@@ -1,0 +1,20 @@
+[project]
+name = "falcon-mcp"
+version = "0.1.0"
+description = "Official CrowdStrike Falcon MCP Server for AI assistants"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastmcp>=2.7.1",
+    "mcp>=1.9.3",
+    "structlog>=24.1.0",
+    "crowdstrike-falconpy>=1.4.5",
+]
+
+[project.scripts]
+falcon-mcp = "src.api.server:main"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+]
