@@ -32,6 +32,12 @@ class HostManager:
         Raises:
             ValueError: If host not found or API error
         """
+        if not host_identifier or not isinstance(host_identifier, str):
+            raise ValueError("Host identifier must be a non-empty string")
+        
+        # Sanitize input for safety
+        host_identifier = host_identifier.strip()
+        
         logger.info("getting_host_technical_details", identifier=host_identifier)
         
         try:
@@ -62,6 +68,18 @@ class HostManager:
         Raises:
             ValueError: If host not found or API error
         """
+        if not host_identifier or not isinstance(host_identifier, str):
+            raise ValueError("Host identifier must be a non-empty string")
+        
+        if not isinstance(limit, int) or limit <= 0:
+            raise ValueError("Limit must be a positive integer")
+        
+        if limit > 5000:  # Falcon API limit
+            raise ValueError("Limit cannot exceed 5000")
+        
+        # Sanitize input for safety
+        host_identifier = host_identifier.strip()
+        
         logger.info("getting_host_recent_events", identifier=host_identifier, limit=limit)
         
         try:
@@ -270,6 +288,30 @@ class HostManager:
         Raises:
             ValueError: If search fails or parameters are invalid
         """
+        # Validate input parameters
+        if not isinstance(query_filter, str):
+            raise ValueError("Query filter must be a string")
+        
+        if not isinstance(limit, int) or limit <= 0:
+            raise ValueError("Limit must be a positive integer")
+        
+        if limit > 5000:  # Falcon API limit
+            raise ValueError("Limit cannot exceed 5000")
+        
+        if not isinstance(sort, str):
+            raise ValueError("Sort parameter must be a string")
+        
+        if not isinstance(fields, str):
+            raise ValueError("Fields parameter must be a string")
+        
+        if not isinstance(include_details, bool):
+            raise ValueError("Include details parameter must be a boolean")
+        
+        # Sanitize string inputs
+        query_filter = query_filter.strip()
+        sort = sort.strip()
+        fields = fields.strip()
+        
         logger.info("search_hosts_advanced_called", 
                    query_filter=query_filter, limit=limit, sort=sort, 
                    fields=fields, include_details=include_details)
@@ -496,6 +538,29 @@ class HostManager:
         Raises:
             ValueError: If search fails or parameters are invalid
         """
+        # Validate input parameters
+        if not isinstance(vulnerability_filter, str):
+            raise ValueError("Vulnerability filter must be a string")
+        
+        if not isinstance(limit, int) or limit <= 0:
+            raise ValueError("Limit must be a positive integer")
+        
+        if limit > 1000:  # Practical limit for vulnerability processing
+            raise ValueError("Limit cannot exceed 1000 for vulnerability searches")
+        
+        if not isinstance(sort, str):
+            raise ValueError("Sort parameter must be a string")
+        
+        if not isinstance(include_host_details, bool):
+            raise ValueError("Include host details parameter must be a boolean")
+        
+        if not isinstance(include_vulnerability_details, bool):
+            raise ValueError("Include vulnerability details parameter must be a boolean")
+        
+        # Sanitize string inputs
+        vulnerability_filter = vulnerability_filter.strip()
+        sort = sort.strip()
+        
         logger.info("search_hosts_by_vulnerabilities_called", 
                    vulnerability_filter=vulnerability_filter, limit=limit, sort=sort,
                    include_host_details=include_host_details, include_vulnerability_details=include_vulnerability_details)

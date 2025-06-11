@@ -20,10 +20,12 @@ class FalconClient:
             client_secret: Falcon API client secret (defaults to FALCON_CLIENT_SECRET env var)  
             base_url: Falcon API base URL (defaults to FALCON_BASE_URL env var or auto-detect)
         """
-        self.client_id = client_id or os.getenv("FALCON_CLIENT_ID")
-        self.client_secret = client_secret or os.getenv("FALCON_CLIENT_SECRET")
-        self.base_url = base_url or os.getenv("FALCON_BASE_URL")
+        # Consider supporting credential providers or vault integrations
+        self.client_id = client_id or os.environ.get("FALCON_CLIENT_ID")
+        self.client_secret = client_secret or os.environ.get("FALCON_CLIENT_SECRET")
+        self.base_url = base_url or os.environ.get("FALCON_BASE_URL")
         
+        # Validate credentials are not empty before proceeding
         if not self.client_id or not self.client_secret:
             raise ValueError("Falcon API credentials must be provided via parameters or environment variables")
         
@@ -39,7 +41,55 @@ class FalconClient:
         self.detects = Detects(**auth_config)
         self.vulnerabilities = SpotlightVulnerabilities(**auth_config)
         
-        logger.info("falcon_client_initialized")
+        # Don't log that credentials were initialized - just log that client was initialized
+        logger.info("falcon_client_initialized", base_url=self.base_url or "default")
+    
+    def _handle_api_response(self, response: Dict[str, Any], operation: str) -> List[Any]:
+        """Handle API responses consistently.
+        
+        Args:
+            response: API response dictionary
+            operation: Description of the operation for logging
+            
+        Returns:
+            Response body resources
+            
+        Raises:
+            ValueError: If API returns an error
+        """
+        if response["status_code"] != 200:
+            errors = response.get("body", {}).get("errors", ["Unknown error"])
+            error_msg = f"Failed to {operation}: {errors}"
+            logger.error(f"{operation}_failed", error=error_msg, status_code=response["status_code"])
+            raise ValueError(error_msg)
+        
+        body = response.get("body", {})
+        resources = body.get("resources", [])
+        
+        return resources
+    
+    def _handle_api_response_body(self, response: Dict[str, Any], operation: str) -> Dict[str, Any]:
+        """Handle API responses consistently and return full body.
+        
+        Args:
+            response: API response dictionary
+            operation: Description of the operation for logging
+            
+        Returns:
+            Response body
+            
+        Raises:
+            ValueError: If API returns an error
+        """
+        if response["status_code"] != 200:
+            errors = response.get("body", {}).get("errors", ["Unknown error"])
+            error_msg = f"Failed to {operation}: {errors}"
+            logger.error(f"{operation}_failed", error=error_msg, status_code=response["status_code"])
+            raise ValueError(error_msg)
+        
+        body = response.get("body", {})
+        
+        return body
     
     def get_host_by_id(self, host_id: str) -> Dict[str, Any]:
         """Get detailed information about a host by its ID.
@@ -53,17 +103,18 @@ class FalconClient:
         Raises:
             ValueError: If host not found or API error
         """
+        if not host_id or not isinstance(host_id, str):
+            raise ValueError("Host ID must be a non-empty string")
+        
+        # Sanitize host_id for FQL injection prevention
+        host_id = host_id.strip().replace("'", "''")  # Escape single quotes for FQL
+        
         logger.info("getting_host_by_id", host_id=host_id)
         
         # Get host details
         response = self.hosts.GetDeviceDetails(ids=[host_id])
         
-        if response["status_code"] != 200:
-            error_msg = f"Failed to get host details: {response.get('body', {}).get('errors', 'Unknown error')}"
-            logger.error("host_details_failed", host_id=host_id, error=error_msg)
-            raise ValueError(error_msg)
-        
-        resources = response.get("body", {}).get("resources", [])
+        resources = self._handle_api_response(response, "get host details")
         if not resources:
             error_msg = f"Host with ID {host_id} not found"
             logger.error("host_not_found", host_id=host_id)
@@ -86,6 +137,12 @@ class FalconClient:
         Raises:
             ValueError: If host not found or API error
         """
+        if not hostname or not isinstance(hostname, str):
+            raise ValueError("Hostname must be a non-empty string")
+        
+        # Sanitize hostname for FQL injection prevention
+        hostname = hostname.strip().replace("'", "''")  # Escape single quotes for FQL
+        
         logger.info("getting_host_by_hostname", hostname=hostname)
         
         # Search for host by hostname
@@ -93,12 +150,7 @@ class FalconClient:
             filter=f"hostname:'{hostname}'"
         )
         
-        if response["status_code"] != 200:
-            error_msg = f"Failed to search for host: {response.get('body', {}).get('errors', 'Unknown error')}"
-            logger.error("host_search_failed", hostname=hostname, error=error_msg)
-            raise ValueError(error_msg)
-        
-        host_ids = response.get("body", {}).get("resources", [])
+        host_ids = self._handle_api_response(response, "search for host")
         if not host_ids:
             error_msg = f"Host with hostname '{hostname}' not found"
             logger.error("host_not_found", hostname=hostname)
@@ -120,6 +172,18 @@ class FalconClient:
         Raises:
             ValueError: If API error occurs
         """
+        if not host_id or not isinstance(host_id, str):
+            raise ValueError("Host ID must be a non-empty string")
+        
+        if not isinstance(limit, int) or limit <= 0:
+            raise ValueError("Limit must be a positive integer")
+        
+        if limit > 5000:  # Falcon API limit
+            raise ValueError("Limit cannot exceed 5000")
+        
+        # Sanitize host_id for FQL injection prevention
+        host_id = host_id.strip().replace("'", "''")  # Escape single quotes for FQL
+        
         logger.info("getting_host_events", host_id=host_id, limit=limit)
         
         # Search for detections on this host
@@ -129,12 +193,7 @@ class FalconClient:
             sort="first_behavior|desc"
         )
         
-        if response["status_code"] != 200:
-            error_msg = f"Failed to search detections: {response.get('body', {}).get('errors', 'Unknown error')}"
-            logger.error("detections_search_failed", host_id=host_id, error=error_msg)
-            raise ValueError(error_msg)
-        
-        detection_ids = response.get("body", {}).get("resources", [])
+        detection_ids = self._handle_api_response(response, "search detections")
         if not detection_ids:
             logger.info("no_detections_found", host_id=host_id)
             return []
@@ -142,12 +201,7 @@ class FalconClient:
         # Get detection details
         details_response = self.detects.GetDetectSummaries(ids=detection_ids)
         
-        if details_response["status_code"] != 200:
-            error_msg = f"Failed to get detection details: {details_response.get('body', {}).get('errors', 'Unknown error')}"
-            logger.error("detection_details_failed", host_id=host_id, error=error_msg)
-            raise ValueError(error_msg)
-        
-        events = details_response.get("body", {}).get("resources", [])
+        events = self._handle_api_response(details_response, "get detection details")
         logger.info("host_events_retrieved", host_id=host_id, event_count=len(events))
         
         return events
@@ -168,6 +222,29 @@ class FalconClient:
         Raises:
             ValueError: If search fails or API error
         """
+        # Validate input parameters
+        if not isinstance(query_filter, str):
+            raise ValueError("Query filter must be a string")
+        
+        if not isinstance(limit, int) or limit <= 0:
+            raise ValueError("Limit must be a positive integer")
+        
+        if limit > 5000:  # Falcon API limit
+            raise ValueError("Limit cannot exceed 5000")
+        
+        if not isinstance(sort, str):
+            raise ValueError("Sort parameter must be a string")
+        
+        if not isinstance(fields, str):
+            raise ValueError("Fields parameter must be a string")
+        
+        # Sanitize string inputs for FQL injection prevention
+        if query_filter:
+            query_filter = query_filter.strip().replace("'", "''")  # Escape single quotes for FQL
+        
+        sort = sort.strip()
+        fields = fields.strip()
+        
         logger.info("search_hosts_combined", query_filter=query_filter, limit=limit, sort=sort, fields=fields)
         
         # Build parameters for the API call
@@ -185,12 +262,7 @@ class FalconClient:
         # Use the combined search endpoint that returns full host records
         response = self.hosts.CombinedDevicesByFilter(**params)
         
-        if response["status_code"] != 200:
-            error_msg = f"Failed to search hosts: {response.get('body', {}).get('errors', 'Unknown error')}"
-            logger.error("host_search_combined_failed", query_filter=query_filter, error=error_msg)
-            raise ValueError(error_msg)
-        
-        search_results = response.get("body", {})
+        search_results = self._handle_api_response_body(response, "search hosts")
         resources = search_results.get("resources", [])
         
         logger.info("host_search_combined_completed", 
@@ -216,6 +288,29 @@ class FalconClient:
         Raises:
             ValueError: If search fails or API error
         """
+        # Validate input parameters
+        if not isinstance(query_filter, str):
+            raise ValueError("Query filter must be a string")
+        
+        if not isinstance(limit, int) or limit <= 0:
+            raise ValueError("Limit must be a positive integer")
+        
+        if limit > 5000:  # Falcon API limit
+            raise ValueError("Limit cannot exceed 5000")
+        
+        if not isinstance(sort, str):
+            raise ValueError("Sort parameter must be a string")
+        
+        if not isinstance(facet, str):
+            raise ValueError("Facet parameter must be a string")
+        
+        # Sanitize string inputs for FQL injection prevention
+        if query_filter:
+            query_filter = query_filter.strip().replace("'", "''")  # Escape single quotes for FQL
+        
+        sort = sort.strip()
+        facet = facet.strip()
+        
         logger.info("search_vulnerabilities_combined", query_filter=query_filter, limit=limit, sort=sort, facet=facet)
         
         # Build parameters for the API call
@@ -233,12 +328,7 @@ class FalconClient:
         # Use the combined search endpoint that returns full vulnerability records
         response = self.vulnerabilities.combinedQueryVulnerabilities(**params)
         
-        if response["status_code"] != 200:
-            error_msg = f"Failed to search vulnerabilities: {response.get('body', {}).get('errors', 'Unknown error')}"
-            logger.error("vulnerability_search_combined_failed", query_filter=query_filter, error=error_msg)
-            raise ValueError(error_msg)
-        
-        search_results = response.get("body", {})
+        search_results = self._handle_api_response_body(response, "search vulnerabilities")
         resources = search_results.get("resources", [])
         
         logger.info("vulnerability_search_combined_completed", 
@@ -260,17 +350,24 @@ class FalconClient:
         Raises:
             ValueError: If API error occurs
         """
-        logger.info("getting_vulnerability_details", vulnerability_count=len(vulnerability_ids))
+        if not vulnerability_ids or not isinstance(vulnerability_ids, list):
+            raise ValueError("Vulnerability IDs must be provided as a non-empty list")
+        
+        if not all(isinstance(vid, str) and vid.strip() for vid in vulnerability_ids):
+            raise ValueError("All vulnerability IDs must be non-empty strings")
+        
+        if len(vulnerability_ids) > 400:  # Falcon API typical limit for batch operations
+            raise ValueError("Too many vulnerability IDs provided (maximum: 400)")
+        
+        # Sanitize vulnerability IDs
+        sanitized_ids = [vid.strip().replace("'", "''") for vid in vulnerability_ids]
+        
+        logger.info("getting_vulnerability_details", vulnerability_count=len(sanitized_ids))
         
         # Get vulnerability details
-        response = self.vulnerabilities.getVulnerabilities(ids=vulnerability_ids)
+        response = self.vulnerabilities.getVulnerabilities(ids=sanitized_ids)
         
-        if response["status_code"] != 200:
-            error_msg = f"Failed to get vulnerability details: {response.get('body', {}).get('errors', 'Unknown error')}"
-            logger.error("vulnerability_details_failed", error=error_msg)
-            raise ValueError(error_msg)
-        
-        resources = response.get("body", {}).get("resources", [])
+        resources = self._handle_api_response(response, "get vulnerability details")
         logger.info("vulnerability_details_retrieved", vulnerability_count=len(resources))
         
         return resources 
