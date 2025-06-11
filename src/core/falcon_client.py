@@ -107,7 +107,7 @@ class FalconClient:
             raise ValueError("Host ID must be a non-empty string")
         
         # Sanitize host_id for FQL injection prevention
-        host_id = host_id.strip().replace("'", "''")  # Escape single quotes for FQL
+        host_id = host_id.strip()
         
         logger.info("getting_host_by_id", host_id=host_id)
         
@@ -141,7 +141,7 @@ class FalconClient:
             raise ValueError("Hostname must be a non-empty string")
         
         # Sanitize hostname for FQL injection prevention
-        hostname = hostname.strip().replace("'", "''")  # Escape single quotes for FQL
+        hostname = hostname.strip()
         
         logger.info("getting_host_by_hostname", hostname=hostname)
         
@@ -182,7 +182,7 @@ class FalconClient:
             raise ValueError("Limit cannot exceed 5000")
         
         # Sanitize host_id for FQL injection prevention
-        host_id = host_id.strip().replace("'", "''")  # Escape single quotes for FQL
+        host_id = host_id.strip()
         
         logger.info("getting_host_events", host_id=host_id, limit=limit)
         
@@ -240,7 +240,7 @@ class FalconClient:
         
         # Sanitize string inputs for FQL injection prevention
         if query_filter:
-            query_filter = query_filter.strip().replace("'", "''")  # Escape single quotes for FQL
+            query_filter = query_filter.strip()
         
         sort = sort.strip()
         fields = fields.strip()
@@ -306,7 +306,7 @@ class FalconClient:
         
         # Sanitize string inputs for FQL injection prevention
         if query_filter:
-            query_filter = query_filter.strip().replace("'", "''")  # Escape single quotes for FQL
+            query_filter = query_filter.strip()
         
         sort = sort.strip()
         facet = facet.strip()
@@ -360,7 +360,7 @@ class FalconClient:
             raise ValueError("Too many vulnerability IDs provided (maximum: 400)")
         
         # Sanitize vulnerability IDs
-        sanitized_ids = [vid.strip().replace("'", "''") for vid in vulnerability_ids]
+        sanitized_ids = [vid.strip() for vid in vulnerability_ids]
         
         logger.info("getting_vulnerability_details", vulnerability_count=len(sanitized_ids))
         
