@@ -44,15 +44,6 @@ def discover_modules():
                     logger.debug("Discovered module: %s", module_name)
 
 
-def register_module(name: str, module_class: Type[MODULE_TYPE]) -> None:
-    """Register a module in the registry.
-
-    Args:
-        name: The name of the module
-        module_class: The module class
-    """
-    AVAILABLE_MODULES[name] = module_class
-
 
 def get_module_names() -> List[str]:
     """Get the names of all registered modules.

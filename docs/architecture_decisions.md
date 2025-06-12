@@ -25,11 +25,11 @@ We implemented a dedicated module registry system in `src/modules/registry.py` t
 The registry system consists of:
 
 - A dictionary to store available modules: `AVAILABLE_MODULES`
-- A `register_module` function to add modules to the registry
+- A `discover_modules` function that automatically discovers and registers modules
 - A `get_module_names` function to retrieve registered module names
 
-Modules are now registered by calling `register_module("module_name", ModuleClass)` instead of directly modifying a
-dictionary in `server.py`.
+Initially, modules were registered by calling `register_module("module_name", ModuleClass)`, but this approach was later
+replaced by the auto-discovery pattern (see "Module Auto-Discovery" section below).
 
 ## Error Handling Refactoring
 

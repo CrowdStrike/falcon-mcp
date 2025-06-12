@@ -66,14 +66,6 @@ class FalconClient:
         """
         return self.client.token_valid
 
-    def get_headers(self) -> Dict[str, str]:
-        """Get the authentication headers.
-
-        Returns:
-            Dict[str, str]: Authentication headers
-        """
-        return self.client.auth_headers
-
     def command(self, operation: str, **kwargs) -> Dict[str, Any]:
         """Execute a Falcon API command.
 
