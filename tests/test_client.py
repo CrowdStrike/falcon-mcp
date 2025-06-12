@@ -1,0 +1,165 @@
+"""
+Tests for the Falcon API client.
+"""
+import unittest
+from unittest.mock import MagicMock, patch
+
+from src.client import FalconClient
+
+
+# pylint: disable=unused-variable
+class TestFalconClient(unittest.TestCase):
+    """Test cases for the Falcon API client."""
+
+    @patch('src.client.os.environ.get')
+    @patch('src.client.APIHarnessV2')
+    def test_client_initialization(self, mock_apiharness, mock_environ_get):
+        """Test client initialization with base URL."""
+        # Setup mock environment variables
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret"
+        }.get(key, default)
+
+        # Create client with base URL
+        client = FalconClient(
+            base_url="https://api.test.crowdstrike.com",
+            debug=True
+        )
+
+        # Verify APIHarnessV2 was initialized correctly with config values
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["client_id"], "test-client-id")
+        self.assertEqual(call_args["client_secret"], "test-client-secret")
+        self.assertEqual(call_args["base_url"], "https://api.test.crowdstrike.com")
+        self.assertTrue(call_args["debug"])
+
+    @patch('src.client.os.environ.get')
+    @patch('src.client.APIHarnessV2')
+    def test_client_initialization_with_env_vars(self, mock_apiharness, mock_environ_get):
+        """Test client initialization with environment variables."""
+        # Setup mock environment variables
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "env-client-id",
+            "FALCON_CLIENT_SECRET": "env-client-secret",
+            "FALCON_BASE_URL": "https://api.env.crowdstrike.com"
+        }.get(key, default)
+
+        # Create client with environment variables
+        client = FalconClient()
+
+        # Verify APIHarnessV2 was initialized correctly
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["client_id"], "env-client-id")
+        self.assertEqual(call_args["client_secret"], "env-client-secret")
+        self.assertEqual(call_args["base_url"], "https://api.env.crowdstrike.com")
+        self.assertFalse(call_args["debug"])
+
+    @patch('src.client.os.environ.get')
+    def test_client_initialization_missing_credentials(self, mock_environ_get):
+        """Test client initialization with missing credentials."""
+        # Setup mock environment variables (missing credentials)
+        mock_environ_get.return_value = None
+
+        # Verify ValueError is raised when credentials are missing
+        with self.assertRaises(ValueError):
+            FalconClient()
+
+    @patch('src.client.os.environ.get')
+    @patch('src.client.APIHarnessV2')
+    def test_authenticate(self, mock_apiharness, mock_environ_get):
+        """Test authenticate method."""
+        # Setup mock environment variables
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret"
+        }.get(key, default)
+
+        # Setup mock
+        mock_instance = MagicMock()
+        mock_instance.login.return_value = True
+        mock_apiharness.return_value = mock_instance
+
+        # Create client and authenticate
+        client = FalconClient()
+        result = client.authenticate()
+
+        # Verify login was called and result is correct
+        mock_instance.login.assert_called_once()
+        self.assertTrue(result)
+
+    @patch('src.client.os.environ.get')
+    @patch('src.client.APIHarnessV2')
+    def test_is_authenticated(self, mock_apiharness, mock_environ_get):
+        """Test is_authenticated method."""
+        # Setup mock environment variables
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret"
+        }.get(key, default)
+
+        # Setup mock
+        mock_instance = MagicMock()
+        mock_instance.token_valid = True
+        mock_apiharness.return_value = mock_instance
+
+        # Create client and check authentication status
+        client = FalconClient()
+        result = client.is_authenticated()
+
+        # Verify result is correct
+        self.assertTrue(result)
+
+    @patch('src.client.os.environ.get')
+    @patch('src.client.APIHarnessV2')
+    def test_get_headers(self, mock_apiharness, mock_environ_get):
+        """Test get_headers method."""
+        # Setup mock environment variables
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret"
+        }.get(key, default)
+
+        # Setup mock
+        mock_instance = MagicMock()
+        mock_instance.auth_headers = {"Authorization": "Bearer test-token"}
+        mock_apiharness.return_value = mock_instance
+
+        # Create client and get headers
+        client = FalconClient()
+        headers = client.get_headers()
+
+        # Verify headers are correct
+        self.assertEqual(headers, {"Authorization": "Bearer test-token"})
+
+    @patch('src.client.os.environ.get')
+    @patch('src.client.APIHarnessV2')
+    def test_command(self, mock_apiharness, mock_environ_get):
+        """Test command method."""
+        # Setup mock environment variables
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret"
+        }.get(key, default)
+
+        # Setup mock
+        mock_instance = MagicMock()
+        mock_instance.command.return_value = {"status_code": 200, "body": {"resources": [{"id": "test"}]}}
+        mock_apiharness.return_value = mock_instance
+
+        # Create client and execute command
+        client = FalconClient()
+        response = client.command("TestOperation", parameters={"filter": "test"})
+
+        # Verify command was called with correct arguments
+        mock_instance.command.assert_called_once_with("TestOperation", parameters={"filter": "test"})
+
+        # Verify response is correct
+        self.assertEqual(response["status_code"], 200)
+        self.assertEqual(response["body"]["resources"][0]["id"], "test")
+
+
+if __name__ == '__main__':
+    unittest.main()
