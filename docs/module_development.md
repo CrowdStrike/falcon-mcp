@@ -97,21 +97,29 @@ API_SCOPE_REQUIREMENTS = {
 
 ### 3. Module Auto-Discovery
 
-Modules are automatically discovered and registered by the server. There's no need for explicit registration.
-
-To create a new module:
+Modules are automatically registered by the server once they're discovered. You don't need to call any registration functions, but you do need to:
 
 1. Create your module class in the `src/modules` directory (e.g., `your_module.py`)
 2. Make sure it inherits from `BaseModule`
-3. Import it in `src/modules/__init__.py` to ensure it's loaded
+3. Import it in `src/modules/__init__.py` to make it available for discovery:
 
 ```python
 # In src/modules/__init__.py
 from .your_module import YourModule
 ```
 
-The server will automatically discover and register your module during initialization. The module name will be
-derived from the class name (e.g., `YourModule` becomes `your`).
+The server will automatically discover and register your module during initialization. The module name will be derived
+from the class name (e.g., `YourModule` becomes `your`).
+
+During server initialization, the registry system will:
+
+1. Scan the modules directory
+2. Import the modules listed in `__init__.py`
+3. Find classes that end with "Module" (excluding BaseModule)
+4. Register them in the `AVAILABLE_MODULES` dictionary
+5. Make them available to the server
+
+This approach simplifies module registration while maintaining a clean architecture that avoids cyclic imports.
 
 ### 4. Add Tests
 
