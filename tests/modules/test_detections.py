@@ -2,50 +2,26 @@
 Tests for the Detections module.
 """
 import unittest
-from unittest.mock import MagicMock
 
-from mcp.server import FastMCP
-
-from src.client import FalconClient
 from src.modules.detections import DetectionsModule
+from tests.modules.utils.test_modules import TestModules
 
 
-class TestDetectionsModule(unittest.TestCase):
+class TestDetectionsModule(TestModules):
     """Test cases for the Detections module."""
 
     def setUp(self):
         """Set up test fixtures."""
-        # Create a mock client
-        self.mock_client = MagicMock(spec=FalconClient)
-
-        # Create the module
-        self.module = DetectionsModule(self.mock_client)
-
-        # Create a mock server
-        self.mock_server = MagicMock(spec=FastMCP)
+        self.setup_module(DetectionsModule)
 
     def test_register_tools(self):
         """Test registering tools with the server."""
-        # Call register_tools
-        self.module.register_tools(self.mock_server)
-
-        # Verify that add_tool was called for each tool
-        self.assertEqual(self.mock_server.add_tool.call_count, 3)
-
-        # Get the tool names that were registered
-        registered_tools = [
-            call.kwargs['name']
-            for call in self.mock_server.add_tool.call_args_list
-        ]
-
-        # Verify that all expected tools were registered
         expected_tools = [
             "search_detections",
             "get_detection_details",
             "get_detection_count"
         ]
-        for tool in expected_tools:
-            self.assertIn(tool, registered_tools)
+        self.assert_tools_registered(expected_tools)
 
     def test_search_detections(self):
         """Test searching for detections."""

@@ -123,7 +123,7 @@ class TestFalconMCPServer(unittest.TestCase):
         result = server.get_available_modules()
 
         # Verify result
-        expected_result = {"modules": ["detections"]}
+        expected_result = {"modules": ["detections", "incidents"]}
         self.assertEqual(result, expected_result)
 
 
