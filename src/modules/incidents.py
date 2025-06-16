@@ -44,6 +44,20 @@ class IncidentsModule(BaseModule):
             description="Search for incidents by providing a FQL filter, sorting, and paging details."
         )
 
+        self._add_tool(
+            server,
+            self.get_behaviors,
+            name="incidents_get_behaviors",
+            description="Get details on behaviors by providing behavior IDs."
+        )
+
+        self._add_tool(
+            server,
+            self.query_behaviors,
+            name="incidents_query_behaviors",
+            description="Search for behaviors by providing a FQL filter, sorting, and paging details."
+        )
+
 
     def crowd_score(self, query: Optional[str] = None, limit: int = 100, offset: int = 0, sort: Optional[str] = None) -> Dict[str, Any]:
         """Query environment wide CrowdScore and return the entity data.
@@ -89,23 +103,9 @@ class IncidentsModule(BaseModule):
         Returns:
             Tool returns the CrowdScore entity data.
         """
-        # Prepare parameters
-        body = prepare_api_parameters({
-            "ids": ids
-        })
-
-        # Define the operation name (used for error handling)
-        operation = "GetIncidents"
-
-        # Make the API request
-        response = self.client.command(operation, body=body)
-
-        # Handle the response
-        return handle_api_response(
-            response,
-            operation=operation,
-            error_message="Failed to perform operation",
-            default_result={}
+        self._base_get(
+            operation="GetIncidents",
+            ids=ids,
         )
 
     def query_incidents(
@@ -147,6 +147,55 @@ class IncidentsModule(BaseModule):
         Returns:
             Tool returns CrowdStrike incidents.
         """
+        self._base_query(
+            operation="QueryIncidents",
+            filter=filter,
+            limit=limit,
+            offset=offset,
+            sort=sort,
+        )
+
+    def get_behaviors(self, ids: List[str]) -> Dict[str, Any]:
+        """Get details on behaviors by providing behavior IDs.
+
+        Args:
+            ids: Behavior ID(s) to retrieve.
+
+        Returns:
+            Tool returns the CrowdScore behaviors by ID.
+        """
+        self._base_get(
+            operation="GetBehaviors",
+            ids=ids,
+        )
+
+
+    def query_behaviors(
+        self, filter: Optional[str] = None, limit: int = 100, offset: int = 0, sort: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Search for behaviors by providing a FQL filter, sorting, and paging details.
+
+        Args:
+            filter: FQL Syntax formatted string used to limit the results.
+            limit: The maximum number of records to return in this response. [Integer, 1-500]. Use with the offset parameter to manage pagination of results.
+            offset: The offset to start retrieving records from. Integer. Use with the limit parameter to manage pagination of results.
+            sort: The property to sort by. (Ex: modified_timestamp.desc)
+
+
+        Returns:
+            Tool returns CrowdStrike behaviors.
+        """
+        self._base_query(
+            operation="QueryBehaviors",
+            filter=filter,
+            limit=limit,
+            offset=offset,
+            sort=sort,
+        )
+
+    def _base_query(
+        self, operation: str, filter: Optional[str] = None, limit: int = 100, offset: int = 0, sort: Optional[str] = None,
+    ) -> Dict[str, Any]:
         # Prepare parameters
         params = prepare_api_parameters({
             "filter": filter,
@@ -155,11 +204,27 @@ class IncidentsModule(BaseModule):
             "sort": sort,
         })
 
-        # Define the operation name (used for error handling)
-        operation = "QueryIncidents"
-
         # Make the API request
         response = self.client.command(operation, parameters=params)
+
+        # Handle the response
+        return handle_api_response(
+            response,
+            operation=operation,
+            error_message="Failed to perform operation",
+            default_result={}
+        )
+
+
+    def _base_get(
+        self, operation: str, ids: List[str],
+    ) -> Dict[str, Any]:
+        body = prepare_api_parameters({
+            "ids": ids
+        })
+
+        # Make the API request
+        response = self.client.command(operation, body=body)
 
         # Handle the response
         return handle_api_response(

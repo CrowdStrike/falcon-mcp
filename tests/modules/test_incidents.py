@@ -15,5 +15,7 @@ class TestIncidentsModule(TestModules):
             "incidents_crowd_score",
             "incidents_get_incidents",
             "incidents_query_incidents",
+            "incidents_get_behaviors",
+            "incidents_query_behaviors",
         ]
         self.assert_tools_registered(expected_tools)
