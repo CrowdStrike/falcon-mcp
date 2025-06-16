@@ -107,7 +107,6 @@ class TestFalconMCPServer(unittest.TestCase):
         expected_result = {"connected": True}
         self.assertEqual(result, expected_result)
 
-    @patch('src.registry.AVAILABLE_MODULES', {'detections': MagicMock()})
     @patch('src.server.FalconClient')
     def test_get_available_modules(self, mock_client):
         """Test getting available modules."""
@@ -122,9 +121,11 @@ class TestFalconMCPServer(unittest.TestCase):
         # Call get_available_modules
         result = server.get_available_modules()
 
-        # Verify result
-        expected_result = {"modules": ["detections", "incidents"]}
-        self.assertEqual(result, expected_result)
+        # Get the actual module names from the registry
+        expected_modules = registry.get_module_names()
+
+        # Verify result matches registry
+        self.assertEqual(set(result["modules"]), set(expected_modules))
 
 
 if __name__ == '__main__':

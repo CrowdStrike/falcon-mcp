@@ -31,6 +31,36 @@ The registry system consists of:
 Initially, modules were registered by calling `register_module("module_name", ModuleClass)`, but this approach was later
 replaced by the auto-discovery pattern (see "Module Auto-Discovery" section below).
 
+## Module Auto-Discovery
+
+### Context
+
+The initial module registry implementation required explicit registration of modules in the `modules/__init__.py` file.
+This approach had several drawbacks:
+
+1. It required function calls in the `__init__.py` file, which is not a common Python pattern
+2. Adding new modules required remembering to register them explicitly
+3. The server needed to import BaseModule to use `__subclasses__()` for discovery
+4. The explicit import of `src.modules` in server.py created a non-standard import pattern
+
+### Decision
+
+We implemented an auto-discovery pattern that:
+
+1. Uses standard library tools (importlib, pkgutil) to scan for modules
+2. Automatically registers modules based on naming conventions
+3. Eliminates the need for explicit registration calls
+4. Follows more standard Python practices
+
+### Implementation
+
+- Added a `discover_modules()` function in `registry.py` that scans the modules directory
+- Uses importlib to dynamically import modules and inspect their contents
+- Automatically registers classes that end with "Module" and aren't BaseModule
+- Simplified the server initialization to just call `registry.discover_modules()`
+- Kept the modules/__init__.py file minimal with just the necessary imports
+- Removed the dependency on `BaseModule.__subclasses__()`
+
 ## Error Handling Refactoring
 
 ### Context
@@ -101,32 +131,30 @@ We updated the tests to:
 - Fixed assertions to match the new function signatures and behavior
 - Ensured all tests pass with the new architecture
 
-## Module Auto-Discovery
+## Authentication Headers Access
 
 ### Context
 
-The initial module registry implementation required explicit registration of modules in the `modules/__init__.py` file.
-This approach had several drawbacks:
-
-1. It required function calls in the `__init__.py` file, which is not a common Python pattern
-2. Adding new modules required remembering to register them explicitly
-3. The server needed to import BaseModule to use `__subclasses__()` for discovery
-4. The explicit import of `src.modules` in server.py created a non-standard import pattern
+The `FalconClient` class needed a way to expose authentication headers for potential
+advanced integration scenarios and custom HTTP requests.
 
 ### Decision
 
-We implemented an auto-discovery pattern that:
+We added a `get_headers()` method to the `FalconClient` class that:
 
-1. Uses standard library tools (importlib, pkgutil) to scan for modules
-2. Automatically registers modules based on naming conventions
-3. Eliminates the need for explicit registration calls
-4. Follows more standard Python practices
+1. Exposes authentication headers from the underlying `APIHarnessV2` client
+2. Enables integration with custom HTTP clients and requests
+3. Provides flexibility for future transport implementations
 
 ### Implementation
 
-- Added a `discover_modules()` function in `registry.py` that scans the modules directory
-- Uses importlib to dynamically import modules and inspect their contents
-- Automatically registers classes that end with "Module" and aren't BaseModule
-- Simplified the server initialization to just call `registry.discover_modules()`
-- Kept the modules/__init__.py file minimal with just the necessary imports
-- Removed the dependency on `BaseModule.__subclasses__()`
+The implementation is a simple pass-through to the underlying client's `auth_headers` property:
+
+```python
+def get_headers(self) -> Dict[str, str]:
+    """Get authentication headers for API requests."""
+    return self.client.auth_headers
+```
+
+This method provides access to authentication headers when needed for custom integrations
+while maintaining the encapsulation of the authentication process.

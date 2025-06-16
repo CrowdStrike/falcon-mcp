@@ -77,3 +77,14 @@ class FalconClient:
             Dict[str, Any]: The API response
         """
         return self.client.command(operation, **kwargs)
+
+    def get_headers(self) -> Dict[str, str]:
+        """Get authentication headers for API requests.
+
+        This method returns the authentication headers from the underlying Falcon API client,
+        which can be used for custom HTTP requests or advanced integration scenarios.
+
+        Returns:
+            Dict[str, str]: Authentication headers including the bearer token
+        """
+        return self.client.auth_headers

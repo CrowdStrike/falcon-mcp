@@ -117,8 +117,6 @@ class TestFalconClient(unittest.TestCase):
     @patch('src.client.os.environ.get')
     @patch('src.client.APIHarnessV2')
     def test_get_headers(self, mock_apiharness, mock_environ_get):
-        pytest.skip("Skipping this test for now, method does not exist")
-
         """Test get_headers method."""
         # Setup mock environment variables
         mock_environ_get.side_effect = lambda key, default=None: {
