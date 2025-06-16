@@ -26,36 +26,31 @@ class IncidentsModule(BaseModule):
         self._add_tool(
             server,
             self.crowd_score,
-            name="incidents_crowd_score",
-            description="Query environment wide CrowdScore and return the entity data."
+            name="incidents_crowd_score"
         )
 
         self._add_tool(
             server,
             self.get_incidents,
-            name="incidents_get_incidents",
-            description="Get details on incidents by providing incident IDs."
+            name="incidents_get_incidents"
         )
 
         self._add_tool(
             server,
             self.query_incidents,
-            name="incidents_query_incidents",
-            description="Search for incidents by providing a FQL filter, sorting, and paging details."
+            name="incidents_query_incidents"
         )
 
         self._add_tool(
             server,
             self.get_behaviors,
-            name="incidents_get_behaviors",
-            description="Get details on behaviors by providing behavior IDs."
+            name="incidents_get_behaviors"
         )
 
         self._add_tool(
             server,
             self.query_behaviors,
-            name="incidents_query_behaviors",
-            description="Search for behaviors by providing a FQL filter, sorting, and paging details."
+            name="incidents_query_behaviors"
         )
 
 

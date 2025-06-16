@@ -28,22 +28,19 @@ class DetectionsModule(BaseModule):
         self._add_tool(
             server,
             self.search_detections,
-            name="search_detections",
-            description="Search for detections in your CrowdStrike environment."
+            name="search_detections"
         )
 
         self._add_tool(
             server,
             self.get_detection_details,
-            name="get_detection_details",
-            description="Get detailed information about a specific detection."
+            name="get_detection_details"
         )
 
         self._add_tool(
             server,
             self.get_detection_count,
-            name="get_detection_count",
-            description="Get the count of detections matching a query."
+            name="get_detection_count"
         )
 
     def search_detections(

@@ -46,8 +46,7 @@ class YourModule(BaseModule):
         self._add_tool(
             server,
             self.your_tool_method,
-            name="your_tool_name",
-            description="Description of your tool."
+            name="your_tool_name"
         )
 
         # Add more tools as needed
@@ -257,7 +256,7 @@ if isinstance(result, dict) and "error" in result:
 
 ### Documentation
 
-1. **Docstrings**: Include detailed docstrings for all classes and methods
+1. **Docstrings**: Include detailed docstrings for all classes and methods. Tool descriptions are derived from method docstrings, so make sure they are comprehensive and well-written.
 2. **Parameter Descriptions**: Document all parameters and return values
 3. **Examples**: Include examples in docstrings where helpful
 
@@ -325,22 +324,19 @@ class HostsModule(BaseModule):
         self._add_tool(
             server,
             self.search_hosts,
-            name="search_hosts",
-            description="Search for hosts in your CrowdStrike environment."
+            name="search_hosts"
         )
 
         self._add_tool(
             server,
             self.get_host_details,
-            name="get_host_details",
-            description="Get detailed information about a specific host."
+            name="get_host_details"
         )
 
         self._add_tool(
             server,
             self.get_host_count,
-            name="get_host_count",
-            description="Get the count of hosts matching a query."
+            name="get_host_count"
         )
 
     def search_hosts(self, query: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:

@@ -26,114 +26,98 @@ class IntelModule(BaseModule):
         self._add_tool(
             server,
             self.query_intel_actor_entities,
-            name="intel_query_intel_actor_entities",
-            description="Search for actors that match provided FQL filters."
+            name="intel_query_intel_actor_entities"
         )
 
         self._add_tool(
             server,
             self.query_intel_indicator_entities,
-            name="intel_query_intel_indicator_entities",
-            description="Search for indicators that match provided FQL filters."
+            name="intel_query_intel_indicator_entities"
         )
 
         self._add_tool(
             server,
             self.query_intel_report_entities,
-            name="intel_query_intel_report_entities",
-            description="Search for reports that match provided FQL filters."
+            name="intel_query_intel_report_entities"
         )
 
         self._add_tool(
             server,
             self.query_intel_rule_entities,
-            name="intel_query_intel_rule_entities",
-            description="Search for rules that match provided FQL filters."
+            name="intel_query_intel_rule_entities"
         )
 
         # Register Get tools
         self._add_tool(
             server,
             self.get_intel_actor_entities,
-            name="intel_get_intel_actor_entities",
-            description="Get detailed information about actors by providing actor IDs."
+            name="intel_get_intel_actor_entities"
         )
 
         self._add_tool(
             server,
             self.get_intel_indicator_entities,
-            name="intel_get_intel_indicator_entities",
-            description="Get detailed information about indicators by providing indicator IDs."
+            name="intel_get_intel_indicator_entities"
         )
 
         self._add_tool(
             server,
             self.get_intel_report_pdf,
-            name="intel_get_intel_report_pdf",
-            description="Get a PDF report by providing a report ID."
+            name="intel_get_intel_report_pdf"
         )
 
         self._add_tool(
             server,
             self.get_intel_report_entities,
-            name="intel_get_intel_report_entities",
-            description="Get detailed information about reports by providing report IDs."
+            name="intel_get_intel_report_entities"
         )
 
         self._add_tool(
             server,
             self.get_intel_rule_entities,
-            name="intel_get_intel_rule_entities",
-            description="Get detailed information about rules by providing rule IDs."
+            name="intel_get_intel_rule_entities"
         )
 
         self._add_tool(
             server,
             self.get_intel_rule_file,
-            name="intel_get_intel_rule_file",
-            description="Download the rule file for the specified rule ID."
+            name="intel_get_intel_rule_file"
         )
 
         self._add_tool(
             server,
             self.get_latest_intel_indicator_timestamp,
-            name="intel_get_latest_intel_indicator_timestamp",
-            description="Get the timestamp of the latest indicator."
+            name="intel_get_latest_intel_indicator_timestamp"
         )
 
         self._add_tool(
             server,
             self.get_mitre_report,
-            name="intel_get_mitre_report",
-            description="Get the MITRE ATT&CK tactics and techniques for a specific actor."
+            name="intel_get_mitre_report"
         )
 
         self._add_tool(
             server,
             self.get_rule_details,
-            name="intel_get_rule_details",
-            description="Get detailed information about a specific rule."
+            name="intel_get_rule_details"
         )
 
         self._add_tool(
             server,
             self.get_rules_details,
-            name="intel_get_rules_details",
-            description="Get detailed information about multiple rules."
+            name="intel_get_rules_details"
         )
 
         self._add_tool(
             server,
             self.get_rule_preview,
-            name="intel_get_rule_preview",
-            description="Get a preview of a rule by providing a rule ID."
+            name="intel_get_rule_preview"
         )
 
         self._add_tool(
             server,
             self.get_vulnerabilities,
-            name="intel_get_vulnerabilities",
-            description="Get vulnerabilities by providing vulnerability IDs."
+            name="intel_get_vulnerabilities"
         )
 
     def query_intel_actor_entities(

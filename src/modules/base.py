@@ -34,15 +34,14 @@ class BaseModule(ABC):
             server: MCP server instance
         """
 
-    def _add_tool(self, server: FastMCP, method: Callable, name: str, description: str) -> None:
+    def _add_tool(self, server: FastMCP, method: Callable, name: str) -> None:
         """Add a tool to the MCP server and track it.
 
         Args:
             server: MCP server instance
             method: Method to register
             name: Tool name
-            description: Tool description
         """
-        server.add_tool(method, name=name, description=description)
+        server.add_tool(method, name=name)
         self.tools.append(name)
         logger.debug("Added tool: %s", name)
