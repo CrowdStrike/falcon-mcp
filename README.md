@@ -81,6 +81,21 @@ server.run()
 server.run("sse")
 ```
 
+#### Running examples
+
+```python
+pip install -e .
+cd examples
+python sse_usage.py
+```
+
+#### Running tests
+
+```python
+pip install -e ".[dev]"
+pytest
+```
+
 ## Available Modules
 
 ### Core Functionality (Built into Server)

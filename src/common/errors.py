@@ -18,6 +18,8 @@ API_SCOPE_REQUIREMENTS = {
     "GetDeviceDetails": ["hosts:read"],
     "QueryIncidents": ["incidents:read"],
     "GetIncidentDetails": ["incidents:read"],
+    "CrowdScore": ["incidents:read"],
+    "GetIncidents": ["incidents:read"],
     # Add more mappings as needed
 }
 
