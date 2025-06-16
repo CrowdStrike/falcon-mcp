@@ -60,7 +60,9 @@ disable=
     suppressed-message,
     useless-suppression,
     deprecated-pragma,
-    use-symbolic-message-instead
+    use-symbolic-message-instead,
+    # Disable line-too-long for now due to docstrings and such
+    line-too-long
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
