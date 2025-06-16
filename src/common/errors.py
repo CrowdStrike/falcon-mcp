@@ -20,6 +20,8 @@ API_SCOPE_REQUIREMENTS = {
     "GetIncidentDetails": ["incidents:read"],
     "CrowdScore": ["incidents:read"],
     "GetIncidents": ["incidents:read"],
+    "GetBehaviors": ["incidents:read"],
+    "QueryBehaviors": ["incidents:read"],
     # Add more mappings as needed
 }
 

@@ -103,7 +103,7 @@ class IncidentsModule(BaseModule):
         Returns:
             Tool returns the CrowdScore entity data.
         """
-        self._base_get(
+        return self._base_get(
             operation="GetIncidents",
             ids=ids,
         )
@@ -147,7 +147,7 @@ class IncidentsModule(BaseModule):
         Returns:
             Tool returns CrowdStrike incidents.
         """
-        self._base_query(
+        return self._base_query(
             operation="QueryIncidents",
             filter=filter,
             limit=limit,
@@ -164,7 +164,7 @@ class IncidentsModule(BaseModule):
         Returns:
             Tool returns the CrowdScore behaviors by ID.
         """
-        self._base_get(
+        return self._base_get(
             operation="GetBehaviors",
             ids=ids,
         )
@@ -185,7 +185,7 @@ class IncidentsModule(BaseModule):
         Returns:
             Tool returns CrowdStrike behaviors.
         """
-        self._base_query(
+        return self._base_query(
             operation="QueryBehaviors",
             filter=filter,
             limit=limit,
