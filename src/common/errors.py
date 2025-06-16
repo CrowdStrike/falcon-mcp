@@ -12,16 +12,36 @@ logger = get_logger(__name__)
 # Map of API operations to required scopes
 # This can be expanded as more modules and operations are added
 API_SCOPE_REQUIREMENTS = {
+    # Detections operations
     "QueryDetects": ["detections:read"],
     "GetDetectSummaries": ["detections:read"],
+    # Hosts operations
     "QueryDevices": ["hosts:read"],
     "GetDeviceDetails": ["hosts:read"],
+    # Incidents operations
     "QueryIncidents": ["incidents:read"],
     "GetIncidentDetails": ["incidents:read"],
     "CrowdScore": ["incidents:read"],
     "GetIncidents": ["incidents:read"],
     "GetBehaviors": ["incidents:read"],
     "QueryBehaviors": ["incidents:read"],
+    # Intel operations
+    "QueryIntelActorEntities": ["actors-falcon-intelligence:read"],
+    "QueryIntelIndicatorEntities": ["indicators:read"],
+    "QueryIntelReportEntities": ["reports:read"],
+    "QueryIntelRuleEntities": ["rules:read"],
+    "GetIntelActorEntities": ["actors-falcon-intelligence:read"],
+    "GetIntelIndicatorEntities": ["indicators:read"],
+    "GetIntelReportPDF": ["reports:read"],
+    "GetIntelReportEntities": ["reports:read"],
+    "GetIntelRuleEntities": ["rules:read"],
+    "GetIntelRuleFile": ["rules:read"],
+    "GetLatestIntelIndicatorTimestamp": ["indicators:read"],
+    "GetMitreReport": ["actors-falcon-intelligence:read"],
+    "GetRuleDetails": ["rules:read"],
+    "GetRulesDetails": ["rules:read"],
+    "GetRulePreview": ["rules:read"],
+    "GetVulnerabilities": ["vulnerabilities:read"],
     # Add more mappings as needed
 }
 
