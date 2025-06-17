@@ -45,9 +45,10 @@ class BaseModule(ABC):
             method: Method to register
             name: Tool name
         """
-        server.add_tool(method, name=name)
-        self.tools.append(name)
-        logger.debug("Added tool: %s", name)
+        prefixed_name = f"falcon_{name}"
+        server.add_tool(method, name=prefixed_name)
+        self.tools.append(prefixed_name)
+        logger.debug("Added tool: %s", prefixed_name)
 
     def _base_get_by_ids(
         self, operation: str, ids: List[str],

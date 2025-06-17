@@ -86,7 +86,7 @@ class TestFalconMCPServer(unittest.TestCase):
             FalconMCPServer()
 
     @patch('src.server.FalconClient')
-    def test_check_falcon_connectivity(self, mock_client):
+    def test_falcon_check_connectivity(self, mock_client):
         """Test checking Falcon API connectivity."""
         # Setup mock
         mock_client_instance = MagicMock()
@@ -97,8 +97,8 @@ class TestFalconMCPServer(unittest.TestCase):
         # Create server with mock client
         server = FalconMCPServer()
 
-        # Call check_falcon_connectivity
-        result = server.check_falcon_connectivity()
+        # Call falcon_check_connectivity
+        result = server.falcon_check_connectivity()
 
         # Verify client method was called
         mock_client_instance.is_authenticated.assert_called_once()

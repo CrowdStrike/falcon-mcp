@@ -17,8 +17,8 @@ class TestDetectionsModule(TestModules):
     def test_register_tools(self):
         """Test registering tools with the server."""
         expected_tools = [
-            "search_detections",
-            "get_detection_details",
+            "falcon_search_detections",
+            "falcon_get_detection_details",
         ]
         self.assert_tools_registered(expected_tools)
 

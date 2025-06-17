@@ -92,14 +92,14 @@ class FalconMCPServer:
         """Register tools from all modules."""
         # Register core tools directly
         self.server.add_tool(
-            self.check_falcon_connectivity,
-            name="check_falcon_connectivity",
+            self.falcon_check_connectivity,
+            name="falcon_check_connectivity",
             description="Check connectivity to the Falcon API."
         )
 
         self.server.add_tool(
             self.get_available_modules,
-            name="get_available_modules",
+            name="falcon_get_available_modules",
             description="Get information about available modules."
         )
 
@@ -107,7 +107,7 @@ class FalconMCPServer:
         for module in self.modules.values():
             module.register_tools(self.server)
 
-    def check_falcon_connectivity(self) -> Dict[str, bool]:
+    def falcon_check_connectivity(self) -> Dict[str, bool]:
         """Check connectivity to the Falcon API.
 
         Returns:

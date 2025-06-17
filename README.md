@@ -102,25 +102,25 @@ pytest
 
 The server provides core tools for interacting with the Falcon API:
 
-- `check_falcon_connectivity`: Check connectivity to the Falcon API
-- `get_available_modules`: Get information about available modules
+- `falcon_check_connectivity`: Check connectivity to the Falcon API
+- `falcon_get_available_modules`: Get information about available modules
 
 ### Detections Module
 
 Provides tools for accessing and analyzing CrowdStrike Falcon detections:
 
-- `search_detections`: Search for detections in your CrowdStrike environment
-- `get_detection_details`: Get detailed information about a specific detection
+- `falcon_search_detections`: Search for detections in your CrowdStrike environment
+- `falcon_get_detection_details`: Get detailed information about a specific detection
 
 ### Incidents Module
 
 Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
 
-- `show_crowd_score`: Show CrowdScore in the environment
-- `get_incident_details`: Get incidents by ID
-- `search_incidents`: Query for incidents
-- `get_behavior_details`: Get behaviors by ID
-- `search_behaviors`: Query for behaviors
+- `falcon_show_crowd_score`: Show CrowdScore in the environment
+- `falcon_get_incident_details`: Get incidents by ID
+- `falcon_search_incidents`: Query for incidents
+- `falcon_get_behavior_details`: Get behaviors by ID
+- `falcon_search_behaviors`: Query for behaviors
 
 ## MCP Configuration
 
