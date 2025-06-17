@@ -109,9 +109,18 @@ The server provides core tools for interacting with the Falcon API:
 
 Provides tools for accessing and analyzing CrowdStrike Falcon detections:
 
-- `search_detections`: Search for detections in your CrowdStrike environment
-- `get_detection_details`: Get detailed information about a specific detection
-- `get_detection_count`: Get the count of detections matching a query
+- `detects_query_detects`: Search for detections in your CrowdStrike environment
+- `detects_get_detect_summaries`: Get detailed information about a specific detection
+
+### Incidents Module
+
+Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
+
+- `incidents_crowd_score`: Show CrowdScore in the environment
+- `incidents_get_incidents`: Get incidents by ID
+- `incidents_query_incidents`: Query for incidents
+- `incidents_get_behaviors`: Get behaviors by ID
+- `incidents_query_behaviors`: Query for behaviors
 
 ## MCP Configuration
 

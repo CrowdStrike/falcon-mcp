@@ -17,9 +17,8 @@ class TestDetectionsModule(TestModules):
     def test_register_tools(self):
         """Test registering tools with the server."""
         expected_tools = [
-            "search_detections",
-            "get_detection_details",
-            "get_detection_count"
+            "detects_query_detects",
+            "detects_get_detect_summaries",
         ]
         self.assert_tools_registered(expected_tools)
 
@@ -41,14 +40,16 @@ class TestDetectionsModule(TestModules):
         self.mock_client.command.side_effect = [query_response, details_response]
 
         # Call search_detections
-        result = self.module.search_detections(query="test query", limit=10)
+        result = self.module.search_detections(filter="test query", limit=10)
 
         # Verify client commands were called correctly
         self.assertEqual(self.mock_client.command.call_count, 2)
-        self.mock_client.command.assert_any_call(
-            "QueryDetects",
-            parameters={"filter": "test query", "limit": 10}
-        )
+
+        # Check that the first call was to QueryDetects with the right filter and limit
+        first_call = self.mock_client.command.call_args_list[0]
+        self.assertEqual(first_call[0][0], "QueryDetects")
+        self.assertEqual(first_call[1]["parameters"]["filter"], "test query")
+        self.assertEqual(first_call[1]["parameters"]["limit"], 10)
         self.mock_client.command.assert_any_call(
             "GetDetectSummaries",
             body={"ids": ["detection1", "detection2"]}
@@ -78,14 +79,16 @@ class TestDetectionsModule(TestModules):
         self.mock_client.command.side_effect = [query_response, details_response]
 
         # Call search_detections
-        result = self.module.search_detections(query="test query", limit=10)
+        result = self.module.search_detections(filter="test query", limit=10)
 
         # Verify client commands were called correctly
         self.assertEqual(self.mock_client.command.call_count, 2)
-        self.mock_client.command.assert_any_call(
-            "QueryDetects",
-            parameters={"filter": "test query", "limit": 10}
-        )
+
+        # Check that the first call was to QueryDetects with the right filter and limit
+        first_call = self.mock_client.command.call_args_list[0]
+        self.assertEqual(first_call[0][0], "QueryDetects")
+        self.assertEqual(first_call[1]["parameters"]["filter"], "test query")
+        self.assertEqual(first_call[1]["parameters"]["limit"], 10)
         self.mock_client.command.assert_any_call(
             "GetDetectSummaries",
             body={"ids": ["detection1", "detection2"]}
@@ -110,7 +113,7 @@ class TestDetectionsModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call search_detections
-        result = self.module.search_detections(query="invalid query")
+        result = self.module.search_detections(filter="invalid query")
 
         # Verify result contains error
         self.assertEqual(len(result), 1)
@@ -131,7 +134,7 @@ class TestDetectionsModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call get_detection_details
-        result = self.module.get_detection_details("detection1")
+        result = self.module.get_detection_details(["detection1"])
 
         # Verify client command was called correctly
         self.mock_client.command.assert_called_once_with(
@@ -139,8 +142,8 @@ class TestDetectionsModule(TestModules):
             body={"ids": ["detection1"]}
         )
 
-        # Verify result
-        expected_result = {"id": "detection1", "name": "Test Detection 1"}
+        # Verify result - handle_api_response returns a list of resources
+        expected_result = [{"id": "detection1", "name": "Test Detection 1"}]
         self.assertEqual(result, expected_result)
 
     def test_get_detection_details_not_found(self):
@@ -155,35 +158,11 @@ class TestDetectionsModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call get_detection_details
-        result = self.module.get_detection_details("nonexistent")
+        result = self.module.get_detection_details(["nonexistent"])
 
-        # Verify result contains error
-        self.assertIn("error", result)
-        self.assertEqual(result["error"], "Detection not found")
-
-    def test_get_detection_count(self):
-        """Test getting detection count."""
-        # Setup mock response
-        mock_response = {
-            "status_code": 200,
-            "body": {
-                "resources": ["detection1", "detection2", "detection3"]
-            }
-        }
-        self.mock_client.command.return_value = mock_response
-
-        # Call get_detection_count
-        result = self.module.get_detection_count(query="test query")
-
-        # Verify client command was called correctly
-        self.mock_client.command.assert_called_once_with(
-            "QueryDetects",
-            parameters={"filter": "test query"}
-        )
-
-        # Verify result
-        expected_result = {"count": 3}
-        self.assertEqual(result, expected_result)
+        # For empty resources, handle_api_response returns the default_result (empty dict)
+        # We should check that the result is empty
+        self.assertEqual(result, {})
 
 
 if __name__ == '__main__':
