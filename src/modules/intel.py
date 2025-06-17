@@ -17,6 +17,7 @@ class IntelModule(BaseModule):
     """Module for accessing and analyzing CrowdStrike Falcon intelligence data."""
 
     def register_tools(self, server: FastMCP) -> None:
+        return
         """Register tools with the MCP server.
 
         Args:

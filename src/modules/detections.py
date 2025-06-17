@@ -6,6 +6,7 @@ This module provides tools for accessing and analyzing CrowdStrike Falcon detect
 from typing import Dict, List, Optional, Any
 
 from mcp.server import FastMCP
+from pydantic import Field
 
 from ..common.logging import get_logger
 from ..common.errors import handle_api_response
@@ -28,13 +29,13 @@ class DetectionsModule(BaseModule):
         self._add_tool(
             server,
             self.search_detections,
-            name="search_detections"
+            name="detects_query_detects"
         )
 
         self._add_tool(
             server,
             self.get_detection_details,
-            name="get_detection_details"
+            name="detects_get_detect_summaries"
         )
 
         self._add_tool(
@@ -44,21 +45,49 @@ class DetectionsModule(BaseModule):
         )
 
     def search_detections(
-        self, query: Optional[str] = None, limit: int = 100
+        self,
+        filter: Optional[str] = Field(default=None, description="Filter detections using a query in Falcon Query Language (FQL) An asterisk wildcard * includes all results."), 
+        limit: Optional[int] = Field(default=100, min=1, max=9999, description="The maximum number of detections to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results."),
+        offset: Optional[int] = Field(default=0, min=0, description="The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results."),
+        q: Optional[str] = Field(default=None, description="Search all detection metadata for the provided string."), 
+        sort: Optional[str] = Field(default=None, description="""Sort detections using these options:
+
+    first_behavior: Timestamp of the first behavior associated with this detection last_behavior: Timestamp of the last behavior associated with this detection
+    max_severity: Highest severity of the behaviors associated with this detection
+    max_confidence: Highest confidence of the behaviors associated with this detection
+    adversary_id: ID of the adversary associated with this detection, if any
+    devices.hostname: Hostname of the host where this detection was detected
+    Sort either asc (ascending) or desc (descending).
+
+    For example: last_behavior|asc""", examples={"last_behavior|asc"}),
     ) -> List[Dict[str, Any]]:
         """Search for detections in your CrowdStrike environment.
 
         Args:
-            query: FQL query string to filter detections
-            limit: Maximum number of results to return
+            filter: Filter detections using a query in Falcon Query Language (FQL) An asterisk wildcard * includes all results.
+            limit: The maximum number of detections to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results.
+            offset: The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results.
+            q: Search all detection metadata for the provided string.
+            sort: Sort detections using these options:
+                first_behavior: Timestamp of the first behavior associated with this detection last_behavior: Timestamp of the last behavior associated with this detection
+                max_severity: Highest severity of the behaviors associated with this detection
+                max_confidence: Highest confidence of the behaviors associated with this detection
+                adversary_id: ID of the adversary associated with this detection, if any
+                devices.hostname: Hostname of the host where this detection was detected
+                Sort either asc (ascending) or desc (descending).
+
+                For example: last_behavior|asc
 
         Returns:
             List of detection details
         """
         # Prepare parameters
         params = prepare_api_parameters({
-            "filter": query,
-            "limit": limit
+            "filter": filter,
+            "limit": limit,
+            "offset": offset,
+            "q": q,
+            "sort": sort,
         })
 
         # Define the operation name
@@ -107,11 +136,14 @@ class DetectionsModule(BaseModule):
 
         return []
 
-    def get_detection_details(self, detection_id: str) -> Dict[str, Any]:
-        """Get detailed information about a specific detection.
+    def get_detection_details(
+        self,
+        ids: List[str] = Field(description="ID(s) of the detections to retrieve. View key attributes of detections, including the associated host, disposition, objective/tactic/technique, adversary, and more. Specify one or more detection IDs (max 1000 per request). Find detection IDs with the QueryDetects operation, the Falcon console, or the Streaming API."),
+    ) -> Dict[str, Any]:
+        """View information about detections. Gets detailed information about a specific detection.
 
         Args:
-            detection_id: The ID of the detection to retrieve
+            ids: ID(s) of the detections to retrieve. View key attributes of detections, including the associated host, disposition, objective/tactic/technique, adversary, and more. Specify one or more detection IDs (max 1000 per request). Find detection IDs with the QueryDetects operation, the Falcon console, or the Streaming API.
 
         Returns:
             Detection details
@@ -119,19 +151,11 @@ class DetectionsModule(BaseModule):
         # Define the operation name
         operation = "GetDetectSummaries"
 
-        logger.debug("Getting detection details for ID: %s", detection_id)
+        logger.debug("Getting detection details for ID: %s", ids)
 
-        # Make the API request
-        response = self.client.command(
-            operation,
-            body={"ids": [detection_id]}
-        )
-
-        # Extract the first resource
-        return extract_first_resource(
-            response,
+        return self._base_get_by_ids(
             operation=operation,
-            not_found_error="Detection not found"
+            ids=ids,
         )
 
     def get_detection_count(self, query: Optional[str] = None) -> Dict[str, int]:

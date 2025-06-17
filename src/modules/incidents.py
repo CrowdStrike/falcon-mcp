@@ -107,7 +107,7 @@ class IncidentsModule(BaseModule):
         Returns:
             Tool returns the CrowdScore entity data.
         """
-        return self._base_get(
+        return self._base_get_by_ids(
             operation="GetIncidents",
             ids=ids,
         )
@@ -168,7 +168,7 @@ class IncidentsModule(BaseModule):
         Returns:
             Tool returns the CrowdScore behaviors by ID.
         """
-        return self._base_get(
+        return self._base_get_by_ids(
             operation="GetBehaviors",
             ids=ids,
         )
@@ -214,25 +214,6 @@ class IncidentsModule(BaseModule):
 
         # Make the API request
         response = self.client.command(operation, parameters=params)
-
-        # Handle the response
-        return handle_api_response(
-            response,
-            operation=operation,
-            error_message="Failed to perform operation",
-            default_result={}
-        )
-
-
-    def _base_get(
-        self, operation: str, ids: List[str],
-    ) -> Dict[str, Any]:
-        body = prepare_api_parameters({
-            "ids": ids
-        })
-
-        # Make the API request
-        response = self.client.command(operation, body=body)
 
         # Handle the response
         return handle_api_response(
