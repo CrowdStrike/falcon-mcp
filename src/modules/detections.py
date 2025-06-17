@@ -1,4 +1,4 @@
-# pylint: disable=W0622
+# pylint: disable=too-many-arguments,too-many-positional-arguments,redefined-builtin
 """
 Detections module for Falcon MCP Server
 
@@ -30,13 +30,13 @@ class DetectionsModule(BaseModule):
         self._add_tool(
             server,
             self.search_detections,
-            name="detects_query_detects"
+            name="search_detections"
         )
 
         self._add_tool(
             server,
             self.get_detection_details,
-            name="detects_get_detect_summaries"
+            name="get_detection_details"
         )
 
     def search_detections(
@@ -76,9 +76,10 @@ class DetectionsModule(BaseModule):
         Available FQL Filters:
             adversary_ids
             assigned_to_name
-            cid	first_behavior
+            cid
             date_updated
             detection_id
+            first_behavior
             last_behavior
             max_confidence
             max_severity

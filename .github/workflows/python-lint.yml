@@ -24,4 +24,4 @@ jobs:
 
     - name: Lint with pylint
       run: |
-        pylint --disable R0801,R0913,R0917 src/ tests/
+        pylint src/ tests/

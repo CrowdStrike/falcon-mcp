@@ -8,7 +8,6 @@ from unittest.mock import patch, MagicMock
 from src.common.logging import configure_logging, get_logger
 
 
-# pylint: disable=unused-variable
 class TestLoggingUtils(unittest.TestCase):
     """Test cases for the logging utilities."""
 
@@ -25,7 +24,7 @@ class TestLoggingUtils(unittest.TestCase):
 
         # Verify basicConfig was called with DEBUG level
         mock_basic_config.assert_called_once()
-        args, kwargs = mock_basic_config.call_args
+        _args, kwargs = mock_basic_config.call_args
         self.assertEqual(kwargs["level"], logging.DEBUG)
 
         # Verify logger was configured correctly
@@ -48,7 +47,7 @@ class TestLoggingUtils(unittest.TestCase):
 
         # Verify basicConfig was called with INFO level
         mock_basic_config.assert_called_once()
-        args, kwargs = mock_basic_config.call_args
+        _args, kwargs = mock_basic_config.call_args
         self.assertEqual(kwargs["level"], logging.INFO)
 
         # Verify logger was configured correctly

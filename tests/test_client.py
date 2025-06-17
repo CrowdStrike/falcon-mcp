@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 from src.client import FalconClient
 
 
-# pylint: disable=unused-variable
 class TestFalconClient(unittest.TestCase):
     """Test cases for the Falcon API client."""
 
@@ -22,7 +21,7 @@ class TestFalconClient(unittest.TestCase):
         }.get(key, default)
 
         # Create client with base URL
-        client = FalconClient(
+        _client = FalconClient(
             base_url="https://api.test.crowdstrike.com",
             debug=True
         )
@@ -47,7 +46,7 @@ class TestFalconClient(unittest.TestCase):
         }.get(key, default)
 
         # Create client with environment variables
-        client = FalconClient()
+        _client = FalconClient()
 
         # Verify APIHarnessV2 was initialized correctly
         mock_apiharness.assert_called_once()
