@@ -1,3 +1,4 @@
+# pylint: disable=W0622
 """
 Incidents module for Falcon MCP Server
 
@@ -8,9 +9,8 @@ from typing import Dict, List, Optional, Any
 from mcp.server import FastMCP
 from pydantic import Field
 
-from ..common.logging import get_logger
 from ..common.errors import handle_api_response
-from ..common.utils import prepare_api_parameters, extract_first_resource
+from ..common.utils import prepare_api_parameters
 from .base import BaseModule
 
 
@@ -56,7 +56,7 @@ class IncidentsModule(BaseModule):
 
     def crowd_score(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results."), 
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results."),
         limit: Optional[int] = Field(default=100, min=1, max=2500, description="Maximum number of records to return. (Max: 2500)"),
         offset: Optional[int] = Field(default=0, min=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="TThe property to sort by. (Ex: modified_timestamp.desc)", examples={"modified_timestamp.desc"}),

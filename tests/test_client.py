@@ -4,8 +4,6 @@ Tests for the Falcon API client.
 import unittest
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from src.client import FalconClient
 
 

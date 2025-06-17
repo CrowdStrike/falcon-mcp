@@ -1,3 +1,6 @@
+"""
+Tests for the Incidents module.
+"""
 from src.modules.incidents import IncidentsModule
 from tests.modules.utils.test_modules import TestModules
 

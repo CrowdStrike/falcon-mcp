@@ -1,3 +1,4 @@
+# pylint: disable=W0622,W0101
 """
 Intel module for Falcon MCP Server
 
@@ -7,9 +8,8 @@ from typing import Dict, List, Optional, Any
 
 from mcp.server import FastMCP
 
-from ..common.logging import get_logger
 from ..common.errors import handle_api_response
-from ..common.utils import prepare_api_parameters, extract_first_resource
+from ..common.utils import prepare_api_parameters
 from .base import BaseModule
 
 
@@ -17,12 +17,13 @@ class IntelModule(BaseModule):
     """Module for accessing and analyzing CrowdStrike Falcon intelligence data."""
 
     def register_tools(self, server: FastMCP) -> None:
-        return
         """Register tools with the MCP server.
 
         Args:
             server: MCP server instance
         """
+
+        return
         # Register Query tools
         self._add_tool(
             server,

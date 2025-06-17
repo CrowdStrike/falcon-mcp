@@ -1,3 +1,6 @@
+"""
+Tests for the Intel module.
+"""
 import pytest
 from src.modules.intel import IntelModule
 from tests.modules.utils.test_modules import TestModules
@@ -11,8 +14,8 @@ class TestIntelModule(TestModules):
         self.setup_module(IntelModule)
 
     def test_register_tools(self):
-        pytest.skip("Skipping this test for now, method does not exist")
         """Test registering tools with the server."""
+        pytest.skip("Skipping this test for now, method does not exist")
         expected_tools = [
             "intel_query_intel_actor_entities",
             "intel_query_intel_indicator_entities",
