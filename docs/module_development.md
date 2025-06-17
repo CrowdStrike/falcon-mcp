@@ -122,53 +122,30 @@ This approach simplifies module registration while maintaining a clean architect
 
 ### 4. Add Tests
 
-Create a test file in the `tests/modules` directory:
+Create a test file in the `tests/modules` directory that inherits from the `TestModules` base class:
 
 ```python
 """
 Tests for the YourModule module.
 """
-import unittest
-from unittest.mock import MagicMock, patch
-
-from mcp.server import FastMCP
-
-from src.client import FalconClient
 from src.modules.your_module import YourModule
+from tests.modules.utils.test_modules import TestModules
 
 
-class TestYourModule(unittest.TestCase):
+class TestYourModule(TestModules):
     """Test cases for the YourModule module."""
 
     def setUp(self):
         """Set up test fixtures."""
-        # Create a mock client
-        self.mock_client = MagicMock(spec=FalconClient)
-
-        # Create the module
-        self.module = YourModule(self.mock_client)
-
-        # Create a mock server
-        self.mock_server = MagicMock(spec=FastMCP)
+        self.setup_module(YourModule)
 
     def test_register_tools(self):
         """Test registering tools with the server."""
-        # Call register_tools
-        self.module.register_tools(self.mock_server)
-
-        # Verify that add_tool was called for each tool
-        self.assertEqual(self.mock_server.add_tool.call_count, 1)  # Adjust based on number of tools
-
-        # Get the tool names that were registered
-        registered_tools = [
-            call.kwargs['name']
-            for call in self.mock_server.add_tool.call_args_list
+        expected_tools = [
+            "falcon_your_tool_name",
+            # Add other tools here
         ]
-
-        # Verify that all expected tools were registered
-        expected_tools = ["your_tool_name"]
-        for tool in expected_tools:
-            self.assertIn(tool, registered_tools)
+        self.assert_tools_registered(expected_tools)
 
     def test_your_tool_method(self):
         """Test your tool method."""
@@ -212,6 +189,13 @@ class TestYourModule(unittest.TestCase):
         self.assertIn("error", result)
         self.assertIn("details", result)
 ```
+
+The `TestModules` base class provides:
+
+1. A `setup_module()` method that handles the common setup of mocking the client and server
+2. An `assert_tools_registered()` helper method to verify tool registration
+
+This approach simplifies test code and ensures consistency across all module tests.
 
 ## Best Practices
 

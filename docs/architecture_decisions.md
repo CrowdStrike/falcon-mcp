@@ -115,7 +115,7 @@ We implemented a `.pylintrc` configuration file to:
 
 ### Context
 
-Tests needed to be updated to reflect the architectural changes.
+Tests needed to be updated to reflect the architectural changes. Additionally, we wanted to standardize the approach to testing modules to ensure consistency and reduce code duplication.
 
 ### Decision
 
@@ -124,11 +124,17 @@ We updated the tests to:
 1. Use the new module registry system
 2. Properly mock dependencies
 3. Ensure all functionality is correctly tested
+4. Create a base test class for module tests to standardize testing patterns
 
 ### Implementation
 
 - Updated test mocks to patch the correct locations after refactoring
 - Fixed assertions to match the new function signatures and behavior
+- Created a `TestModules` base class in `tests/modules/utils/test_modules.py` that:
+  - Provides a `setup_module()` method to handle the common setup of mocking the client and server
+  - Provides an `assert_tools_registered()` helper method to verify tool registration
+  - Simplifies test code and ensures consistency across all module tests
+- Updated all module test classes to inherit from `TestModules` instead of directly from `unittest.TestCase`
 - Ensured all tests pass with the new architecture
 
 ## Authentication Headers Access
