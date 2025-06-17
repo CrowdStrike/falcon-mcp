@@ -6,6 +6,7 @@ This module provides tools for accessing and analyzing CrowdStrike Falcon incide
 from typing import Dict, List, Optional, Any
 
 from mcp.server import FastMCP
+from pydantic import Field
 
 from ..common.logging import get_logger
 from ..common.errors import handle_api_response
@@ -53,13 +54,18 @@ class IncidentsModule(BaseModule):
             name="incidents_query_behaviors"
         )
 
-
-    def crowd_score(self, query: Optional[str] = None, limit: int = 100, offset: int = 0, sort: Optional[str] = None) -> Dict[str, Any]:
+    def crowd_score(
+        self,
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results."), 
+        limit: Optional[int] = Field(default=100, min=1, max=2500, description="Maximum number of records to return. (Max: 2500)"),
+        offset: Optional[int] = Field(default=0, min=0, description="Starting index of overall result set from which to return ids."),
+        sort: Optional[str] = Field(default=None, description="TThe property to sort by. (Ex: modified_timestamp.desc)", examples={"modified_timestamp.desc"}),
+    ) -> Dict[str, Any]:
         """Query environment wide CrowdScore and return the entity data.
 
         Args:
-            query: FQL Syntax formatted string used to limit the results.
-            limit: Maximum number of records to return. Max 2500.
+            filter: FQL Syntax formatted string used to limit the results.
+            limit: Maximum number of records to return. (Max: 2500)
             offset: Starting index of overall result set from which to return ids.
             sort: The property to sort by. (Ex: modified_timestamp.desc)
 
@@ -68,7 +74,7 @@ class IncidentsModule(BaseModule):
         """
         # Prepare parameters
         params = prepare_api_parameters({
-            "query": query,
+            "filter": filter,
             "limit": limit,
             "offset": offset,
             "sort": sort,
@@ -89,7 +95,10 @@ class IncidentsModule(BaseModule):
         )
 
 
-    def get_incidents(self, ids: List[str]) -> Dict[str, Any]:
+    def get_incidents(
+        self,
+        ids: List[str] = Field(description="Incident ID(s) to retrieve."),
+    ) -> Dict[str, Any]:
         """Get details on incidents by providing incident IDs.
 
         Args:
@@ -104,21 +113,19 @@ class IncidentsModule(BaseModule):
         )
 
     def query_incidents(
-        self, filter: Optional[str] = None, limit: int = 100, offset: int = 0, sort: Optional[str] = None,
+        self,
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. Review the following table for a complete list of available filters."),
+        limit: int = Field(default=100, min=1, max=500, description="Maximum number of records to return. (Max: 500)"),
+        offset: int = Field(default=0, min=0, description="Starting index of overall result set from which to return ids."),
+        sort: Optional[str] = Field(default=None, description="The property to sort by. FQL syntax. Ex: state.asc, name.desc"),
     ) -> Dict[str, Any]:
         """Search for incidents by providing a FQL filter, sorting, and paging details.
 
         Args:
-            filter: The filter expression that should be used to limit the results. FQL syntax.
-            limit: The maximum number of records to return in this response. [Integer, 1-500]. Use with the offset parameter to manage pagination of results.
-            offset: The offset to start retrieving records from. Integer. Use with the limit parameter to manage pagination of results.
-            sort: The property to sort by. FQL syntax. Ex: state.asc, name.desc
-                    Available sort fields:
-                    assigned_to                 sort_score
-                    assigned_to_name            start
-                    end                         state
-                    modified_timestamp          status
-                    name
+            filter: FQL Syntax formatted string used to limit the results. Review the following table for a complete list of available filters.
+            limit: Maximum number of records to return. (Max: 500)
+            offset: Starting index of overall result set from which to return ids.
+            sort: The property to sort by. (Ex: modified_timestamp.desc)
 
         For more detail regarding filters and their usage, please review the Falcon Query Language documentation.
 
@@ -138,7 +145,6 @@ class IncidentsModule(BaseModule):
             status: The incident status as a number: 20: New, 25: Reopened, 30: In Progress, 40: Closed. Example: `20`
             modified_timestamp: The most recent time a user has updated the incident. Example: `2021-02-04T05:57:04Z`
 
-
         Returns:
             Tool returns CrowdStrike incidents.
         """
@@ -150,7 +156,10 @@ class IncidentsModule(BaseModule):
             sort=sort,
         )
 
-    def get_behaviors(self, ids: List[str]) -> Dict[str, Any]:
+    def get_behaviors(
+        self,
+        ids: List[str] = Field(description="Behavior ID(s) to retrieve."),
+    ) -> Dict[str, Any]:
         """Get details on behaviors by providing behavior IDs.
 
         Args:
@@ -166,14 +175,18 @@ class IncidentsModule(BaseModule):
 
 
     def query_behaviors(
-        self, filter: Optional[str] = None, limit: int = 100, offset: int = 0, sort: Optional[str] = None,
+        self,
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results."),
+        limit: int = Field(default=100, min=1, max=500, description="Maximum number of records to return. (Max: 500)"),
+        offset: int = Field(default=0, min=0, description="Starting index of overall result set from which to return ids."),
+        sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: modified_timestamp.desc)"),
     ) -> Dict[str, Any]:
         """Search for behaviors by providing a FQL filter, sorting, and paging details.
 
         Args:
             filter: FQL Syntax formatted string used to limit the results.
             limit: The maximum number of records to return in this response. [Integer, 1-500]. Use with the offset parameter to manage pagination of results.
-            offset: The offset to start retrieving records from. Integer. Use with the limit parameter to manage pagination of results.
+            offset: Starting index of overall result set from which to return ids.
             sort: The property to sort by. (Ex: modified_timestamp.desc)
 
 
