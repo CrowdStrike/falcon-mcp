@@ -75,84 +75,84 @@ class DetectionsModule(BaseModule):
 
         Available FQL Filters:
             adversary_ids
-            date_updated
-            last_behavior
-            max_severity_displayname
-            status
             assigned_to_name
-            detection_id
-            max_confidence
-            seconds_to_resolved
             cid	first_behavior
+            date_updated
+            detection_id
+            last_behavior
+            max_confidence
             max_severity
+            max_severity_displayname
+            seconds_to_resolved
             seconds_to_triaged
+            status
             behaviors
                 alleged_filetype
-                md5
-                sha256
                 behavior_id
-                objective
-                tactic
                 cmdline
-                parent_details.parent_cmdline
-                technique
                 confidence
-                parent_details.parent_md5
-                timestamp
                 contral_graph_id
-                parent_details.parent_process_id
-                triggering_process_id
                 device_id
-                parent_details.parent_process_graph_id
-                triggering_process_graph_id
                 filename
-                parent_details.parent_sha256
-                user_id
                 ioc_source
-                pattern_disposition
-                user_name
                 ioc_type
-                scenario
                 ioc_value
+                md5
+                objective
+                parent_details.parent_cmdline
+                parent_details.parent_md5
+                parent_details.parent_process_graph_id
+                parent_details.parent_process_id
+                parent_details.parent_sha256
+                pattern_disposition
+                scenario
                 severity
+                sha256
+                tactic
+                technique
+                timestamp
+                triggering_process_graph_id
+                triggering_process_id
+                user_id
+                user_name
             device
                 agent_load_flags
-                first_seen
-                platform_name
                 agent_local_time
-                hostname
-                product_type
                 agent_version
-                last_seen
-                product_type_desc
                 bios_manufacturer
-                local_ip
-                release_group
                 bios_version
-                mac_address
-                reduced_functionality_mode
                 cid	machine_domain
-                serial_number
                 config_id_base
-                major_version
-                site_name
                 config_id_build
-                minor_version
-                status
                 config_id_platform
-                modified_timestamp
-                system_product_name
                 cpu_signature
-                os_version
-                system_manufacturer
                 device_id
-                ou
                 external_ip
+                first_seen
+                hostname
+                last_seen
+                local_ip
+                mac_address
+                major_version
+                minor_version
+                modified_timestamp
+                os_version
+                ou
                 platform_id
+                platform_name
+                product_type
+                product_type_desc
+                reduced_functionality_mode
+                release_group
+                serial_number
+                site_name
+                status
+                system_manufacturer
+                system_product_name
             hostinfo.domain
+            hostinfo.active_directory_dn_display
             quarantined_files.id
             quarantined_files.sha256
-            hostinfo.active_directory_dn_display
             quarantined_files.paths
             quarantined_files.state
 

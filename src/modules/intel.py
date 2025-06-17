@@ -143,55 +143,69 @@ class IntelModule(BaseModule):
 
         Filter parameters include: 
             actors
-            sub_type.name
             actors.id
-            sub_type.slug
             actors.name
-            tags
             actors.slug
-            tags.id
             actors.url
-            tags.slug
-            created_date
-            tags.value
-            description
-            target_countries
-            id
-            target_countries.id
-            last_modified_date
-            target_countries.slug
-            motivations
-            target_countries.value
-            motivations.id
-            target_industries
-            motivations.slug
-            target_industries.id
-            motivations.value
-            target_industries.slug
-            name
-            target_industries.value
-            name.raw
-            type
-            short_description
-            type.id
-            slug
-            type.name
-            sub_type
-            type.slug
-            sub_type.id
-            url
             animal_classifier
+            created_date
+            description
+            id
+            last_modified_date
+            motivations
+            motivations.id
+            motivations.slug
+            motivations.value
+            name
+            name.raw
+            short_description
+            slug
+            sub_type
+            sub_type.id
+            sub_type.name
+            sub_type.slug
+            tags
+            tags.id
+            tags.slug
+            tags.value
+            target_countries
+            target_countries.id
+            target_countries.slug
+            target_countries.value
+            target_industries
+            target_industries.id
+            target_industries.slug
+            target_industries.value
+            type
+            type.id
+            type.name
+            type.slug
+            url
 
         Returns:
             Tool returns CrowdStrike Intel actors.
         """
-        return self._base_query(
-            operation="QueryIntelActorEntities",
-            filter=filter,
-            limit=limit,
-            offset=offset,
-            q=q,
-            sort=sort,
+
+        operation = "QueryIntelActorEntities"
+
+        # Prepare parameters
+        params = prepare_api_parameters({
+            "filter": filter,
+            "limit": limit,
+            "offset": offset,
+            "q": q,
+            "sort": sort,
+        })
+
+        # Make the API request
+        response = self.client.command(operation, parameters=params)
+
+        # Handle the response
+        return handle_api_response(
+            response,
+            operation=operation,
+            error_message="Failed to perform operation",
+            default_result={}
         )
 
     def query_intel_indicator_entities(
@@ -217,39 +231,52 @@ class IntelModule(BaseModule):
 
         Filter parameters include:
             _marker
-            labels.name
             actors
-            last_updated
             deleted
-            malicious_confidence
             domain_types
-            malware_families
             id
-            published_date
             indicator
-            reports
             ip_address_types
-            targets
             kill_chains
-            threat_types
             labels
-            type
             labels.created_on
-            vulnerabilities
             labels.last_valid_on
+            labels.name
+            last_updated
+            malicious_confidence
+            malware_families
+            published_date
+            reports
+            targets
+            threat_types
+            type
+            vulnerabilities
 
         Returns:
             Tool returns CrowdStrike Intel indicators.
         """
-        return self._base_query(
-            operation="QueryIntelIndicatorEntities",
-            filter=filter,
-            include_deleted=include_deleted,
-            include_relations=include_relations,
-            limit=limit,
-            offset=offset,
-            q=q,
-            sort=sort,
+        operation = "QueryIntelIndicatorEntities"
+
+        # Prepare parameters
+        params = prepare_api_parameters({
+            "filter": filter,
+            "include_deleted": include_deleted,
+            "include_relations": include_relations,
+            "limit": limit,
+            "offset": offset,
+            "q": q,
+            "sort": sort,
+        })
+
+        # Make the API request
+        response = self.client.command(operation, parameters=params)
+
+        # Handle the response
+        return handle_api_response(
+            response,
+            operation=operation,
+            error_message="Failed to perform operation",
+            default_result={}
         )
 
     def query_intel_report_entities(

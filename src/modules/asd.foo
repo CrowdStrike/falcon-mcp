@@ -1,0 +1,33 @@
+agent_load_flags
+                agent_local_time
+                agent_version
+                bios_manufacturer
+                bios_version
+                cid	machine_domain
+                config_id_base
+                config_id_build
+                config_id_platform
+                cpu_signature
+                device_id
+                external_ip
+                first_seen
+                hostname
+                last_seen
+                local_ip
+                mac_address
+                major_version
+                minor_version
+                modified_timestamp
+                os_version
+                ou
+                platform_id
+                platform_name
+                product_type
+                product_type_desc
+                reduced_functionality_mode
+                release_group
+                serial_number
+                site_name
+                status
+                system_manufacturer
+                system_product_name
