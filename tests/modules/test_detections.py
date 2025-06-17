@@ -17,8 +17,8 @@ class TestDetectionsModule(TestModules):
     def test_register_tools(self):
         """Test registering tools with the server."""
         expected_tools = [
-            "detects_query_detects",
-            "detects_get_detect_summaries",
+            "search_detections",
+            "get_detection_details",
         ]
         self.assert_tools_registered(expected_tools)
 

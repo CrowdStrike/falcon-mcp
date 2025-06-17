@@ -109,18 +109,18 @@ The server provides core tools for interacting with the Falcon API:
 
 Provides tools for accessing and analyzing CrowdStrike Falcon detections:
 
-- `detects_query_detects`: Search for detections in your CrowdStrike environment
-- `detects_get_detect_summaries`: Get detailed information about a specific detection
+- `search_detections`: Search for detections in your CrowdStrike environment
+- `get_detection_details`: Get detailed information about a specific detection
 
 ### Incidents Module
 
 Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
 
-- `incidents_crowd_score`: Show CrowdScore in the environment
-- `incidents_get_incidents`: Get incidents by ID
-- `incidents_query_incidents`: Query for incidents
-- `incidents_get_behaviors`: Get behaviors by ID
-- `incidents_query_behaviors`: Query for behaviors
+- `show_crowd_score`: Show CrowdScore in the environment
+- `get_incident_details`: Get incidents by ID
+- `search_incidents`: Query for incidents
+- `get_behavior_details`: Get behaviors by ID
+- `search_behaviors`: Query for behaviors
 
 ## MCP Configuration
 
@@ -155,3 +155,5 @@ To use the Falcon MCP server with AI assistants, you can use the provided `examp
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+TODO: automate add falcon\_ prefix to all tools/resources

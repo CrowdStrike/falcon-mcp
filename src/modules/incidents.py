@@ -27,31 +27,31 @@ class IncidentsModule(BaseModule):
         self._add_tool(
             server,
             self.crowd_score,
-            name="incidents_crowd_score"
+            name="show_crowd_score"
         )
 
         self._add_tool(
             server,
             self.get_incidents,
-            name="incidents_get_incidents"
+            name="get_incident_details"
         )
 
         self._add_tool(
             server,
             self.query_incidents,
-            name="incidents_query_incidents"
+            name="search_incidents"
         )
 
         self._add_tool(
             server,
             self.get_behaviors,
-            name="incidents_get_behaviors"
+            name="get_behavior_details"
         )
 
         self._add_tool(
             server,
             self.query_behaviors,
-            name="incidents_query_behaviors"
+            name="search_behaviors"
         )
 
     def crowd_score(
