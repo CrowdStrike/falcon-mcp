@@ -155,5 +155,3 @@ To use the Falcon MCP server with AI assistants, you can use the provided `examp
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-TODO: automate add falcon\_ prefix to all tools/resources
