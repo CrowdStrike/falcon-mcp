@@ -57,8 +57,8 @@ class IncidentsModule(BaseModule):
     def crowd_score(
         self,
         filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results."),
-        limit: Optional[int] = Field(default=100, min=1, max=2500, description="Maximum number of records to return. (Max: 2500)"),
-        offset: Optional[int] = Field(default=0, min=0, description="Starting index of overall result set from which to return ids."),
+        limit: Optional[int] = Field(default=100, ge=1, le=2500, description="Maximum number of records to return. (Max: 2500)"),
+        offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="TThe property to sort by. (Ex: modified_timestamp.desc)", examples={"modified_timestamp.desc"}),
     ) -> Dict[str, Any]:
         """Query environment wide CrowdScore and return the entity data.
@@ -115,8 +115,8 @@ class IncidentsModule(BaseModule):
     def query_incidents(
         self,
         filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. Review the following table for a complete list of available filters."),
-        limit: int = Field(default=100, min=1, max=500, description="Maximum number of records to return. (Max: 500)"),
-        offset: int = Field(default=0, min=0, description="Starting index of overall result set from which to return ids."),
+        limit: int = Field(default=100, ge=1, le=500, description="Maximum number of records to return. (Max: 500)"),
+        offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. FQL syntax. Ex: state.asc, name.desc"),
     ) -> Dict[str, Any]:
         """Search for incidents by providing a FQL filter, sorting, and paging details.
@@ -177,8 +177,8 @@ class IncidentsModule(BaseModule):
     def query_behaviors(
         self,
         filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results."),
-        limit: int = Field(default=100, min=1, max=500, description="Maximum number of records to return. (Max: 500)"),
-        offset: int = Field(default=0, min=0, description="Starting index of overall result set from which to return ids."),
+        limit: int = Field(default=100, ge=1, le=500, description="Maximum number of records to return. (Max: 500)"),
+        offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: modified_timestamp.desc)"),
     ) -> Dict[str, Any]:
         """Search for behaviors by providing a FQL filter, sorting, and paging details.

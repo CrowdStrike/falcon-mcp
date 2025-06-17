@@ -42,8 +42,8 @@ class DetectionsModule(BaseModule):
     def search_detections(
         self,
         filter: Optional[str] = Field(default=None, description="Filter detections using a query in Falcon Query Language (FQL) An asterisk wildcard * includes all results.", examples={"behaviors.sha256:'87b8a76d9c657cb3954936b8afa58652c2a01b2f7d26345b9aff0c831c5cead3'", "status:'New'"}),
-        limit: Optional[int] = Field(default=100, min=1, max=9999, description="The maximum number of detections to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results."),
-        offset: Optional[int] = Field(default=0, min=0, description="The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results."),
+        limit: Optional[int] = Field(default=100, ge=1, le=9999, description="The maximum number of detections to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results."),
+        offset: Optional[int] = Field(default=0, ge=0, description="The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results."),
         q: Optional[str] = Field(default=None, description="Search all detection metadata for the provided string."),
         sort: Optional[str] = Field(default=None, description="""Sort detections using these options:
 
