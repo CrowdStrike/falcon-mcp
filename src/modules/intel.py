@@ -7,6 +7,7 @@ This module provides tools for accessing and analyzing CrowdStrike Falcon intell
 from typing import Dict, List, Optional, Any
 
 from mcp.server import FastMCP
+from pydantic import Field
 
 from ..common.errors import handle_api_response
 from ..common.utils import prepare_api_parameters
@@ -23,7 +24,6 @@ class IntelModule(BaseModule):
             server: MCP server instance
         """
 
-        return
         # Register Query tools
         self._add_tool(
             server,
@@ -36,6 +36,8 @@ class IntelModule(BaseModule):
             self.query_intel_indicator_entities,
             name="intel_query_intel_indicator_entities"
         )
+
+        return
 
         self._add_tool(
             server,
@@ -123,15 +125,62 @@ class IntelModule(BaseModule):
         )
 
     def query_intel_actor_entities(
-        self, filter: Optional[str] = None, limit: int = 100, offset: int = 0, sort: Optional[str] = None,
+        self,
+        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results.", examples={"id:'THE_ACTUAL_ID'"}),
+        limit: Optional[int] = Field(default=100, min=1, max=5000, description="Maximum number of records to return. (Max: 5000)"),
+        offset: Optional[int] = Field(default=0, min=0, description="Starting index of overall result set from which to return ids."),
+        q: Optional[str] = Field(default=None, description="Free text search across all indexed fields."),
+        sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)", examples={"created_date|desc"}),
     ) -> Dict[str, Any]:
         """Search for actors that match provided FQL filters.
 
         Args:
-            filter: The filter expression that should be used to limit the results. FQL syntax.
-            limit: The maximum number of records to return in this response. [Integer, 1-500]. Use with the offset parameter to manage pagination of results.
-            offset: The offset to start retrieving records from. Integer. Use with the limit parameter to manage pagination of results.
-            sort: The property to sort by. FQL syntax. Ex: created_date.desc
+            filter: FQL query expression that should be used to limit the results.
+            limit: Maximum number of records to return. (Max: 5000)
+            offset: Starting index of overall result set from which to return ids.
+            q: Free text search across all indexed fields.
+            sort: The property to sort by. (Ex: created_date|desc)
+
+        Filter parameters include: 
+            actors
+            sub_type.name
+            actors.id
+            sub_type.slug
+            actors.name
+            tags
+            actors.slug
+            tags.id
+            actors.url
+            tags.slug
+            created_date
+            tags.value
+            description
+            target_countries
+            id
+            target_countries.id
+            last_modified_date
+            target_countries.slug
+            motivations
+            target_countries.value
+            motivations.id
+            target_industries
+            motivations.slug
+            target_industries.id
+            motivations.value
+            target_industries.slug
+            name
+            target_industries.value
+            name.raw
+            type
+            short_description
+            type.id
+            slug
+            type.name
+            sub_type
+            type.slug
+            sub_type.id
+            url
+            animal_classifier
 
         Returns:
             Tool returns CrowdStrike Intel actors.
@@ -141,19 +190,53 @@ class IntelModule(BaseModule):
             filter=filter,
             limit=limit,
             offset=offset,
+            q=q,
             sort=sort,
         )
 
     def query_intel_indicator_entities(
-        self, filter: Optional[str] = None, limit: int = 100, offset: int = 0, sort: Optional[str] = None,
+        self,
+        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results.", examples={"id:'THE_ACTUAL_ID'"}),
+        include_deleted: Optional[bool] = Field(default=False, description="Flag indicating if both published and deleted indicators should be returned."),
+        include_relations: Optional[bool] = Field(default=False, description="Flag indicating if related indicators should be returned."),
+        limit: Optional[int] = Field(default=100, min=1, max=5000, description="Maximum number of records to return. (Max: 5000)"),
+        offset: Optional[int] = Field(default=0, min=0, description="Starting index of overall result set from which to return ids."),
+        q: Optional[str] = Field(default=None, description="Free text search across all indexed fields."),
+        sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)", examples={"created_date|desc"}),
     ) -> Dict[str, Any]:
         """Search for indicators that match provided FQL filters.
 
         Args:
-            filter: The filter expression that should be used to limit the results. FQL syntax.
-            limit: The maximum number of records to return in this response. [Integer, 1-500]. Use with the offset parameter to manage pagination of results.
-            offset: The offset to start retrieving records from. Integer. Use with the limit parameter to manage pagination of results.
+            filter: FQL query expression that should be used to limit the results.
+            include_deleted: Flag indicating if both published and deleted indicators should be returned.
+            include_relations: Flag indicating if related indicators should be returned.
+            limit: Maximum number of records to return. (Max: 5000)
+            offset: Starting index of overall result set from which to return ids.
+            q: Free text search across all indexed fields.
             sort: The property to sort by. FQL syntax. Ex: created_date.desc
+
+        Filter parameters include:
+            _marker
+            labels.name
+            actors
+            last_updated
+            deleted
+            malicious_confidence
+            domain_types
+            malware_families
+            id
+            published_date
+            indicator
+            reports
+            ip_address_types
+            targets
+            kill_chains
+            threat_types
+            labels
+            type
+            labels.created_on
+            vulnerabilities
+            labels.last_valid_on
 
         Returns:
             Tool returns CrowdStrike Intel indicators.
@@ -161,8 +244,11 @@ class IntelModule(BaseModule):
         return self._base_query(
             operation="QueryIntelIndicatorEntities",
             filter=filter,
+            include_deleted=include_deleted,
+            include_relations=include_relations,
             limit=limit,
             offset=offset,
+            q=q,
             sort=sort,
         )
 
