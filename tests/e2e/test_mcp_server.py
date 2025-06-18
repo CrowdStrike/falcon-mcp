@@ -11,6 +11,7 @@ import threading
 import time
 import unittest
 from unittest.mock import MagicMock, patch
+import pytest
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
@@ -78,6 +79,7 @@ def _mock_falcon_api_side_effect(operation: str, **kwargs: dict) -> dict:
     return {"status_code": 200, "body": {"resources": []}}
 
 
+@pytest.mark.e2e
 class TestFalconMCPServerE2E(unittest.TestCase):
     """
     End-to-end test suite for the Falcon MCP Server.
