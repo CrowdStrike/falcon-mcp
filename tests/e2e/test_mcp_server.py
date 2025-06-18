@@ -16,12 +16,22 @@ import pytest
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from mcp_use import MCPAgent, MCPClient
+import mcp_use
 
 from src.server import FalconMCPServer
+
+# Models to test against
+# MODELS_TO_TEST = ["gpt-4o", "gpt-4.1-mini", "gpt-4o-mini"]
+MODELS_TO_TEST = ["gpt-4o-mini"]
+# Number of times to run each test
+RUNS_PER_TEST = 5
+# Success threshold for passing a test
+SUCCESS_THRESHOLD = 0.7
 
 # Load environment variables from .env file for local development
 load_dotenv()
 
+mcp_use.set_debug(0)
 
 def _mock_falcon_api_side_effect(operation: str, **kwargs: dict) -> dict:
     """
@@ -120,7 +130,7 @@ class TestFalconMCPServerE2E(unittest.TestCase):
         cls._mock_api_instance.command.side_effect = _mock_falcon_api_side_effect
         mock_apiharness_class.return_value = cls._mock_api_instance
 
-        server = FalconMCPServer(debug=True)
+        server = FalconMCPServer(debug=False)
         cls._server_thread = threading.Thread(target=server.run, args=("sse",))
         cls._server_thread.daemon = True
         cls._server_thread.start()
@@ -134,8 +144,6 @@ class TestFalconMCPServerE2E(unittest.TestCase):
             }
         }
         cls.client = MCPClient(config=server_config)
-        cls.llm = ChatOpenAI(model="gpt-4o", temperature=0)
-        cls.agent = MCPAgent(llm=cls.llm, client=cls.client, verbose=True, use_server_manager=True, memory_enabled=False)
 
 
     @classmethod
@@ -174,52 +182,90 @@ class TestFalconMCPServerE2E(unittest.TestCase):
                 tools.append(data)
             elif event_type == "on_chat_model_stream" and data.get('chunk'):
                 result += str(data['chunk'].content)
+        print("RESULT", result)
+        print("TOOLS", tools)
         return tools, result
+
+    def run_test_with_retries(self, test_logic_coro):
+        """
+        Run a given test logic multiple times against different models and check for a success threshold.
+
+        Args:
+            test_logic_coro: An asynchronous function containing the test's assertions.
+        """
+        success_count = 0
+        total_runs = len(MODELS_TO_TEST) * RUNS_PER_TEST
+
+        for model_name in MODELS_TO_TEST:
+            self.llm = ChatOpenAI(model=model_name, temperature=0.4)
+            self.agent = MCPAgent(llm=self.llm, client=self.client, verbose=False, use_server_manager=True, memory_enabled=False)
+
+            for i in range(RUNS_PER_TEST):
+                print(f"Running test with model {model_name}, try {i+1}/{RUNS_PER_TEST}")
+                try:
+                    # Each test logic run needs a clean slate.
+                    self._mock_api_instance.reset_mock()
+                    self.loop.run_until_complete(test_logic_coro())
+                    success_count += 1
+                except AssertionError as e:
+                    print(f"Assertion failed with model {model_name}, try {i+1}: {e}")
+
+        success_rate = success_count / total_runs if total_runs > 0 else 0
+        print(f"Success rate: {success_rate * 100:.2f}% ({success_count}/{total_runs})")
+        self.assertGreaterEqual(
+            success_rate,
+            SUCCESS_THRESHOLD,
+            f"Success rate of {success_rate*100:.2f}% is below the required {SUCCESS_THRESHOLD*100:.2f}% threshold."
+        )
 
     def test_get_top_3_high_severity_detections(self):
         """Verify the agent can retrieve the top 3 high-severity detections."""
-        
-        prompt = "Give me the details of the top 3 high severity detections, return only detection id and descriptions"
-        tools, result = self.loop.run_until_complete(self._run_agent_stream(prompt))
-        
-        self.assertEqual(len(tools), 1, "Expected 1 tool call")
-        self.assertEqual(tools[0]['input']['tool_name'], "falcon_search_detections")
-        self.assertIn("high", tools[0]['input']['tool_input'].lower())
-        self.assertIn("detection-1", tools[0]['output'])
-        self.assertIn("detection-2", tools[0]['output'])
-        self.assertIn("detection-3", tools[0]['output'])
+        async def test_logic():
+            prompt = "Give me the details of the top 3 high severity detections, return only detection id and descriptions"
+            tools, result = await self._run_agent_stream(prompt)
 
-        self.assertEqual(self._mock_api_instance.command.call_count, 2, "Expected 2 API calls")
-        api_call_1_params = self._mock_api_instance.command.call_args_list[0][1]['parameters']
-        self.assertIn("high", api_call_1_params['filter'].lower())
-        self.assertEqual(api_call_1_params['limit'], 3)
-        self.assertEqual(api_call_1_params['sort'], 'max_severity|desc')
-        api_call_2_body = self._mock_api_instance.command.call_args_list[1][1]['body']
-        self.assertEqual(api_call_2_body['ids'], ["detection-1", "detection-2", "detection-3"])
+            self.assertEqual(len(tools), 1, "Expected 1 tool call")
+            self.assertEqual(tools[0]['input']['tool_name'], "falcon_search_detections")
+            self.assertIn("high", tools[0]['input']['tool_input'].lower())
+            self.assertIn("detection-1", tools[0]['output'])
+            self.assertIn("detection-2", tools[0]['output'])
+            self.assertIn("detection-3", tools[0]['output'])
 
-        self.assertIn("detection-1", result)
-        self.assertIn("detection-2", result)
-        self.assertIn("detection-3", result)
-        
+            self.assertEqual(self._mock_api_instance.command.call_count, 2, "Expected 2 API calls")
+            api_call_1_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
+            self.assertIn("high", api_call_1_params.get('filter').lower())
+            self.assertEqual(api_call_1_params.get('limit'), 3)
+            self.assertEqual(api_call_1_params.get('sort'), 'max_severity|desc')
+            api_call_2_body = self._mock_api_instance.command.call_args_list[1][1].get('body', {})
+            self.assertEqual(api_call_2_body.get('ids'), ["detection-1", "detection-2", "detection-3"])
+
+            self.assertIn("detection-1", result)
+            self.assertIn("detection-2", result)
+            self.assertIn("detection-3", result)
+
+        self.run_test_with_retries(test_logic)
+
     def test_get_highest_detection_for_ip(self):
         """Verify the agent can find the highest-severity detection for a specific IP."""
-        
-        prompt = "What is the highest detection for the device with local_ip 10.0.0.1? Return the detection id as well"
-        tools, result = self.loop.run_until_complete(self._run_agent_stream(prompt))
+        async def test_logic():
+            prompt = "What is the highest detection for the device with local_ip 10.0.0.1? Return the detection id as well"
+            tools, result = await self._run_agent_stream(prompt)
 
-        self.assertEqual(len(tools), 1, f"Expected 1 tool call, but got {len(tools)}")
-        self.assertEqual(tools[0]['input']['tool_name'], "falcon_search_detections")
-        self.assertIn("10.0.0.1", tools[0]['input']['tool_input'])
-        self.assertIn("detection-4", tools[0]['output'])
+            self.assertEqual(len(tools), 1, f"Expected 1 tool call, but got {len(tools)}")
+            self.assertEqual(tools[0]['input']['tool_name'], "falcon_search_detections")
+            self.assertIn("10.0.0.1", tools[0]['input']['tool_input'])
+            self.assertIn("detection-4", tools[0]['output'])
 
-        self.assertEqual(self._mock_api_instance.command.call_count, 2, "Expected 2 API calls")
-        api_call_1_params = self._mock_api_instance.command.call_args_list[0][1]['parameters']
-        self.assertIn("10.0.0.1", api_call_1_params['filter'])
-        api_call_2_body = self._mock_api_instance.command.call_args_list[1][1]['body']
-        self.assertEqual(api_call_2_body['ids'], ["detection-4"])
+            self.assertEqual(self._mock_api_instance.command.call_count, 2, "Expected 2 API calls")
+            api_call_1_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
+            self.assertIn("10.0.0.1", api_call_1_params.get('filter'))
+            api_call_2_body = self._mock_api_instance.command.call_args_list[1][1].get('body', {})
+            self.assertEqual(api_call_2_body.get('ids'), ["detection-4"])
 
-        self.assertIn("detection-4", result)
-        self.assertNotIn("detection-1", result)
+            self.assertIn("detection-4", result)
+            self.assertNotIn("detection-1", result)
+
+        self.run_test_with_retries(test_logic)
 
 if __name__ == '__main__':
     unittest.main() 
