@@ -91,10 +91,23 @@ python sse_usage.py
 
 #### Running tests
 
-```python
+```bash
+# Install development dependencies
 pip install -e ".[dev]"
+
+# Run all tests
 pytest
+
+# Run end-to-end tests
+pytest --run-e2e tests/e2e/
+
+# Run end-to-end tests with verbose output (note: -s is required to see output)
+pytest --run-e2e -v -s tests/e2e/
 ```
+
+> **Note**: The `-s` flag is required to see detailed output from E2E tests.
+
+For more details on running tests, see the [End-to-End Testing Guide](docs/e2e_testing.md).
 
 ## Available Modules
 
@@ -151,6 +164,7 @@ To use the Falcon MCP server with AI assistants, you can use the provided `examp
 
 - [Module Development Guide](docs/module_development.md): Instructions for implementing new modules
 - [Architecture Decisions](docs/architecture_decisions.md): Key architectural decisions and their rationale
+- [End-to-End Testing Guide](docs/e2e_testing.md): Guide for running and understanding E2E tests
 
 ## License
 

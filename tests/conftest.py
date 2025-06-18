@@ -30,3 +30,9 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "e2e" in item.keywords:
             item.add_marker(skip_e2e)
+
+
+@pytest.fixture
+def verbosity_level(request):
+    """Return the verbosity level from pytest config."""
+    return request.config.option.verbose
