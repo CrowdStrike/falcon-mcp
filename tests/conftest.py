@@ -1,3 +1,6 @@
+"""
+Pytest configuration file for the tests.
+"""
 import pytest
 
 
