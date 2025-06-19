@@ -44,7 +44,7 @@ The E2E tests support different levels of verbosity, but **all require the `-s` 
 
 ### Standard Output (No Verbosity)
 
-By default, tests run with minimal output:
+By default, tests run with minimal output and the agent runs silently:
 
 ```bash
 pytest --run-e2e -s tests/e2e/
@@ -52,23 +52,40 @@ pytest --run-e2e -s tests/e2e/
 
 ### Verbose Output
 
-To see more detailed output, use both `-v` and `-s` flags:
+To see more detailed output, including basic agent debug information, use both `-v` and `-s` flags:
 
 ```bash
 pytest --run-e2e -v -s tests/e2e/
 ```
 
+With this level of verbosity, you'll see:
+
+- Test execution progress
+- Basic agent operations
+- Tool calls and responses
+- Test success/failure information
+
 ### Extra Verbose Output
 
-For even more detailed output, including all events:
+For even more detailed output, including all agent events and detailed debugging information:
 
 ```bash
 pytest --run-e2e -vv -s tests/e2e/
 ```
 
+This level shows everything from the verbose level plus:
+
+- Detailed agent thought processes
+- Step-by-step execution flow
+- Complete prompt and response content
+- Detailed tool execution information
+
 > [!NOTE]
 > The `-s` flag disables pytest's output capture, allowing all print statements to be displayed.
 > Without this flag, you won't see any of the detailed output from the tests.
+>
+> The verbosity level (`-v`, `-vv`) controls both test output verbosity AND agent debug output.
+> Higher verbosity levels are extremely useful when diagnosing test failures or unexpected agent behavior.
 
 ## Test Retry Logic
 
@@ -110,13 +127,14 @@ pytest --run-e2e -v tests/e2e/
 
 ### Diagnosing Test Failures
 
-If a test is failing, try running it with full debug output (`-v -s` flags) to see what's happening. Look for:
+If a test is failing, try running it with full debug output (`-v -s` or `-vv -s` flags) to see what's happening. Look for:
 
 1. Connection issues with the MCP server
 2. Unexpected LLM responses
 3. Assertion failures in the test logic
+4. Agent debugging information (enabled with verbosity)
 
-The verbose output will show you the exact prompts, responses, and tool calls, which can help diagnose the issue.
+The verbose output will show you the exact prompts, responses, and tool calls, which can help diagnose the issue. With higher verbosity levels, you'll also see detailed agent debugging information that can help identify why the agent isn't behaving as expected.
 
 ### Using Custom LLM Endpoints
 

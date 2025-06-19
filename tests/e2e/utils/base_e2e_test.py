@@ -11,7 +11,6 @@ import pytest
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from mcp_use import MCPAgent, MCPClient
-import mcp_use
 
 from src.server import FalconMCPServer
 
@@ -123,12 +122,6 @@ class BaseE2ETest(unittest.TestCase):
         Returns:
             A tuple containing the list of tool calls and the final string result from the agent.
         """
-        # Only print detailed info if verbose mode is enabled
-        if self.verbosity_level > 0:
-            print("\n=== PROMPT ===")
-            print(prompt)
-            print("==============\n")
-
         result = ""
         tools = []
         await self.agent.initialize()
@@ -137,36 +130,10 @@ class BaseE2ETest(unittest.TestCase):
             data = event.get("data", {})
             name = event.get("name")
 
-            # Log events if in extra verbose mode
-            if self.verbosity_level > 1 and event_type:  # Extra verbose with -vv
-                print(f"EVENT: {event_type}, NAME: {name}")
-
             if event_type == "on_tool_end" and name == "use_tool_from_server":
                 tools.append(data)
-                if self.verbosity_level > 0:  # Standard verbose with -v
-                    print("\n=== TOOL CALL ===")
-                    print(f"Tool: {data['input']['tool_name']}")
-                    print(f"Input: {data['input']['tool_input']}")
-                    print("=================\n")
             elif event_type == "on_chat_model_stream" and data.get('chunk'):
-                chunk = str(data['chunk'].content)
-                result += chunk
-                if self.verbosity_level > 0:
-                    print(f"{chunk}", end="", flush=True)
-
-        # Always print result and tools for debugging, but format based on verbosity
-        if self.verbosity_level > 0:
-            print("\n\n=== RESULT ===")
-            print(result)
-            print("==============\n")
-            print("=== TOOLS ===")
-            print(tools)
-            print("=============\n")
-        else:
-            # Just print minimal info in non-verbose mode
-            print("RESULT", result)
-            print("TOOLS", tools)
-
+                result += str(data['chunk'].content)
         return tools, result
 
     def run_test_with_retries(self, test_name: str, test_logic_coro: callable, assertion_logic: callable):
@@ -179,13 +146,7 @@ class BaseE2ETest(unittest.TestCase):
             assertion_logic: A function that takes tools and result and performs assertions.
         """
         success_count = 0
-        total_runs = len(MODELS_TO_TEST) * RUNS_PER_TEST
-
-        # Set debug level based on verbosity
-        if self.verbosity_level > 0:
-            mcp_use.set_debug(self.verbosity_level)
-        else:
-            mcp_use.set_debug(0)
+        total_runs = len(self.models_to_test) * RUNS_PER_TEST
 
         for model_name in self.models_to_test:
             # Initialize ChatOpenAI with base_url only if it's provided
@@ -201,7 +162,7 @@ class BaseE2ETest(unittest.TestCase):
                 llm=self.llm,
                 client=self.client,
                 max_steps=20,
-                verbose=verbose_mode,  # Only verbose if -v is passed
+                verbose=verbose_mode,
                 use_server_manager=True,
                 memory_enabled=False,
             )
@@ -243,7 +204,7 @@ class BaseE2ETest(unittest.TestCase):
         )
 
     def _create_mock_api_side_effect(self, fixtures: list) -> callable:
-        """Create a side effect function for the mock API based on a list of fixtures."""
+        """Create a side effect function for the `mock API` based on a list of fixtures."""
 
         def mock_api_side_effect(operation: str, **kwargs: dict) -> dict:
             print(f"Mock API called with: operation={operation}, kwargs={kwargs}")
