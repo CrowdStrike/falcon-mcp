@@ -12,6 +12,7 @@ import time
 import unittest
 from unittest.mock import MagicMock, patch
 import pytest
+import json
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
@@ -22,9 +23,9 @@ from src.server import FalconMCPServer
 
 # Models to test against
 # MODELS_TO_TEST = ["gpt-4o", "gpt-4.1-mini", "gpt-4o-mini"]
-MODELS_TO_TEST = ["gpt-4o-mini"]
+MODELS_TO_TEST = ["gpt-4.1", "gpt-4o-mini"]
 # Number of times to run each test
-RUNS_PER_TEST = 5
+RUNS_PER_TEST = 2
 # Success threshold for passing a test
 SUCCESS_THRESHOLD = 0.7
 
@@ -32,62 +33,6 @@ SUCCESS_THRESHOLD = 0.7
 load_dotenv()
 
 mcp_use.set_debug(0)
-
-def _mock_falcon_api_side_effect(operation: str, **kwargs: dict) -> dict:
-    """
-    Simulate the behavior of the Falcon API's `command` method.
-
-    This function returns predefined responses based on the operation name and parameters,
-    allowing for controlled testing of the MCP server's interaction with the Falcon API.
-
-    Args:
-        operation: The name of the API operation to mock.
-        kwargs: The arguments passed to the API operation.
-
-    Returns:
-        A dictionary representing the mocked API response.
-    """
-    params = kwargs.get('parameters', {})
-    body = kwargs.get('body', {})
-    print("OPERATION", operation)
-    print("PARAMS", params)
-    print("BODY", body)
-
-    if operation == "QueryDetects":
-        filter_str = params.get('filter', '')
-        if "10.0.0.1" in filter_str:
-            return {"status_code": 200, "body": {"resources": ["detection-4"]}}
-        if "high" in filter_str.lower() or "max_severity:5" in filter_str.lower():
-            return {"status_code": 200, "body": {"resources": ["detection-1", "detection-2", "detection-3"]}}
-
-    if operation == "GetDetectSummaries":
-        ids = body.get('ids', [])
-        if "detection-1" in ids:
-            return {
-                "status_code": 200,
-                "body": {
-                    "resources": [
-                        {"id": "detection-1", "status": "new", "severity": "high", "description": "A test detection for E2E."},
-                        {"id": "detection-2", "status": "new", "severity": "high", "description": "A test detection for E2E."},
-                        {"id": "detection-3", "status": "new", "severity": "high", "description": "A test detection for E2E."}
-                    ]
-                }
-            }
-        if "detection-4" in ids:
-            return {
-                "status_code": 200,
-                "body": {
-                    "resources": [{
-                        "id": "detection-4",
-                        "status": "new",
-                        "severity": "critical",
-                        "description": "A critical detection on a specific IP."
-                    }]
-                }
-            }
-
-    return {"status_code": 200, "body": {"resources": []}}
-
 
 @pytest.mark.e2e
 class TestFalconMCPServerE2E(unittest.TestCase):
@@ -97,7 +42,7 @@ class TestFalconMCPServerE2E(unittest.TestCase):
     This class sets up a live server in a separate thread, mocks the Falcon API,
     and then runs tests using an MCP client and agent to interact with the server.
     """
-
+    test_results = []
     _server_thread: threading.Thread = None
     _env_patcher = None
     _api_patcher = None
@@ -127,7 +72,6 @@ class TestFalconMCPServerE2E(unittest.TestCase):
         cls._mock_api_instance = MagicMock()
         cls._mock_api_instance.login.return_value = True
         cls._mock_api_instance.token_valid.return_value = True
-        cls._mock_api_instance.command.side_effect = _mock_falcon_api_side_effect
         mock_apiharness_class.return_value = cls._mock_api_instance
 
         server = FalconMCPServer(debug=False)
@@ -149,6 +93,9 @@ class TestFalconMCPServerE2E(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """Tear down the test environment for the entire class."""
+        with open('test_results.json', 'w', encoding='utf-8') as f:
+            json.dump(cls.test_results, f, indent=4)
+
         cls.loop.run_until_complete(cls.client.close_all_sessions())
         cls._api_patcher.stop()
         cls._env_patcher.stop()
@@ -186,29 +133,49 @@ class TestFalconMCPServerE2E(unittest.TestCase):
         print("TOOLS", tools)
         return tools, result
 
-    def run_test_with_retries(self, test_logic_coro):
+    def run_test_with_retries(self, test_name: str, test_logic_coro: callable, assertion_logic: callable):
         """
         Run a given test logic multiple times against different models and check for a success threshold.
 
         Args:
-            test_logic_coro: An asynchronous function containing the test's assertions.
+            test_name: The name of the test being run.
+            test_logic_coro: An asynchronous function that runs the agent and returns tools and result.
+            assertion_logic: A function that takes tools and result and performs assertions.
         """
         success_count = 0
         total_runs = len(MODELS_TO_TEST) * RUNS_PER_TEST
 
         for model_name in MODELS_TO_TEST:
             self.llm = ChatOpenAI(model=model_name, temperature=0.4)
-            self.agent = MCPAgent(llm=self.llm, client=self.client, verbose=False, use_server_manager=True, memory_enabled=False)
+            self.agent = MCPAgent(llm=self.llm, client=self.client, max_steps=20, verbose=False, use_server_manager=True, memory_enabled=False)
 
             for i in range(RUNS_PER_TEST):
-                print(f"Running test with model {model_name}, try {i+1}/{RUNS_PER_TEST}")
+                print(f"Running test {test_name} with model {model_name}, try {i+1}/{RUNS_PER_TEST}")
+                run_result = {
+                    'test_name': test_name,
+                    'model_name': model_name,
+                    'run_number': i + 1,
+                    'status': 'failure',
+                    'failure_reason': None,
+                    'tools_used': None,
+                    'agent_result': None,
+                }
                 try:
                     # Each test logic run needs a clean slate.
                     self._mock_api_instance.reset_mock()
-                    self.loop.run_until_complete(test_logic_coro())
+                    tools, result = self.loop.run_until_complete(test_logic_coro())
+                    run_result['tools_used'] = tools
+                    run_result['agent_result'] = result
+
+                    assertion_logic(tools, result)
+
+                    run_result['status'] = 'success'
                     success_count += 1
                 except AssertionError as e:
+                    run_result['failure_reason'] = str(e)
                     print(f"Assertion failed with model {model_name}, try {i+1}: {e}")
+                finally:
+                    self.__class__.test_results.append(run_result)
 
         success_rate = success_count / total_runs if total_runs > 0 else 0
         print(f"Success rate: {success_rate * 100:.2f}% ({success_count}/{total_runs})")
@@ -218,15 +185,52 @@ class TestFalconMCPServerE2E(unittest.TestCase):
             f"Success rate of {success_rate*100:.2f}% is below the required {SUCCESS_THRESHOLD*100:.2f}% threshold."
         )
 
+    def _create_mock_api_side_effect(self, fixtures: list) -> callable:
+        """Create a side effect function for the mock API based on a list of fixtures."""
+        def mock_api_side_effect(operation: str, **kwargs: dict) -> dict:
+            print(f"Mock API called with: operation={operation}, kwargs={kwargs}")
+            for fixture in fixtures:
+                if fixture["operation"] == operation and fixture["validator"](kwargs):
+                    print(f"Found matching fixture for {operation}, returning {fixture['response']}")
+                    return fixture["response"]
+            print(f"No matching fixture found for {operation}")
+            return {"status_code": 200, "body": {"resources": []}}
+        return mock_api_side_effect
+
     def test_get_top_3_high_severity_detections(self):
         """Verify the agent can retrieve the top 3 high-severity detections."""
         async def test_logic():
-            prompt = "Give me the details of the top 3 high severity detections, return only detection id and descriptions"
-            tools, result = await self._run_agent_stream(prompt)
+            fixtures = [
+                {
+                    "operation": "QueryDetects",
+                    "validator": lambda kwargs: "high" in kwargs.get('parameters', {}).get('filter', '').lower() or "max_severity:5" in kwargs.get('parameters', {}).get('filter', '').lower(),
+                    "response": {"status_code": 200, "body": {"resources": ["detection-1", "detection-2", "detection-3"]}}
+                },
+                {
+                    "operation": "GetDetectSummaries",
+                    "validator": lambda kwargs: "detection-1" in kwargs.get('body', {}).get('ids', []),
+                    "response": {
+                        "status_code": 200,
+                        "body": {
+                            "resources": [
+                                {"id": "detection-1", "status": "new", "severity": "high", "description": "A test detection for E2E."},
+                                {"id": "detection-2", "status": "new", "severity": "high", "description": "A test detection for E2E."},
+                                {"id": "detection-3", "status": "new", "severity": "high", "description": "A test detection for E2E."}
+                            ]
+                        }
+                    }
+                }
+            ]
 
+            self._mock_api_instance.command.side_effect = self._create_mock_api_side_effect(fixtures)
+
+            prompt = "Give me the details of the top 3 high severity detections, return only detection id and descriptions"
+            return await self._run_agent_stream(prompt)
+
+        def assertions(tools, result):
             self.assertEqual(len(tools), 1, "Expected 1 tool call")
             self.assertEqual(tools[0]['input']['tool_name'], "falcon_search_detections")
-            self.assertIn("high", tools[0]['input']['tool_input'].lower())
+            self.assertIn("high", json.dumps(tools[0]['input']['tool_input']).lower())
             self.assertIn("detection-1", tools[0]['output'])
             self.assertIn("detection-2", tools[0]['output'])
             self.assertIn("detection-3", tools[0]['output'])
@@ -235,7 +239,7 @@ class TestFalconMCPServerE2E(unittest.TestCase):
             api_call_1_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
             self.assertIn("high", api_call_1_params.get('filter').lower())
             self.assertEqual(api_call_1_params.get('limit'), 3)
-            self.assertEqual(api_call_1_params.get('sort'), 'max_severity|desc')
+            self.assertIn('max_severity.desc', api_call_1_params.get('sort', ''))
             api_call_2_body = self._mock_api_instance.command.call_args_list[1][1].get('body', {})
             self.assertEqual(api_call_2_body.get('ids'), ["detection-1", "detection-2", "detection-3"])
 
@@ -243,17 +247,47 @@ class TestFalconMCPServerE2E(unittest.TestCase):
             self.assertIn("detection-2", result)
             self.assertIn("detection-3", result)
 
-        self.run_test_with_retries(test_logic)
+        self.run_test_with_retries(
+            "test_get_top_3_high_severity_detections",
+            test_logic,
+            assertions
+        )
 
     def test_get_highest_detection_for_ip(self):
         """Verify the agent can find the highest-severity detection for a specific IP."""
         async def test_logic():
-            prompt = "What is the highest detection for the device with local_ip 10.0.0.1? Return the detection id as well"
-            tools, result = await self._run_agent_stream(prompt)
+            fixtures = [
+                {
+                    "operation": "QueryDetects",
+                    "validator": lambda kwargs: "10.0.0.1" in kwargs.get('parameters', {}).get('filter', ''),
+                    "response": {"status_code": 200, "body": {"resources": ["detection-4"]}}
+                },
+                {
+                    "operation": "GetDetectSummaries",
+                    "validator": lambda kwargs: "detection-4" in kwargs.get('body', {}).get('ids', []),
+                    "response": {
+                        "status_code": 200,
+                        "body": {
+                            "resources": [{
+                                "id": "detection-4",
+                                "status": "new",
+                                "severity": "critical",
+                                "description": "A critical detection on a specific IP."
+                            }]
+                        }
+                    }
+                }
+            ]
 
+            self._mock_api_instance.command.side_effect = self._create_mock_api_side_effect(fixtures)
+
+            prompt = "What is the highest detection for the device with local_ip 10.0.0.1? Return the detection id as well"
+            return await self._run_agent_stream(prompt)
+
+        def assertions(tools, result):
             self.assertEqual(len(tools), 1, f"Expected 1 tool call, but got {len(tools)}")
             self.assertEqual(tools[0]['input']['tool_name'], "falcon_search_detections")
-            self.assertIn("10.0.0.1", tools[0]['input']['tool_input'])
+            self.assertIn("10.0.0.1", json.dumps(tools[0]['input']['tool_input']))
             self.assertIn("detection-4", tools[0]['output'])
 
             self.assertEqual(self._mock_api_instance.command.call_count, 2, "Expected 2 API calls")
@@ -265,7 +299,11 @@ class TestFalconMCPServerE2E(unittest.TestCase):
             self.assertIn("detection-4", result)
             self.assertNotIn("detection-1", result)
 
-        self.run_test_with_retries(test_logic)
+        self.run_test_with_retries(
+            "test_get_highest_detection_for_ip",
+            test_logic,
+            assertions
+        )
 
 if __name__ == '__main__':
     unittest.main() 

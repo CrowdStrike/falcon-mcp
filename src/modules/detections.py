@@ -71,7 +71,7 @@ class DetectionsModule(BaseModule):
                 devices.hostname: Hostname of the host where this detection was detected
                 Sort either asc (ascending) or desc (descending).
 
-                For example: last_behavior|asc
+                For example: last_behavior.asc
 
         Available FQL Filters:
             adversary_ids
@@ -82,7 +82,7 @@ class DetectionsModule(BaseModule):
             first_behavior
             last_behavior
             max_confidence
-            max_severity
+            max_severity: low, medium, high, critical
             max_severity_displayname
             seconds_to_resolved
             seconds_to_triaged
