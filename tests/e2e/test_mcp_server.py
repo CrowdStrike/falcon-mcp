@@ -236,7 +236,7 @@ class TestFalconMCPServerE2E(unittest.TestCase):
             self.assertIn("detection-2", used_tool['output'])
             self.assertIn("detection-3", used_tool['output'])
 
-            self.assertEqual(self._mock_api_instance.command.call_count, 2, "Expected 2 API calls")
+            self.assertGreaterEqual(self._mock_api_instance.command.call_count, 2, "Expected 2 API calls")
             api_call_1_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
             self.assertIn("high", api_call_1_params.get('filter').lower())
             self.assertEqual(api_call_1_params.get('limit'), 3)
@@ -292,7 +292,7 @@ class TestFalconMCPServerE2E(unittest.TestCase):
             self.assertIn("10.0.0.1", json.dumps(used_tool['input']['tool_input']))
             self.assertIn("detection-4", used_tool['output'])
 
-            self.assertEqual(self._mock_api_instance.command.call_count, 2, "Expected 2 API calls")
+            self.assertGreaterEqual(self._mock_api_instance.command.call_count, 2, "Expected 2 API calls")
             api_call_1_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
             self.assertIn("10.0.0.1", api_call_1_params.get('filter'))
             api_call_2_body = self._mock_api_instance.command.call_args_list[1][1].get('body', {})

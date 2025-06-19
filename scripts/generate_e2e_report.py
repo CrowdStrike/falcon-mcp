@@ -1,8 +1,12 @@
+"""
+Generate a static HTML report from test result data
+"""
 import json
 import re
+import sys
 from html import escape
 
-def generate_static_report(data, template_path='test_results_viewer.html', output_path='static_test_report.html'):
+def generate_static_report(data, template_path='scripts/test_results_viewer.html', output_path='static_test_report.html'):
     """
     Generates a static HTML report from test result data.
 
@@ -62,7 +66,7 @@ def generate_static_report(data, template_path='test_results_viewer.html', outpu
                     reason = escape(run['failure_reason'])
                     run_html += f'<p><strong>Failure Reason:</strong></p><pre class="failure-reason"><code>{reason}</code></pre>'
 
-                agent_result = escape(run.get('agent_result', 'No result'))
+                agent_result = escape(run.get('agent_result', 'No result') or 'No result')
                 run_html += f"""
                     <details>
                         <summary>Agent Result</summary>
@@ -107,11 +111,12 @@ def generate_static_report(data, template_path='test_results_viewer.html', outpu
     print(f"Successfully generated static report: {output_path}")
 
 if __name__ == "__main__":
+    test_results_path = sys.argv[1] if len(sys.argv) > 1 else 'test_results.json'
     try:
-        with open('test_results.json', 'r', encoding='utf-8') as f:
+        with open(test_results_path, 'r', encoding='utf-8') as f:
             test_data = json.load(f)
         generate_static_report(test_data)
     except FileNotFoundError:
         print("Error: test_results.json not found. Please run the tests first.")
     except json.JSONDecodeError:
-        print("Error: Could not parse test_results.json. The file might be corrupted or empty.") 
+        print("Error: Could not parse test_results.json. The file might be corrupted or empty.")
