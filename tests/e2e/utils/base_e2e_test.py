@@ -6,6 +6,7 @@ import time
 import unittest
 from unittest.mock import MagicMock, patch
 import json
+import pytest
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
@@ -23,8 +24,6 @@ SUCCESS_THRESHOLD = 0.7
 
 # Load environment variables from .env file for local development
 load_dotenv()
-
-mcp_use.set_debug(0)
 
 
 class BaseE2ETest(unittest.TestCase):
@@ -44,12 +43,30 @@ class BaseE2ETest(unittest.TestCase):
     agent = None
     llm = None
     loop = None
+    verbosity_level = 0  # Default verbosity level
+    base_url = None  # Base URL for LLM API
+    models_to_test = None  # Models to test against
+
+    @pytest.fixture(autouse=True)
+    def inject_fixtures(self, verbosity_level):
+        """Inject pytest fixtures into the test class."""
+        self.verbosity_level = verbosity_level
 
     @classmethod
     def setUpClass(cls):
         """Set up the test environment for the entire class."""
         cls.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(cls.loop)
+
+        # Read optional base_url from environment
+        cls.base_url = os.getenv('OPENAI_BASE_URL')
+
+        # Optionally override models from environment
+        models_env = os.getenv('MODELS_TO_TEST')
+        if models_env:
+            cls.models_to_test = models_env.split(',')
+        else:
+            cls.models_to_test = MODELS_TO_TEST
 
         cls._env_patcher = patch.dict(
             os.environ,
@@ -106,6 +123,12 @@ class BaseE2ETest(unittest.TestCase):
         Returns:
             A tuple containing the list of tool calls and the final string result from the agent.
         """
+        # Only print detailed info if verbose mode is enabled
+        if self.verbosity_level > 0:
+            print("\n=== PROMPT ===")
+            print(prompt)
+            print("==============\n")
+
         result = ""
         tools = []
         await self.agent.initialize()
@@ -114,10 +137,36 @@ class BaseE2ETest(unittest.TestCase):
             data = event.get("data", {})
             name = event.get("name")
 
+            # Log events if in extra verbose mode
+            if self.verbosity_level > 1 and event_type:  # Extra verbose with -vv
+                print(f"EVENT: {event_type}, NAME: {name}")
+
             if event_type == "on_tool_end" and name == "use_tool_from_server":
                 tools.append(data)
+                if self.verbosity_level > 0:  # Standard verbose with -v
+                    print("\n=== TOOL CALL ===")
+                    print(f"Tool: {data['input']['tool_name']}")
+                    print(f"Input: {data['input']['tool_input']}")
+                    print("=================\n")
             elif event_type == "on_chat_model_stream" and data.get('chunk'):
-                result += str(data['chunk'].content)
+                chunk = str(data['chunk'].content)
+                result += chunk
+                if self.verbosity_level > 0:
+                    print(f"{chunk}", end="", flush=True)
+
+        # Always print result and tools for debugging, but format based on verbosity
+        if self.verbosity_level > 0:
+            print("\n\n=== RESULT ===")
+            print(result)
+            print("==============\n")
+            print("=== TOOLS ===")
+            print(tools)
+            print("=============\n")
+        else:
+            # Just print minimal info in non-verbose mode
+            print("RESULT", result)
+            print("TOOLS", tools)
+
         return tools, result
 
     def run_test_with_retries(self, test_name: str, test_logic_coro: callable, assertion_logic: callable):
@@ -132,13 +181,27 @@ class BaseE2ETest(unittest.TestCase):
         success_count = 0
         total_runs = len(MODELS_TO_TEST) * RUNS_PER_TEST
 
-        for model_name in MODELS_TO_TEST:
-            self.llm = ChatOpenAI(model=model_name, temperature=0.7)
+        # Set debug level based on verbosity
+        if self.verbosity_level > 0:
+            mcp_use.set_debug(self.verbosity_level)
+        else:
+            mcp_use.set_debug(0)
+
+        for model_name in self.models_to_test:
+            # Initialize ChatOpenAI with base_url only if it's provided
+            kwargs = {"model": model_name, "temperature": 0.7}
+            if self.base_url:
+                kwargs["base_url"] = self.base_url
+
+            self.llm = ChatOpenAI(**kwargs)
+
+            # Set agent verbosity based on pytest verbosity
+            verbose_mode = self.verbosity_level > 0
             self.agent = MCPAgent(
                 llm=self.llm,
                 client=self.client,
                 max_steps=20,
-                verbose=False,
+                verbose=verbose_mode,  # Only verbose if -v is passed
                 use_server_manager=True,
                 memory_enabled=False,
             )

@@ -2,6 +2,25 @@
 
 This document provides guidance on running and understanding the end-to-end tests for the Falcon MCP Server.
 
+## Configuration
+
+The E2E tests can be configured using environment variables or a `.env` file:
+
+### LLM Configuration
+
+```bash
+# API key for OpenAI or compatible API
+OPENAI_API_KEY=your-api-key
+
+# Optional: Custom base URL for LLM API (for VPN-only or custom endpoints)
+OPENAI_BASE_URL=https://your-custom-llm-endpoint.com/v1
+
+# Optional: Comma-separated list of models to test against
+MODELS_TO_TEST=example-model-1,example-model-2
+```
+
+If not specified, the tests will use the default models defined in `tests/e2e/utils/base_e2e_test.py`.
+
 ## Running E2E Tests
 
 End-to-end tests are marked with the `@pytest.mark.e2e` decorator and require the `--run-e2e` flag to run:
@@ -55,18 +74,25 @@ pytest --run-e2e -vv -s tests/e2e/
 
 The E2E tests use a retry mechanism to handle the non-deterministic nature of LLM responses. Each test is run multiple times against different models, and the test passes if a certain percentage of runs succeed.
 
-The retry configuration can be found at the top of `tests/e2e/test_mcp_server.py`:
+The retry configuration can be found at the top of `tests/e2e/utils/base_e2e_test.py`:
 
 ```python
 # Models to test against
-MODELS_TO_TEST = ["gpt-4o", "gpt-4.1-mini", "gpt-4o-mini"]
+MODELS_TO_TEST = ["gpt-4.1-mini", "gpt-4o-mini"]
 # Number of times to run each test
-RUNS_PER_TEST = 5
+RUNS_PER_TEST = 2
 # Success threshold for passing a test
 SUCCESS_THRESHOLD = 0.7
 ```
 
-This means each test will run 5 times for each model and the test will pass if at least 70% of the runs succeed (i.e., 4 out of 5 runs).
+This means each test will run 2 times for each model and the test will pass if at least 70% of the runs succeed.
+
+You can override the models to test using the `MODELS_TO_TEST` environment variable:
+
+```bash
+# Test with Claude models
+MODELS_TO_TEST=example-model-1,example-model-2 pytest --run-e2e -s tests/e2e/
+```
 
 ## Troubleshooting
 
@@ -91,3 +117,14 @@ If a test is failing, try running it with full debug output (`-v -s` flags) to s
 3. Assertion failures in the test logic
 
 The verbose output will show you the exact prompts, responses, and tool calls, which can help diagnose the issue.
+
+### Using Custom LLM Endpoints
+
+If you need to use a custom LLM endpoint (e.g., for VPN-only accessible models), set the `OPENAI_BASE_URL` environment variable:
+
+```bash
+# Use a custom LLM endpoint
+OPENAI_BASE_URL=https://your-custom-llm-endpoint.com/v1 pytest --run-e2e -s tests/e2e/
+```
+
+This is particularly useful when testing with models that are only accessible through specific endpoints or when using a proxy server.
