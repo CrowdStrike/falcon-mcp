@@ -41,20 +41,11 @@ class DetectionsModule(BaseModule):
 
     def search_detections(
         self,
-        filter: Optional[str] = Field(default=None, description="Filter detections using a query in Falcon Query Language (FQL) An asterisk wildcard * includes all results.", examples={"behaviors.sha256:'87b8a76d9c657cb3954936b8afa58652c2a01b2f7d26345b9aff0c831c5cead3'", "status:'New'"}),
-        limit: Optional[int] = Field(default=100, ge=1, le=9999, description="The maximum number of detections to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results."),
-        offset: Optional[int] = Field(default=0, ge=0, description="The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results."),
-        q: Optional[str] = Field(default=None, description="Search all detection metadata for the provided string."),
-        sort: Optional[str] = Field(default=None, description="""Sort detections using these options:
-
-    first_behavior: Timestamp of the first behavior associated with this detection last_behavior: Timestamp of the last behavior associated with this detection
-    max_severity: Highest severity of the behaviors associated with this detection
-    max_confidence: Highest confidence of the behaviors associated with this detection
-    adversary_id: ID of the adversary associated with this detection, if any
-    devices.hostname: Hostname of the host where this detection was detected
-    Sort either asc (ascending) or desc (descending).
-
-    For example: last_behavior|asc""", examples={"last_behavior|asc"}),
+        filter: Optional[str] = Field(default=None, examples={"behaviors.sha256:'87b8a76d9c657cb3954936b8afa58652c2a01b2f7d26345b9aff0c831c5cead3'", "status:'New'"}),
+        limit: Optional[int] = Field(default=100, ge=1, le=9999),
+        offset: Optional[int] = Field(default=0, ge=0),
+        q: Optional[str] = Field(default=None),
+        sort: Optional[str] = Field(default=None, examples={"max_severity.desc", "last_behavior.desc"}),
     ) -> List[Dict[str, Any]]:
         """Search for detections in your CrowdStrike environment.
 
@@ -64,14 +55,19 @@ class DetectionsModule(BaseModule):
             offset: The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results.
             q: Search all detection metadata for the provided string.
             sort: Sort detections using these options:
-                first_behavior: Timestamp of the first behavior associated with this detection last_behavior: Timestamp of the last behavior associated with this detection
-                max_severity: Highest severity of the behaviors associated with this detection
+                first_behavior: Timestamp of the first behavior associated with this detection
+                last_behavior: Timestamp of the last behavior associated with this detection
+                max_severity: Highest severity of the behaviors associated with this detection (recommended when filtering by severity)
                 max_confidence: Highest confidence of the behaviors associated with this detection
-                adversary_id: ID of the adversary associated with this detection, if any
-                devices.hostname: Hostname of the host where this detection was detected
-                Sort either asc (ascending) or desc (descending).
+                device.hostname: Hostname of the host where this detection was detected
 
-                For example: last_behavior.asc
+                Sort either asc (ascending) or desc (descending).
+                Both formats are supported: 'max_severity.desc' or 'max_severity|desc'
+
+                When searching for high severity detections, use 'max_severity.desc' to get the highest severity detections first.
+                For chronological ordering, use 'last_behavior.desc' for most recent detections first.
+
+                Examples: 'max_severity.desc', 'last_behavior.desc'
 
         Available FQL Filters:
             adversary_ids
@@ -82,8 +78,8 @@ class DetectionsModule(BaseModule):
             first_behavior
             last_behavior
             max_confidence
-            max_severity: low, medium, high, critical
-            max_severity_displayname
+            max_severity: Value can be any integer between 1-100
+            max_severity_displayname: informational, low, medium, high, critical
             seconds_to_resolved
             seconds_to_triaged
             status
@@ -217,7 +213,7 @@ class DetectionsModule(BaseModule):
 
     def get_detection_details(
         self,
-        ids: List[str] = Field(description="ID(s) of the detections to retrieve. View key attributes of detections, including the associated host, disposition, objective/tactic/technique, adversary, and more. Specify one or more detection IDs (max 1000 per request). Find detection IDs with the QueryDetects operation, the Falcon console, or the Streaming API."),
+        ids: List[str] = Field(),
     ) -> Dict[str, Any]:
         """View information about detections. Gets detailed information about a specific detection.
 
