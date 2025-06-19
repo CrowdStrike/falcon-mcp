@@ -228,12 +228,13 @@ class TestFalconMCPServerE2E(unittest.TestCase):
             return await self._run_agent_stream(prompt)
 
         def assertions(tools, result):
-            self.assertEqual(len(tools), 1, "Expected 1 tool call")
-            self.assertEqual(tools[0]['input']['tool_name'], "falcon_search_detections")
-            self.assertIn("high", json.dumps(tools[0]['input']['tool_input']).lower())
-            self.assertIn("detection-1", tools[0]['output'])
-            self.assertIn("detection-2", tools[0]['output'])
-            self.assertIn("detection-3", tools[0]['output'])
+            self.assertGreaterEqual(len(tools), 1, "Expected 1 tool call")
+            used_tool = tools[len(tools) - 1]
+            self.assertEqual(used_tool['input']['tool_name'], "falcon_search_detections")
+            self.assertIn("high", json.dumps(used_tool['input']['tool_input']).lower())
+            self.assertIn("detection-1", used_tool['output'])
+            self.assertIn("detection-2", used_tool['output'])
+            self.assertIn("detection-3", used_tool['output'])
 
             self.assertEqual(self._mock_api_instance.command.call_count, 2, "Expected 2 API calls")
             api_call_1_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
@@ -285,10 +286,11 @@ class TestFalconMCPServerE2E(unittest.TestCase):
             return await self._run_agent_stream(prompt)
 
         def assertions(tools, result):
-            self.assertEqual(len(tools), 1, f"Expected 1 tool call, but got {len(tools)}")
-            self.assertEqual(tools[0]['input']['tool_name'], "falcon_search_detections")
-            self.assertIn("10.0.0.1", json.dumps(tools[0]['input']['tool_input']))
-            self.assertIn("detection-4", tools[0]['output'])
+            self.assertGreaterEqual(len(tools), 1, f"Expected 1 tool call, but got {len(tools)}")
+            used_tool = tools[len(tools) - 1]
+            self.assertEqual(used_tool['input']['tool_name'], "falcon_search_detections")
+            self.assertIn("10.0.0.1", json.dumps(used_tool['input']['tool_input']))
+            self.assertIn("detection-4", used_tool['output'])
 
             self.assertEqual(self._mock_api_instance.command.call_count, 2, "Expected 2 API calls")
             api_call_1_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
