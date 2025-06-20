@@ -6,11 +6,11 @@ import time
 import unittest
 from unittest.mock import MagicMock, patch
 import json
+import pytest
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from mcp_use import MCPAgent, MCPClient
-import mcp_use
 
 from src.server import FalconMCPServer
 
@@ -23,8 +23,6 @@ SUCCESS_THRESHOLD = 0.7
 
 # Load environment variables from .env file for local development
 load_dotenv()
-
-mcp_use.set_debug(0)
 
 
 class BaseE2ETest(unittest.TestCase):
@@ -44,12 +42,30 @@ class BaseE2ETest(unittest.TestCase):
     agent = None
     llm = None
     loop = None
+    verbosity_level = 0  # Default verbosity level
+    base_url = None  # Base URL for LLM API
+    models_to_test = None  # Models to test against
+
+    @pytest.fixture(autouse=True)
+    def inject_fixtures(self, verbosity_level):
+        """Inject pytest fixtures into the test class."""
+        self.verbosity_level = verbosity_level
 
     @classmethod
     def setUpClass(cls):
         """Set up the test environment for the entire class."""
         cls.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(cls.loop)
+
+        # Read optional base_url from environment
+        cls.base_url = os.getenv('OPENAI_BASE_URL')
+
+        # Optionally override models from environment
+        models_env = os.getenv('MODELS_TO_TEST')
+        if models_env:
+            cls.models_to_test = models_env.split(',')
+        else:
+            cls.models_to_test = MODELS_TO_TEST
 
         cls._env_patcher = patch.dict(
             os.environ,
@@ -130,15 +146,23 @@ class BaseE2ETest(unittest.TestCase):
             assertion_logic: A function that takes tools and result and performs assertions.
         """
         success_count = 0
-        total_runs = len(MODELS_TO_TEST) * RUNS_PER_TEST
+        total_runs = len(self.models_to_test) * RUNS_PER_TEST
 
-        for model_name in MODELS_TO_TEST:
-            self.llm = ChatOpenAI(model=model_name, temperature=0.7)
+        for model_name in self.models_to_test:
+            # Initialize ChatOpenAI with base_url only if it's provided
+            kwargs = {"model": model_name, "temperature": 0.7}
+            if self.base_url:
+                kwargs["base_url"] = self.base_url
+
+            self.llm = ChatOpenAI(**kwargs)
+
+            # Set agent verbosity based on pytest verbosity
+            verbose_mode = self.verbosity_level > 0
             self.agent = MCPAgent(
                 llm=self.llm,
                 client=self.client,
                 max_steps=20,
-                verbose=False,
+                verbose=verbose_mode,
                 use_server_manager=True,
                 memory_enabled=False,
             )
@@ -180,7 +204,7 @@ class BaseE2ETest(unittest.TestCase):
         )
 
     def _create_mock_api_side_effect(self, fixtures: list) -> callable:
-        """Create a side effect function for the mock API based on a list of fixtures."""
+        """Create a side effect function for the `mock API` based on a list of fixtures."""
 
         def mock_api_side_effect(operation: str, **kwargs: dict) -> dict:
             print(f"Mock API called with: operation={operation}, kwargs={kwargs}")

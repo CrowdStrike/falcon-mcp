@@ -11,5 +11,5 @@ mypy>=1.0.0
 flake8>=6.0.0
 
 # Add mcp-use and its dependencies
-mcp-use
+mcp-use[search]
 langchain-openai

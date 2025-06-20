@@ -65,4 +65,8 @@ disallow_incomplete_defs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-
+filterwarnings = [
+    "ignore::DeprecationWarning:websockets.*:",
+    "ignore::DeprecationWarning:uvicorn.protocols.websockets.*:",
+    "ignore::pydantic.PydanticDeprecatedSince20:langchain_core.*:"
+]
