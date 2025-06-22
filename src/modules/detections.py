@@ -69,89 +69,207 @@ class DetectionsModule(BaseModule):
 
                 Examples: 'max_severity.desc', 'last_behavior.desc'
 
-        Available FQL Filters:
-            adversary_ids
-            assigned_to_name
-            cid
-            date_updated
-            detection_id
-            first_behavior
-            last_behavior
-            max_confidence
-            max_severity: Value can be any integer between 1-100
-            max_severity_displayname: informational, low, medium, high, critical
-            seconds_to_resolved
-            seconds_to_triaged
-            status
-            behaviors
-                alleged_filetype
-                behavior_id
-                cmdline
-                confidence
-                contral_graph_id
-                device_id
-                filename
-                ioc_source
-                ioc_type
-                ioc_value
-                md5
-                objective
-                parent_details.parent_cmdline
-                parent_details.parent_md5
-                parent_details.parent_process_graph_id
-                parent_details.parent_process_id
-                parent_details.parent_sha256
-                pattern_disposition
-                scenario
-                severity
-                sha256
-                tactic
-                technique
-                timestamp
-                triggering_process_graph_id
-                triggering_process_id
-                user_id
-                user_name
-            device
-                agent_load_flags
-                agent_local_time
-                agent_version
-                bios_manufacturer
-                bios_version
-                cid	machine_domain
-                config_id_base
-                config_id_build
-                config_id_platform
-                cpu_signature
-                device_id
-                external_ip
-                first_seen
-                hostname
-                last_seen
-                local_ip
-                mac_address
-                major_version
-                minor_version
-                modified_timestamp
-                os_version
-                ou
-                platform_id
-                platform_name
-                product_type
-                product_type_desc
-                reduced_functionality_mode
-                release_group
-                serial_number
-                site_name
-                status
-                system_manufacturer
-                system_product_name
-            hostinfo.domain
-            hostinfo.active_directory_dn_display
-            quarantined_files.id
-            quarantined_files.sha256
-            quarantined_files.paths
-            quarantined_files.state
+    🎯 FALCON QUERY LANGUAGE (FQL) COMPREHENSIVE GUIDE:
+    
+    === BASIC SYNTAX ===
+    property_name:[operator]'value'
+    
+    === AVAILABLE OPERATORS ===
+    • No operator = equals (default)
+    • ! = not equal to
+    • > = greater than  
+    • >= = greater than or equal
+    • < = less than
+    • <= = less than or equal  
+    • ~ = text match (ignores case, spaces, punctuation)
+    • !~ = does not text match
+    • * = wildcard matching (one or more characters)
+    
+    === DATA TYPES & SYNTAX ===
+    • Strings: 'value' or ['exact_value'] for exact match
+    • Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format) 
+    • Booleans: true or false (no quotes)
+    • Numbers: 123 (no quotes)
+    • Wildcards: 'partial*' or '*partial' or '*partial*'
+    • IP addresses: Support wildcards like '192.168.*'
+    
+    === COMBINING CONDITIONS ===
+    • + = AND condition
+    • , = OR condition  
+    • ( ) = Group expressions
+    
+    🏷️ SEARCHABLE HOST PROPERTIES (Complete List):
+    
+    === IDENTIFICATION ===
+    • device_id: Host unique identifier (AID)
+    • hostname: Machine hostname (supports wildcards)
+    • computer_name: Computer display name
+    • serial_number: Hardware serial number
+    • mac_address: Network MAC address
+    
+    === SYSTEM INFORMATION ===  
+    • platform_name: OS platform (Windows, Mac, Linux)
+    • os_version: Operating system version
+    • major_version: OS major version number
+    • minor_version: OS minor version number
+    • system_manufacturer: Hardware manufacturer
+    • system_product_name: System model/product name
+    • bios_manufacturer: BIOS manufacturer
+    • bios_version: BIOS version
+    • cpu_signature: CPU type/signature
+    
+    === NETWORK INFORMATION ===
+    • local_ip: Internal IP address (supports wildcards with local_ip.raw)
+    • external_ip: External/public IP address  
+    • machine_domain: Active Directory domain
+    • ou: Organizational Unit
+    • site_name: AD site name
+    
+    === AGENT & CONFIGURATION ===
+    • agent_version: Falcon agent version
+    • agent_load_flags: Agent configuration flags
+    • config_id_base: Configuration base ID
+    • config_id_build: Configuration build ID  
+    • config_id_platform: Platform configuration ID
+    • platform_id: Platform identifier
+    • product_type_desc: Product type description
+    • release_group: Sensor deployment group
+    
+    === STATUS & TIMESTAMPS ===
+    • status: Host status (normal, containment_pending, contained, lift_containment_pending)
+    • first_seen: First connection timestamp
+    • last_seen: Most recent connection timestamp  
+    • last_login_timestamp: User login timestamp
+    • modified_timestamp: Last record update timestamp
+    • max_severity: Value can be any integer between 1-100
+    • max_severity_displayname: informational, low, medium, high, critical
+    
+    === SPECIALIZED PROPERTIES ===
+    • reduced_functionality_mode: RFM status (yes, no, blank for unknown)
+    • linux_sensor_mode: Linux mode (Kernel Mode, User Mode)
+    • deployment_type: Linux deployment (Standard, DaemonSet)
+    • tags: Falcon grouping tags
+    
+    💡 PRACTICAL SEARCH EXAMPLES:
+    
+    === BASIC SEARCHES ===
+    Find Windows servers:
+    platform_name:'Windows'
+    
+    Find specific hostname:
+    hostname:'web-server-01'
+    
+    Find hosts with hostname starting with 'web':
+    hostname:'web*'
+    
+    === NETWORK-BASED SEARCHES ===
+    Find hosts in specific IP range:
+    local_ip.raw:*'192.168.1.*'
+    
+    Find hosts by external IP:
+    external_ip:'203.0.113.45'
+    
+    Find hosts in specific domain:
+    machine_domain:'contoso.com'
+    
+    === TIME-BASED SEARCHES ===
+    Find hosts not seen in last 30 days:
+    last_seen:<'2024-01-01T00:00:00Z'
+    
+    Find recently joined hosts (last 7 days):
+    first_seen:>'2024-01-15T00:00:00Z'
+    
+    === STATUS & HEALTH SEARCHES ===
+    Find contained hosts:
+    status:'contained'
+    
+    Find hosts in reduced functionality mode:
+    reduced_functionality_mode:'yes'
+    
+    Find offline hosts (not seen in 24 hours):
+    last_seen:<'2024-01-20T00:00:00Z'
+    
+    === SYSTEM SPECIFICATION SEARCHES ===
+    Find Linux hosts:
+    platform_name:'Linux'
+    
+    Find VMware virtual machines:
+    system_manufacturer:'VMware, Inc.'
+    
+    Find specific OS version:
+    os_version:'Windows Server 2019'
+    
+    Find hosts with old agent versions:
+    agent_version:<'7.0.0'
+    
+    === ADVANCED COMBINED SEARCHES ===
+    Find Windows servers in production domain not seen recently:
+    platform_name:'Windows'+machine_domain:'prod.company.com'+last_seen:<'2024-01-15T00:00:00Z'
+    
+    Find either Linux hosts OR hosts with specific hostname pattern:
+    (platform_name:'Linux'),(hostname:'app-*')
+    
+    Find critical infrastructure hosts (complex grouping):
+    (hostname:'dc-*'+platform_name:'Windows'),(hostname:'db-*'+status:'normal')
+    
+    Find hosts by multiple criteria with exclusions:
+    platform_name:'Windows'+hostname:!'test-*'+status:!'contained'
+    
+    Find hosts needing attention (old, offline, or contained):
+    (last_seen:<'2024-01-10T00:00:00Z'),(status:'contained'),(agent_version:<'6.0.0')
+    
+    === COMPLIANCE & INVENTORY SEARCHES ===
+    Find untagged hosts:
+    tags:!*
+    
+    Find hosts with specific tags:
+    tags:'production'
+    
+    Find hosts by manufacturer for hardware inventory:
+    system_manufacturer:'Dell Inc.'
+    
+    Find hosts by deployment group:
+    release_group:'production-sensors'
+    
+    === SECURITY-FOCUSED SEARCHES ===
+    Find hosts with suspicious external IPs:
+    external_ip.raw:*'10.*'
+    
+    Find hosts that haven't checked in (potential compromise):
+    last_seen:<'2024-01-18T00:00:00Z'+status:'normal'
+    
+    Find hosts with modified configurations:
+    modified_timestamp:>'2024-01-15T00:00:00Z'
+    
+    🚀 USAGE EXAMPLES:
+    
+    # Find all Windows hosts sorted by hostname
+    search_hosts_advanced("platform_name:'Windows'", limit=50, sort="hostname.asc")
+    
+    # Find hosts not seen in 30 days with full details  
+    search_hosts_advanced("last_seen:<'2024-01-01T00:00:00Z'", limit=25, include_details=True)
+    
+    # Find Linux hosts in specific IP range
+    search_hosts_advanced("platform_name:'Linux'+local_ip.raw:*'10.0.*'", limit=100)
+    
+    # Get basic inventory - just hostnames and IDs
+    search_hosts_advanced("", limit=1000, fields="hostname,device_id,platform_name")
+    
+    # Find contained or pending containment hosts
+    search_hosts_advanced("(status:'contained'),(status:'containment_pending')", sort="modified_timestamp.desc")
+    
+    # Complex search: Production Windows servers, healthy, recent
+    search_hosts_advanced("platform_name:'Windows'+hostname:'prod-*'+status:'normal'+last_seen:>'2024-01-15T00:00:00Z'")
+    
+    ⚠️ IMPORTANT NOTES:
+    • Use single quotes around string values: 'value'
+    • Use square brackets for exact matches: ['exact_value']  
+    • Wildcard searches may be limited (one * per property in some cases)
+    • Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
+    • Maximum 20 properties per FQL statement
+    • Boolean values: true/false (no quotes)
+    • For IP wildcards, use local_ip.raw property
+    • Complex queries may take longer to execute
 
         Returns:
             List of detection details
