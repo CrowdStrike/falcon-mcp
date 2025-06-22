@@ -50,7 +50,7 @@ class DetectionsModule(BaseModule):
         """Search for detections in your CrowdStrike environment.
 
         Args:
-            filter: Filter detections using a query in Falcon Query Language (FQL) An asterisk wildcard * includes all results.
+            filter: Filter detections using a query in Falcon Query Language (FQL) An asterisk wildcard * includes all results. You must use FQL and never use JSON.
             limit: The maximum number of detections to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results.
             offset: The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results.
             q: Search all detection metadata for the provided string.
