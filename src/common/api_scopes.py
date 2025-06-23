@@ -55,6 +55,4 @@ def get_required_scopes(operation: Optional[str]) -> List[str]:
     Returns:
         List[str]: List of required API scopes
     """
-    if operation is None:
-        return []
     return API_SCOPE_REQUIREMENTS.get(operation, [])
