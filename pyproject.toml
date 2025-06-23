@@ -45,7 +45,7 @@ dev = [
 falcon-mcp = "src.server:main"
 
 [tool.setuptools]
-packages = ["src"]
+packages = ["src", "src.common", "src.modules"]
 
 [tool.black]
 line-length = 100

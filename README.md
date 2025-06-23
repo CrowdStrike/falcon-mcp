@@ -35,6 +35,55 @@ CrowdStrike Falcon capabilities.
 
 ### Usage
 
+#### In Docker
+
+```bash
+docker build -t falcon-mcp .
+docker run falcon-mcp --help
+```
+
+##### Standalone
+
+```bash
+docker run \
+  -e FALCON_CLIENT_ID='YOUR_CLIENT_ID'\
+  -e FALCON_CLIENT_SECRET='YOUR_CLIENT_SECRET'\
+  -e FALCON_BASE_URL='YOUR_BASE_URL'\
+  falcon-mcp -t sse
+
+# The MCP server should be available here: http://127.0.0.1:8000/sse
+```
+
+##### Editor integration
+
+```json
+{
+  "mcpServers": {
+    "falcon-mcp": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "FALCON_CLIENT_ID",
+        "-e",
+        "FALCON_CLIENT_SECRET",
+        "-e",
+        "FALCON_BASE_URL",
+        "falcon-mcp"
+      ],
+      "env": {
+        "FALCON_CLIENT_ID": "YOUR_CLIENT_ID",
+        "FALCON_CLIENT_SECRET": "YOUR_CLIENT_SECRET",
+        "FALCON_BASE_URL": "YOUR_BASE_URL"
+      },
+      "disabled": false
+    }
+  }
+}
+```
+
 #### Command Line
 
 Run the server with default settings (stdio transport):
