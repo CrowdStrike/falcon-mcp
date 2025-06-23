@@ -3,7 +3,7 @@ Error handling utilities for Falcon MCP Server
 
 This module provides error handling utilities for the Falcon MCP server.
 """
-from typing import Dict, Any, Optional, Union, List
+from typing import Dict, Any, Optional, Union
 
 from .logging import get_logger
 from .api_scopes import get_required_scopes
