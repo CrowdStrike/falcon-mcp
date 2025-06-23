@@ -5,14 +5,13 @@ Tests for the error handling utilities.
 import unittest
 from unittest.mock import patch
 
+from src.common.api_scopes import API_SCOPE_REQUIREMENTS, get_required_scopes
 from src.common.errors import (
     FalconError,
     AuthenticationError,
     APIError,
     is_success_response,
-    get_required_scopes,
     handle_api_response,
-    API_SCOPE_REQUIREMENTS,
     _format_error_response,
 )
 
