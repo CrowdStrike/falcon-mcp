@@ -91,7 +91,7 @@ class IncidentsModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to perform operation",
-            default_result={}
+            default_result=[]
         )
 
         # Check if we received an error response
