@@ -87,13 +87,40 @@ class IncidentsModule(BaseModule):
         response = self.client.command(operation, parameters=params)
 
         # Handle the response
-        return handle_api_response(
+        api_response = handle_api_response(
             response,
             operation=operation,
             error_message="Failed to perform operation",
             default_result={}
         )
 
+        # Check if we received an error response
+        if isinstance(api_response, dict) and "error" in api_response:
+            # Return the error response as is
+            return api_response
+
+        # Initialize result with all scores
+        result = {
+            "average_score": 0,
+            "average_adjusted_score": 0,
+            "scores": api_response  # Include all the scores in the result
+        }
+
+        if api_response:  # If we have scores (list of score objects)
+            score_sum = 0
+            adjusted_score_sum = 0
+            count = len(api_response)
+
+            for item in api_response:
+                score_sum += item.get("score", 0)
+                adjusted_score_sum += item.get("adjusted_score", 0)
+
+            if count > 0:
+                # Round to ensure integer output
+                result["average_score"] = round(score_sum / count)
+                result["average_adjusted_score"] = round(adjusted_score_sum / count)
+
+        return result
 
     def get_incidents(
         self,
