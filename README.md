@@ -35,55 +35,6 @@ CrowdStrike Falcon capabilities.
 
 ### Usage
 
-#### In Docker
-
-```bash
-docker build -t falcon-mcp .
-docker run falcon-mcp --help
-```
-
-##### Standalone
-
-```bash
-docker run \
-  -e FALCON_CLIENT_ID='YOUR_CLIENT_ID'\
-  -e FALCON_CLIENT_SECRET='YOUR_CLIENT_SECRET'\
-  -e FALCON_BASE_URL='YOUR_BASE_URL'\
-  falcon-mcp -t sse
-
-# The MCP server should be available here: http://127.0.0.1:8000/sse
-```
-
-##### Editor integration
-
-```json
-{
-  "mcpServers": {
-    "falcon-mcp": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "FALCON_CLIENT_ID",
-        "-e",
-        "FALCON_CLIENT_SECRET",
-        "-e",
-        "FALCON_BASE_URL",
-        "falcon-mcp"
-      ],
-      "env": {
-        "FALCON_CLIENT_ID": "YOUR_CLIENT_ID",
-        "FALCON_CLIENT_SECRET": "YOUR_CLIENT_SECRET",
-        "FALCON_BASE_URL": "YOUR_BASE_URL"
-      },
-      "disabled": false
-    }
-  }
-}
-```
-
 #### Command Line
 
 Run the server with default settings (stdio transport):
@@ -158,6 +109,100 @@ pytest --run-e2e -v -s tests/e2e/
 
 For more details on running tests, see the [End-to-End Testing Guide](docs/e2e_testing.md).
 
+#### In Docker
+
+```bash
+docker build -t falcon-mcp .
+docker run falcon-mcp --help
+```
+
+##### Standalone
+
+```bash
+docker run \
+  -e FALCON_CLIENT_ID='YOUR_CLIENT_ID'\
+  -e FALCON_CLIENT_SECRET='YOUR_CLIENT_SECRET'\
+  -e FALCON_BASE_URL='YOUR_BASE_URL'\
+  falcon-mcp -t sse
+
+# The MCP server should be available here: http://127.0.0.1:8000/sse
+```
+
+##### Editor integration
+
+You can integrate the Falcon MCP server with your editor in two ways:
+
+###### Using an .env file (recommended)
+
+This approach keeps your credentials in a single `.env` file (which should be gitignored) and references them in the editor configuration:
+
+1. Create a `.env` file in your project root with your credentials:
+
+   ```bash
+   FALCON_CLIENT_ID=your-client-id
+   FALCON_CLIENT_SECRET=your-client-secret
+   FALCON_BASE_URL=https://api.us-2.crowdstrike.com  # Or your appropriate region
+   ```
+
+2. Configure your editor to use environment variables from the `.env` file:
+
+   ```json
+   {
+     "mcpServers": {
+       "falcon-mcp": {
+         "command": "docker",
+         "args": [
+           "run",
+           "-i",
+           "--rm",
+           "--env-file",
+           "/full/path/to/.env",
+           "falcon-mcp"
+         ],
+         "disabled": false
+       }
+     }
+   }
+   ```
+
+This approach is more secure and maintainable as it:
+
+- Keeps sensitive credentials out of your editor configuration
+- Allows you to easily update credentials in one place
+- Prevents accidental credential exposure in version control
+
+###### Direct environment variables (alternative)
+
+Alternatively, you can specify environment variables directly in the configuration:
+
+```json
+{
+  "mcpServers": {
+    "falcon-mcp": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "FALCON_CLIENT_ID",
+        "-e",
+        "FALCON_CLIENT_SECRET",
+        "-e",
+        "FALCON_BASE_URL",
+        "falcon-mcp"
+      ],
+      "env": {
+        "FALCON_CLIENT_ID": "YOUR_CLIENT_ID",
+        "FALCON_CLIENT_SECRET": "YOUR_CLIENT_SECRET",
+        "FALCON_BASE_URL": "YOUR_BASE_URL"
+      },
+      "disabled": false
+    }
+  }
+}
+```
+
 ## Available Modules
 
 ### Core Functionality (Built into Server)
@@ -196,6 +241,21 @@ To use the Falcon MCP server with AI assistants, you can use the provided `examp
       "transport": {
         "type": "stdio",
         "command": "python -m falcon-mcp"
+      }
+    },
+    {
+      "name": "falcon-stdio-docker",
+      "transport": {
+        "type": "stdio",
+        "command": "docker",
+        "args": [
+          "run",
+          "-i",
+          "--rm",
+          "--env-file",
+          "/full/path/to/.env",
+          "falcon-mcp"
+        ]
       }
     },
     {
