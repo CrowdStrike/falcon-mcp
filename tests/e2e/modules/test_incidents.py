@@ -42,19 +42,19 @@ class TestIncidentsModuleE2E(BaseE2ETest):
             self.assertGreaterEqual(len(tools), 1, "Expected at least 1 tool call")
             used_tool = tools[len(tools) - 1]
             self.assertEqual(used_tool['input']['tool_name'], "show_crowd_score")
-            
+
             # Verify the output contains the expected data
             output = json.loads(used_tool['output'])
             self.assertEqual(output["average_score"], 53)  # (50+70+40)/3 = 53.33 rounded to 53
             self.assertEqual(output["average_adjusted_score"], 63)  # (60+80+50)/3 = 63.33 rounded to 63
             self.assertEqual(len(output["scores"]), 3)
-            
+
             # Verify API call parameters
             self.assertGreaterEqual(self._mock_api_instance.command.call_count, 1, "Expected at least 1 API call")
             api_call_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
             self.assertEqual(api_call_params.get('limit'), 100)  # Default limit
             self.assertEqual(api_call_params.get('offset'), 0)   # Default offset
-            
+
             # Verify result contains CrowdScore information
             self.assertIn("CrowdScore", result)
             self.assertIn("53", result)  # Average score should be mentioned
