@@ -10,7 +10,7 @@ from tests.e2e.utils.base_e2e_test import BaseE2ETest
 
 
 @pytest.mark.e2e
-class TestFalconMCPServerE2E(BaseE2ETest):
+class TestDetectionsModuleE2E(BaseE2ETest):
     """
     End-to-end test suite for the Falcon MCP Server Detections Module.
     """
