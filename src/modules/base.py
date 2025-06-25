@@ -52,7 +52,7 @@ class BaseModule(ABC):
 
     def _base_get_by_ids(
         self, operation: str, ids: List[str],
-    ) -> Dict[str, Any]:
+    ) -> List[Dict[str, Any]]|Dict[str, Any]:
         body = prepare_api_parameters({
             "ids": ids
         })
@@ -65,5 +65,8 @@ class BaseModule(ABC):
             response,
             operation=operation,
             error_message="Failed to perform operation",
-            default_result={}
+            default_result=[]
         )
+
+    def _is_error(self, response: Any) -> bool:
+        return isinstance(response, dict) and "error" in response

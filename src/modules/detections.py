@@ -301,7 +301,7 @@ class DetectionsModule(BaseModule):
 
         # If handle_api_response returns an error dict instead of a list,
         # it means there was an error, so we return it wrapped in a list
-        if isinstance(detection_ids, dict) and "error" in detection_ids:
+        if self._is_error(detection_ids):
             return [detection_ids]
 
         # If we have detection IDs, get the details for each one
@@ -322,7 +322,7 @@ class DetectionsModule(BaseModule):
 
             # If handle_api_response returns an error dict instead of a list,
             # it means there was an error, so we return it wrapped in a list
-            if isinstance(details, dict) and "error" in details:
+            if self._is_error(details):
                 return [details]
 
             return details
@@ -332,7 +332,7 @@ class DetectionsModule(BaseModule):
     def get_detection_details(
         self,
         ids: List[str] = Field(),
-    ) -> Dict[str, Any]:
+    ) -> List[Dict[str, Any]]|Dict[str, Any]:
         """View information about detections. Gets detailed information about a specific detection.
 
         Args:

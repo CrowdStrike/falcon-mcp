@@ -40,7 +40,7 @@ class TestIncidentsModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call crowd_score with test parameters
-        result = self.module.crowd_score(filter="test filter", limit=100, offset=0, sort="modified_timestamp.desc")
+        result = self.module.show_crowd_score(filter="test filter", limit=100, offset=0, sort="modified_timestamp.desc")
 
         # Verify client command was called correctly
         self.mock_client.command.assert_called_once_with(
@@ -72,7 +72,7 @@ class TestIncidentsModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call crowd_score
-        result = self.module.crowd_score()
+        result = self.module.show_crowd_score()
 
         # Verify client command was called with the correct operation
         self.assertEqual(self.mock_client.command.call_count, 1)
@@ -96,7 +96,7 @@ class TestIncidentsModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call crowd_score
-        result = self.module.crowd_score(filter="invalid query")
+        result = self.module.show_crowd_score(filter="invalid query")
 
         # Verify result contains error
         self.assertIn("error", result)
@@ -119,7 +119,7 @@ class TestIncidentsModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call crowd_score with no parameters (using defaults)
-        result = self.module.crowd_score()
+        result = self.module.show_crowd_score()
 
         # Verify client command was called with the correct operation
         self.assertEqual(self.mock_client.command.call_count, 1)

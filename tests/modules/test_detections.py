@@ -160,9 +160,9 @@ class TestDetectionsModule(TestModules):
         # Call get_detection_details
         result = self.module.get_detection_details(["nonexistent"])
 
-        # For empty resources, handle_api_response returns the default_result (empty dict)
+        # For empty resources, handle_api_response returns the default_result (empty list)
         # We should check that the result is empty
-        self.assertEqual(result, {})
+        self.assertEqual(result, [])
 
 
 if __name__ == '__main__':

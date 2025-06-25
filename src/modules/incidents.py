@@ -26,35 +26,35 @@ class IncidentsModule(BaseModule):
         # Register tools
         self._add_tool(
             server,
-            self.crowd_score,
+            self.show_crowd_score,
             name="show_crowd_score"
         )
 
         self._add_tool(
             server,
-            self.get_incidents,
-            name="get_incident_details"
-        )
-
-        self._add_tool(
-            server,
-            self.query_incidents,
+            self.search_incidents,
             name="search_incidents"
         )
 
         self._add_tool(
             server,
-            self.get_behaviors,
-            name="get_behavior_details"
+            self.get_incident_details,
+            name="get_incident_details"
         )
 
         self._add_tool(
             server,
-            self.query_behaviors,
+            self.search_behaviors,
             name="search_behaviors"
         )
 
-    def crowd_score(
+        self._add_tool(
+            server,
+            self.get_behavior_details,
+            name="get_behavior_details"
+        )
+
+    def show_crowd_score(
         self,
         filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results."),
         limit: Optional[int] = Field(default=100, ge=1, le=2500, description="Maximum number of records to return. (Max: 2500)"),
@@ -95,7 +95,7 @@ class IncidentsModule(BaseModule):
         )
 
         # Check if we received an error response
-        if isinstance(api_response, dict) and "error" in api_response:
+        if self._is_error(api_response):
             # Return the error response as is
             return api_response
 
@@ -122,30 +122,13 @@ class IncidentsModule(BaseModule):
 
         return result
 
-    def get_incidents(
-        self,
-        ids: List[str] = Field(description="Incident ID(s) to retrieve."),
-    ) -> Dict[str, Any]:
-        """Get details on incidents by providing incident IDs.
-
-        Args:
-            ids: Incident ID(s) to retrieve.
-
-        Returns:
-            Tool returns the CrowdScore entity data.
-        """
-        return self._base_get_by_ids(
-            operation="GetIncidents",
-            ids=ids,
-        )
-
-    def query_incidents(
+    def search_incidents(
         self,
         filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. Review the following table for a complete list of available filters."),
         limit: int = Field(default=100, ge=1, le=500, description="Maximum number of records to return. (Max: 500)"),
         offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. FQL syntax. Ex: state.asc, name.desc"),
-    ) -> Dict[str, Any]:
+    ) -> List[Dict[str, Any]]:
         """Search for incidents by providing a FQL filter, sorting, and paging details.
 
         Args:
@@ -175,7 +158,7 @@ class IncidentsModule(BaseModule):
         Returns:
             Tool returns CrowdStrike incidents.
         """
-        return self._base_query(
+        incident_ids = self._base_query(
             operation="QueryIncidents",
             filter=filter,
             limit=limit,
@@ -183,31 +166,44 @@ class IncidentsModule(BaseModule):
             sort=sort,
         )
 
-    def get_behaviors(
+        if self._is_error(incident_ids):
+            return [incident_ids]
+
+        # If we have incident IDs, get the details for each one
+        if incident_ids:
+            return self.get_incident_details(incident_ids)
+
+        return []
+
+    def get_incident_details(
         self,
-        ids: List[str] = Field(description="Behavior ID(s) to retrieve."),
-    ) -> Dict[str, Any]:
-        """Get details on behaviors by providing behavior IDs.
+        ids: List[str] = Field(description="Incident ID(s) to retrieve."),
+    ) -> List[Dict[str, Any]]:
+        """Get details on incidents by providing incident IDs.
 
         Args:
-            ids: Behavior ID(s) to retrieve.
+            ids: Incident ID(s) to retrieve.
 
         Returns:
-            Tool returns the CrowdScore behaviors by ID.
+            Tool returns the CrowdScore entity data.
         """
-        return self._base_get_by_ids(
-            operation="GetBehaviors",
+        incidents = self._base_get_by_ids(
+            operation="GetIncidents",
             ids=ids,
         )
 
+        if self._is_error(incidents):
+            return [incidents]
 
-    def query_behaviors(
+        return incidents
+
+    def search_behaviors(
         self,
         filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results."),
         limit: int = Field(default=100, ge=1, le=500, description="Maximum number of records to return. (Max: 500)"),
         offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: modified_timestamp.desc)"),
-    ) -> Dict[str, Any]:
+    ) -> List[Dict[str, Any]]:
         """Search for behaviors by providing a FQL filter, sorting, and paging details.
 
         Args:
@@ -220,7 +216,7 @@ class IncidentsModule(BaseModule):
         Returns:
             Tool returns CrowdStrike behaviors.
         """
-        return self._base_query(
+        behavior_ids = self._base_query(
             operation="QueryBehaviors",
             filter=filter,
             limit=limit,
@@ -228,9 +224,40 @@ class IncidentsModule(BaseModule):
             sort=sort,
         )
 
+        if self._is_error(behavior_ids):
+            return [behavior_ids]
+
+        # If we have behavior IDs, get the details for each one
+        if behavior_ids:
+            return self.get_behavior_details(behavior_ids)
+
+        return []
+
+    def get_behavior_details(
+        self,
+        ids: List[str] = Field(description="Behavior ID(s) to retrieve."),
+    ) -> List[Dict[str, Any]]:
+        """Get details on behaviors by providing behavior IDs.
+
+        Args:
+            ids: Behavior ID(s) to retrieve.
+
+        Returns:
+            Tool returns the CrowdScore behaviors by ID.
+        """
+        behaviors = self._base_get_by_ids(
+            operation="GetBehaviors",
+            ids=ids,
+        )
+
+        if self._is_error(behaviors):
+            return [behaviors]
+
+        return behaviors
+
     def _base_query(
         self, operation: str, filter: Optional[str] = None, limit: int = 100, offset: int = 0, sort: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> List[str]|Dict[str, Any]:
         # Prepare parameters
         params = prepare_api_parameters({
             "filter": filter,
@@ -247,5 +274,5 @@ class IncidentsModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to perform operation",
-            default_result={}
+            default_result=[]
         )
