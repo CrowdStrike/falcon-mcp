@@ -19,6 +19,7 @@ class TestIntelModule(TestModules):
         expected_tools = [
             "falcon_search_actors",
             "falcon_search_indicators",
+            "falcon_search_reports",
         ]
         self.assert_tools_registered(expected_tools)
 
@@ -190,6 +191,91 @@ class TestIntelModule(TestModules):
         self.assertIn("details", result[0])
         # Check that the error message starts with the expected prefix
         self.assertTrue(result[0]["error"].startswith("Failed to search indicators"))
+
+    def test_query_report_entities_success(self):
+        """Test querying report entities with successful response."""
+        # Setup mock response with sample reports
+        mock_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "report1", "name": "Report 1", "description": "Description 1"},
+                    {"id": "report2", "name": "Report 2", "description": "Description 2"}
+                ]
+            }
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call query_report_entities with test parameters
+        result = self.module.query_report_entities(
+            filter="name:'Report*'",
+            limit=100,
+            offset=0,
+            sort="created_date.desc",
+            q="test",
+            include_deleted=True,
+        )
+
+        # Verify client command was called correctly
+        self.mock_client.command.assert_called_once_with(
+            "QueryIntelReportEntities",
+            parameters={
+                "filter": "name:'Report*'",
+                "limit": 100,
+                "offset": 0,
+                "sort": "created_date.desc",
+                "q": "test",
+                "include_deleted": True,
+            }
+        )
+
+        # Verify result contains expected values
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "report1")
+        self.assertEqual(result[1]["id"], "report2")
+
+    def test_query_report_entities_empty_response(self):
+        """Test querying report entities with empty response."""
+        # Setup mock response with empty resources
+        mock_response = {
+            "status_code": 200,
+            "body": {
+                "resources": []
+            }
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call query_report_entities
+        result = self.module.query_report_entities()
+
+        # Verify client command was called with the correct operation
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        call_args = self.mock_client.command.call_args
+        self.assertEqual(call_args[0][0], "QueryIntelReportEntities")
+
+        # Verify result is an empty list
+        self.assertEqual(result, [])
+
+    def test_query_report_entities_error(self):
+        """Test querying report entities with API error."""
+        # Setup mock response with error
+        mock_response = {
+            "status_code": 400,
+            "body": {
+                "errors": [{"message": "Invalid query"}]
+            }
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call query_report_entities
+        result = self.module.query_report_entities(filter="invalid query")
+
+        # Verify result contains error
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
+        self.assertIn("details", result[0])
+        # Check that the error message starts with the expected prefix
+        self.assertTrue(result[0]["error"].startswith("Failed to search reports"))
 
 
 if __name__ == '__main__':
