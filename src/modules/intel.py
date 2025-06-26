@@ -29,11 +29,17 @@ class IntelModule(BaseModule):
         # Register tools
         self._add_tool(
             server,
-            self.search_actors,
+            self.query_actor_entities,
             name="search_actors"
         )
 
-    def search_actors(
+        self._add_tool(
+            server,
+            self.query_indicator_entities,
+            name="search_indicators"
+        )
+
+    def query_actor_entities(
         self,
         filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results."),
         limit: Optional[int] = Field(default=100, ge=1, le=5000, description="Maximum number of records to return. (Max: 5000)"),
@@ -77,3 +83,61 @@ class IntelModule(BaseModule):
             error_message="Failed to search actors",
             default_result=[]
         )
+
+    def query_indicator_entities(
+        self,
+        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results."),
+        limit: Optional[int] = Field(default=100, ge=1, le=5000, description="Maximum number of records to return. (Max: 5000)"),
+        offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
+        sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)"),
+        q: Optional[str] = Field(default=None, description="Free text search across all indexed fields."),
+        include_deleted: Optional[bool] = Field(default=False, description="Flag indicating if both published and deleted indicators should be returned."),
+        include_relations: Optional[bool] = Field(default=False, description="Flag indicating if related indicators should be returned."),
+    ) -> List[Dict[str, Any]]:
+        """Get info about indicators that match provided FQL filters.
+
+        Args:
+            filter: FQL query expression that should be used to limit the results.
+            limit: Maximum number of records to return. (Max: 5000)
+            offset: Starting index of overall result set from which to return ids.
+            sort: The property to sort by. (Ex: created_date|desc)
+            q: Free text search across all indexed fields.
+            include_deleted: Flag indicating if both published and deleted indicators should be returned.
+            include_relations: Flag indicating if related indicators should be returned.
+
+        Returns:
+            List of indicators that match the provided filters.
+        """
+        # Prepare parameters
+        params = prepare_api_parameters({
+            "filter": filter,
+            "limit": limit,
+            "offset": offset,
+            "sort": sort,
+            "q": q,
+            "include_deleted": include_deleted,
+            "include_relations": include_relations,
+        })
+
+        # Define the operation name
+        operation = "QueryIntelIndicatorEntities"
+
+        logger.debug("Searching indicators with params: %s", params)
+
+        # Make the API request
+        response = self.client.command(operation, parameters=params)
+
+        # Handle the response
+        result = handle_api_response(
+            response,
+            operation=operation,
+            error_message="Failed to search indicators",
+            default_result=[]
+        )
+
+        # If handle_api_response returns an error dict instead of a list,
+        # it means there was an error, so we return it wrapped in a list
+        if isinstance(result, dict) and "error" in result:
+            return [result]
+
+        return result
