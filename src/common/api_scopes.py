@@ -27,21 +27,8 @@ API_SCOPE_REQUIREMENTS = {
     "QueryBehaviors": ["incidents:read"],
     # Intel operations
     "QueryIntelActorEntities": ["actors-falcon-intelligence:read"],
-    "QueryIntelIndicatorEntities": ["indicators:read"],
-    "QueryIntelReportEntities": ["reports:read"],
-    "QueryIntelRuleEntities": ["rules:read"],
-    "GetIntelActorEntities": ["actors-falcon-intelligence:read"],
-    "GetIntelIndicatorEntities": ["indicators:read"],
-    "GetIntelReportPDF": ["reports:read"],
-    "GetIntelReportEntities": ["reports:read"],
-    "GetIntelRuleEntities": ["rules:read"],
-    "GetIntelRuleFile": ["rules:read"],
-    "GetLatestIntelIndicatorTimestamp": ["indicators:read"],
-    "GetMitreReport": ["actors-falcon-intelligence:read"],
-    "GetRuleDetails": ["rules:read"],
-    "GetRulesDetails": ["rules:read"],
-    "GetRulePreview": ["rules:read"],
-    "GetVulnerabilities": ["vulnerabilities:read"],
+    "QueryIntelIndicatorEntities": ["indicators-falcon-intelligence:read"],
+    "QueryIntelReportEntities": ["reports-falcon-intelligence:read"],
     # Add more mappings as needed
 }
 

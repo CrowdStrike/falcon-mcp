@@ -224,10 +224,18 @@ Provides tools for accessing and analyzing CrowdStrike Falcon detections:
 Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
 
 - `falcon_show_crowd_score`: Show CrowdScore in the environment
-- `falcon_get_incident_details`: Get incidents by ID
 - `falcon_search_incidents`: Query for incidents
-- `falcon_get_behavior_details`: Get behaviors by ID
+- `falcon_get_incident_details`: Get incidents by ID
 - `falcon_search_behaviors`: Query for behaviors
+- `falcon_get_behavior_details`: Get behaviors by ID
+
+### Intel Module
+
+Provides tools for accessing and analyzing CrowdStrike Intel:
+
+- `falcon_search_actors`: Get info about actors
+- `falcon_search_indicators`: Get info about indicators
+- `search_reports`: Get info about reports
 
 ## MCP Configuration
 
