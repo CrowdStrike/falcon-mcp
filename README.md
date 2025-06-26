@@ -235,7 +235,7 @@ Provides tools for accessing and analyzing CrowdStrike Intel:
 
 - `falcon_search_actors`: Get info about actors
 - `falcon_search_indicators`: Get info about indicators
-- `search_reports`: Get info about reports
+- `falcon_search_reports`: Get info about reports
 
 ## MCP Configuration
 
