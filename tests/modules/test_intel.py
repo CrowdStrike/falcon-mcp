@@ -39,10 +39,10 @@ class TestIntelModule(TestModules):
 
         # Call search_actors with test parameters
         result = self.module.query_actor_entities(
-            filter="name:'Actor*'", 
-            limit=100, 
-            offset=0, 
-            sort="name.asc", 
+            filter="name:'Actor*'",
+            limit=100,
+            offset=0,
+            sort="name.asc",
             q="test"
         )
 
@@ -121,10 +121,10 @@ class TestIntelModule(TestModules):
 
         # Call query_indicator_entities with test parameters
         result = self.module.query_indicator_entities(
-            filter="type:'domain'", 
-            limit=100, 
-            offset=0, 
-            sort="published_date.desc", 
+            filter="type:'domain'",
+            limit=100,
+            offset=0,
+            sort="published_date.desc",
             q="malicious",
             include_deleted=True,
             include_relations=True
