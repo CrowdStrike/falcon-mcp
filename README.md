@@ -163,7 +163,7 @@ For more details on running tests, see the [End-to-End Testing Guide](docs/e2e_t
 
 You can integrate the Falcon MCP server with your editor in two ways:
 
-###### Using an .env file (recommended)
+##### Using an .env file (recommended)
 
 This approach keeps your credentials in a single `.env` file (which should be gitignored) and references them in the editor configuration:
 
