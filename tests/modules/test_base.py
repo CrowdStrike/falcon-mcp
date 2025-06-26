@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 """
 Tests for the Base module.
 """
@@ -9,10 +10,9 @@ from tests.modules.utils.test_modules import TestModules
 
 class ConcreteBaseModule(BaseModule):
     """Concrete implementation of BaseModule for testing."""
-    
+
     def register_tools(self, server):
         """Implement abstract method."""
-        pass
 
 
 class TestBaseModule(TestModules):
@@ -40,17 +40,17 @@ class TestBaseModule(TestModules):
         response = ["item1", "item2"]
         result = self.module._is_error(response)
         self.assertFalse(result)
-        
+
         # Test with a string
         response = "This is a string response"
         result = self.module._is_error(response)
         self.assertFalse(result)
-        
+
         # Test with None
         response = None
         result = self.module._is_error(response)
         self.assertFalse(result)
-        
+
         # Test with an integer
         response = 42
         result = self.module._is_error(response)
