@@ -8,9 +8,10 @@ import argparse
 import os
 import sys
 from typing import Dict, List, Optional, Set
+import uvicorn
 
 from dotenv import load_dotenv
-from mcp.server import FastMCP
+from mcp.server.fastmcp import FastMCP
 
 from .client import FalconClient
 from .common.logging import configure_logging, get_logger
@@ -120,13 +121,26 @@ class FalconMCPServer:
         """
         return {"modules": registry.get_module_names()}
 
-    def run(self, transport: str = "stdio"):
+    def run(self, transport: str = "stdio", host: str = "127.0.0.1", port: int = 8000):
         """Run the MCP server.
 
         Args:
             transport: Transport protocol to use ("stdio", "sse", or "streamable-http")
+            host: Host to bind to for HTTP transports (default: 127.0.0.1)
+            port: Port to listen on for HTTP transports (default: 8000)
         """
-        self.server.run(transport)
+        if transport == "streamable-http":
+            # For streamable-http, use uvicorn directly for custom host/port
+            logger.info("Starting streamable-http server on %s:%d", host, port)
+
+            # Get the ASGI app from FastMCP (handles /mcp path automatically)
+            app = self.server.streamable_http_app()
+
+            # Run with uvicorn for custom host/port configuration
+            uvicorn.run(app, host=host, port=port, log_level="info" if not self.debug else "debug")
+        else:
+            # For stdio and sse, use the default FastMCP run method
+            self.server.run(transport)
 
 
 def parse_args():
@@ -163,11 +177,25 @@ def parse_args():
     )
 
     # API base URL
-
     parser.add_argument(
         "--base-url",
         help="Falcon API base URL (defaults to FALCON_BASE_URL env var)"
     )
+
+    # HTTP transport configuration
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host to bind to for HTTP transports (default: 127.0.0.1)"
+    )
+
+    parser.add_argument(
+        "--port", "-p",
+        type=int,
+        default=8000,
+        help="Port to listen on for HTTP transports (default: 8000)"
+    )
+
 
     return parser.parse_args()
 
@@ -191,7 +219,7 @@ def main():
             enabled_modules=set(args.modules)
         )
         logger.info("Starting server with %s transport", args.transport)
-        server.run(args.transport)
+        server.run(args.transport, host=args.host, port=args.port)
     except RuntimeError as e:
         logger.error("Runtime error: %s", e)
         sys.exit(1)

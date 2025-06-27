@@ -7,7 +7,7 @@ CrowdStrike Falcon capabilities.
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - CrowdStrike Falcon API credentials
 
 ### Installation
@@ -49,6 +49,50 @@ Run with SSE transport:
 python -m falcon-mcp --transport sse
 ```
 
+Run with streamable-http transport:
+
+```bash
+python -m falcon-mcp --transport streamable-http
+```
+
+Run with streamable-http transport on custom port:
+
+```bash
+python -m falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8080
+```
+
+### Docker Usage
+
+The Falcon MCP Server can be run in Docker containers for easy deployment:
+
+```bash
+# Build the Docker image
+docker build -t falcon-mcp .
+
+# Run with stdio transport (default)
+docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret falcon-mcp
+
+# Run with SSE transport
+docker run --rm -p 8000:8000 -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
+  falcon-mcp --transport sse --host 0.0.0.0
+
+# Run with streamable-http transport
+docker run --rm -p 8000:8000 -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
+  falcon-mcp --transport streamable-http --host 0.0.0.0
+
+# Run with custom port
+docker run --rm -p 8080:8080 -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
+  falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8080
+
+# Run with specific modules
+docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
+  falcon-mcp --modules detections incidents
+```
+
+**Note**: When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
+
+#### Additional Command Line Options
+
 Run with specific modules:
 
 ```bash
@@ -79,6 +123,12 @@ server.run()
 
 # Or run with SSE transport
 server.run("sse")
+
+# Or run with streamable-http transport
+server.run("streamable-http")
+
+# Or run with streamable-http transport on custom host/port
+server.run("streamable-http", host="0.0.0.0", port=8080)
 ```
 
 #### Running examples
@@ -109,30 +159,11 @@ pytest --run-e2e -v -s tests/e2e/
 
 For more details on running tests, see the [End-to-End Testing Guide](docs/e2e_testing.md).
 
-#### In Docker
-
-```bash
-docker build -t falcon-mcp .
-docker run falcon-mcp --help
-```
-
-##### Standalone
-
-```bash
-docker run \
-  -e FALCON_CLIENT_ID='YOUR_CLIENT_ID'\
-  -e FALCON_CLIENT_SECRET='YOUR_CLIENT_SECRET'\
-  -e FALCON_BASE_URL='YOUR_BASE_URL'\
-  falcon-mcp -t sse
-
-# The MCP server should be available here: http://127.0.0.1:8000/sse
-```
-
-##### Editor integration
+#### Editor Integration
 
 You can integrate the Falcon MCP server with your editor in two ways:
 
-###### Using an .env file (recommended)
+##### Using an .env file (recommended)
 
 This approach keeps your credentials in a single `.env` file (which should be gitignored) and references them in the editor configuration:
 
@@ -271,6 +302,13 @@ To use the Falcon MCP server with AI assistants, you can use the provided `examp
       "transport": {
         "type": "sse",
         "url": "http://127.0.0.1:8000/sse"
+      }
+    },
+    {
+      "name": "falcon-streamable-http",
+      "transport": {
+        "type": "streamable-http",
+        "url": "http://127.0.0.1:8000/mcp"
       }
     }
   ]
