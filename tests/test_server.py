@@ -11,6 +11,11 @@ from src.server import FalconMCPServer
 class TestFalconMCPServer(unittest.TestCase):
     """Test cases for the Falcon MCP server."""
 
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Ensure modules are discovered before each test
+        registry.discover_modules()
+
     @patch('src.server.FalconClient')
     @patch('src.server.FastMCP')
     def test_server_initialization(self, mock_fastmcp, mock_client):

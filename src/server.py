@@ -39,9 +39,6 @@ class FalconMCPServer:
         self.base_url = base_url
         self.debug = debug
 
-        # Discover and register available modules
-        registry.discover_modules()
-
         self.enabled_modules = enabled_modules or set(registry.AVAILABLE_MODULES.keys())
 
         # Configure logging
@@ -134,6 +131,9 @@ class FalconMCPServer:
 
 def parse_args():
     """Parse command line arguments."""
+    # Ensure modules are discovered before creating the parser
+    registry.discover_modules()
+
     parser = argparse.ArgumentParser(description="Falcon MCP Server")
 
     # Transport options
@@ -145,12 +145,14 @@ def parse_args():
     )
 
     # Module selection
+    available_modules = list(registry.AVAILABLE_MODULES.keys())
     parser.add_argument(
         "--modules", "-m",
         nargs="+",
-        choices=list(registry.AVAILABLE_MODULES.keys()),
-        default=list(registry.AVAILABLE_MODULES.keys()),
-        help="Modules to enable (default: all)"
+        choices=available_modules,
+        default=available_modules,
+        metavar="MODULE",
+        help=f"Modules to enable. Available: {', '.join(available_modules)} (default: {','.join(available_modules)})"
     )
 
     # Debug mode
