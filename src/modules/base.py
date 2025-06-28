@@ -51,11 +51,28 @@ class BaseModule(ABC):
         logger.debug("Added tool: %s", prefixed_name)
 
     def _base_get_by_ids(
-        self, operation: str, ids: List[str],
+        self,
+        operation: str,
+        ids: List[str],
+        id_key: str = "ids",
+        **additional_params
     ) -> List[Dict[str, Any]]|Dict[str, Any]:
-        body = prepare_api_parameters({
-            "ids": ids
-        })
+        """Helper method for API operations that retrieve entities by IDs.
+
+        Args:
+            operation: The API operation name
+            ids: List of entity IDs
+            id_key: The key name for IDs in the request body (default: "ids")
+            **additional_params: Additional parameters to include in the request body
+
+        Returns:
+            List of entity details or error dict
+        """
+        # Build the request body with dynamic ID key and additional parameters
+        body_params = {id_key: ids}
+        body_params.update(additional_params)
+
+        body = prepare_api_parameters(body_params)
 
         # Make the API request
         response = self.client.command(operation, body=body)

@@ -62,7 +62,7 @@ class TestErrorUtils(unittest.TestCase):
     def test_get_required_scopes(self):
         """Test get_required_scopes function."""
         # Known operation
-        self.assertEqual(get_required_scopes("QueryDetects"), ["detections:read"])
+        self.assertEqual(get_required_scopes("GetQueriesAlertsV2"), ["alerts:read"])
 
         # Unknown operation
         self.assertEqual(get_required_scopes("UnknownOperation"), [])
@@ -84,13 +84,13 @@ class TestErrorUtils(unittest.TestCase):
         # Permission error with operation
         details = {"status_code": 403, "body": {"errors": [{"message": "Access denied"}]}}
         response = _format_error_response(
-            "Permission denied", details=details, operation="QueryDetects"
+            "Permission denied", details=details, operation="GetQueriesAlertsV2"
         )
         self.assertEqual(response["error"], "Permission denied")
         self.assertEqual(response["details"], details)
-        self.assertEqual(response["required_scopes"], ["detections:read"])
+        self.assertEqual(response["required_scopes"], ["alerts:read"])
         self.assertIn("resolution", response)
-        self.assertIn("detections:read", response["resolution"])
+        self.assertIn("alerts:read", response["resolution"])
 
     def test_handle_api_response_success(self):
         """Test handle_api_response function with success response."""

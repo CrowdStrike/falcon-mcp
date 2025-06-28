@@ -12,9 +12,10 @@ logger = get_logger(__name__)
 # Map of API operations to required scopes
 # This can be expanded as more modules and operations are added
 API_SCOPE_REQUIREMENTS = {
-    # Detections operations
-    "QueryDetects": ["detections:read"],
-    "GetDetectSummaries": ["detections:read"],
+    # Alerts operations (migrated from detections)
+    "GetQueriesAlertsV2": ["alerts:read"],
+    "PostEntitiesAlertsV2": ["alerts:read"],
+    "PostAggregatesAlertsV2": ["alerts:read"],
     # Hosts operations
     "QueryDevices": ["hosts:read"],
     "GetDeviceDetails": ["hosts:read"],

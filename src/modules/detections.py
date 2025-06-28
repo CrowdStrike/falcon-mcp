@@ -41,11 +41,12 @@ class DetectionsModule(BaseModule):
 
     def search_detections(
         self,
-        filter: Optional[str] = Field(default=None, examples={"behaviors.sha256:'87b8a76d9c657cb3954936b8afa58652c2a01b2f7d26345b9aff0c831c5cead3'", "status:'New'"}),
+        filter: Optional[str] = Field(default=None, examples={"behaviors.sha256:'87b8a76d9c657cb3954936b8afa58652c2a01b2f7d26345b9aff0c831c5cead3'", "status:'new'"}),
         limit: Optional[int] = Field(default=100, ge=1, le=9999),
         offset: Optional[int] = Field(default=0, ge=0),
         q: Optional[str] = Field(default=None),
         sort: Optional[str] = Field(default=None, examples={"max_severity.desc", "last_behavior.desc"}),
+        include_hidden: Optional[bool] = Field(default=True),
     ) -> List[Dict[str, Any]]:
         """Search for detections in your CrowdStrike environment.
 
@@ -68,208 +69,223 @@ class DetectionsModule(BaseModule):
                 For chronological ordering, use 'last_behavior.desc' for most recent detections first.
 
                 Examples: 'max_severity.desc', 'last_behavior.desc'
+            include_hidden: Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility.
 
-    🎯 FALCON QUERY LANGUAGE (FQL) COMPREHENSIVE GUIDE:
-    
+    🎯 FALCON QUERY LANGUAGE (FQL) COMPREHENSIVE GUIDE FOR DETECTIONS:
+
     === BASIC SYNTAX ===
     property_name:[operator]'value'
-    
+
     === AVAILABLE OPERATORS ===
     • No operator = equals (default)
     • ! = not equal to
-    • > = greater than  
+    • > = greater than
     • >= = greater than or equal
     • < = less than
-    • <= = less than or equal  
+    • <= = less than or equal
     • ~ = text match (ignores case, spaces, punctuation)
     • !~ = does not text match
     • * = wildcard matching (one or more characters)
-    
+
     === DATA TYPES & SYNTAX ===
     • Strings: 'value' or ['exact_value'] for exact match
-    • Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format) 
+    • Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
     • Booleans: true or false (no quotes)
     • Numbers: 123 (no quotes)
     • Wildcards: 'partial*' or '*partial' or '*partial*'
-    • IP addresses: Support wildcards like '192.168.*'
-    
+
     === COMBINING CONDITIONS ===
     • + = AND condition
-    • , = OR condition  
+    • , = OR condition
     • ( ) = Group expressions
-    
-    🏷️ SEARCHABLE HOST PROPERTIES (Complete List):
-    
-    === IDENTIFICATION ===
-    • device_id: Host unique identifier (AID)
-    • hostname: Machine hostname (supports wildcards)
-    • computer_name: Computer display name
-    • serial_number: Hardware serial number
-    • mac_address: Network MAC address
-    
-    === SYSTEM INFORMATION ===  
-    • platform_name: OS platform (Windows, Mac, Linux)
-    • os_version: Operating system version
-    • major_version: OS major version number
-    • minor_version: OS minor version number
-    • system_manufacturer: Hardware manufacturer
-    • system_product_name: System model/product name
-    • bios_manufacturer: BIOS manufacturer
-    • bios_version: BIOS version
-    • cpu_signature: CPU type/signature
-    
-    === NETWORK INFORMATION ===
-    • local_ip: Internal IP address (supports wildcards with local_ip.raw)
-    • external_ip: External/public IP address  
-    • machine_domain: Active Directory domain
-    • ou: Organizational Unit
-    • site_name: AD site name
-    
-    === AGENT & CONFIGURATION ===
-    • agent_version: Falcon agent version
-    • agent_load_flags: Agent configuration flags
-    • config_id_base: Configuration base ID
-    • config_id_build: Configuration build ID  
-    • config_id_platform: Platform configuration ID
-    • platform_id: Platform identifier
-    • product_type_desc: Product type description
-    • release_group: Sensor deployment group
-    
-    === STATUS & TIMESTAMPS ===
-    • status: Host status (normal, containment_pending, contained, lift_containment_pending)
-    • first_seen: First connection timestamp
-    • last_seen: Most recent connection timestamp  
-    • last_login_timestamp: User login timestamp
-    • modified_timestamp: Last record update timestamp
-    • max_severity: Value can be any integer between 1-100
-    • max_severity_displayname: informational, low, medium, high, critical
-    
-    === SPECIALIZED PROPERTIES ===
-    • reduced_functionality_mode: RFM status (yes, no, blank for unknown)
-    • linux_sensor_mode: Linux mode (Kernel Mode, User Mode)
-    • deployment_type: Linux deployment (Standard, DaemonSet)
-    • tags: Falcon grouping tags
-    
-    💡 PRACTICAL SEARCH EXAMPLES:
-    
-    === BASIC SEARCHES ===
-    Find Windows servers:
-    platform_name:'Windows'
-    
-    Find specific hostname:
-    hostname:'web-server-01'
-    
-    Find hosts with hostname starting with 'web':
-    hostname:'web*'
-    
-    === NETWORK-BASED SEARCHES ===
-    Find hosts in specific IP range:
-    local_ip.raw:*'192.168.1.*'
-    
-    Find hosts by external IP:
-    external_ip:'203.0.113.45'
-    
-    Find hosts in specific domain:
-    machine_domain:'contoso.com'
-    
+
+    🚨 DETECTION PROPERTIES (Complete List):
+
+    === IDENTIFICATION & CORE ===
+    • composite_id: Unique detection identifier
+    • aggregate_id: Related detection group identifier
+    • cid: Customer ID
+    • agent_id: Falcon agent identifier
+    • pattern_id: Detection pattern identifier
+
+    === ASSIGNMENT & WORKFLOW ===
+    • assigned_to_name: Person assigned to this detection
+    • assigned_to_uid: Assigned user identifier
+    • assigned_to_uuid: Assigned user UUID
+    • status: Detection status (new, in_progress, closed, reopened)
+
+    === TIMESTAMPS ===
+    • created_timestamp: When detection was created
+    • updated_timestamp: Last modification time
+    • timestamp: Detection occurrence timestamp
+
+    === THREAT INTELLIGENCE ===
+    • confidence: Confidence level (1-100)
+    • severity: Detection severity level
+    • tactic: MITRE ATT&CK tactic
+    • tactic_id: MITRE ATT&CK tactic ID
+    • technique: MITRE ATT&CK technique
+    • technique_id: MITRE ATT&CK technique ID
+    • objective: Attack objective description
+
+    === DETECTION METADATA ===
+    • name: Detection name/title
+    • display_name: Human-readable detection name
+    • description: Detection description
+    • type: Detection type classification
+    • scenario: Detection scenario
+
+    === SYSTEM & PLATFORM ===
+    • platform: Operating system platform
+    • show_in_ui: Whether detection appears in UI (true/false)
+    • data_domains: Data classification domains
+
+    === PRODUCT FILTERING ===
+    • product: Source Falcon product
+        - 'epp' (Endpoint Protection)
+        - 'idp' (Identity Protection)
+        - 'mobile' (Falcon for Mobile)
+        - 'xdr' (Falcon XDR)
+        - 'overwatch' (OverWatch)
+        - 'cwpp' (Cloud Workload Protection)
+        - 'ngsiem' (Next-Gen SIEM)
+        - 'thirdparty' (Third party data)
+        - 'data-protection' (Data Protection)
+
+    === SOURCE INFORMATION ===
+    • source_products: Products that generated this detection
+    • source_vendors: Vendor sources for the detection
+
+    === TAGS & CLASSIFICATION ===
+    • tags: Detection classification tags
+
+    💡 PRACTICAL DETECTION SEARCH EXAMPLES:
+
+    === STATUS-BASED SEARCHES ===
+    Find new detections:
+    status:'new'
+
+    Find detections in progress:
+    status:'in_progress'
+
+    Find closed detections:
+    status:'closed'
+
+    Find reopened detections:
+    status:'reopened'
+
+    === PRODUCT-SPECIFIC SEARCHES ===
+    Find endpoint protection detections:
+    product:'epp'
+
+    Find identity protection detections:
+    product:'idp'
+
+    Find XDR detections:
+    product:'xdr'
+
+    Find OverWatch detections:
+    product:'overwatch'
+
+    === SEVERITY & CONFIDENCE SEARCHES ===
+    Find high confidence detections:
+    confidence:>80
+
+    Find medium to high confidence:
+    confidence:>=50
+
+    Find high severity detections (assuming severity scale):
+    severity:>'medium'
+
+    === ASSIGNMENT SEARCHES ===
+    Find unassigned detections:
+    assigned_to_name:!*
+
+    Find detections assigned to specific analyst:
+    assigned_to_name:'john.doe'
+
     === TIME-BASED SEARCHES ===
-    Find hosts not seen in last 30 days:
-    last_seen:<'2024-01-01T00:00:00Z'
-    
-    Find recently joined hosts (last 7 days):
-    first_seen:>'2024-01-15T00:00:00Z'
-    
-    === STATUS & HEALTH SEARCHES ===
-    Find contained hosts:
-    status:'contained'
-    
-    Find hosts in reduced functionality mode:
-    reduced_functionality_mode:'yes'
-    
-    Find offline hosts (not seen in 24 hours):
-    last_seen:<'2024-01-20T00:00:00Z'
-    
-    === SYSTEM SPECIFICATION SEARCHES ===
-    Find Linux hosts:
-    platform_name:'Linux'
-    
-    Find VMware virtual machines:
-    system_manufacturer:'VMware, Inc.'
-    
-    Find specific OS version:
-    os_version:'Windows Server 2019'
-    
-    Find hosts with old agent versions:
-    agent_version:<'7.0.0'
-    
+    Find recent detections (last 24 hours):
+    created_timestamp:>'2024-01-20T00:00:00Z'
+
+    Find detections from specific date range:
+    created_timestamp:>='2024-01-15T00:00:00Z'+created_timestamp:<='2024-01-20T00:00:00Z'
+
+    Find recently updated detections:
+    updated_timestamp:>'2024-01-19T00:00:00Z'
+
+    === THREAT INTELLIGENCE SEARCHES ===
+    Find detections with specific tactic:
+    tactic:'Persistence'
+
+    Find detections with technique ID:
+    technique_id:'T1055'
+
+    Find detections with specific objective:
+    objective:'*credential*'
+
     === ADVANCED COMBINED SEARCHES ===
-    Find Windows servers in production domain not seen recently:
-    platform_name:'Windows'+machine_domain:'prod.company.com'+last_seen:<'2024-01-15T00:00:00Z'
-    
-    Find either Linux hosts OR hosts with specific hostname pattern:
-    (platform_name:'Linux'),(hostname:'app-*')
-    
-    Find critical infrastructure hosts (complex grouping):
-    (hostname:'dc-*'+platform_name:'Windows'),(hostname:'db-*'+status:'normal')
-    
-    Find hosts by multiple criteria with exclusions:
-    platform_name:'Windows'+hostname:!'test-*'+status:!'contained'
-    
-    Find hosts needing attention (old, offline, or contained):
-    (last_seen:<'2024-01-10T00:00:00Z'),(status:'contained'),(agent_version:<'6.0.0')
-    
-    === COMPLIANCE & INVENTORY SEARCHES ===
-    Find untagged hosts:
-    tags:!*
-    
-    Find hosts with specific tags:
-    tags:'production'
-    
-    Find hosts by manufacturer for hardware inventory:
-    system_manufacturer:'Dell Inc.'
-    
-    Find hosts by deployment group:
-    release_group:'production-sensors'
-    
-    === SECURITY-FOCUSED SEARCHES ===
-    Find hosts with suspicious external IPs:
-    external_ip.raw:*'10.*'
-    
-    Find hosts that haven't checked in (potential compromise):
-    last_seen:<'2024-01-18T00:00:00Z'+status:'normal'
-    
-    Find hosts with modified configurations:
-    modified_timestamp:>'2024-01-15T00:00:00Z'
-    
+    Find new high-confidence endpoint detections:
+    status:'new'+confidence:>75+product:'epp'
+
+    Find assigned XDR detections that are in progress:
+    product:'xdr'+status:'in_progress'+assigned_to_name:*
+
+    Find recent high-severity unassigned detections:
+    created_timestamp:>'2024-01-18T00:00:00Z'+assigned_to_name:!*+confidence:>80
+
+    Find OverWatch detections with persistence tactics:
+    product:'overwatch'+tactic:'Persistence'
+
+    === BULK FILTERING SEARCHES ===
+    Find detections from multiple products:
+    (product:'epp'),(product:'xdr'),(product:'idp')
+
+    Find detections in various active states:
+    (status:'new'),(status:'in_progress')
+
+    Find detections needing attention (new or reopened):
+    (status:'new'),(status:'reopened')
+
+    === INVESTIGATION-FOCUSED SEARCHES ===
+    Find detections with specific pattern:
+    pattern_id:'12345'
+
+    Find related detections by aggregate:
+    aggregate_id:'agg-67890'
+
+    Find detections with specific tags:
+    tags:'malware'
+
+    Find detections that show in UI:
+    show_in_ui:true
+
     🚀 USAGE EXAMPLES:
-    
-    # Find all Windows hosts sorted by hostname
-    search_hosts_advanced("platform_name:'Windows'", limit=50, sort="hostname.asc")
-    
-    # Find hosts not seen in 30 days with full details  
-    search_hosts_advanced("last_seen:<'2024-01-01T00:00:00Z'", limit=25, include_details=True)
-    
-    # Find Linux hosts in specific IP range
-    search_hosts_advanced("platform_name:'Linux'+local_ip.raw:*'10.0.*'", limit=100)
-    
-    # Get basic inventory - just hostnames and IDs
-    search_hosts_advanced("", limit=1000, fields="hostname,device_id,platform_name")
-    
-    # Find contained or pending containment hosts
-    search_hosts_advanced("(status:'contained'),(status:'containment_pending')", sort="modified_timestamp.desc")
-    
-    # Complex search: Production Windows servers, healthy, recent
-    search_hosts_advanced("platform_name:'Windows'+hostname:'prod-*'+status:'normal'+last_seen:>'2024-01-15T00:00:00Z'")
-    
+
+    # Find new endpoint protection detections sorted by severity
+    search_detections("status:'new'+product:'epp'", limit=50, sort="confidence.desc")
+
+    # Find high-confidence XDR detections from last week
+    search_detections("product:'xdr'+confidence:>80+created_timestamp:>'2024-01-15T00:00:00Z'", limit=25)
+
+    # Find unassigned detections across all products
+    search_detections("assigned_to_name:!*", limit=100, sort="created_timestamp.desc")
+
+    # Find OverWatch detections with specific tactics
+    search_detections("product:'overwatch'+tactic:'Initial Access'", limit=50)
+
+    # Find detections that need immediate attention
+    search_detections("(status:'new'),(status:'reopened')+confidence:>75", sort="created_timestamp.desc")
+
     ⚠️ IMPORTANT NOTES:
     • Use single quotes around string values: 'value'
-    • Use square brackets for exact matches: ['exact_value']  
-    • Wildcard searches may be limited (one * per property in some cases)
+    • Use square brackets for exact matches: ['exact_value']
     • Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
-    • Maximum 20 properties per FQL statement
-    • Boolean values: true/false (no quotes)
-    • For IP wildcards, use local_ip.raw property
+    • Status values are: new, in_progress, closed, reopened
+    • Product filtering enables product-specific detection analysis
+    • Confidence values range from 1-100
     • Complex queries may take longer to execute
+    • include_hidden parameter shows previously hidden detections
 
         Returns:
             List of detection details
@@ -283,15 +299,15 @@ class DetectionsModule(BaseModule):
             "sort": sort,
         })
 
-        # Define the operation name
-        operation = "QueryDetects"
+        # Define the operation name - migrated from QueryDetects to GetQueriesAlertsV2
+        operation = "GetQueriesAlertsV2"
 
         logger.debug("Searching detections with params: %s", params)
 
         # Make the API request
         response = self.client.command(operation, parameters=params)
 
-        # Use handle_api_response to get detection IDs
+        # Use handle_api_response to get detection IDs (now composite_ids)
         detection_ids = handle_api_response(
             response,
             operation=operation,
@@ -306,18 +322,12 @@ class DetectionsModule(BaseModule):
 
         # If we have detection IDs, get the details for each one
         if detection_ids:
-            details_operation = "GetDetectSummaries"
-            details_response = self.client.command(
-                details_operation,
-                body={"ids": detection_ids}
-            )
-
-            # Use handle_api_response for the details response
-            details = handle_api_response(
-                details_response,
-                operation=details_operation,
-                error_message="Failed to get detection details",
-                default_result=[]
+            # Use the enhanced base method with composite_ids and include_hidden
+            details = self._base_get_by_ids(
+                operation="PostEntitiesAlertsV2",
+                ids=detection_ids,
+                id_key="composite_ids",
+                include_hidden=include_hidden
             )
 
             # If handle_api_response returns an error dict instead of a list,
@@ -332,21 +342,23 @@ class DetectionsModule(BaseModule):
     def get_detection_details(
         self,
         ids: List[str] = Field(),
+        include_hidden: Optional[bool] = Field(default=True),
     ) -> List[Dict[str, Any]]|Dict[str, Any]:
         """View information about detections. Gets detailed information about a specific detection.
 
         Args:
-            ids: ID(s) of the detections to retrieve. View key attributes of detections, including the associated host, disposition, objective/tactic/technique, adversary, and more. Specify one or more detection IDs (max 1000 per request). Find detection IDs with the QueryDetects operation, the Falcon console, or the Streaming API.
+            ids: ID(s) of the detections to retrieve. View key attributes of detections, including the associated host, disposition, objective/tactic/technique, adversary, and more. Specify one or more detection IDs (max 1000 per request). Find detection IDs with the search_detections operation, the Falcon console, or the Streaming API.
+            include_hidden: Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility.
 
         Returns:
             Detection details
         """
-        # Define the operation name
-        operation = "GetDetectSummaries"
-
         logger.debug("Getting detection details for ID: %s", ids)
 
+        # Use the enhanced base method - composite_ids parameter matches ids for backward compatibility
         return self._base_get_by_ids(
-            operation=operation,
+            operation="PostEntitiesAlertsV2",
             ids=ids,
+            id_key="composite_ids",
+            include_hidden=include_hidden,
         )
