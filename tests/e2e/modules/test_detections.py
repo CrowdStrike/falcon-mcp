@@ -20,13 +20,13 @@ class TestDetectionsModuleE2E(BaseE2ETest):
         async def test_logic():
             fixtures = [
                 {
-                    "operation": "QueryDetects",
-                    "validator": lambda kwargs: "high" in kwargs.get('parameters', {}).get('filter', '').lower() or "max_severity:5" in kwargs.get('parameters', {}).get('filter', '').lower(),
+                    "operation": "GetQueriesAlertsV2",
+                    "validator": lambda kwargs: any(term in kwargs.get('parameters', {}).get('filter', '').lower() for term in ["high", "severity:", "confidence:"]) and kwargs.get('parameters', {}).get('limit', 0) <= 10,
                     "response": {"status_code": 200, "body": {"resources": ["detection-1", "detection-2", "detection-3"]}}
                 },
                 {
-                    "operation": "GetDetectSummaries",
-                    "validator": lambda kwargs: "detection-1" in kwargs.get('body', {}).get('ids', []),
+                    "operation": "PostEntitiesAlertsV2",
+                    "validator": lambda kwargs: "detection-1" in kwargs.get('body', {}).get('composite_ids', []),
                     "response": {
                         "status_code": 200,
                         "body": {
@@ -58,9 +58,9 @@ class TestDetectionsModuleE2E(BaseE2ETest):
             api_call_1_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
             self.assertIn("high", api_call_1_params.get('filter').lower())
             self.assertEqual(api_call_1_params.get('limit'), 3)
-            self.assertIn('max_severity.desc', api_call_1_params.get('sort', ''))
+            self.assertIn('severity.desc', api_call_1_params.get('sort', ''))
             api_call_2_body = self._mock_api_instance.command.call_args_list[1][1].get('body', {})
-            self.assertEqual(api_call_2_body.get('ids'), ["detection-1", "detection-2", "detection-3"])
+            self.assertEqual(api_call_2_body.get('composite_ids'), ["detection-1", "detection-2", "detection-3"])
 
             self.assertIn("detection-1", result)
             self.assertIn("detection-2", result)
@@ -77,13 +77,13 @@ class TestDetectionsModuleE2E(BaseE2ETest):
         async def test_logic():
             fixtures = [
                 {
-                    "operation": "QueryDetects",
+                    "operation": "GetQueriesAlertsV2",
                     "validator": lambda kwargs: "10.0.0.1" in kwargs.get('parameters', {}).get('filter', ''),
                     "response": {"status_code": 200, "body": {"resources": ["detection-4"]}}
                 },
                 {
-                    "operation": "GetDetectSummaries",
-                    "validator": lambda kwargs: "detection-4" in kwargs.get('body', {}).get('ids', []),
+                    "operation": "PostEntitiesAlertsV2",
+                    "validator": lambda kwargs: "detection-4" in kwargs.get('body', {}).get('composite_ids', []),
                     "response": {
                         "status_code": 200,
                         "body": {
@@ -114,7 +114,7 @@ class TestDetectionsModuleE2E(BaseE2ETest):
             api_call_1_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
             self.assertIn("10.0.0.1", api_call_1_params.get('filter'))
             api_call_2_body = self._mock_api_instance.command.call_args_list[1][1].get('body', {})
-            self.assertEqual(api_call_2_body.get('ids'), ["detection-4"])
+            self.assertEqual(api_call_2_body.get('composite_ids'), ["detection-4"])
 
             self.assertIn("detection-4", result)
             self.assertNotIn("detection-1", result)

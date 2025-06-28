@@ -41,11 +41,11 @@ class DetectionsModule(BaseModule):
 
     def search_detections(
         self,
-        filter: Optional[str] = Field(default=None, examples={"behaviors.sha256:'87b8a76d9c657cb3954936b8afa58652c2a01b2f7d26345b9aff0c831c5cead3'", "status:'new'"}),
+        filter: Optional[str] = Field(default=None, examples={"agent_id:'77d11725xxxxxxxxxxxxxxxxxxxxc48ca19'", "status:'new'"}),
         limit: Optional[int] = Field(default=100, ge=1, le=9999),
         offset: Optional[int] = Field(default=0, ge=0),
         q: Optional[str] = Field(default=None),
-        sort: Optional[str] = Field(default=None, examples={"max_severity.desc", "last_behavior.desc"}),
+        sort: Optional[str] = Field(default=None, examples={"severity.desc", "timestamp.desc"}),
         include_hidden: Optional[bool] = Field(default=True),
     ) -> List[Dict[str, Any]]:
         """Search for detections in your CrowdStrike environment.
@@ -56,19 +56,20 @@ class DetectionsModule(BaseModule):
             offset: The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results.
             q: Search all detection metadata for the provided string.
             sort: Sort detections using these options:
-                first_behavior: Timestamp of the first behavior associated with this detection
-                last_behavior: Timestamp of the last behavior associated with this detection
-                max_severity: Highest severity of the behaviors associated with this detection (recommended when filtering by severity)
-                max_confidence: Highest confidence of the behaviors associated with this detection
-                device.hostname: Hostname of the host where this detection was detected
+                timestamp: Timestamp when the alert occurred
+                created_timestamp: When the alert was created
+                updated_timestamp: When the alert was last modified
+                severity: Severity level of the alert (1-100, recommended when filtering by severity)
+                confidence: Confidence level of the alert (1-100)
+                agent_id: Agent ID associated with the alert
 
                 Sort either asc (ascending) or desc (descending).
-                Both formats are supported: 'max_severity.desc' or 'max_severity|desc'
+                Both formats are supported: 'severity.desc' or 'severity|desc'
 
-                When searching for high severity detections, use 'max_severity.desc' to get the highest severity detections first.
-                For chronological ordering, use 'last_behavior.desc' for most recent detections first.
+                When searching for high severity alerts, use 'severity.desc' to get the highest severity alerts first.
+                For chronological ordering, use 'timestamp.desc' for most recent alerts first.
 
-                Examples: 'max_severity.desc', 'last_behavior.desc'
+                Examples: 'severity.desc', 'timestamp.desc'
             include_hidden: Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility.
 
     🎯 FALCON QUERY LANGUAGE (FQL) COMPREHENSIVE GUIDE FOR DETECTIONS:
@@ -263,19 +264,19 @@ class DetectionsModule(BaseModule):
     🚀 USAGE EXAMPLES:
 
     # Find new endpoint protection detections sorted by severity
-    search_detections("status:'new'+product:'epp'", limit=50, sort="confidence.desc")
+    search_detections("status:'new'+product:'epp'", limit=50, sort="severity.desc")
 
     # Find high-confidence XDR detections from last week
     search_detections("product:'xdr'+confidence:>80+created_timestamp:>'2024-01-15T00:00:00Z'", limit=25)
 
     # Find unassigned detections across all products
-    search_detections("assigned_to_name:!*", limit=100, sort="created_timestamp.desc")
+    search_detections("assigned_to_name:!*", limit=100, sort="timestamp.desc")
 
     # Find OverWatch detections with specific tactics
     search_detections("product:'overwatch'+tactic:'Initial Access'", limit=50)
 
     # Find detections that need immediate attention
-    search_detections("(status:'new'),(status:'reopened')+confidence:>75", sort="created_timestamp.desc")
+    search_detections("(status:'new'),(status:'reopened')+confidence:>75", sort="timestamp.desc")
 
     ⚠️ IMPORTANT NOTES:
     • Use single quotes around string values: 'value'
