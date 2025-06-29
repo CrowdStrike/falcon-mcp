@@ -15,7 +15,6 @@ API_SCOPE_REQUIREMENTS = {
     # Alerts operations (migrated from detections)
     "GetQueriesAlertsV2": ["alerts:read"],
     "PostEntitiesAlertsV2": ["alerts:read"],
-    "PostAggregatesAlertsV2": ["alerts:read"],
     # Hosts operations
     "QueryDevices": ["hosts:read"],
     "GetDeviceDetails": ["hosts:read"],
