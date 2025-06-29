@@ -195,8 +195,28 @@ class DetectionsModule(BaseModule):
     Find medium to high confidence:
     confidence:>=50
 
-    Find high severity detections (assuming severity scale):
-    severity:>'medium'
+    🔥 SEVERITY NUMERIC MAPPING (Critical for Proper Filtering):
+    Based on CrowdStrike Falcon API data:
+    • Critical: severity:>=90 (or severity:90 exactly)
+    • High: severity:>=70 (or severity:70 exactly)
+    • Medium: severity:>=50 (or severity:50 exactly)
+    • Low: severity:>=20 (covers range 20-40)
+    • Informational: severity:<=10 (covers range 2-5)
+
+    Find critical severity detections only:
+    severity:>=90
+
+    Find high severity detections (includes critical):
+    severity:>=70
+
+    Find medium severity and above (includes high & critical):
+    severity:>=50
+
+    Find high severity detections only (excludes critical):
+    severity:70
+
+    Find informational detections:
+    severity:<=10
 
     === ASSIGNMENT SEARCHES ===
     Find unassigned detections:
