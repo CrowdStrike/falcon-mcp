@@ -138,8 +138,17 @@ class FalconMCPServer:
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(app, host=host, port=port, log_level="info" if not self.debug else "debug")
+        elif transport == "sse":
+            # For sse, use uvicorn directly for custom host/port (same pattern as streamable-http)
+            logger.info("Starting sse server on %s:%d", host, port)
+
+            # Get the ASGI app from FastMCP
+            app = self.server.sse_app()
+
+            # Run with uvicorn for custom host/port configuration
+            uvicorn.run(app, host=host, port=port, log_level="info" if not self.debug else "debug")
         else:
-            # For stdio and sse, use the default FastMCP run method
+            # For stdio, use the default FastMCP run method (no host/port needed)
             self.server.run(transport)
 
 
