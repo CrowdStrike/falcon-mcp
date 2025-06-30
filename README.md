@@ -14,24 +14,27 @@ CrowdStrike Falcon capabilities.
 
 1. Clone the repository:
 
-   ```bash
-   git clone https://github.com/CrowdStrike/falcon-mcp.git
-   cd falcon-mcp
-   ```
+```bash
+git clone https://github.com/CrowdStrike/falcon-mcp.git
+cd falcon-mcp
+```
 
 2. Install dependencies:
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+# Optionally create a virtual environment
+python -m venv .venv && source .venv/bin/activate
+
+pip install -e .
+```
 
 3. Create a `.env` file with your Falcon API credentials:
 
-   ```bash
-   FALCON_CLIENT_ID=your-client-id
-   FALCON_CLIENT_SECRET=your-client-secret
-   FALCON_BASE_URL=https://api.us-2.crowdstrike.com  # Or your appropriate region
-   ```
+```bash
+FALCON_CLIENT_ID=your-client-id
+FALCON_CLIENT_SECRET=your-client-secret
+FALCON_BASE_URL=https://api.us-2.crowdstrike.com  # Or your appropriate region
+```
 
 ### Usage
 
