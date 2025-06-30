@@ -14,6 +14,19 @@ class ConcreteBaseModule(BaseModule):
     def register_tools(self, server):
         """Implement abstract method."""
 
+    def register_resources(self, server):
+        """Override register_resources for testing."""
+        self._add_resource(
+            server,
+            self.get_test_resource,
+            "test_resource",
+            "Test resource description"
+        )
+
+    def get_test_resource(self):
+        """Test resource method."""
+        return {"test": "data"}
+
 
 class TestBaseModule(TestModules):
     """Test cases for the Base module."""
@@ -192,6 +205,43 @@ class TestBaseModule(TestModules):
 
         # Verify result is empty list
         self.assertEqual(result, [])
+
+    def test_add_resource(self):
+        """Test _add_resource method."""
+        # Setup mock server
+        mock_server = unittest.mock.MagicMock()
+
+        # Define a test resource function
+        def test_resource():
+            return {"test": "data"}
+
+        # Call _add_resource
+        self.module._add_resource(
+            mock_server,
+            test_resource,
+            "test_resource",
+            "Test resource description"
+        )
+
+        # Verify resource was added to the server with the correct prefix
+        mock_server.add_resource.assert_called_once_with(
+            "falcon:test_resource",
+            test_resource,
+            description="Test resource description"
+        )
+
+        # Verify resource was tracked in the module
+        self.assertIn("falcon:test_resource", self.module.resources)
+
+    def test_register_resources(self):
+        """Test register_resources method."""
+        # Use the helper method to verify resources
+        expected_resources = ["falcon:test_resource"]
+        self.assert_resources_registered(expected_resources)
+
+        # Verify resource was tracked in the module
+        self.assertEqual(len(self.module.resources), 1)
+        self.assertEqual(self.module.resources[0], "falcon:test_resource")
 
 if __name__ == '__main__':
     unittest.main()

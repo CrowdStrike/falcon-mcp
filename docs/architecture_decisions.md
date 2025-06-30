@@ -2,6 +2,33 @@
 
 This document outlines key architectural decisions made during the development of the Falcon MCP Server.
 
+## Resource Implementation
+
+### Context
+
+The initial implementation of the Falcon MCP Server only supported tools, which are functions that can be called with arguments. However, the Model Context Protocol (MCP) also supports resources, which are data sources that can be accessed directly. Resources provide a way to expose data that doesn't require computation or that should be available as context for tools.
+
+### Decision
+
+We implemented a resource system that:
+
+1. Allows modules to register resources with the server
+2. Provides a consistent naming scheme for resources (prefixed with `falcon:`)
+3. Integrates with the existing module architecture
+4. Makes resources discoverable and accessible to MCP clients
+
+### Implementation
+
+- Added an `add_resource` method to the `FalconMCPServer` class
+- Added a `_register_resources` method to the server to register resources from modules
+- Added a `register_resources` method to the `BaseModule` class (optional for modules to implement)
+- Added an `_add_resource` helper method to the `BaseModule` class
+- Updated the server initialization to call `_register_resources()`
+- Added tracking of registered resources in modules
+- Created documentation for resource development in `docs/resource_development.md`
+
+This implementation allows modules to register resources in a similar way to how they register tools, maintaining consistency in the codebase while extending its capabilities.
+
 ## Module Registry System
 
 ### Context

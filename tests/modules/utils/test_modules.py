@@ -45,3 +45,29 @@ class TestModules(unittest.TestCase):
         # Verify that all expected tools were registered
         for tool in expected_tools:
             self.assertIn(tool, registered_tools)
+
+    def assert_resources_registered(self, expected_resources):
+        """
+        Helper method to verify that a module correctly registers its resources.
+
+        Args:
+            expected_resources: List of resource URIs that should be registered
+        """
+        # Reset the mock server to clear any previous calls
+        self.mock_server.reset_mock()
+
+        # Call register_resources
+        self.module.register_resources(self.mock_server)
+
+        # Verify that add_resource was called for each resource
+        self.assertEqual(self.mock_server.add_resource.call_count, len(expected_resources))
+
+        # Get the resource URIs that were registered
+        registered_resources = [
+            args[0]
+            for args, _ in self.mock_server.add_resource.call_args_list
+        ]
+
+        # Verify that all expected resources were registered
+        for resource in expected_resources:
+            self.assertIn(resource, registered_resources)

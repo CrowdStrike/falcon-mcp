@@ -4,7 +4,7 @@ Base module for Falcon MCP Server
 This module provides the base class for all Falcon MCP server modules.
 """
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from mcp.server import FastMCP
 
@@ -28,10 +28,20 @@ class BaseModule(ABC):
         """
         self.client = client
         self.tools = []  # List to track registered tools
+        self.resources = []  # List to track registered resources
 
     @abstractmethod
     def register_tools(self, server: FastMCP) -> None:
         """Register tools with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
+
+    def register_resources(self, server: FastMCP) -> None:
+        """Register resources with the MCP server.
+
+        This method is optional. Modules can override it to register resources.
 
         Args:
             server: MCP server instance
@@ -49,6 +59,20 @@ class BaseModule(ABC):
         server.add_tool(method, name=prefixed_name)
         self.tools.append(prefixed_name)
         logger.debug("Added tool: %s", prefixed_name)
+
+    def _add_resource(self, server: FastMCP, resource_fn: Callable, uri: str, description: Optional[str] = None) -> None:
+        """Add a resource to the MCP server and track it.
+
+        Args:
+            server: MCP server instance
+            resource_fn: Function that returns the resource data
+            uri: Resource URI
+            description: Optional description of the resource
+        """
+        prefixed_uri = f"falcon:{uri}"
+        server.add_resource(prefixed_uri, resource_fn, description=description)
+        self.resources.append(prefixed_uri)
+        logger.debug("Added resource: %s", prefixed_uri)
 
     def _base_get_by_ids(
         self,

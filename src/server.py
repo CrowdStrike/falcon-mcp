@@ -7,7 +7,7 @@ and serves as the entry point for the application.
 import argparse
 import os
 import sys
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Callable, Any
 import uvicorn
 
 from dotenv import load_dotenv
@@ -73,10 +73,11 @@ class FalconMCPServer:
                 self.modules[module_name] = module_class(self.falcon_client)
                 logger.debug("Initialized module: %s", module_name)
 
-        # Register tools from modules
+        # Register tools and resources from modules
         self._register_tools()
+        self._register_resources()
 
-        # Count modules and tools with proper grammar
+        # Count modules, tools, and resources with proper grammar
         module_count = len(self.modules)
         module_word = "module" if module_count == 1 else "modules"
 
@@ -84,7 +85,14 @@ class FalconMCPServer:
         tool_count = sum(len(getattr(m, 'tools', [])) for m in self.modules.values())
         tool_word = "tool" if tool_count == 1 else "tools"
 
-        logger.info("Initialized %d %s with %d %s", module_count, module_word, tool_count, tool_word)
+        # Simple count of resources (handles modules without resources attribute)
+        resource_count = sum(len(getattr(m, 'resources', [])) for m in self.modules.values())
+        resource_word = "resource" if resource_count == 1 else "resources"
+
+        logger.info(
+            "Initialized %d %s with %d %s and %d %s",
+            module_count, module_word, tool_count, tool_word, resource_count, resource_word
+        )
 
     def _register_tools(self):
         """Register tools from all modules."""
@@ -104,6 +112,26 @@ class FalconMCPServer:
         # Register tools from modules
         for module in self.modules.values():
             module.register_tools(self.server)
+
+    def _register_resources(self):
+        """Register resources from all modules."""
+        # Register resources from modules
+        for module in self.modules.values():
+            # Check if the module has a register_resources method
+            if hasattr(module, 'register_resources') and callable(module.register_resources):
+                module.register_resources(self.server)
+
+    def add_resource(self, uri: str, resource_fn: Callable[..., Any], description: Optional[str] = None):
+        """Add a resource to the MCP server.
+
+        Args:
+            uri: Resource URI
+            resource_fn: Function that returns the resource data
+            description: Optional description of the resource
+        """
+        prefixed_uri = f"falcon:{uri}"
+        self.server.add_resource(prefixed_uri, resource_fn, description=description)
+        logger.debug("Added resource: %s", prefixed_uri)
 
     def falcon_check_connectivity(self) -> Dict[str, bool]:
         """Check connectivity to the Falcon API.

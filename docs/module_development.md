@@ -8,8 +8,10 @@ Each module should:
 
 1. Inherit from the `BaseModule` class
 2. Implement the `register_tools` method
-3. Define tool methods that interact with the Falcon API
-4. Use common utilities for configuration, logging, error handling, and API interactions
+3. Optionally implement the `register_resources` method
+4. Define tool methods that interact with the Falcon API
+5. Optionally define resource methods that provide data
+6. Use common utilities for configuration, logging, error handling, and API interactions
 
 ## Step-by-Step Implementation Guide
 
@@ -51,6 +53,22 @@ class YourModule(BaseModule):
 
         # Add more tools as needed
 
+    def register_resources(self, server: FastMCP) -> None:
+        """Register resources with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
+        # Register resources
+        self._add_resource(
+            server,
+            self.your_resource_method,
+            uri="your_resource_name",
+            description="Description of your resource"
+        )
+
+        # Add more resources as needed
+
     def your_tool_method(self, param1: str, param2: Optional[int] = None) -> Dict[str, Any]:
         """Description of what your tool does.
 
@@ -78,6 +96,26 @@ class YourModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to perform operation",
+            default_result={}
+        )
+
+    def your_resource_method(self) -> Dict[str, Any]:
+        """Description of what your resource provides.
+
+        Returns:
+            Resource data description
+        """
+        # Define the operation name (used for error handling)
+        operation = "YourFalconAPIOperation"
+
+        # Make the API request
+        response = self.client.command(operation, parameters={})
+
+        # Handle the response
+        return handle_api_response(
+            response,
+            operation=operation,
+            error_message="Failed to get resource data",
             default_result={}
         )
 ```
@@ -194,6 +232,7 @@ The `TestModules` base class provides:
 
 1. A `setup_module()` method that handles the common setup of mocking the client and server
 2. An `assert_tools_registered()` helper method to verify tool registration
+3. An `assert_resources_registered()` helper method to verify resource registration
 
 This approach simplifies test code and ensures consistency across all module tests.
 
@@ -278,13 +317,13 @@ if isinstance(result, dict) and "error" in result:
 
 ## Example: Implementing a Hosts Module
 
-Here's an example of implementing a Hosts module that provides tools for accessing and managing hosts in the Falcon platform:
+Here's an example of implementing a Hosts module that provides tools and resources for accessing and managing hosts in the Falcon platform:
 
 ```python
 """
 Hosts module for Falcon MCP Server
 
-This module provides tools for accessing and managing CrowdStrike Falcon hosts.
+This module provides tools and resources for accessing and managing CrowdStrike Falcon hosts.
 """
 from typing import Dict, List, Optional, Any
 
@@ -321,6 +360,27 @@ class HostsModule(BaseModule):
             server,
             self.get_host_count,
             name="get_host_count"
+        )
+
+    def register_resources(self, server: FastMCP) -> None:
+        """Register resources with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
+        # Register resources
+        self._add_resource(
+            server,
+            self.get_host_summary,
+            uri="hosts/summary",
+            description="Summary of hosts in the environment"
+        )
+
+        self._add_resource(
+            server,
+            self.get_host_counts_by_platform,
+            uri="hosts/counts/platform",
+            description="Host counts by platform"
         )
 
     def search_hosts(self, query: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
@@ -429,6 +489,117 @@ class HostsModule(BaseModule):
             return {"count": 0, **host_ids}
 
         return {"count": len(host_ids)}
+
+    def get_host_summary(self) -> Dict[str, Any]:
+        """Get a summary of hosts in the environment.
+
+        Returns:
+            Summary of hosts including total count, online count, and offline count
+        """
+        # Define the operation name
+        operation = "QueryDevices"
+
+        # Make the API request for all hosts
+        all_response = self.client.command(operation, parameters={})
+
+        # Make the API request for online hosts
+        online_params = prepare_api_parameters({
+            "filter": "status:'normal'"
+        })
+        online_response = self.client.command(operation, parameters=online_params)
+
+        # Handle the responses
+        all_hosts = handle_api_response(
+            all_response,
+            operation=operation,
+            error_message="Failed to get host summary",
+            default_result=[]
+        )
+
+        online_hosts = handle_api_response(
+            online_response,
+            operation=operation,
+            error_message="Failed to get online hosts",
+            default_result=[]
+        )
+
+        # If either response is an error, return the error
+        if self._is_error(all_hosts):
+            return all_hosts
+        if self._is_error(online_hosts):
+            return online_hosts
+
+        # Calculate counts
+        total_count = len(all_hosts)
+        online_count = len(online_hosts)
+        offline_count = total_count - online_count
+
+        # Return the summary
+        return {
+            "total_count": total_count,
+            "online_count": online_count,
+            "offline_count": offline_count,
+            "last_updated": self.client.command("GetTime")["body"]["utc_time"]
+        }
+
+    def get_host_counts_by_platform(self) -> Dict[str, Any]:
+        """Get host counts by platform.
+
+        Returns:
+            Dictionary with counts for each platform (Windows, Mac, Linux)
+        """
+        # Define the operation name
+        operation = "QueryDevices"
+
+        # Make the API requests for each platform
+        windows_params = prepare_api_parameters({
+            "filter": "platform_name:'Windows'"
+        })
+        windows_response = self.client.command(operation, parameters=windows_params)
+
+        mac_params = prepare_api_parameters({
+            "filter": "platform_name:'Mac'"
+        })
+        mac_response = self.client.command(operation, parameters=mac_params)
+
+        linux_params = prepare_api_parameters({
+            "filter": "platform_name:'Linux'"
+        })
+        linux_response = self.client.command(operation, parameters=linux_params)
+
+        # Handle the responses
+        windows_hosts = handle_api_response(
+            windows_response,
+            operation=operation,
+            error_message="Failed to get Windows hosts",
+            default_result=[]
+        )
+
+        mac_hosts = handle_api_response(
+            mac_response,
+            operation=operation,
+            error_message="Failed to get Mac hosts",
+            default_result=[]
+        )
+
+        linux_hosts = handle_api_response(
+            linux_response,
+            operation=operation,
+            error_message="Failed to get Linux hosts",
+            default_result=[]
+        )
+
+        # Check for errors
+        if self._is_error(windows_hosts) or self._is_error(mac_hosts) or self._is_error(linux_hosts):
+            return {"error": "Failed to get host counts by platform"}
+
+        # Return the counts
+        return {
+            "windows": len(windows_hosts),
+            "mac": len(mac_hosts),
+            "linux": len(linux_hosts),
+            "last_updated": self.client.command("GetTime")["body"]["utc_time"]
+        }
 ```
 
 Don't forget to update the `API_SCOPE_REQUIREMENTS` dictionary in `src/common/errors.py`:
@@ -447,3 +618,25 @@ And import the module in the `src/modules/__init__.py` file:
 ```python
 # In src/modules/__init__.py
 from .hosts import HostsModule
+```
+
+## Resources vs. Tools
+
+When deciding whether to implement functionality as a tool or a resource, consider the following:
+
+### Use Tools When:
+
+1. The functionality requires user input (parameters)
+2. The operation performs an action or computation
+3. The result may change based on input parameters
+4. The operation might modify data or state
+
+### Use Resources When:
+
+1. The data is static or changes infrequently
+2. The data provides context for other operations
+3. The data doesn't require user input
+4. Multiple tools might need the same data
+5. The data is useful as reference information
+
+For more detailed information about implementing resources, see the [Resource Development Guide](resource_development.md).
