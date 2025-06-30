@@ -22,7 +22,14 @@ AVAILABLE_MODULES: Dict[str, Type[MODULE_TYPE]] = {}
 
 
 def discover_modules():
-    """Discover available modules by scanning the modules directory."""
+    """Discover available modules by scanning the modules directory.
+
+    Always clears and rediscovers modules. Safe to call multiple times.
+    """
+    # Clear existing modules first
+    AVAILABLE_MODULES.clear()
+    logger.debug("Clearing and rediscovering modules")
+
     # Get the path to the modules directory
     current_dir = os.path.dirname(__file__)
     modules_path = os.path.join(current_dir, 'modules')
@@ -42,6 +49,8 @@ def discover_modules():
                     module_name = attr_name.lower().replace('module', '')
                     AVAILABLE_MODULES[module_name] = module_class
                     logger.debug("Discovered module: %s", module_name)
+
+    logger.debug("Module discovery completed - found %d modules", len(AVAILABLE_MODULES))
 
 
 

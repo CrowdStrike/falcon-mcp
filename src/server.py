@@ -36,6 +36,9 @@ class FalconMCPServer:
             debug: Enable debug logging
             enabled_modules: Set of module names to enable (defaults to all modules)
         """
+        # Ensure modules are discovered
+        registry.discover_modules()
+
         # Store configuration
         self.base_url = base_url
         self.debug = debug

@@ -8,7 +8,6 @@ with streamable-http transport for custom integrations and web-based deployments
 import os
 from dotenv import load_dotenv
 
-from src import registry
 from src.server import FalconMCPServer
 
 
@@ -16,9 +15,6 @@ def main():
     """Run the Falcon MCP server with streamable-http transport."""
     # Load environment variables from .env file
     load_dotenv()
-
-    # Discover all available modules
-    registry.discover_modules()
 
     # Create and run the server with streamable-http transport
     server = FalconMCPServer(
