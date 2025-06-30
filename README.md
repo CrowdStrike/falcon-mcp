@@ -135,8 +135,15 @@ server.run("streamable-http", host="0.0.0.0", port=8080)
 
 ```python
 pip install -e .
-cd examples
-python sse_usage.py
+
+# Run with stdio transport
+python examples/basic_usage.py
+
+# Run with SSE transport
+python examples/sse_usage.py
+
+# Run with streamable-http transport
+python examples/streamable_http_usage.py
 ```
 
 #### Running tests
@@ -153,15 +160,6 @@ pytest --run-e2e tests/e2e/
 
 # Run end-to-end tests with verbose output (note: -s is required to see output)
 pytest --run-e2e -v -s tests/e2e/
-
-# Run with stdio transport
-python examples/basic_usage.py
-
-# Run with SSE transport
-python examples/sse_usage.py
-
-# Run with streamable-http transport
-python examples/streamable_http_usage.py
 ```
 
 > **Note**: The `-s` flag is required to see detailed output from E2E tests.
