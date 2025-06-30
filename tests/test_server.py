@@ -11,11 +11,6 @@ from src.server import FalconMCPServer
 class TestFalconMCPServer(unittest.TestCase):
     """Test cases for the Falcon MCP server."""
 
-    def setUp(self):
-        """Set up test fixtures before each test method."""
-        # Ensure modules are discovered before each test
-        registry.discover_modules()
-
     @patch('src.server.FalconClient')
     @patch('src.server.FastMCP')
     def test_server_initialization(self, mock_fastmcp, mock_client):
@@ -53,8 +48,9 @@ class TestFalconMCPServer(unittest.TestCase):
         )
 
         # Verify modules initialization
-        self.assertEqual(len(server.modules), len(registry.AVAILABLE_MODULES))
-        for module_name in registry.AVAILABLE_MODULES:
+        available_module_names = registry.get_module_names()
+        self.assertEqual(len(server.modules), len(available_module_names))
+        for module_name in available_module_names:
             self.assertIn(module_name, server.modules)
 
     @patch('src.server.FalconClient')

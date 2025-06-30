@@ -21,6 +21,15 @@ MODULE_TYPE = 'BaseModule'  # type: ignore
 AVAILABLE_MODULES: Dict[str, Type[MODULE_TYPE]] = {}
 
 
+def is_modules_discovered() -> bool:
+    """Check if modules have been discovered.
+
+    Returns:
+        bool: True if modules have been discovered, False otherwise
+    """
+    return bool(AVAILABLE_MODULES)
+
+
 def discover_modules():
     """Discover available modules by scanning the modules directory."""
     # Get the path to the modules directory
@@ -44,7 +53,6 @@ def discover_modules():
                     logger.debug("Discovered module: %s", module_name)
 
 
-
 def get_module_names() -> List[str]:
     """Get the names of all registered modules.
 
@@ -52,3 +60,12 @@ def get_module_names() -> List[str]:
         List of module names
     """
     return list(AVAILABLE_MODULES.keys())
+
+
+def get_available_modules() -> Dict[str, Type[MODULE_TYPE]]:
+    """Get the dictionary of available modules.
+
+    Returns:
+        Dict[str, Type[MODULE_TYPE]]: Dictionary mapping module names to module classes
+    """
+    return AVAILABLE_MODULES

@@ -36,11 +36,15 @@ class FalconMCPServer:
             debug: Enable debug logging
             enabled_modules: Set of module names to enable (defaults to all modules)
         """
+        # Ensure modules are discovered
+        if not registry.is_modules_discovered():
+            registry.discover_modules()
+
         # Store configuration
         self.base_url = base_url
         self.debug = debug
 
-        self.enabled_modules = enabled_modules or set(registry.AVAILABLE_MODULES.keys())
+        self.enabled_modules = enabled_modules or set(registry.get_module_names())
 
         # Configure logging
         configure_logging(debug=self.debug)
@@ -67,9 +71,10 @@ class FalconMCPServer:
 
         # Initialize and register modules
         self.modules = {}
+        available_modules = registry.get_available_modules()
         for module_name in self.enabled_modules:
-            if module_name in registry.AVAILABLE_MODULES:
-                module_class = registry.AVAILABLE_MODULES[module_name]
+            if module_name in available_modules:
+                module_class = available_modules[module_name]
                 self.modules[module_name] = module_class(self.falcon_client)
                 logger.debug("Initialized module: %s", module_name)
 
@@ -159,7 +164,7 @@ def parse_args():
     )
 
     # Module selection
-    available_modules = list(registry.AVAILABLE_MODULES.keys())
+    available_modules = registry.get_module_names()
     parser.add_argument(
         "--modules", "-m",
         nargs="+",
