@@ -96,13 +96,13 @@ docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_
 Run with specific modules:
 
 ```bash
-python -m falcon-mcp --modules detections
+falcon-mcp --modules detections
 ```
 
 For all available options:
 
 ```bash
-python -m falcon-mcp --help
+falcon-mcp --help
 ```
 
 #### As a Library
