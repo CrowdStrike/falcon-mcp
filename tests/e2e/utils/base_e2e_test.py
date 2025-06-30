@@ -1,4 +1,5 @@
 """Base class for E2E tests."""
+
 import asyncio
 import os
 import threading
@@ -7,7 +8,6 @@ import unittest
 from unittest.mock import MagicMock, patch
 import json
 import atexit
-import pytest
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
@@ -30,124 +30,136 @@ load_dotenv()
 # Module-level singleton for shared server resources
 class SharedTestServer:
     """Singleton class to manage shared test server resources."""
-    _instance = None
-    _initialized = False
-    
+
+    instance = None
+    initialized = False
+
     def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-    
+        if cls.instance is None:
+            cls.instance = super().__new__(cls)
+        return cls.instance
+
     def __init__(self):
-        if not self._initialized:
-            self.test_results = []
-            self.server_thread = None
-            self.env_patcher = None
-            self.api_patcher = None
-            self.mock_api_instance = None
-            self.client = None
-            self.loop = None
-            self.verbosity_level = 0
-            self.base_url = os.getenv('OPENAI_BASE_URL')
-            self.models_to_test = MODELS_TO_TEST
+        if not self.initialized:
+            # Group server-related attributes
+            self.server_config = {
+                "thread": None,
+                "client": None,
+                "loop": None,
+            }
+
+            # Group patching-related attributes
+            self.patchers = {
+                "env": None,
+                "api": None,
+                "mock_api_instance": None,
+            }
+
+            # Group test configuration
+            self.test_config = {
+                "results": [],
+                "verbosity_level": 0,
+                "base_url": os.getenv("OPENAI_BASE_URL"),
+                "models_to_test": MODELS_TO_TEST,
+            }
+
             self._cleanup_registered = False
-    
+
     def initialize(self):
         """Initialize the shared server and test environment."""
-        if self._initialized:
+        if self.initialized:
             return
-            
+
         print("Initializing shared FalconMCP server for E2E tests...")
-        
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
+
+        self.server_config["loop"] = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.server_config["loop"])
 
         # Optionally override models from environment
-        models_env = os.getenv('MODELS_TO_TEST')
+        models_env = os.getenv("MODELS_TO_TEST")
         if models_env:
-            self.models_to_test = models_env.split(',')
+            self.test_config["models_to_test"] = models_env.split(",")
 
-
-        self.env_patcher = patch.dict(
+        self.patchers["env"] = patch.dict(
             os.environ,
             {
-                'FALCON_CLIENT_ID': 'test-client-id',
-                'FALCON_CLIENT_SECRET': 'test-client-secret',
-                'FALCON_BASE_URL': 'https://api.test.crowdstrike.com',
-                'OPENAI_API_KEY': os.getenv('OPENAI_API_KEY', 'test-openai-key'),
+                "FALCON_CLIENT_ID": "test-client-id",
+                "FALCON_CLIENT_SECRET": "test-client-secret",
+                "FALCON_BASE_URL": "https://api.test.crowdstrike.com",
+                "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", "test-openai-key"),
             },
         )
-        self.env_patcher.start()
+        self.patchers["env"].start()
 
-        self.api_patcher = patch('src.client.APIHarnessV2')
-        mock_apiharness_class = self.api_patcher.start()
+        self.patchers["api"] = patch("src.client.APIHarnessV2")
+        mock_apiharness_class = self.patchers["api"].start()
 
-        self.mock_api_instance = MagicMock()
-        self.mock_api_instance.login.return_value = True
-        self.mock_api_instance.token_valid.return_value = True
-        mock_apiharness_class.return_value = self.mock_api_instance
+        self.patchers["mock_api_instance"] = MagicMock()
+        self.patchers["mock_api_instance"].login.return_value = True
+        self.patchers["mock_api_instance"].token_valid.return_value = True
+        mock_apiharness_class.return_value = self.patchers["mock_api_instance"]
 
         # Ensure modules are discovered before creating the server
         registry.discover_modules()
 
         server = FalconMCPServer(debug=False)
-        self.server_thread = threading.Thread(target=server.run, args=("sse",))
-        self.server_thread.daemon = True
-        self.server_thread.start()
+        self.server_config["thread"] = threading.Thread(target=server.run, args=("sse",))
+        self.server_config["thread"].daemon = True
+        self.server_config["thread"].start()
         time.sleep(2)  # Wait for the server to initialize
 
         server_config = {"mcpServers": {"falcon": {"url": "http://127.0.0.1:8000/sse"}}}
-        self.client = MCPClient(config=server_config)
-        
-        self.__class__._initialized = True
-        
+        self.server_config["client"] = MCPClient(config=server_config)
+
+        self.__class__.initialized = True
+
         # Register cleanup function to run when Python exits (only once)
         if not self._cleanup_registered:
             atexit.register(self.cleanup)
             self._cleanup_registered = True
-        
+
         print("Shared FalconMCP server initialized successfully.")
-    
+
     def cleanup(self):
         """Clean up the shared server and test environment."""
-        if not self._initialized:
+        if not self.initialized:
             return
-            
+
         print("Cleaning up shared FalconMCP server...")
-        
+
         try:
             # Write test results to file
-            with open('test_results.json', 'w', encoding='utf-8') as f:
-                json.dump(self.test_results, f, indent=4)
-            
-            if self.api_patcher:
+            with open("test_results.json", "w", encoding="utf-8") as f:
+                json.dump(self.test_config["results"], f, indent=4)
+
+            if self.patchers["api"]:
                 try:
-                    self.api_patcher.stop()
-                except Exception as e:
+                    self.patchers["api"].stop()
+                except (RuntimeError, AttributeError) as e:
                     print(f"Warning: API patcher cleanup error: {e}")
-            
-            if self.env_patcher:
+
+            if self.patchers["env"]:
                 try:
-                    self.env_patcher.stop()
-                except Exception as e:
+                    self.patchers["env"].stop()
+                except (RuntimeError, AttributeError) as e:
                     print(f"Warning: Environment patcher cleanup error: {e}")
-                
-            if self.loop and not self.loop.is_closed():
+
+            if self.server_config["loop"] and not self.server_config["loop"].is_closed():
                 try:
-                    self.loop.close()
+                    self.server_config["loop"].close()
                     asyncio.set_event_loop(None)
-                except Exception as e:
+                except RuntimeError as e:
                     print(f"Warning: Event loop cleanup error: {e}")
-            
+
             # Reset state
-            self.__class__._initialized = False
+            self.__class__.initialized = False
             self._cleanup_registered = False
-            
+
             print("Shared FalconMCP server cleanup completed.")
-        except Exception as e:
+        except (IOError, OSError) as e:
             print(f"Error during cleanup: {e}")
             # Still reset the state even if cleanup partially failed
-            self.__class__._initialized = False
+            self.__class__.initialized = False
             self._cleanup_registered = False
 
 
@@ -161,33 +173,37 @@ class BaseE2ETest(unittest.TestCase):
 
     This class sets up a live server in a separate thread, mocks the Falcon API,
     and provides helper methods for running tests with an MCP client and agent.
-    
+
     The server is shared across all test classes that inherit from this base class.
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.llm = None
+        self.agent = None
 
     @classmethod
     def setUpClass(cls):
         """Set up the test environment for the entire class."""
         # Initialize the shared server
         _shared_server.initialize()
-        
+
         # Set instance variables to point to shared resources
-        cls.test_results = _shared_server.test_results
-        cls._server_thread = _shared_server.server_thread
-        cls._env_patcher = _shared_server.env_patcher
-        cls._api_patcher = _shared_server.api_patcher
-        cls._mock_api_instance = _shared_server.mock_api_instance
-        cls.models_to_test = _shared_server.models_to_test
-        cls.base_url = _shared_server.base_url
-        cls.verbosity_level = _shared_server.verbosity_level
-        cls.client = _shared_server.client
-        cls.loop = _shared_server.loop
+        cls.test_results = _shared_server.test_config["results"]
+        cls._server_thread = _shared_server.server_config["thread"]
+        cls._env_patcher = _shared_server.patchers["env"]
+        cls._api_patcher = _shared_server.patchers["api"]
+        cls._mock_api_instance = _shared_server.patchers["mock_api_instance"]
+        cls.models_to_test = _shared_server.test_config["models_to_test"]
+        cls.base_url = _shared_server.test_config["base_url"]
+        cls.verbosity_level = _shared_server.test_config["verbosity_level"]
+        cls.client = _shared_server.server_config["client"]
+        cls.loop = _shared_server.server_config["loop"]
 
     @classmethod
     def tearDownClass(cls):
         """Tear down the test environment for the current class."""
         # Don't cleanup here - let atexit handle it
-        pass
 
     def setUp(self):
         """Set up test fixtures before each test method."""
@@ -214,11 +230,13 @@ class BaseE2ETest(unittest.TestCase):
 
             if event_type == "on_tool_end" and name == "use_tool_from_server":
                 tools.append(data)
-            elif event_type == "on_chat_model_stream" and data.get('chunk'):
-                result += str(data['chunk'].content)
+            elif event_type == "on_chat_model_stream" and data.get("chunk"):
+                result += str(data["chunk"].content)
         return tools, result
 
-    def run_test_with_retries(self, test_name: str, test_logic_coro: callable, assertion_logic: callable):
+    def run_test_with_retries(
+        self, test_name: str, test_logic_coro: callable, assertion_logic: callable
+    ):
         """
         Run a given test logic multiple times against different models and check for a success threshold.
 
@@ -229,58 +247,86 @@ class BaseE2ETest(unittest.TestCase):
         """
         # Extract module name from the test class name
         module_name = self._get_module_name()
-        
         success_count = 0
         total_runs = len(self.models_to_test) * RUNS_PER_TEST
 
         for model_name in self.models_to_test:
-            # Initialize ChatOpenAI with base_url only if it's provided
-            kwargs = {"model": model_name, "temperature": 0.7}
-            if self.base_url:
-                kwargs["base_url"] = self.base_url
-
-            self.llm = ChatOpenAI(**kwargs)
-
-            # Set agent verbosity based on pytest verbosity
-            verbose_mode = self.verbosity_level > 0
-            self.agent = MCPAgent(
-                llm=self.llm,
-                client=self.client,
-                max_steps=20,
-                verbose=verbose_mode,
-                use_server_manager=True,
-                memory_enabled=False,
+            self._setup_model_and_agent(model_name)
+            success_count += self._run_model_tests(
+                test_name, module_name, model_name, test_logic_coro, assertion_logic
             )
 
-            for i in range(RUNS_PER_TEST):
-                print(f"Running test {test_name} with model {model_name}, try {i+1}/{RUNS_PER_TEST}")
-                run_result = {
-                    'test_name': test_name,
-                    'module_name': module_name,
-                    'model_name': model_name,
-                    'run_number': i + 1,
-                    'status': 'failure',
-                    'failure_reason': None,
-                    'tools_used': None,
-                    'agent_result': None,
-                }
-                try:
-                    # Each test logic run needs a clean slate.
-                    self._mock_api_instance.reset_mock()
-                    tools, result = self.loop.run_until_complete(test_logic_coro())
-                    run_result['tools_used'] = tools
-                    run_result['agent_result'] = result
+        self._assert_success_threshold(success_count, total_runs)
 
-                    assertion_logic(tools, result)
+    def _setup_model_and_agent(self, model_name: str):
+        """Set up the LLM and agent for a specific model."""
+        # Initialize ChatOpenAI with base_url only if it's provided
+        kwargs = {"model": model_name, "temperature": 0.7}
+        if self.base_url:
+            kwargs["base_url"] = self.base_url
 
-                    run_result['status'] = 'success'
-                    success_count += 1
-                except AssertionError as e:
-                    run_result['failure_reason'] = str(e)
-                    print(f"Assertion failed with model {model_name}, try {i+1}: {e}")
-                finally:
-                    self.test_results.append(run_result)
+        self.llm = ChatOpenAI(**kwargs)
 
+        # Set agent verbosity based on pytest verbosity
+        verbose_mode = self.verbosity_level > 0
+        self.agent = MCPAgent(
+            llm=self.llm,
+            client=self.client,
+            max_steps=20,
+            verbose=verbose_mode,
+            use_server_manager=True,
+            memory_enabled=False,
+        )
+
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def _run_model_tests(
+        self,
+        test_name: str,
+        module_name: str,
+        model_name: str,
+        test_logic_coro: callable,
+        assertion_logic: callable,
+    ) -> int:
+        """Run tests for a specific model and return success count."""
+        model_success_count = 0
+
+        for i in range(RUNS_PER_TEST):
+            print(f"Running test {test_name} with model {model_name}, try {i+1}/{RUNS_PER_TEST}")
+            run_result = {
+                "test_name": test_name,
+                "module_name": module_name,
+                "model_name": model_name,
+                "run_number": i + 1,
+                "status": "failure",
+                "failure_reason": None,
+                "tools_used": None,
+                "agent_result": None,
+            }
+
+            try:
+                # Each test logic run needs a clean slate.
+                self._mock_api_instance.reset_mock()
+                tools, result = self.loop.run_until_complete(test_logic_coro())
+                run_result.update(
+                    {
+                        "tools_used": tools,
+                        "agent_result": result,
+                    }
+                )
+
+                assertion_logic(tools, result)
+                run_result["status"] = "success"
+                model_success_count += 1
+            except AssertionError as e:
+                run_result["failure_reason"] = str(e)
+                print(f"Assertion failed with model {model_name}, try {i+1}: {e}")
+            finally:
+                self.test_results.append(run_result)
+
+        return model_success_count
+
+    def _assert_success_threshold(self, success_count: int, total_runs: int):
+        """Assert that the success rate meets the threshold."""
         success_rate = success_count / total_runs if total_runs > 0 else 0
         print(f"Success rate: {success_rate * 100:.2f}% ({success_count}/{total_runs})")
         self.assertGreaterEqual(
@@ -296,12 +342,12 @@ class BaseE2ETest(unittest.TestCase):
         """
         class_name = self.__class__.__name__
         # Remove 'Test' prefix and 'ModuleE2E' suffix
-        if class_name.startswith('Test') and class_name.endswith('ModuleE2E'):
+        if class_name.startswith("Test") and class_name.endswith("ModuleE2E"):
             module_name = class_name[4:-9]  # Remove 'Test' (4 chars) and 'ModuleE2E' (9 chars)
             return module_name
-        else:
-            # Fallback: use the class name as-is if it doesn't match the expected pattern
-            return class_name
+
+        # Fallback: use the class name as-is if it doesn't match the expected pattern
+        return class_name
 
     def _create_mock_api_side_effect(self, fixtures: list) -> callable:
         """Create a side effect function for the `mock API` based on a list of fixtures."""
@@ -310,7 +356,9 @@ class BaseE2ETest(unittest.TestCase):
             print(f"Mock API called with: operation={operation}, kwargs={kwargs}")
             for fixture in fixtures:
                 if fixture["operation"] == operation and fixture["validator"](kwargs):
-                    print(f"Found matching fixture for {operation}, returning {fixture['response']}")
+                    print(
+                        f"Found matching fixture for {operation}, returning {fixture['response']}"
+                    )
                     return fixture["response"]
             print(f"No matching fixture found for {operation}")
             return {"status_code": 200, "body": {"resources": []}}
