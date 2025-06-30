@@ -19,7 +19,7 @@ git clone https://github.com/CrowdStrike/falcon-mcp.git
 cd falcon-mcp
 ```
 
-2. Install dependencies:
+1. Install dependencies:
 
 ```bash
 # Optionally create a virtual environment
@@ -28,7 +28,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e .
 ```
 
-3. Create a `.env` file with your Falcon API credentials:
+1. Create a `.env` file with your Falcon API credentials:
 
 ```bash
 FALCON_CLIENT_ID=your-client-id
