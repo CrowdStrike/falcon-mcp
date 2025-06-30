@@ -227,6 +227,9 @@ class BaseE2ETest(unittest.TestCase):
             test_logic_coro: An asynchronous function that runs the agent and returns tools and result.
             assertion_logic: A function that takes tools and result and performs assertions.
         """
+        # Extract module name from the test class name
+        module_name = self._get_module_name()
+        
         success_count = 0
         total_runs = len(self.models_to_test) * RUNS_PER_TEST
 
@@ -253,6 +256,7 @@ class BaseE2ETest(unittest.TestCase):
                 print(f"Running test {test_name} with model {model_name}, try {i+1}/{RUNS_PER_TEST}")
                 run_result = {
                     'test_name': test_name,
+                    'module_name': module_name,
                     'model_name': model_name,
                     'run_number': i + 1,
                     'status': 'failure',
@@ -284,6 +288,20 @@ class BaseE2ETest(unittest.TestCase):
             SUCCESS_THRESHOLD,
             f"Success rate of {success_rate*100:.2f}% is below the required {SUCCESS_THRESHOLD*100:.2f}% threshold.",
         )
+
+    def _get_module_name(self) -> str:
+        """
+        Extract the module name from the test class name.
+        Expected pattern: Test{ModuleName}ModuleE2E -> {ModuleName}
+        """
+        class_name = self.__class__.__name__
+        # Remove 'Test' prefix and 'ModuleE2E' suffix
+        if class_name.startswith('Test') and class_name.endswith('ModuleE2E'):
+            module_name = class_name[4:-9]  # Remove 'Test' (4 chars) and 'ModuleE2E' (9 chars)
+            return module_name
+        else:
+            # Fallback: use the class name as-is if it doesn't match the expected pattern
+            return class_name
 
     def _create_mock_api_side_effect(self, fixtures: list) -> callable:
         """Create a side effect function for the `mock API` based on a list of fixtures."""

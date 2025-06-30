@@ -37,10 +37,39 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        .module-group {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .module-group > h2 {
+            color: #1976d2;
+            border-bottom: 2px solid #e3f2fd;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .test-group {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2196f3;
+        }
+        .test-group > h3 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
         .model-group {
             margin-top: 15px;
             padding-left: 20px;
             border-left: 3px solid #e0e0e0;
+        }
+        .model-group > h4 {
+            color: #555;
+            margin-bottom: 10px;
         }
         .run-grid {
             display: grid;
@@ -63,6 +92,12 @@
         }
         .test-run h4 {
             margin-top: 0;
+        }
+        .test-run h5 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 14px;
         }
         .failure-reason {
             color: #c62828;
@@ -137,76 +172,92 @@
             document.getElementById('total-tests').textContent = totalRuns;
             document.getElementById('success-rate').textContent = successRate;
 
-
-            const groupedByTestName = data.reduce((acc, run) => {
+            // Group first by module, then by test name
+            const groupedByModule = data.reduce((acc, run) => {
+                const moduleName = run.module_name || 'Unknown Module';
                 const testName = run.test_name;
-                if (!acc[testName]) {
-                    acc[testName] = [];
+                
+                if (!acc[moduleName]) {
+                    acc[moduleName] = {};
                 }
-                acc[testName].push(run);
+                if (!acc[moduleName][testName]) {
+                    acc[moduleName][testName] = [];
+                }
+                acc[moduleName][testName].push(run);
                 return acc;
             }, {});
 
-            for (const testName in groupedByTestName) {
-                const testGroupEl = document.createElement('div');
-                testGroupEl.className = 'test-group';
-                testGroupEl.innerHTML = `<h2>${testName}</h2>`;
+            // Render modules
+            for (const moduleName in groupedByModule) {
+                const moduleGroupEl = document.createElement('div');
+                moduleGroupEl.className = 'module-group';
+                moduleGroupEl.innerHTML = `<h2>${moduleName}</h2>`;
 
-                const groupedByModel = groupedByTestName[testName].reduce((acc, run) => {
-                    const modelName = run.model_name;
-                    if (!acc[modelName]) {
-                        acc[modelName] = [];
-                    }
-                    acc[modelName].push(run);
-                    return acc;
-                }, {});
+                const tests = groupedByModule[moduleName];
+                
+                for (const testName in tests) {
+                    const testGroupEl = document.createElement('div');
+                    testGroupEl.className = 'test-group';
+                    testGroupEl.innerHTML = `<h3>${testName}</h3>`;
 
-                for (const modelName in groupedByModel) {
-                    const modelGroupEl = document.createElement('div');
-                    modelGroupEl.className = 'model-group';
-                    modelGroupEl.innerHTML = `<h3>${modelName}</h3>`;
-
-                    const runGridEl = document.createElement('div');
-                    runGridEl.className = 'run-grid';
-
-                    groupedByModel[modelName].forEach(run => {
-                        const runEl = document.createElement('div');
-                        runEl.className = `test-run ${run.status}`;
-                        let runContent = `<h4>Run ${run.run_number} - ${run.status.toUpperCase()}</h4>`;
-                        
-                        if (run.status === 'failure' && run.failure_reason) {
-                            runContent += `<p><strong>Failure Reason:</strong></p><pre class="failure-reason"><code>${escapeHtml(run.failure_reason)}</code></pre>`;
+                    const groupedByModel = tests[testName].reduce((acc, run) => {
+                        const modelName = run.model_name;
+                        if (!acc[modelName]) {
+                            acc[modelName] = [];
                         }
+                        acc[modelName].push(run);
+                        return acc;
+                    }, {});
 
-                        runContent += `
-                            <details>
-                                <summary>Agent Result</summary>
-                                <div class="agent-result"><pre><code>${escapeHtml(run.agent_result || 'No result')}</code></pre></div>
-                            </details>
-                        `;
+                    for (const modelName in groupedByModel) {
+                        const modelGroupEl = document.createElement('div');
+                        modelGroupEl.className = 'model-group';
+                        modelGroupEl.innerHTML = `<h4>${modelName}</h4>`;
 
-                        if (run.tools_used && run.tools_used.length > 0) {
+                        const runGridEl = document.createElement('div');
+                        runGridEl.className = 'run-grid';
+
+                        groupedByModel[modelName].forEach(run => {
+                            const runEl = document.createElement('div');
+                            runEl.className = `test-run ${run.status}`;
+                            let runContent = `<h5>Run ${run.run_number} - ${run.status.toUpperCase()}</h5>`;
+                            
+                            if (run.status === 'failure' && run.failure_reason) {
+                                runContent += `<p><strong>Failure Reason:</strong></p><pre class="failure-reason"><code>${escapeHtml(run.failure_reason)}</code></pre>`;
+                            }
+
                             runContent += `
                                 <details>
-                                    <summary>Tools Used (${run.tools_used.length})</summary>
-                                    <div class="tools-content">
-                                        <pre><code>${escapeHtml(JSON.stringify(run.tools_used, null, 2))}</code></pre>
-                                    </div>
+                                    <summary>Agent Result</summary>
+                                    <div class="agent-result"><pre><code>${escapeHtml(run.agent_result || 'No result')}</code></pre></div>
                                 </details>
                             `;
-                        } else {
-                            runContent += `<p>No tools were used.</p>`;
-                        }
 
-                        runEl.innerHTML = runContent;
-                        runGridEl.appendChild(runEl);
-                    });
+                            if (run.tools_used && run.tools_used.length > 0) {
+                                runContent += `
+                                    <details>
+                                        <summary>Tools Used (${run.tools_used.length})</summary>
+                                        <div class="tools-content">
+                                            <pre><code>${escapeHtml(JSON.stringify(run.tools_used, null, 2))}</code></pre>
+                                        </div>
+                                    </details>
+                                `;
+                            } else {
+                                runContent += `<p>No tools were used.</p>`;
+                            }
 
-                    modelGroupEl.appendChild(runGridEl);
-                    testGroupEl.appendChild(modelGroupEl);
+                            runEl.innerHTML = runContent;
+                            runGridEl.appendChild(runEl);
+                        });
+
+                        modelGroupEl.appendChild(runGridEl);
+                        testGroupEl.appendChild(modelGroupEl);
+                    }
+
+                    moduleGroupEl.appendChild(testGroupEl);
                 }
 
-                container.appendChild(testGroupEl);
+                container.appendChild(moduleGroupEl);
             }
         }
 

@@ -28,17 +28,28 @@ def generate_static_report(data, template_path='scripts/test_results_viewer.html
     successful_runs = sum(1 for run in data if run.get('status') == 'success')
     success_rate = (successful_runs / total_runs * 100) if total_runs > 0 else 0
 
-    grouped_by_test_name = {}
+    # Group first by module, then by test name
+    grouped_by_module = {}
     for run in data:
+        module_name = run.get('module_name', 'Unknown Module')
         test_name = run.get('test_name', 'Unnamed Test')
-        grouped_by_test_name.setdefault(test_name, []).append(run)
+        
+        if module_name not in grouped_by_module:
+            grouped_by_module[module_name] = {}
+        
+        if test_name not in grouped_by_module[module_name]:
+            grouped_by_module[module_name][test_name] = []
+        
+        grouped_by_module[module_name][test_name].append(run)
 
-    for test_name, runs in grouped_by_test_name.items():
-        grouped_by_model = {}
-        for run in runs:
-            model_name = run.get('model_name', 'Unnamed Model')
-            grouped_by_model.setdefault(model_name, []).append(run)
-        grouped_by_test_name[test_name] = grouped_by_model
+    # Further group by model within each test
+    for module_name, tests in grouped_by_module.items():
+        for test_name, runs in tests.items():
+            grouped_by_model = {}
+            for run in runs:
+                model_name = run.get('model_name', 'Unnamed Model')
+                grouped_by_model.setdefault(model_name, []).append(run)
+            grouped_by_module[module_name][test_name] = grouped_by_model
 
     # --- Build HTML body content ---
     body_content = f"""
@@ -51,43 +62,46 @@ def generate_static_report(data, template_path='scripts/test_results_viewer.html
     <div id="results-container">
     """
 
-    for test_name, models in sorted(grouped_by_test_name.items()):
-        body_content += f'<div class="test-group"><h2>{escape(test_name)}</h2>'
-        for model_name, runs in sorted(models.items()):
-            body_content += f'<div class="model-group"><h3>{escape(model_name)}</h3>'
-            body_content += '<div class="run-grid">'
-            for run in sorted(runs, key=lambda x: x.get('run_number', 0)):
-                status_class = escape(run.get('status', 'unknown'))
-                run_html = f"""
-                <div class="test-run {status_class}">
-                    <h4>Run {run.get('run_number', '#')} - {status_class.upper()}</h4>
-                """
-                if status_class == 'failure' and run.get('failure_reason'):
-                    reason = escape(run['failure_reason'])
-                    run_html += f'<p><strong>Failure Reason:</strong></p><pre class="failure-reason"><code>{reason}</code></pre>'
+    for module_name, tests in sorted(grouped_by_module.items()):
+        body_content += f'<div class="module-group"><h2>{escape(module_name)}</h2>'
+        for test_name, models in sorted(tests.items()):
+            body_content += f'<div class="test-group"><h3>{escape(test_name)}</h3>'
+            for model_name, runs in sorted(models.items()):
+                body_content += f'<div class="model-group"><h4>{escape(model_name)}</h4>'
+                body_content += '<div class="run-grid">'
+                for run in sorted(runs, key=lambda x: x.get('run_number', 0)):
+                    status_class = escape(run.get('status', 'unknown'))
+                    run_html = f"""
+                    <div class="test-run {status_class}">
+                        <h5>Run {run.get('run_number', '#')} - {status_class.upper()}</h5>
+                    """
+                    if status_class == 'failure' and run.get('failure_reason'):
+                        reason = escape(run['failure_reason'])
+                        run_html += f'<p><strong>Failure Reason:</strong></p><pre class="failure-reason"><code>{reason}</code></pre>'
 
-                agent_result = escape(run.get('agent_result', 'No result') or 'No result')
-                run_html += f"""
-                    <details>
-                        <summary>Agent Result</summary>
-                        <div class="agent-result"><pre><code>{agent_result}</code></pre></div>
-                    </details>
-                """
-
-                if run.get('tools_used'):
-                    tools_json = escape(json.dumps(run['tools_used'], indent=2))
+                    agent_result = escape(run.get('agent_result', 'No result') or 'No result')
                     run_html += f"""
                         <details>
-                            <summary>Tools Used ({len(run['tools_used'])})</summary>
-                            <div class="tools-content"><pre><code>{tools_json}</code></pre></div>
+                            <summary>Agent Result</summary>
+                            <div class="agent-result"><pre><code>{agent_result}</code></pre></div>
                         </details>
                     """
-                else:
-                    run_html += "<p>No tools were used.</p>"
 
-                run_html += "</div>"
-                body_content += run_html
-            body_content += '</div></div>'
+                    if run.get('tools_used'):
+                        tools_json = escape(json.dumps(run['tools_used'], indent=2))
+                        run_html += f"""
+                            <details>
+                                <summary>Tools Used ({len(run['tools_used'])})</summary>
+                                <div class="tools-content"><pre><code>{tools_json}</code></pre></div>
+                            </details>
+                        """
+                    else:
+                        run_html += "<p>No tools were used.</p>"
+
+                    run_html += "</div>"
+                    body_content += run_html
+                body_content += '</div></div>'
+            body_content += '</div>'
         body_content += '</div>'
     body_content += "</div>"
 
