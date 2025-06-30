@@ -318,8 +318,12 @@ class BaseE2ETest(unittest.TestCase):
                 run_result["status"] = "success"
                 model_success_count += 1
             except AssertionError as e:
-                run_result["failure_reason"] = str(e)
+                run_result["failure_reason"] = f"Assertion failed: {str(e)}"
                 print(f"Assertion failed with model {model_name}, try {i+1}: {e}")
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                # Catch any other exception that might occur during agent streaming or test execution
+                run_result["failure_reason"] = f"Test execution failed: {type(e).__name__}: {str(e)}"
+                print(f"Test execution failed with model {model_name}, try {i+1}: {type(e).__name__}: {e}")
             finally:
                 self.test_results.append(run_result)
 
