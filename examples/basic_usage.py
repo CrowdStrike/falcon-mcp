@@ -7,7 +7,6 @@ This script demonstrates how to initialize and run the Falcon MCP server.
 import os
 from dotenv import load_dotenv
 
-from src import registry
 from src.server import FalconMCPServer
 
 
@@ -15,9 +14,6 @@ def main():
     """Run the Falcon MCP server with default settings."""
     # Load environment variables from .env file
     load_dotenv()
-
-    # Discover all available modules
-    registry.discover_modules()
 
     # Create and run the server with stdio transport
     server = FalconMCPServer(

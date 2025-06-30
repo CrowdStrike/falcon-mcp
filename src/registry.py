@@ -45,10 +45,22 @@ def discover_modules():
 
 
 
+def get_available_modules() -> Dict[str, Type[MODULE_TYPE]]:
+    """Get available modules dict, discovering if needed (lazy loading).
+
+    Returns:
+        Dict mapping module names to module classes
+    """
+    if not AVAILABLE_MODULES:
+        logger.debug("No modules discovered yet, performing lazy discovery")
+        discover_modules()
+    return AVAILABLE_MODULES
+
+
 def get_module_names() -> List[str]:
-    """Get the names of all registered modules.
+    """Get the names of all registered modules, discovering if needed (lazy loading).
 
     Returns:
         List of module names
     """
-    return list(AVAILABLE_MODULES.keys())
+    return list(get_available_modules().keys())

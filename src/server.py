@@ -67,9 +67,10 @@ class FalconMCPServer:
 
         # Initialize and register modules
         self.modules = {}
+        available_modules = registry.get_available_modules()
         for module_name in self.enabled_modules:
-            if module_name in registry.AVAILABLE_MODULES:
-                module_class = registry.AVAILABLE_MODULES[module_name]
+            if module_name in available_modules:
+                module_class = available_modules[module_name]
                 self.modules[module_name] = module_class(self.falcon_client)
                 logger.debug("Initialized module: %s", module_name)
 
@@ -154,9 +155,6 @@ class FalconMCPServer:
 
 def parse_args():
     """Parse command line arguments."""
-    # Ensure modules are discovered before creating the parser
-    registry.discover_modules()
-
     parser = argparse.ArgumentParser(description="Falcon MCP Server")
 
     # Transport options
