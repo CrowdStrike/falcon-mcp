@@ -53,8 +53,9 @@ class TestFalconMCPServer(unittest.TestCase):
         )
 
         # Verify modules initialization
-        self.assertEqual(len(server.modules), len(registry.AVAILABLE_MODULES))
-        for module_name in registry.AVAILABLE_MODULES:
+        available_module_names = registry.get_module_names()
+        self.assertEqual(len(server.modules), len(available_module_names))
+        for module_name in available_module_names:
             self.assertIn(module_name, server.modules)
 
     @patch('src.server.FalconClient')

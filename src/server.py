@@ -40,7 +40,7 @@ class FalconMCPServer:
         self.base_url = base_url
         self.debug = debug
 
-        self.enabled_modules = enabled_modules or set(registry.AVAILABLE_MODULES.keys())
+        self.enabled_modules = enabled_modules or set(registry.get_module_names())
 
         # Configure logging
         configure_logging(debug=self.debug)
@@ -159,7 +159,7 @@ def parse_args():
     )
 
     # Module selection
-    available_modules = list(registry.AVAILABLE_MODULES.keys())
+    available_modules = registry.get_module_names()
     parser.add_argument(
         "--modules", "-m",
         nargs="+",
