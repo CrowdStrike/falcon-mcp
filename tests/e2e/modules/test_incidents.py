@@ -146,7 +146,7 @@ class TestIncidentsModuleE2E(BaseE2ETest):
             assertions
         )
 
-    def xtest_get_incident_details(self):
+    def test_get_incident_details(self):
         """Verify the agent can get details for specific incidents."""
         async def test_logic():
             fixtures = [
@@ -186,7 +186,7 @@ class TestIncidentsModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_get_incident_details")
 
             # Verify the tool input contains the incident ID
-            tool_input = json.loads(used_tool['input']['tool_input'])
+            tool_input = used_tool['input']['tool_input']
             self.assertIn("incident-3", tool_input.get('ids', []))
 
             # Verify API call parameters
