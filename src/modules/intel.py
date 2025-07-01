@@ -52,7 +52,7 @@ class IntelModule(BaseModule):
         offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)"),
         q: Optional[str] = Field(default=None, description="Free text search across all indexed fields."),
-    ) -> Dict[str, Any]:
+    ) -> List[Dict[str, Any]]:
         """Get info about actors that match provided FQL filters.
 
         Args:
@@ -80,15 +80,20 @@ class IntelModule(BaseModule):
         logger.debug("Searching actors with params: %s", params)
 
         # Make the API request
-        response = self.client.command(operation, parameters=params)
+        command_response = self.client.command(operation, parameters=params)
 
         # Handle the response
-        return handle_api_response(
-            response,
+        api_response = handle_api_response(
+            command_response,
             operation=operation,
             error_message="Failed to search actors",
             default_result=[]
         )
+
+        if self._is_error(api_response):
+            return [api_response]
+
+        return api_response
 
     def query_indicator_entities(
         self,

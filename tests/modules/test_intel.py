@@ -97,7 +97,8 @@ class TestIntelModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call search_actors
-        result = self.module.query_actor_entities(filter="invalid query")
+        results = self.module.query_actor_entities(filter="invalid query")
+        result = results[0]
 
         # Verify result contains error
         self.assertIn("error", result)
