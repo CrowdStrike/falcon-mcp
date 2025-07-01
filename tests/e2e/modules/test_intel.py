@@ -1,7 +1,6 @@
 """
 E2E tests for the Intel module.
 """
-import json
 import unittest
 
 import pytest
