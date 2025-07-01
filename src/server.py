@@ -7,7 +7,7 @@ and serves as the entry point for the application.
 import argparse
 import os
 import sys
-from typing import Dict, List, Optional, Set, Callable, Any
+from typing import Dict, List, Optional, Set
 import uvicorn
 
 from dotenv import load_dotenv
@@ -120,18 +120,6 @@ class FalconMCPServer:
             # Check if the module has a register_resources method
             if hasattr(module, 'register_resources') and callable(module.register_resources):
                 module.register_resources(self.server)
-
-    def add_resource(self, uri: str, resource_fn: Callable[..., Any], description: Optional[str] = None):
-        """Add a resource to the MCP server.
-
-        Args:
-            uri: Resource URI
-            resource_fn: Function that returns the resource data
-            description: Optional description of the resource
-        """
-        prefixed_uri = f"falcon:{uri}"
-        self.server.add_resource(prefixed_uri, resource_fn, description=description)
-        logger.debug("Added resource: %s", prefixed_uri)
 
     def falcon_check_connectivity(self) -> Dict[str, bool]:
         """Check connectivity to the Falcon API.
