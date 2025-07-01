@@ -5,3 +5,4 @@ Modules package for Falcon MCP Server
 from .detections import DetectionsModule
 from .incidents import IncidentsModule
 from .intel import IntelModule
+from .fql import FqlModule
