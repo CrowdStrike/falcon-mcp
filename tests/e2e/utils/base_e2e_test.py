@@ -14,7 +14,6 @@ from langchain_openai import ChatOpenAI
 from mcp_use import MCPAgent, MCPClient
 
 from src.server import FalconMCPServer
-from src import registry
 
 # Models to test against
 MODELS_TO_TEST = ["gpt-4.1-mini", "gpt-4o-mini"]
@@ -98,9 +97,6 @@ class SharedTestServer:
         self.patchers["mock_api_instance"].login.return_value = True
         self.patchers["mock_api_instance"].token_valid.return_value = True
         mock_apiharness_class.return_value = self.patchers["mock_api_instance"]
-
-        # Ensure modules are discovered before creating the server
-        registry.discover_modules()
 
         server = FalconMCPServer(debug=False)
         self.server_config["thread"] = threading.Thread(target=server.run, args=("sse",))

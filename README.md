@@ -19,13 +19,16 @@ CrowdStrike Falcon capabilities.
    cd falcon-mcp
    ```
 
-2. Install dependencies:
+1. Install dependencies:
 
    ```bash
-   pip install -r requirements.txt
+   # Optionally create a virtual environment
+   python -m venv .venv && source .venv/bin/activate
+
+   pip install -e .
    ```
 
-3. Create a `.env` file with your Falcon API credentials:
+1. Create a `.env` file with your Falcon API credentials:
 
    ```bash
    FALCON_CLIENT_ID=your-client-id
@@ -40,25 +43,25 @@ CrowdStrike Falcon capabilities.
 Run the server with default settings (stdio transport):
 
 ```bash
-python -m falcon-mcp
+falcon-mcp
 ```
 
 Run with SSE transport:
 
 ```bash
-python -m falcon-mcp --transport sse
+falcon-mcp --transport sse
 ```
 
 Run with streamable-http transport:
 
 ```bash
-python -m falcon-mcp --transport streamable-http
+falcon-mcp --transport streamable-http
 ```
 
 Run with streamable-http transport on custom port:
 
 ```bash
-python -m falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8080
+falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8080
 ```
 
 ### Docker Usage
@@ -96,13 +99,13 @@ docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_
 Run with specific modules:
 
 ```bash
-python -m falcon-mcp --modules detections
+falcon-mcp --modules detections
 ```
 
 For all available options:
 
 ```bash
-python -m falcon-mcp --help
+falcon-mcp --help
 ```
 
 #### As a Library
@@ -135,8 +138,15 @@ server.run("streamable-http", host="0.0.0.0", port=8080)
 
 ```python
 pip install -e .
-cd examples
-python sse_usage.py
+
+# Run with stdio transport
+python examples/basic_usage.py
+
+# Run with SSE transport
+python examples/sse_usage.py
+
+# Run with streamable-http transport
+python examples/streamable_http_usage.py
 ```
 
 #### Running tests

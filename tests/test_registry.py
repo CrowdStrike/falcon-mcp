@@ -51,16 +51,21 @@ class TestRegistry(unittest.TestCase):
         self.assertEqual(set(module_names), {'test1', 'test2', 'test3'})
         self.assertEqual(len(module_names), 3)
 
-    def test_get_module_names_empty(self):
-        """Test that get_module_names returns an empty list when no modules are registered."""
+    def test_get_module_names_lazy_discovery(self):
+        """Test that get_module_names performs lazy discovery when no modules are registered."""
         # Ensure AVAILABLE_MODULES is empty
         registry.AVAILABLE_MODULES.clear()
 
-        # Call get_module_names
+        # Call get_module_names (should trigger lazy discovery)
         module_names = registry.get_module_names()
 
-        # Verify that the returned list is empty
-        self.assertEqual(module_names, [])
+        # Verify that modules were discovered (should not be empty)
+        self.assertGreater(len(module_names), 0)
+
+        # Verify that the expected modules are discovered
+        expected_modules = ['detections', 'incidents', 'intel']
+        for module_name in expected_modules:
+            self.assertIn(module_name, module_names)
 
     def test_actual_modules_discovery(self):
         """Test that actual modules in the project are discovered correctly."""
