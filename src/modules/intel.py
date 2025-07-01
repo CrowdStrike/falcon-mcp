@@ -136,22 +136,20 @@ class IntelModule(BaseModule):
         logger.debug("Searching indicators with params: %s", params)
 
         # Make the API request
-        response = self.client.command(operation, parameters=params)
+        command_response = self.client.command(operation, parameters=params)
 
         # Handle the response
-        result = handle_api_response(
-            response,
+        api_response = handle_api_response(
+            command_response,
             operation=operation,
             error_message="Failed to search indicators",
             default_result=[]
         )
 
-        # If handle_api_response returns an error dict instead of a list,
-        # it means there was an error, so we return it wrapped in a list
-        if isinstance(result, dict) and "error" in result:
-            return [result]
+        if self._is_error(api_response):
+            return [api_response]
 
-        return result
+        return api_response
 
     def query_report_entities(
         self,

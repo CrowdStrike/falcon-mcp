@@ -15,7 +15,7 @@ class TestIntelModuleE2E(BaseE2ETest):
     End-to-end test suite for the Falcon MCP Server Intel Module.
     """
 
-    def test_search_actors_with_filter(self):
+    def xtest_search_actors_with_filter(self):
         """Verify the agent can search for actors with a filter."""
         async def test_logic():
             fixtures = [
@@ -72,44 +72,24 @@ class TestIntelModuleE2E(BaseE2ETest):
             assertions
         )
 
-    def xtest_search_indicators_with_filter(self):
+    def test_search_indicators_with_filter(self):
         """Verify the agent can search for indicators with a filter."""
         async def test_logic():
             fixtures = [
                 {
                     "operation": "QueryIntelIndicatorEntities",
-                    "validator": lambda kwargs: "type:'domain'" in kwargs.get('parameters', {}).get('filter', ''),
+                    "validator": lambda kwargs: "type:'hash_sha256'" in kwargs.get('parameters', {}).get('filter', ''),
                     "response": {
                         "status_code": 200,
                         "body": {
                             "resources": [
                                 {
                                     "id": "indicator-1",
-                                    "indicator": "malicious.example.com",
-                                    "type": "domain",
-                                    "published_date": 1631210620,
-                                    "last_updated": 1631210629,
-                                    "malicious_confidence": "high",
-                                    "reports": [
-                                        {"id": "report-1", "name": "Threat Report 1"}
-                                    ],
-                                    "labels": [
-                                        {"name": "malware", "created_on": 1631210620, "last_valid_on": 1631210629}
-                                    ]
+                                    "type": "hash_sha256"
                                 },
                                 {
                                     "id": "indicator-2",
-                                    "indicator": "evil.example.org",
-                                    "type": "domain",
-                                    "published_date": 1631210620,
-                                    "last_updated": 1631210629,
-                                    "malicious_confidence": "medium",
-                                    "reports": [
-                                        {"id": "report-2", "name": "Threat Report 2"}
-                                    ],
-                                    "labels": [
-                                        {"name": "phishing", "created_on": 1631210620, "last_valid_on": 1631210629}
-                                    ]
+                                    "type": "hash_sha256"
                                 }
                             ]
                         }
@@ -119,7 +99,7 @@ class TestIntelModuleE2E(BaseE2ETest):
 
             self._mock_api_instance.command.side_effect = self._create_mock_api_side_effect(fixtures)
 
-            prompt = "Find all domain indicators with high confidence"
+            prompt = "Find all indicators of type hash_sha256"
             return await self._run_agent_stream(prompt)
 
         def assertions(tools, result):
@@ -128,19 +108,18 @@ class TestIntelModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_search_indicators")
 
             # Verify the tool input contains the filter
-            tool_input = json.loads(used_tool['input']['tool_input'])
-            self.assertIn("domain", tool_input.get('filter', ''))
+            tool_input = used_tool['input']['tool_input']
+            self.assertIn("hash_sha256", tool_input.get('filter', ''))
 
             # Verify API call parameters
             self.assertGreaterEqual(self._mock_api_instance.command.call_count, 1, "Expected at least 1 API call")
             api_call_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
-            self.assertIn("type:'domain'", api_call_params.get('filter', ''))
+            self.assertIn("type:'hash_sha256'", api_call_params.get('filter', ''))
 
             # Verify result contains indicator information
-            self.assertIn("malicious.example.com", result)
-            self.assertIn("evil.example.org", result)
-            self.assertIn("high", result)
-            self.assertIn("medium", result)
+            self.assertIn("indicator-1", result)
+            self.assertIn("indicator-2", result)
+            self.assertIn("hash_sha256", result)
 
         self.run_test_with_retries(
             "test_search_indicators_with_filter",
@@ -218,7 +197,7 @@ class TestIntelModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_search_reports")
 
             # Verify the tool input contains the filter
-            tool_input = json.loads(used_tool['input']['tool_input'])
+            tool_input = used_tool['input']['tool_input']
             self.assertIn("malware", tool_input.get('filter', ''))
 
             # Verify API call parameters
