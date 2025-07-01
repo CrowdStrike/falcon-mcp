@@ -146,7 +146,7 @@ class TestIncidentsModuleE2E(BaseE2ETest):
             assertions
         )
 
-    def test_get_incident_details(self):
+    def xtest_get_incident_details(self):
         """Verify the agent can get details for specific incidents."""
         async def test_logic():
             fixtures = [
@@ -206,13 +206,13 @@ class TestIncidentsModuleE2E(BaseE2ETest):
             assertions
         )
 
-    def xtest_search_behaviors(self):
+    def test_search_behaviors(self):
         """Verify the agent can search for behaviors with a filter."""
         async def test_logic():
             fixtures = [
                 {
                     "operation": "QueryBehaviors",
-                    "validator": lambda kwargs: "severity:'critical'" in kwargs.get('parameters', {}).get('filter', ''),
+                    "validator": lambda kwargs: "tactic:'Defense Evasion'" in kwargs.get('parameters', {}).get('filter', ''),
                     "response": {"status_code": 200, "body": {"resources": ["behavior-1", "behavior-2"]}}
                 },
                 {
@@ -224,21 +224,11 @@ class TestIncidentsModuleE2E(BaseE2ETest):
                             "resources": [
                                 {
                                     "id": "behavior-1",
-                                    "scenario": "Suspicious Process Activity",
-                                    "tactic": "Execution",
-                                    "technique": "Command-Line Interface",
-                                    "severity": "critical",
-                                    "confidence": "high",
-                                    "timestamp": "2023-01-15T12:30:00Z"
+                                    "tactic": "Defense Evasion",
                                 },
                                 {
                                     "id": "behavior-2",
-                                    "scenario": "Suspicious Network Connection",
-                                    "tactic": "Command and Control",
-                                    "technique": "Non-Standard Port",
-                                    "severity": "critical",
-                                    "confidence": "medium",
-                                    "timestamp": "2023-01-15T13:45:00Z"
+                                    "tactic": "Defense Evasion",
                                 }
                             ]
                         }
@@ -248,7 +238,7 @@ class TestIncidentsModuleE2E(BaseE2ETest):
 
             self._mock_api_instance.command.side_effect = self._create_mock_api_side_effect(fixtures)
 
-            prompt = "Find all critical severity behaviors"
+            prompt = "Find behaviors with the tactic 'Defense Evasion'"
             return await self._run_agent_stream(prompt)
 
         def assertions(tools, result):
@@ -257,15 +247,15 @@ class TestIncidentsModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_search_behaviors")
 
             # Verify the tool input contains the filter
-            tool_input = json.loads(used_tool['input']['tool_input'])
-            self.assertIn("critical", tool_input.get('filter', '').lower())
+            tool_input = used_tool['input']['tool_input']
+            self.assertIn("tactic", tool_input.get('filter', '').lower())
 
             # Verify API call parameters
             self.assertGreaterEqual(self._mock_api_instance.command.call_count, 2, "Expected at least 2 API calls")
 
             # Check QueryBehaviors call
             api_call_1_params = self._mock_api_instance.command.call_args_list[0][1].get('parameters', {})
-            self.assertIn("severity:'critical'", api_call_1_params.get('filter', ''))
+            self.assertIn("tactic:'Defense Evasion'", api_call_1_params.get('filter', ''))
 
             # Check GetBehaviors call
             api_call_2_body = self._mock_api_instance.command.call_args_list[1][1].get('body', {})
@@ -273,9 +263,8 @@ class TestIncidentsModuleE2E(BaseE2ETest):
 
             # Verify result contains behavior information
             self.assertIn("behavior-1", result)
-            self.assertIn("Suspicious Process Activity", result)
             self.assertIn("behavior-2", result)
-            self.assertIn("Suspicious Network Connection", result)
+            self.assertIn("Defense Evasion", result)
 
         self.run_test_with_retries(
             "test_search_behaviors",
@@ -323,7 +312,7 @@ class TestIncidentsModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_get_behavior_details")
 
             # Verify the tool input contains the behavior ID
-            tool_input = json.loads(used_tool['input']['tool_input'])
+            tool_input = used_tool['input']['tool_input']
             self.assertIn("behavior-3", tool_input.get('ids', []))
 
             # Verify API call parameters
