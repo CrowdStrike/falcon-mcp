@@ -624,14 +624,14 @@ from .hosts import HostsModule
 
 When deciding whether to implement functionality as a tool or a resource, consider the following:
 
-### Use Tools When:
+### Use Tools When
 
 1. The functionality requires user input (parameters)
 2. The operation performs an action or computation
 3. The result may change based on input parameters
 4. The operation might modify data or state
 
-### Use Resources When:
+### Use Resources When
 
 1. The data is static or changes infrequently
 2. The data provides context for other operations

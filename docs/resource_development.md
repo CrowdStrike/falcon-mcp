@@ -7,6 +7,7 @@ This guide provides instructions for implementing resources for the Falcon MCP s
 Resources in the Model Context Protocol (MCP) represent data sources that can be accessed by clients. Unlike tools, which are functions that can be called with arguments, resources are data objects that can be accessed directly. Resources are useful for providing context, configuration, or other data that doesn't require computation.
 
 Examples of resources include:
+
 - Configuration data
 - Reference information
 - Static data sets
@@ -31,7 +32,7 @@ Modify your module class to implement the `register_resources` method:
 ```python
 def register_resources(self, server: FastMCP) -> None:
     """Register resources with the MCP server.
-    
+
     Args:
         server: MCP server instance
     """
@@ -42,7 +43,7 @@ def register_resources(self, server: FastMCP) -> None:
         uri="your_resource_name",
         description="Description of your resource"
     )
-    
+
     # Add more resources as needed
 ```
 
@@ -53,7 +54,7 @@ Create methods in your module class that return resource data:
 ```python
 def get_your_resource(self) -> Dict[str, Any]:
     """Get your resource data.
-    
+
     Returns:
         Resource data
     """
@@ -143,12 +144,12 @@ class HostsModule(BaseModule):
             self.search_hosts,
             name="search_hosts"
         )
-        
+
         # Add more tools as needed
 
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.
-        
+
         Args:
             server: MCP server instance
         """
@@ -159,14 +160,14 @@ class HostsModule(BaseModule):
             uri="hosts/summary",
             description="Summary of hosts in the environment"
         )
-        
+
         self._add_resource(
             server,
             self.get_host_counts_by_platform,
             uri="hosts/counts/platform",
             description="Host counts by platform"
         )
-        
+
         # Add more resources as needed
 
     def search_hosts(self, query: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
@@ -184,22 +185,22 @@ class HostsModule(BaseModule):
 
     def get_host_summary(self) -> Dict[str, Any]:
         """Get a summary of hosts in the environment.
-        
+
         Returns:
             Summary of hosts including total count, online count, and offline count
         """
         # Define the operation name
         operation = "QueryDevices"
-        
+
         # Make the API request for all hosts
         all_response = self.client.command(operation, parameters={})
-        
+
         # Make the API request for online hosts
         online_params = prepare_api_parameters({
             "filter": "status:'normal'"
         })
         online_response = self.client.command(operation, parameters=online_params)
-        
+
         # Handle the responses
         all_hosts = handle_api_response(
             all_response,
@@ -207,25 +208,25 @@ class HostsModule(BaseModule):
             error_message="Failed to get host summary",
             default_result=[]
         )
-        
+
         online_hosts = handle_api_response(
             online_response,
             operation=operation,
             error_message="Failed to get online hosts",
             default_result=[]
         )
-        
+
         # If either response is an error, return the error
         if self._is_error(all_hosts):
             return all_hosts
         if self._is_error(online_hosts):
             return online_hosts
-        
+
         # Calculate counts
         total_count = len(all_hosts)
         online_count = len(online_hosts)
         offline_count = total_count - online_count
-        
+
         # Return the summary
         return {
             "total_count": total_count,
@@ -236,29 +237,29 @@ class HostsModule(BaseModule):
 
     def get_host_counts_by_platform(self) -> Dict[str, Any]:
         """Get host counts by platform.
-        
+
         Returns:
             Dictionary with counts for each platform (Windows, Mac, Linux)
         """
         # Define the operation name
         operation = "QueryDevices"
-        
+
         # Make the API requests for each platform
         windows_params = prepare_api_parameters({
             "filter": "platform_name:'Windows'"
         })
         windows_response = self.client.command(operation, parameters=windows_params)
-        
+
         mac_params = prepare_api_parameters({
             "filter": "platform_name:'Mac'"
         })
         mac_response = self.client.command(operation, parameters=mac_params)
-        
+
         linux_params = prepare_api_parameters({
             "filter": "platform_name:'Linux'"
         })
         linux_response = self.client.command(operation, parameters=linux_params)
-        
+
         # Handle the responses
         windows_hosts = handle_api_response(
             windows_response,
@@ -266,25 +267,25 @@ class HostsModule(BaseModule):
             error_message="Failed to get Windows hosts",
             default_result=[]
         )
-        
+
         mac_hosts = handle_api_response(
             mac_response,
             operation=operation,
             error_message="Failed to get Mac hosts",
             default_result=[]
         )
-        
+
         linux_hosts = handle_api_response(
             linux_response,
             operation=operation,
             error_message="Failed to get Linux hosts",
             default_result=[]
         )
-        
+
         # Check for errors
         if self._is_error(windows_hosts) or self._is_error(mac_hosts) or self._is_error(linux_hosts):
             return {"error": "Failed to get host counts by platform"}
-        
+
         # Return the counts
         return {
             "windows": len(windows_hosts),
@@ -324,19 +325,19 @@ For example, a tool might use a resource to get context before performing an act
 ```python
 def perform_action(self, param1: str) -> Dict[str, Any]:
     """Perform an action using context from a resource.
-    
+
     Args:
         param1: Parameter for the action
-        
+
     Returns:
         Result of the action
     """
     # Get context from a resource
     context = self.get_resource_data()
-    
+
     # Use the context to perform the action
     result = self._perform_action_with_context(param1, context)
-    
+
     return result
 ```
 
@@ -372,18 +373,18 @@ def test_get_host_summary(self):
             "utc_time": "2023-01-01T00:00:00Z"
         }
     }
-    
+
     # Configure mock client
     self.mock_client.command.side_effect = [all_response, online_response, time_response]
-    
+
     # Call the resource function
     result = self.module.get_host_summary()
-    
+
     # Verify client commands were called correctly
     self.mock_client.command.assert_any_call("QueryDevices", parameters={})
     self.mock_client.command.assert_any_call("QueryDevices", parameters={"filter": "status:'normal'"})
     self.mock_client.command.assert_any_call("GetTime")
-    
+
     # Verify result
     expected_result = {
         "total_count": 3,
@@ -392,3 +393,4 @@ def test_get_host_summary(self):
         "last_updated": "2023-01-01T00:00:00Z"
     }
     self.assertEqual(result, expected_result)
+```
