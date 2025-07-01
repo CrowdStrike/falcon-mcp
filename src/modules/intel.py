@@ -158,7 +158,6 @@ class IntelModule(BaseModule):
         offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)"),
         q: Optional[str] = Field(default=None, description="Free text search across all indexed fields."),
-        include_deleted: Optional[bool] = Field(default=False, description="Flag indicating if both published and deleted reports should be returned."),
     ) -> List[Dict[str, Any]]:
         """Get info about reports that match provided FQL filters.
 
@@ -168,7 +167,6 @@ class IntelModule(BaseModule):
             offset: Starting index of overall result set from which to return ids.
             sort: The property to sort by. (Ex: created_date|desc)
             q: Free text search across all indexed fields.
-            include_deleted: Flag indicating if both published and deleted reports should be returned.
             fields: The fields to return, or a predefined set of fields in the form of the collection name surrounded by two underscores.
 
         Returns:
@@ -181,7 +179,6 @@ class IntelModule(BaseModule):
             "offset": offset,
             "sort": sort,
             "q": q,
-            "include_deleted": include_deleted,
         })
 
         # Define the operation name
@@ -190,11 +187,11 @@ class IntelModule(BaseModule):
         logger.debug("Searching reports with params: %s", params)
 
         # Make the API request
-        response = self.client.command(operation, parameters=params)
+        command_response = self.client.command(operation, parameters=params)
 
         # Handle the response
-        result = handle_api_response(
-            response,
+        api_response = handle_api_response(
+            command_response,
             operation=operation,
             error_message="Failed to search reports",
             default_result=[]
@@ -202,7 +199,7 @@ class IntelModule(BaseModule):
 
         # If handle_api_response returns an error dict instead of a list,
         # it means there was an error, so we return it wrapped in a list
-        if self._is_error(result):
-            return [result]
+        if self._is_error(api_response):
+            return [api_response]
 
-        return result
+        return api_response
