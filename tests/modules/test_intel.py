@@ -214,7 +214,6 @@ class TestIntelModule(TestModules):
             offset=0,
             sort="created_date.desc",
             q="test",
-            include_deleted=True,
         )
 
         # Verify client command was called correctly
@@ -226,7 +225,6 @@ class TestIntelModule(TestModules):
                 "offset": 0,
                 "sort": "created_date.desc",
                 "q": "test",
-                "include_deleted": True,
             }
         )
 
