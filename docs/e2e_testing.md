@@ -94,17 +94,23 @@ The E2E tests use a retry mechanism to handle the non-deterministic nature of LL
 The retry configuration can be found at the top of `tests/e2e/utils/base_e2e_test.py`:
 
 ```python
-# Models to test against
-MODELS_TO_TEST = ["gpt-4.1-mini", "gpt-4o-mini"]
-# Number of times to run each test
-RUNS_PER_TEST = 2
-# Success threshold for passing a test
-SUCCESS_THRESHOLD = 0.7
+# Default models to test against
+DEFAULT_MODLES_TO_TEST = ["gpt-4.1-mini", "gpt-4o-mini"]
+# Default number of times to run each test
+DEFAULT_RUNS_PER_TEST = 2
+# Default success threshold for passing a test
+DEFAULT_SUCCESS_TRESHOLD = 0.7
 ```
 
 This means each test will run 2 times for each model and the test will pass if at least 70% of the runs succeed.
 
-You can override the models to test using the `MODELS_TO_TEST` environment variable:
+Each of these can be overridden by using the appropriate environment variable:
+
+- MODELS_TO_TEST
+- RUNS_PER_TEST
+- SUCCESS_THRESHOLD
+
+For example:
 
 ```bash
 # Test with Claude models

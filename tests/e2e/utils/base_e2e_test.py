@@ -15,12 +15,19 @@ from mcp_use import MCPAgent, MCPClient
 
 from src.server import FalconMCPServer
 
+# Default models to test against
+DEFAULT_MODLES_TO_TEST = ["gpt-4.1-mini", "gpt-4o-mini"]
+# Default number of times to run each test
+DEFAULT_RUNS_PER_TEST = 2
+# Default success threshold for passing a test
+DEFAULT_SUCCESS_TRESHOLD = 0.7
+
 # Models to test against
-MODELS_TO_TEST = ["gpt-4.1-mini", "gpt-4o-mini"]
+MODELS_TO_TEST = os.getenv("MODELS_TO_TEST", ",".join(DEFAULT_MODLES_TO_TEST)).split(",")
 # Number of times to run each test
-RUNS_PER_TEST = 2
+RUNS_PER_TEST = int(os.getenv("RUNS_PER_TEST", str(DEFAULT_RUNS_PER_TEST)))
 # Success threshold for passing a test
-SUCCESS_THRESHOLD = 0.7
+SUCCESS_THRESHOLD = float(os.getenv("SUCCESS_TRESHOLD", str(DEFAULT_SUCCESS_TRESHOLD)))
 
 # Load environment variables from .env file for local development
 load_dotenv()
@@ -73,11 +80,6 @@ class SharedTestServer:
 
         self.server_config["loop"] = asyncio.new_event_loop()
         asyncio.set_event_loop(self.server_config["loop"])
-
-        # Optionally override models from environment
-        models_env = os.getenv("MODELS_TO_TEST")
-        if models_env:
-            self.test_config["models_to_test"] = models_env.split(",")
 
         self.patchers["env"] = patch.dict(
             os.environ,
