@@ -206,6 +206,9 @@ class IncidentsModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for behaviors by providing a FQL filter, sorting, and paging details.
 
+        Use this when you need to find behaviors matching certain criteria rather than retrieving specific behaviors by ID.
+        For retrieving details of known behavior IDs, use falcon_get_behavior_details instead.
+
         Args:
             filter: FQL Syntax formatted string used to limit the results.
             limit: The maximum number of records to return in this response. [Integer, 1-500]. Use with the offset parameter to manage pagination of results.
@@ -238,6 +241,9 @@ class IncidentsModule(BaseModule):
         ids: List[str] = Field(description="Behavior ID(s) to retrieve."),
     ) -> List[Dict[str, Any]]:
         """Get details on behaviors by providing behavior IDs.
+
+        Use this when you already know the specific behavior ID(s) and need to retrieve their details.
+        For searching behaviors based on criteria, use falcon_search_behaviors instead.
 
         Args:
             ids: Behavior ID(s) to retrieve.
