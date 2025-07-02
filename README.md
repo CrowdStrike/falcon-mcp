@@ -335,6 +335,7 @@ To use the Falcon MCP server with AI assistants, you can use the provided `examp
 ## Documentation
 
 - [Module Development Guide](docs/module_development.md): Instructions for implementing new modules
+- [Resource Development Guide](docs/resource_development.md): Instructions for implementing resources
 - [Architecture Decisions](docs/architecture_decisions.md): Key architectural decisions and their rationale
 - [End-to-End Testing Guide](docs/e2e_testing.md): Guide for running and understanding E2E tests
 
