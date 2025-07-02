@@ -166,14 +166,13 @@ class SharedTestServer:
 _shared_server = SharedTestServer()
 
 
-def ensure_dict(input: Any) -> dict:
+def ensure_dict(data: Any) -> dict:
     """
     Return input if it is a dict, otherwise, attempt to convert it to a dict using json.loads
     """
-    if isinstance(input, dict):
-        return input
-    else:
-        return json.loads(input)
+    if isinstance(data, dict):
+        return data
+    return json.loads(data)
 
 
 class BaseE2ETest(unittest.TestCase):
