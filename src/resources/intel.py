@@ -1,0 +1,80 @@
+query_actor_entities_fql_documentation = """Falcon Query Language (FQL) - Intel Query Actor Entities Guide
+
+=== BASIC SYNTAX ===
+property_name:[operator]'value'
+
+=== AVAILABLE OPERATORS ===
+• No operator = equals (default)
+• ! = not equal to
+• > = greater than
+• >= = greater than or equal
+• < = less than
+• <= = less than or equal
+• ~ = text match (ignores case, spaces, punctuation)
+• !~ = does not text match
+• \* = wildcard matching (one or more characters)
+
+=== DATA TYPES & SYNTAX ===
+• Strings: 'value' or ['exact_value'] for exact match
+• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
+• Booleans: true or false (no quotes)
+• Numbers: 123 (no quotes)
+• Wildcards: 'partial*' or '*partial' or '_partial_'
+
+=== COMBINING CONDITIONS ===
+• + = AND condition
+• , = OR condition
+• ( ) = Group expressions
+
+=== falcon_search_actors FQL filter options ===
+• actors
+• actors.id
+• actors.name
+• actors.slug
+• actors.url
+• animal_classifier
+• created_date
+• description
+• id
+• last_modified_date
+• motivations
+• motivations.id
+• motivations.slug
+• motivations.value
+• name
+• name.raw
+• short_description
+• slug
+• sub_type
+• sub_type.id
+• sub_type.name
+• sub_type.slug
+• tags
+• tags.id
+• tags.slug
+• tags.value
+• target_countries
+• target_countries.id
+• target_countries.slug
+• target_countries.value
+• target_industries
+• target_industries.id
+• target_industries.slug
+• target_industries.value
+• type
+• type.id
+• type.name
+• type.slug
+• url
+
+=== EXAMPLE USAGE ===
+
+• animal_classifier:'BEAR'
+• name:'FANCY BEAR'
+• animal_classifier:'BEAR',animal_classifier:'SPIDER'
+
+=== IMPORTANT NOTES ===
+• Use single quotes around string values: 'value'
+• Use square brackets for exact matches: ['exact_value']
+• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
+"""

@@ -7,11 +7,13 @@ This module provides tools for accessing and analyzing CrowdStrike Falcon intell
 from typing import Dict, List, Optional, Any
 
 from mcp.server import FastMCP
-from pydantic import Field
+from mcp.server.fastmcp.resources import TextResource
+from pydantic import AnyUrl, Field
 
 from ..common.logging import get_logger
 from ..common.errors import handle_api_response
 from ..common.utils import prepare_api_parameters
+from ..resources.intel import query_actor_entities_fql_documentation
 from .base import BaseModule
 
 logger = get_logger(__name__)
@@ -45,22 +47,36 @@ class IntelModule(BaseModule):
             name="search_reports"
         )
 
-    def query_actor_entities(
-        self,
-        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results."),
-        limit: Optional[int] = Field(default=100, ge=1, le=5000, description="Maximum number of records to return. (Max: 5000)"),
-        offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
-        sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)"),
-        q: Optional[str] = Field(default=None, description="Free text search across all indexed fields."),
-    ) -> List[Dict[str, Any]]:
-        """Get info about actors that match provided FQL filters.
+    def register_resources(self, server) -> None:
+        """Register resources with the MCP server.
 
         Args:
-            filter: FQL query expression that should be used to limit the results.
-            limit: Maximum number of records to return. (Max: 5000)
-            offset: Starting index of overall result set from which to return ids.
-            sort: The property to sort by. (Ex: created_date|desc)
-            q: Free text search across all indexed fields.
+            server: MCP server instance
+        """
+
+        query_actor_entities_resource = TextResource(
+            uri=AnyUrl("falcon://intel/query_actor_entities/fql-guide"),
+            name="falcon_query_actor_entities_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_actors` tool.",
+            text=query_actor_entities_fql_documentation
+        )
+
+        self._add_resource(
+            server,
+            query_actor_entities_resource
+        )
+
+    def query_actor_entities(
+        self,
+        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results. IMPORTANT: use the 'falcon://query_actor_entities_fql_documentation' resource when building this parameter."),
+        limit: Optional[int] = Field(default=100, ge=1, le=5000, description="Maximum number of records to return.", examples={10, 20, 100}),
+        offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids.", examples={0,10}),
+        sort: Optional[str] = Field(default=None, description="The property to sort by.", examples={"created_date|desc"}),
+        q: Optional[str] = Field(default=None, description="Free text search across all indexed fields.", examples={"BEAR"}),
+    ) -> List[Dict[str, Any]]:
+        """Get info about actors that match provided FQL filters. Use this when you need to query for actor entities matching certain criteria.
+
+        IMPORTANT: You must call the FQL Guide for Intel Query Actor Entities (falcon://intel/query_actor_entities/fql-guide) resource first
 
         Returns:
             Information about actors that match the provided filters.

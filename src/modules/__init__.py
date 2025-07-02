@@ -6,4 +6,3 @@ from .detections import DetectionsModule
 from .hosts import HostsModule
 from .incidents import IncidentsModule
 from .intel import IntelModule
-from .fql import FqlModule
