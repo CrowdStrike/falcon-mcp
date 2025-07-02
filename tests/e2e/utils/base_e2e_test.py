@@ -4,6 +4,7 @@ import asyncio
 import os
 import threading
 import time
+from typing import Any
 import unittest
 from unittest.mock import MagicMock, patch
 import json
@@ -163,6 +164,28 @@ class SharedTestServer:
 
 # Global singleton instance
 _shared_server = SharedTestServer()
+
+
+def parse_used_tool_input(used_tool: Any) -> dict:
+    """
+    Parse the input from a tool used by the agent during testing.
+
+    This utility function extracts the 'tool_input' from a used tool object and ensures
+    it's returned as a dictionary. If the tool_input is already a dictionary, it's returned
+    directly. Otherwise, it's parsed from a JSON string.
+
+    Args:
+        used_tool: The tool object containing input data, typically from agent.astream() events
+                  with event_type 'on_tool_end'
+
+    Returns:
+        dict: The normalized tool input as a dictionary
+    """
+    tool_input = used_tool['input']['tool_input']
+    if isinstance(tool_input, dict):
+        return tool_input
+    else:
+        return json.loads(tool_input)
 
 
 class BaseE2ETest(unittest.TestCase):

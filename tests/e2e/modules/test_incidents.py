@@ -6,7 +6,7 @@ import unittest
 
 import pytest
 
-from tests.e2e.utils.base_e2e_test import BaseE2ETest
+from tests.e2e.utils.base_e2e_test import BaseE2ETest, parse_used_tool_input
 
 
 @pytest.mark.e2e
@@ -120,7 +120,7 @@ class TestIncidentsModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_search_incidents")
 
             # Verify the tool input contains the filter
-            tool_input = used_tool['input']['tool_input']
+            tool_input = parse_used_tool_input(used_tool['input']['tool_input'])
             self.assertIn("open", tool_input.get('filter', '').lower())
 
             # Verify API call parameters
@@ -186,7 +186,7 @@ class TestIncidentsModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_get_incident_details")
 
             # Verify the tool input contains the incident ID
-            tool_input = used_tool['input']['tool_input']
+            tool_input = parse_used_tool_input(used_tool['input']['tool_input'])
             self.assertIn("incident-3", tool_input.get('ids', []))
 
             # Verify API call parameters
@@ -247,7 +247,7 @@ class TestIncidentsModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_search_behaviors")
 
             # Verify the tool input contains the filter
-            tool_input = used_tool['input']['tool_input']
+            tool_input = parse_used_tool_input(used_tool['input']['tool_input'])
             self.assertIn("tactic", tool_input.get('filter', '').lower())
 
             # Verify API call parameters
@@ -304,7 +304,7 @@ class TestIncidentsModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_get_behavior_details")
 
             # Verify the tool input contains the behavior ID
-            tool_input = used_tool['input']['tool_input']
+            tool_input = parse_used_tool_input(used_tool['input']['tool_input'])
             self.assertIn("behavior-3", tool_input.get('ids', []))
 
             # Verify API call parameters
