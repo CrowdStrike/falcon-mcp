@@ -69,9 +69,9 @@ class IntelModule(BaseModule):
     def query_actor_entities(
         self,
         filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results. IMPORTANT: use the 'falcon://query_actor_entities_fql_documentation' resource when building this parameter."),
-        limit: Optional[int] = Field(default=100, ge=1, le=5000, description="Maximum number of records to return.", examples={10, 20, 100}),
+        limit: Optional[int] = Field(default=100, ge=1, le=5000, description="Maximum number of records to return. Max 5000", examples={10, 20, 100}),
         offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids.", examples={0,10}),
-        sort: Optional[str] = Field(default=None, description="The property to sort by.", examples={"created_date|desc"}),
+        sort: Optional[str] = Field(default=None, description="The property to sort by. Example: 'created_date|desc'", examples={"created_date|desc"}),
         q: Optional[str] = Field(default=None, description="Free text search across all indexed fields.", examples={"BEAR"}),
     ) -> List[Dict[str, Any]]:
         """Get info about actors that match provided FQL filters. Use this when you need to query for actor entities matching certain criteria.
