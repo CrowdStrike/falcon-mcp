@@ -31,7 +31,7 @@ First, define the content for your resource. This could be:
 
 For text-based resources, it's recommended to store the content in a separate file in the `src/resources` directory:
 
-````python
+```python
 # src/resources/your_resource.py
 YOUR_RESOURCE_CONTENT = """
 Detailed documentation or reference information goes here.
@@ -43,14 +43,11 @@ This can be multi-line text with formatting.
 - And other formatting
 
 Code examples:
-```python
-def example_code():
-    return "This is an example"
-````
+...
 
 """
 
-````
+```
 
 ### 2. Register Resources in Your Module
 
@@ -89,7 +86,7 @@ class YourModule(BaseModule):
             server,
             your_resource
         )
-````
+```
 
 ### 3. Resource URI Conventions
 
