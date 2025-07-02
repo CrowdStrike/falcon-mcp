@@ -166,26 +166,14 @@ class SharedTestServer:
 _shared_server = SharedTestServer()
 
 
-def parse_used_tool_input(used_tool: Any) -> dict:
+def ensure_dict(input: Any) -> dict:
     """
-    Parse the input from a tool used by the agent during testing.
-
-    This utility function extracts the 'tool_input' from a used tool object and ensures
-    it's returned as a dictionary. If the tool_input is already a dictionary, it's returned
-    directly. Otherwise, it's parsed from a JSON string.
-
-    Args:
-        used_tool: The tool object containing input data, typically from agent.astream() events
-                  with event_type 'on_tool_end'
-
-    Returns:
-        dict: The normalized tool input as a dictionary
+    Return input if it is a dict, otherwise, attempt to convert it to a dict using json.loads
     """
-    tool_input = used_tool['input']['tool_input']
-    if isinstance(tool_input, dict):
-        return tool_input
+    if isinstance(input, dict):
+        return input
     else:
-        return json.loads(tool_input)
+        return json.loads(input)
 
 
 class BaseE2ETest(unittest.TestCase):

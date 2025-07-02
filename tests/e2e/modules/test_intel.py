@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from tests.e2e.utils.base_e2e_test import BaseE2ETest, parse_used_tool_input
+from tests.e2e.utils.base_e2e_test import BaseE2ETest, ensure_dict
 
 
 @pytest.mark.e2e
@@ -52,7 +52,7 @@ class TestIntelModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_search_actors")
 
             # Verify the tool input contains the filter
-            tool_input = parse_used_tool_input(used_tool['input']['tool_input'])
+            tool_input = ensure_dict(used_tool['input']['tool_input'])
             self.assertIn("animal_classifier", tool_input.get('filter', ''))
 
             # Verify API call parameters
@@ -107,7 +107,7 @@ class TestIntelModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_search_indicators")
 
             # Verify the tool input contains the filter
-            tool_input = parse_used_tool_input(used_tool['input']['tool_input'])
+            tool_input = ensure_dict(used_tool['input']['tool_input'])
             self.assertIn("hash_sha256", tool_input.get('filter', ''))
 
             # Verify API call parameters
@@ -159,7 +159,7 @@ class TestIntelModuleE2E(BaseE2ETest):
             self.assertEqual(used_tool['input']['tool_name'], "falcon_search_reports")
 
             # Verify the tool input contains the filter
-            tool_input = parse_used_tool_input(used_tool['input']['tool_input'])
+            tool_input = ensure_dict(used_tool['input']['tool_input'])
             self.assertIn("slug", tool_input.get('filter', ''))
 
             # Verify API call parameters
