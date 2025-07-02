@@ -1,4 +1,8 @@
-query_actor_entities_fql_documentation = """Falcon Query Language (FQL) - Intel Query Actor Entities Guide
+"""
+Contains Intel resources.
+"""
+
+QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Actor Entities Guide
 
 === BASIC SYNTAX ===
 property_name:[operator]'value'
@@ -12,7 +16,7 @@ property_name:[operator]'value'
 • <= = less than or equal
 • ~ = text match (ignores case, spaces, punctuation)
 • !~ = does not text match
-• \* = wildcard matching (one or more characters)
+• * = wildcard matching (one or more characters)
 
 === DATA TYPES & SYNTAX ===
 • Strings: 'value' or ['exact_value'] for exact match

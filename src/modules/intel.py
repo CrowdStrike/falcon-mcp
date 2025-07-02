@@ -13,7 +13,7 @@ from pydantic import AnyUrl, Field
 from ..common.logging import get_logger
 from ..common.errors import handle_api_response
 from ..common.utils import prepare_api_parameters
-from ..resources.intel import query_actor_entities_fql_documentation
+from ..resources.intel import QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION
 from .base import BaseModule
 
 logger = get_logger(__name__)
@@ -58,7 +58,7 @@ class IntelModule(BaseModule):
             uri=AnyUrl("falcon://intel/query_actor_entities/fql-guide"),
             name="falcon_query_actor_entities_fql_guide",
             description="Contains the guide for the `filter` param of the `falcon_search_actors` tool.",
-            text=query_actor_entities_fql_documentation
+            text=QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION
         )
 
         self._add_resource(
