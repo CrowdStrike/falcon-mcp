@@ -16,6 +16,9 @@ from mcp_use import MCPAgent, MCPClient
 
 from src.server import FalconMCPServer
 
+# Load environment variables from .env file for local development
+load_dotenv()
+
 # Default models to test against
 DEFAULT_MODLES_TO_TEST = ["gpt-4.1-mini", "gpt-4o-mini"]
 # Default number of times to run each test
@@ -29,9 +32,6 @@ MODELS_TO_TEST = os.getenv("MODELS_TO_TEST", ",".join(DEFAULT_MODLES_TO_TEST)).s
 RUNS_PER_TEST = int(os.getenv("RUNS_PER_TEST", str(DEFAULT_RUNS_PER_TEST)))
 # Success threshold for passing a test
 SUCCESS_THRESHOLD = float(os.getenv("SUCCESS_TRESHOLD", str(DEFAULT_SUCCESS_TRESHOLD)))
-
-# Load environment variables from .env file for local development
-load_dotenv()
 
 
 # Module-level singleton for shared server resources
