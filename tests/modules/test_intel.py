@@ -18,6 +18,7 @@ class TestIntelModule(TestModules):
         """Test registering tools with the server."""
         expected_tools = [
             "falcon_search_actors",
+            "falcon_search_actors_fql_filter_guide",
             "falcon_search_indicators",
             "falcon_search_reports",
         ]

@@ -275,6 +275,7 @@ Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
 Provides tools for accessing and analyzing CrowdStrike Intel:
 
 - `falcon_search_actors`: Get info about actors
+- `falcon_search_actors_fql_filter_guide`: Get FQL rules for falcon_search_actors tool filter param
 - `falcon_search_indicators`: Get info about indicators
 - `falcon_search_reports`: Get info about reports
 
