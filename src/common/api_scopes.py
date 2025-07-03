@@ -16,8 +16,8 @@ API_SCOPE_REQUIREMENTS = {
     "GetQueriesAlertsV2": ["alerts:read"],
     "PostEntitiesAlertsV2": ["alerts:read"],
     # Hosts operations
-    "QueryDevices": ["hosts:read"],
-    "GetDeviceDetails": ["hosts:read"],
+    "QueryDevicesByFilter": ["hosts:read"],
+    "PostDeviceDetailsV2": ["hosts:read"],
     # Incidents operations
     "QueryIncidents": ["incidents:read"],
     "GetIncidentDetails": ["incidents:read"],

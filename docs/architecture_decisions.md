@@ -164,3 +164,44 @@ def get_headers(self) -> Dict[str, str]:
 
 This method provides access to authentication headers when needed for custom integrations
 while maintaining the encapsulation of the authentication process.
+
+## Five-Module Architecture
+
+### Context
+
+The Falcon MCP Server has evolved from a basic proof-of-concept to a comprehensive platform supporting multiple CrowdStrike Falcon capabilities. The modular architecture needed to demonstrate scalability and maintainability.
+
+### Decision
+
+We implemented a five-module architecture that covers the core areas of CrowdStrike Falcon functionality:
+
+1. __Core Module__: Basic connectivity and system information
+2. __Detections Module__: Alert/detection analysis (modern alerts API)
+3. __Incidents Module__: Incident management and analysis
+4. __Intel Module__: Threat intelligence (actors, indicators, reports)
+5. __Hosts Module__: Host/device management and analysis
+
+### Implementation
+
+__Consistent Patterns:__
+
+- All modules follow the same BaseModule inheritance pattern
+- Standardized tool registration using `_add_tool()` helper method
+- Consistent error handling with `handle_api_response()`
+- Unified testing approach using TestModules base class
+
+__Scalability Validation:__
+
+- Architecture successfully scaled from 3 to 5 modules without breaking changes
+- Auto-discovery system automatically registers new modules
+- Registry system handles module management without cyclic imports
+- Enhanced base methods support different API parameter patterns
+
+__API Integration Evolution:__
+
+- Migrated from legacy detections API to modern alerts API
+- Added comprehensive intelligence capabilities through Intel module
+- Implemented innovative hosts module using API exploration methodology
+- Enhanced base methods with dynamic ID keys and additional parameters
+
+The five-module architecture demonstrates that the MCP server design is robust, scalable, and ready for additional modules as needed.

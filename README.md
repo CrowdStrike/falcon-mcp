@@ -257,8 +257,8 @@ The server provides core tools for interacting with the Falcon API:
 
 Provides tools for accessing and analyzing CrowdStrike Falcon detections:
 
-- `falcon_search_detections`: Search for detections in your CrowdStrike environment
-- `falcon_get_detection_details`: Get detailed information about a specific detection
+- `falcon_search_detections`: Query and return information about detections
+- `falcon_get_detection_details`: Get information about specific detection composite IDs
 
 ### Incidents Module
 
@@ -278,6 +278,13 @@ Provides tools for accessing and analyzing CrowdStrike Intel:
 - `falcon_search_indicators`: Get info about indicators
 - `falcon_search_reports`: Get info about reports
 
+### Hosts Module
+
+Provides tools for accessing and managing CrowdStrike Falcon hosts/devices:
+
+- `falcon_search_hosts`: Query and return information about hosts
+- `falcon_get_host_details`: Get information about specific host IDs
+
 ## MCP Configuration
 
 To use the Falcon MCP server with AI assistants, you can use the provided `examples/mcp_config.json` file:
@@ -289,7 +296,7 @@ To use the Falcon MCP server with AI assistants, you can use the provided `examp
       "name": "falcon-stdio",
       "transport": {
         "type": "stdio",
-        "command": "python -m falcon-mcp"
+        "command": "python -m src.server"
       }
     },
     {
