@@ -283,7 +283,7 @@ class TestHostsModuleE2E(BaseE2ETest):
                     found_azure_filtering = True
                     break
 
-            self.assertTrue(found_azure_filtering, f"Expected Azure filtering in tool inputs")
+            self.assertTrue(found_azure_filtering, "Expected Azure filtering in tool inputs")
 
             # Verify Azure host is in the search tool output
             self.assertIn("azure-vm-debian", search_tool['output'])
