@@ -12,6 +12,7 @@ from pydantic import Field
 from ..common.logging import get_logger
 from ..common.errors import handle_api_response
 from ..common.utils import prepare_api_parameters
+from ..resources.detections import SEARCH_DETECTIONS_FQL_DOCUMENTATION
 from .base import BaseModule
 
 logger = get_logger(__name__)
@@ -35,13 +36,19 @@ class DetectionsModule(BaseModule):
 
         self._add_tool(
             server,
+            self.search_detections_fql_filter_guide,
+            name="search_detections_fql_filter_guide"
+        )
+
+        self._add_tool(
+            server,
             self.get_detection_details,
             name="get_detection_details"
         )
 
     def search_detections(
         self,
-        filter: Optional[str] = Field(default=None, examples={"agent_id:'77d11725xxxxxxxxxxxxxxxxxxxxc48ca19'", "status:'new'"}),
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_search_detections_fql_filter_guide` tool when building this filter parameter.", examples={"agent_id:'77d11725xxxxxxxxxxxxxxxxxxxxc48ca19'", "status:'new'"}),
         limit: Optional[int] = Field(default=100, ge=1, le=9999),
         offset: Optional[int] = Field(default=0, ge=0),
         q: Optional[str] = Field(default=None),
@@ -49,6 +56,8 @@ class DetectionsModule(BaseModule):
         include_hidden: Optional[bool] = Field(default=True),
     ) -> List[Dict[str, Any]]:
         """Search for detections in your CrowdStrike environment.
+
+        IMPORTANT: You must use the tool `falcon_search_detections_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_detections` tool.
 
         Args:
             filter: Filter detections using a query in Falcon Query Language (FQL) An asterisk wildcard * includes all results. You must use FQL and never use JSON.
@@ -359,6 +368,14 @@ class DetectionsModule(BaseModule):
             return details
 
         return []
+
+    def search_detections_fql_filter_guide(self) -> str:
+        """
+        Returns the guide for the `filter` param of the `falcon_search_detections` tool.
+
+        IMPORTANT: Before running `falcon_search_detections`, always call this tool to get information about how to build the FQL for the filter.
+        """
+        return SEARCH_DETECTIONS_FQL_DOCUMENTATION
 
     def get_detection_details(
         self,

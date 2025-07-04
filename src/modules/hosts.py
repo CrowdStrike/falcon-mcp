@@ -12,6 +12,7 @@ from pydantic import Field
 from ..common.logging import get_logger
 from ..common.errors import handle_api_response
 from ..common.utils import prepare_api_parameters
+from ..resources.hosts import SEARCH_HOSTS_FQL_DOCUMENTATION
 from .base import BaseModule
 
 logger = get_logger(__name__)
@@ -35,18 +36,26 @@ class HostsModule(BaseModule):
 
         self._add_tool(
             server,
+            self.search_hosts_fql_filter_guide,
+            name="search_hosts_fql_filter_guide"
+        )
+
+        self._add_tool(
+            server,
             self.get_host_details,
             name="get_host_details"
         )
 
     def search_hosts(
         self,
-        filter: Optional[str] = Field(default=None, examples={"platform_name:'Windows'", "hostname:'PC*'"}),
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_search_hosts_fql_filter_guide` tool when building this filter parameter.", examples={"platform_name:'Windows'", "hostname:'PC*'"}),
         limit: Optional[int] = Field(default=100, ge=1, le=5000),
         offset: Optional[int] = Field(default=0, ge=0),
         sort: Optional[str] = Field(default=None, examples={"hostname.asc", "last_seen.desc"}),
     ) -> List[Dict[str, Any]]:
         """Search for hosts in your CrowdStrike environment.
+
+        IMPORTANT: You must use the tool `falcon_search_hosts_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_hosts` tool.
 
         Args:
             filter: Filter hosts using a query in Falcon Query Language (FQL). An asterisk wildcard * includes all results. You must use FQL and never use JSON.
@@ -373,6 +382,14 @@ class HostsModule(BaseModule):
             return details
 
         return []
+
+    def search_hosts_fql_filter_guide(self) -> str:
+        """
+        Returns the guide for the `filter` param of the `falcon_search_hosts` tool.
+
+        IMPORTANT: Before running `falcon_search_hosts`, always call this tool to get information about how to build the FQL for the filter.
+        """
+        return SEARCH_HOSTS_FQL_DOCUMENTATION
 
     def get_host_details(
         self,

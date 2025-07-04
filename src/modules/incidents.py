@@ -11,6 +11,11 @@ from pydantic import Field
 
 from ..common.errors import handle_api_response
 from ..common.utils import prepare_api_parameters
+from ..resources.incidents import (
+    CROWD_SCORE_FQL_DOCUMENTATION,
+    SEARCH_INCIDENTS_FQL_DOCUMENTATION,
+    SEARCH_BEHAVIORS_FQL_DOCUMENTATION
+)
 from .base import BaseModule
 
 
@@ -32,8 +37,20 @@ class IncidentsModule(BaseModule):
 
         self._add_tool(
             server,
+            self.show_crowd_score_fql_filter_guide,
+            name="show_crowd_score_fql_filter_guide"
+        )
+
+        self._add_tool(
+            server,
             self.search_incidents,
             name="search_incidents"
+        )
+
+        self._add_tool(
+            server,
+            self.search_incidents_fql_filter_guide,
+            name="search_incidents_fql_filter_guide"
         )
 
         self._add_tool(
@@ -50,24 +67,26 @@ class IncidentsModule(BaseModule):
 
         self._add_tool(
             server,
+            self.search_behaviors_fql_filter_guide,
+            name="search_behaviors_fql_filter_guide"
+        )
+
+        self._add_tool(
+            server,
             self.get_behavior_details,
             name="get_behavior_details"
         )
 
     def show_crowd_score(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results."),
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_show_crowd_score_fql_filter_guide` tool when building this filter parameter."),
         limit: Optional[int] = Field(default=100, ge=1, le=2500, description="Maximum number of records to return. (Max: 2500)"),
         offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="TThe property to sort by. (Ex: modified_timestamp.desc)", examples={"modified_timestamp.desc"}),
     ) -> Dict[str, Any]:
         """Query environment wide CrowdScore and return the entity data.
 
-        Args:
-            filter: FQL Syntax formatted string used to limit the results.
-            limit: Maximum number of records to return. (Max: 2500)
-            offset: Starting index of overall result set from which to return ids.
-            sort: The property to sort by. (Ex: modified_timestamp.desc)
+        IMPORTANT: You must use the tool `falcon_show_crowd_score_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `show_crowd_score` tool.
 
         Returns:
             Tool returns the CrowdScore entity data.
@@ -122,38 +141,24 @@ class IncidentsModule(BaseModule):
 
         return result
 
+    def show_crowd_score_fql_filter_guide(self) -> str:
+        """
+        Returns the guide for the `filter` param of the `falcon_show_crowd_score` tool.
+
+        IMPORTANT: Before running `falcon_show_crowd_score`, always call this tool to get information about how to build the FQL for the filter.
+        """
+        return CROWD_SCORE_FQL_DOCUMENTATION
+
     def search_incidents(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. Review the following table for a complete list of available filters."),
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_search_incidents_fql_filter_guide` tool when building this filter parameter."),
         limit: int = Field(default=100, ge=1, le=500, description="Maximum number of records to return. (Max: 500)"),
         offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. FQL syntax. Ex: state.asc, name.desc"),
     ) -> List[Dict[str, Any]]:
         """Search for incidents by providing a FQL filter, sorting, and paging details.
 
-        Args:
-            filter: FQL Syntax formatted string used to limit the results. Review the following table for a complete list of available filters.
-            limit: Maximum number of records to return. (Max: 500)
-            offset: Starting index of overall result set from which to return ids.
-            sort: The property to sort by. (Ex: modified_timestamp.desc)
-
-        For more detail regarding filters and their usage, please review the Falcon Query Language documentation.
-
-        Available filters:
-            host_ids: The device IDs of all the hosts on which the incident occurred. Example: `9a07d39f8c9f430eb3e474d1a0c16ce9`
-            lm_host_ids: If lateral movement has occurred, this field shows the remote device IDs of the hosts on which the lateral movement occurred. Example: `c4e9e4643999495da6958ea9f21ee597`
-            lm_hosts_capped: Indicates that the list of lateral movement hosts has been truncated. The limit is 15 hosts. Example: `True`
-            name: The name of the incident. Initially the name is assigned by CrowdScore, but it can be updated through the API. Example: `Incident on DESKTOP-27LTE3R at 2019-12-20T19:56:16Z`
-            description: The description of the incident. Initially the description is assigned by CrowdScore, but it can be updated through the API. Example: `Objectives in this incident: Keep Access. Techniques: Masquerading. Involved hosts and end users: DESKTOP-27LTE3R, DESKTOP-27LTE3R$.`
-            users: The usernames of the accounts associated with the incident. Example: `someuser`
-            tags: Tags associated with the incident. CrowdScore will assign an initial set of tags, but tags can be added or removed through the API. Example: `Objective/Keep Access`
-            final_score: The incident score. Divide the integer by 10 to match the displayed score for the incident. Example: `56`
-            start: The recorded time of the earliest behavior. Example: 2017-01-31T22:36:11Z
-            end: The recorded time of the latest behavior. Example: 2017-01-31T22:36:11Z
-            assigned_to_name: The name of the user the incident is assigned to.
-            state: The incident state: "open" or "closed". Example: `open`
-            status: The incident status as a number: 20: New, 25: Reopened, 30: In Progress, 40: Closed. Example: `20`
-            modified_timestamp: The most recent time a user has updated the incident. Example: `2021-02-04T05:57:04Z`
+        IMPORTANT: You must use the tool `falcon_search_incidents_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_incidents` tool.
 
         Returns:
             Tool returns CrowdStrike incidents.
@@ -174,6 +179,14 @@ class IncidentsModule(BaseModule):
             return self.get_incident_details(incident_ids)
 
         return []
+
+    def search_incidents_fql_filter_guide(self) -> str:
+        """
+        Returns the guide for the `filter` param of the `falcon_search_incidents` tool.
+
+        IMPORTANT: Before running `falcon_search_incidents`, always call this tool to get information about how to build the FQL for the filter.
+        """
+        return SEARCH_INCIDENTS_FQL_DOCUMENTATION
 
     def get_incident_details(
         self,
@@ -199,7 +212,7 @@ class IncidentsModule(BaseModule):
 
     def search_behaviors(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results."),
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_search_behaviors_fql_filter_guide` tool when building this filter parameter."),
         limit: int = Field(default=100, ge=1, le=500, description="Maximum number of records to return. (Max: 500)"),
         offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: modified_timestamp.desc)"),
@@ -209,12 +222,7 @@ class IncidentsModule(BaseModule):
         Use this when you need to find behaviors matching certain criteria rather than retrieving specific behaviors by ID.
         For retrieving details of known behavior IDs, use falcon_get_behavior_details instead.
 
-        Args:
-            filter: FQL Syntax formatted string used to limit the results.
-            limit: The maximum number of records to return in this response. [Integer, 1-500]. Use with the offset parameter to manage pagination of results.
-            offset: Starting index of overall result set from which to return ids.
-            sort: The property to sort by. (Ex: modified_timestamp.desc)
-
+        IMPORTANT: You must use the tool `falcon_search_behaviors_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_behaviors` tool.
 
         Returns:
             Tool returns CrowdStrike behaviors.
@@ -235,6 +243,14 @@ class IncidentsModule(BaseModule):
             return self.get_behavior_details(behavior_ids)
 
         return []
+
+    def search_behaviors_fql_filter_guide(self) -> str:
+        """
+        Returns the guide for the `filter` param of the `falcon_search_behaviors` tool.
+
+        IMPORTANT: Before running `falcon_search_behaviors`, always call this tool to get information about how to build the FQL for the filter.
+        """
+        return SEARCH_BEHAVIORS_FQL_DOCUMENTATION
 
     def get_behavior_details(
         self,

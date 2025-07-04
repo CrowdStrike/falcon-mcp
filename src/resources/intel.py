@@ -2,6 +2,123 @@
 Contains Intel resources.
 """
 
+QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Indicator Entities Guide
+
+=== BASIC SYNTAX ===
+property_name:[operator]'value'
+
+=== AVAILABLE OPERATORS ===
+• No operator = equals (default)
+• ! = not equal to
+• > = greater than
+• >= = greater than or equal
+• < = less than
+• <= = less than or equal
+• ~ = text match (ignores case, spaces, punctuation)
+• !~ = does not text match
+• * = wildcard matching (one or more characters)
+
+=== DATA TYPES & SYNTAX ===
+• Strings: 'value' or ['exact_value'] for exact match
+• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
+• Booleans: true or false (no quotes)
+• Numbers: 123 (no quotes)
+• Wildcards: 'partial*' or '*partial' or '*partial*'
+
+=== COMBINING CONDITIONS ===
+• + = AND condition
+• , = OR condition
+• ( ) = Group expressions
+
+=== falcon_search_indicators FQL filter options ===
+• created_date
+• deleted
+• domain_types
+• id
+• indicator
+• ip_address_types
+• kill_chains
+• labels
+• last_updated
+• malicious_confidence
+• malware_families
+• published_date
+• reports
+• source
+• targets
+• threat_types
+• type
+• vulnerabilities
+
+=== EXAMPLE USAGE ===
+
+• type:'domain'
+• malicious_confidence:'high'
+• type:'hash_md5'+malicious_confidence:'high'
+• created_date:>'2023-01-01T00:00:00Z'
+
+=== IMPORTANT NOTES ===
+• Use single quotes around string values: 'value'
+• Use square brackets for exact matches: ['exact_value']
+• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
+"""
+
+QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Report Entities Guide
+
+=== BASIC SYNTAX ===
+property_name:[operator]'value'
+
+=== AVAILABLE OPERATORS ===
+• No operator = equals (default)
+• ! = not equal to
+• > = greater than
+• >= = greater than or equal
+• < = less than
+• <= = less than or equal
+• ~ = text match (ignores case, spaces, punctuation)
+• !~ = does not text match
+• * = wildcard matching (one or more characters)
+
+=== DATA TYPES & SYNTAX ===
+• Strings: 'value' or ['exact_value'] for exact match
+• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
+• Booleans: true or false (no quotes)
+• Numbers: 123 (no quotes)
+• Wildcards: 'partial*' or '*partial' or '*partial*'
+
+=== COMBINING CONDITIONS ===
+• + = AND condition
+• , = OR condition
+• ( ) = Group expressions
+
+=== falcon_search_reports FQL filter options ===
+• actors
+• created_date
+• description
+• id
+• last_modified_date
+• name
+• report_type
+• short_description
+• slug
+• tags
+• target_countries
+• target_industries
+• url
+
+=== EXAMPLE USAGE ===
+
+• report_type:'malware'
+• name:'*ransomware*'
+• created_date:>'2023-01-01T00:00:00Z'
+• target_industries:'healthcare'
+
+=== IMPORTANT NOTES ===
+• Use single quotes around string values: 'value'
+• Use square brackets for exact matches: ['exact_value']
+• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
+"""
+
 QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Actor Entities Guide
 
 === BASIC SYNTAX ===

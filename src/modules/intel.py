@@ -12,7 +12,11 @@ from pydantic import Field
 from ..common.logging import get_logger
 from ..common.errors import handle_api_response
 from ..common.utils import prepare_api_parameters
-from ..resources.intel import QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION
+from ..resources.intel import (
+    QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION,
+    QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION,
+    QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION
+)
 from .base import BaseModule
 
 logger = get_logger(__name__)
@@ -48,8 +52,20 @@ class IntelModule(BaseModule):
 
         self._add_tool(
             server,
+            self.search_indicators_fql_filter_guide,
+            name="search_indicators_fql_filter_guide"
+        )
+
+        self._add_tool(
+            server,
             self.query_report_entities,
             name="search_reports"
+        )
+
+        self._add_tool(
+            server,
+            self.search_reports_fql_filter_guide,
+            name="search_reports_fql_filter_guide"
         )
 
     def query_actor_entities(
@@ -107,7 +123,7 @@ class IntelModule(BaseModule):
 
     def query_indicator_entities(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results."),
+        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon_search_indicators_fql_filter_guide` tool when building this filter parameter."),
         limit: Optional[int] = Field(default=100, ge=1, le=5000, description="Maximum number of records to return. (Max: 5000)"),
         offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)"),
@@ -117,14 +133,7 @@ class IntelModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Get info about indicators that match provided FQL filters.
 
-        Args:
-            filter: FQL query expression that should be used to limit the results.
-            limit: Maximum number of records to return. (Max: 5000)
-            offset: Starting index of overall result set from which to return ids.
-            sort: The property to sort by. (Ex: created_date|desc)
-            q: Free text search across all indexed fields.
-            include_deleted: Flag indicating if both published and deleted indicators should be returned.
-            include_relations: Flag indicating if related indicators should be returned.
+        IMPORTANT: You must use the tool `falcon_search_indicators_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_indicators` tool.
 
         Returns:
             List of indicators that match the provided filters.
@@ -161,15 +170,25 @@ class IntelModule(BaseModule):
 
         return api_response
 
+    def search_indicators_fql_filter_guide(self) -> str:
+        """
+        Returns the guide for the `filter` param of the `falcon_search_indicators` tool.
+
+        IMPORTANT: Before running `falcon_search_indicators`, always call this tool to get information about how to build the FQL for the filter.
+        """
+        return QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION
+
     def query_report_entities(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results."),
+        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon_search_reports_fql_filter_guide` tool when building this filter parameter."),
         limit: int = Field(default=100, ge=1, le=5000, description="Maximum number of records to return. (Max: 5000)"),
         offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)"),
         q: Optional[str] = Field(default=None, description="Free text search across all indexed fields."),
     ) -> List[Dict[str, Any]]:
         """Get info about reports that match provided FQL filters.
+
+        IMPORTANT: You must use the tool `falcon_search_reports_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_reports` tool.
 
         Args:
             filter: FQL query expression that should be used to limit the results. Review the following table for a complete list of available filters.
@@ -213,3 +232,11 @@ class IntelModule(BaseModule):
             return [api_response]
 
         return api_response
+
+    def search_reports_fql_filter_guide(self) -> str:
+        """
+        Returns the guide for the `filter` param of the `falcon_search_reports` tool.
+
+        IMPORTANT: Before running `falcon_search_reports`, always call this tool to get information about how to build the FQL for the filter.
+        """
+        return QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION
