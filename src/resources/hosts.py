@@ -2,6 +2,7 @@
 Contains Hosts resources.
 """
 
+# TODO: verify filter and provide valid examples
 SEARCH_HOSTS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Hosts Guide
 
 === BASIC SYNTAX ===

@@ -2,6 +2,7 @@
 Contains Detections resources.
 """
 
+# TODO: verify filter and provide valid examples
 SEARCH_DETECTIONS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Detections Guide
 
 === BASIC SYNTAX ===
