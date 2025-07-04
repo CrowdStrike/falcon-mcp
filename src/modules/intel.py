@@ -186,20 +186,17 @@ class IntelModule(BaseModule):
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)"),
         q: Optional[str] = Field(default=None, description="Free text search across all indexed fields."),
     ) -> List[Dict[str, Any]]:
-        """Get info about reports that match provided FQL filters.
+        """Retrieve intelligence reports that match provided FQL filters.
+
+        This tool returns comprehensive intelligence report details based on your search criteria.
+        Use this when you need to find threat intelligence reports matching specific conditions.
+        For guidance on building FQL filters, use the `falcon_search_reports_fql_filter_guide` tool.
 
         IMPORTANT: You must use the tool `falcon_search_reports_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_reports` tool.
 
-        Args:
-            filter: FQL query expression that should be used to limit the results. Review the following table for a complete list of available filters.
-            limit: Maximum number of records to return. (Max: 5000)
-            offset: Starting index of overall result set from which to return ids.
-            sort: The property to sort by. (Ex: created_date|desc)
-            q: Free text search across all indexed fields.
-            fields: The fields to return, or a predefined set of fields in the form of the collection name surrounded by two underscores.
-
         Returns:
-            List of reports that match the provided filters.
+            List of intelligence reports with comprehensive information including content,
+            metadata, threat classifications, and associated indicators
         """
         # Prepare parameters
         params = prepare_api_parameters({

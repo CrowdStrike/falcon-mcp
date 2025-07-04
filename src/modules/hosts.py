@@ -5,6 +5,7 @@ Hosts module for Falcon MCP Server
 This module provides tools for accessing and managing CrowdStrike Falcon hosts/devices.
 """
 from typing import Dict, List, Optional, Any
+from textwrap import dedent
 
 from mcp.server import FastMCP
 from pydantic import Field
@@ -51,22 +52,27 @@ class HostsModule(BaseModule):
         filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_search_hosts_fql_filter_guide` tool when building this filter parameter.", examples={"platform_name:'Windows'", "hostname:'PC*'"}),
         limit: Optional[int] = Field(default=100, ge=1, le=5000, description="The maximum records to return. [1-5000]"),
         offset: Optional[int] = Field(default=0, ge=0, description="The offset to start retrieving records from."),
-        sort: Optional[str] = Field(default=None, description="""Sort hosts using these options:
+        sort: Optional[str] = Field(
+            default=None,
+            description=dedent("""
+                Sort hosts using these options:
 
-    hostname: Host name/computer name
-    last_seen: Timestamp when the host was last seen
-    first_seen: Timestamp when the host was first seen
-    modified_timestamp: When the host record was last modified
-    platform_name: Operating system platform
-    agent_version: CrowdStrike agent version
-    os_version: Operating system version
-    external_ip: External IP address
+                hostname: Host name/computer name
+                last_seen: Timestamp when the host was last seen
+                first_seen: Timestamp when the host was first seen
+                modified_timestamp: When the host record was last modified
+                platform_name: Operating system platform
+                agent_version: CrowdStrike agent version
+                os_version: Operating system version
+                external_ip: External IP address
 
-    Sort either asc (ascending) or desc (descending).
-    Both formats are supported: 'hostname.desc' or 'hostname|desc'
+                Sort either asc (ascending) or desc (descending).
+                Both formats are supported: 'hostname.desc' or 'hostname|desc'
 
-Examples: 'hostname.asc', 'last_seen.desc', 'platform_name.asc'
-""", examples={"hostname.asc", "last_seen.desc"}),
+                Examples: 'hostname.asc', 'last_seen.desc', 'platform_name.asc'
+            """).strip(),
+            examples={"hostname.asc", "last_seen.desc"}
+        ),
     ) -> List[Dict[str, Any]]:
         """Search for hosts in your CrowdStrike environment.
 
@@ -132,15 +138,17 @@ Examples: 'hostname.asc', 'last_seen.desc', 'platform_name.asc'
 
     def get_host_details(
         self,
-        ids: List[str] = Field(description="Host device IDs to retrieve details for"),
+        ids: List[str] = Field(description="Host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request."),
     ) -> List[Dict[str, Any]]|Dict[str, Any]:
-        """Get detailed information about specific hosts by their device IDs.
+        """Retrieve detailed information for specified host device IDs.
 
-        Args:
-            ids: List of host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request.
+        This tool returns comprehensive host details for one or more device IDs.
+        Use this when you already have specific device IDs and need their full details.
+        For searching/discovering hosts, use the `falcon_search_hosts` tool instead.
 
         Returns:
-            Host details for the specified device IDs
+            List of host details with comprehensive information including system specs,
+            agent information, network details, and security status
         """
         logger.debug("Getting host details for IDs: %s", ids)
 

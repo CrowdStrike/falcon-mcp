@@ -192,13 +192,15 @@ class IncidentsModule(BaseModule):
         self,
         ids: List[str] = Field(description="Incident ID(s) to retrieve."),
     ) -> List[Dict[str, Any]]:
-        """Get details on incidents by providing incident IDs.
+        """Retrieve detailed information for specified incident IDs.
 
-        Args:
-            ids: Incident ID(s) to retrieve.
+        This tool returns comprehensive incident details for one or more incident IDs.
+        Use this when you already have specific incident IDs and need their full details.
+        For searching/discovering incidents, use the `falcon_search_incidents` tool instead.
 
         Returns:
-            Tool returns the CrowdScore entity data.
+            List of incident details with comprehensive information including hosts,
+            scores, behaviors, timeline, and associated metadata
         """
         incidents = self._base_get_by_ids(
             operation="GetIncidents",
@@ -256,16 +258,14 @@ class IncidentsModule(BaseModule):
         self,
         ids: List[str] = Field(description="Behavior ID(s) to retrieve."),
     ) -> List[Dict[str, Any]]:
-        """Get details on behaviors by providing behavior IDs.
+        """Retrieve detailed information for specified behavior IDs.
 
         Use this when you already know the specific behavior ID(s) and need to retrieve their details.
-        For searching behaviors based on criteria, use falcon_search_behaviors instead.
-
-        Args:
-            ids: Behavior ID(s) to retrieve.
+        For searching behaviors based on criteria, use the search_behaviors tool instead.
 
         Returns:
-            Tool returns the CrowdScore behaviors by ID.
+            List of behavior details with comprehensive information including techniques,
+            tactics, severity, confidence levels, and associated metadata
         """
         behaviors = self._base_get_by_ids(
             operation="GetBehaviors",
