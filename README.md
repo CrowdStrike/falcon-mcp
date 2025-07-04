@@ -258,6 +258,7 @@ The server provides core tools for interacting with the Falcon API:
 Provides tools for accessing and analyzing CrowdStrike Falcon detections:
 
 - `falcon_search_detections`: Query and return information about detections
+- `falcon_search_detections_fql_filter_guide`: Get FQL rules for `falcon_search_detections` tool filter param
 - `falcon_get_detection_details`: Get information about specific detection composite IDs
 
 ### Incidents Module
@@ -265,9 +266,12 @@ Provides tools for accessing and analyzing CrowdStrike Falcon detections:
 Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
 
 - `falcon_show_crowd_score`: Show CrowdScore in the environment
+- `falcon_show_crowd_score_fql_filter_guide`: Get FQL rules for `falcon_show_crowd_score` tool filter param
 - `falcon_search_incidents`: Query for incidents
+- `falcon_search_incidents_fql_filter_guide`: Get FQL rules for `falcon_search_incidents` tool filter param
 - `falcon_get_incident_details`: Get incidents by ID
 - `falcon_search_behaviors`: Query for behaviors
+- `falcon_search_behaviors_fql_filter_guide`: Get FQL rules for `falcon_search_behaviors` tool filter param
 - `falcon_get_behavior_details`: Get behaviors by ID
 
 ### Intel Module
@@ -275,15 +279,18 @@ Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
 Provides tools for accessing and analyzing CrowdStrike Intel:
 
 - `falcon_search_actors`: Get info about actors
-- `falcon_search_actors_fql_filter_guide`: Get FQL rules for falcon_search_actors tool filter param
+- `falcon_search_actors_fql_filter_guide`: Get FQL rules for `falcon_search_actors` tool filter param
 - `falcon_search_indicators`: Get info about indicators
+- `falcon_search_indicators_fql_filter_guide`: Get FQL rules for `falcon_search_indicators` tool filter param
 - `falcon_search_reports`: Get info about reports
+- `falcon_search_reports_fql_filter_guide`: Get FQL rules for `falcon_search_reports` tool filter param
 
 ### Hosts Module
 
 Provides tools for accessing and managing CrowdStrike Falcon hosts/devices:
 
 - `falcon_search_hosts`: Query and return information about hosts
+- `falcon_search_hosts_fql_filter_guide`: Get FQL rules for `falcon_search_hosts` tool filter param
 - `falcon_get_host_details`: Get information about specific host IDs
 
 ## MCP Configuration

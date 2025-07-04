@@ -2,7 +2,6 @@
 Contains Incidents resources.
 """
 
-# TODO: verify filter
 CROWD_SCORE_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - CrowdScore Guide
 
 === BASIC SYNTAX ===
@@ -51,7 +50,6 @@ property_name:[operator]'value'
 • Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
 """
 
-# TODO: verify filter and provide valid examples
 SEARCH_INCIDENTS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Incidents Guide
 
 === BASIC SYNTAX ===
@@ -156,7 +154,6 @@ property_name:[operator]'value'
 • Status values: 20: New, 25: Reopened, 30: In Progress, 40: Closed
 """
 
-# TODO: verify filter and provide valid examples
 SEARCH_BEHAVIORS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Behaviors Guide
 
 === BASIC SYNTAX ===

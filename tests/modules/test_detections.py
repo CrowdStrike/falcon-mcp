@@ -18,6 +18,7 @@ class TestDetectionsModule(TestModules):
         """Test registering tools with the server."""
         expected_tools = [
             "falcon_search_detections",
+            "falcon_search_detections_fql_filter_guide",
             "falcon_get_detection_details",
         ]
         self.assert_tools_registered(expected_tools)

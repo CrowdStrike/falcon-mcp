@@ -20,7 +20,9 @@ class TestIntelModule(TestModules):
             "falcon_search_actors",
             "falcon_search_actors_fql_filter_guide",
             "falcon_search_indicators",
+            "falcon_search_indicators_fql_filter_guide",
             "falcon_search_reports",
+            "falcon_search_reports_fql_filter_guide",
         ]
         self.assert_tools_registered(expected_tools)
 

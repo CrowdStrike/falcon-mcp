@@ -2,7 +2,6 @@
 Contains Intel resources.
 """
 
-# TODO: verify filter and provide valid examples
 QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Actor Entities Guide
 
 === BASIC SYNTAX ===
@@ -84,7 +83,6 @@ property_name:[operator]'value'
 • Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
 """
 
-# TODO: verify filter and provide valid examples
 QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Indicator Entities Guide
 
 === BASIC SYNTAX ===
@@ -146,7 +144,6 @@ property_name:[operator]'value'
 • Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
 """
 
-# TODO: verify filter and provide valid examples
 QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Report Entities Guide
 
 === BASIC SYNTAX ===
