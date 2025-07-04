@@ -32,145 +32,137 @@ property_name:[operator]'value'
 
 === falcon_search_hosts FQL filter options ===
 
-=== IDENTIFICATION & CORE ===
-• device_id: Unique device identifier
-• hostname: Host name/computer name (supports wildcards)
-• cid: Customer ID
-• agent_version: CrowdStrike agent version
-• serial_number: Device serial number
-
-=== PLATFORM & SYSTEM ===
-• platform_name: Operating system platform
-  Available Options:
-    - 'Windows'
-    - 'Mac'
-    - 'Linux'
-• platform_id: Numeric platform identifier
-• os_version: Operating system version
-• major_version: Major OS version number
-• minor_version: Minor OS version number
-• kernel_version: Linux kernel version
-• product_type_desc: System type
-  Available Options:
-    - 'Workstation'
-    - 'Server'
-    - 'Domain Controller'
-
-=== NETWORK INFORMATION ===
-• external_ip: External IP address as seen by CrowdStrike
-• local_ip: Local/internal IP address
-• local_ip.raw: IP address with wildcard support (use *'192.168.1.*')
-• connection_ip: Current connection IP
-• default_gateway_ip: Default gateway IP
-• mac_address: MAC address
-• connection_mac_address: Connection MAC address
-
-=== STATUS & CONTAINMENT ===
-• status: Host containment status
-  Available Options:
-    - 'normal' (normal operations)
-    - 'containment_pending' (containment in progress)
-    - 'contained' (host contained)
-    - 'lift_containment_pending' (lifting containment)
-• filesystem_containment_status: File system containment status
-• reduced_functionality_mode: RFM status ('yes', 'no', or blank)
-• rtr_state: Real Time Response state
-
-=== TIMESTAMPS ===
-• first_seen: When host first connected to Falcon
-• last_seen: Most recent connection to Falcon
-• modified_timestamp: Last host record update
-• agent_local_time: Agent's local timestamp
-
-=== HARDWARE & BIOS ===
-• bios_manufacturer: BIOS manufacturer name
-• bios_version: BIOS version
-• system_manufacturer: System manufacturer
-• system_product_name: System product name
-• cpu_signature: CPU signature
-• cpu_vendor: CPU vendor code
-• chassis_type: Chassis type code
-• chassis_type_desc: Chassis type description
-
-=== DOMAIN & GROUPS ===
-• machine_domain: Active Directory domain
-• ou: Organizational unit
-• groups: Host groups
-• tags: Falcon grouping tags
-
-=== CLOUD & VIRTUALIZATION ===
-• service_provider: Cloud provider ('AZURE', 'AWS', 'GCP', etc.)
-• service_provider_account_id: Cloud account ID
-• instance_id: Cloud instance ID
-• k8s_cluster_id: Kubernetes cluster ID
-• deployment_type: Deployment type ('Standard', 'DaemonSet')
-• linux_sensor_mode: Linux sensor mode ('Kernel Mode', 'User Mode')
-
-=== CONFIGURATION ===
-• config_id_base: Agent configuration base ID
-• config_id_build: Agent configuration build ID
-• config_id_platform: Agent configuration platform ID
-• agent_load_flags: Agent load flags
-
-=== EXAMPLE USAGE ===
-
-=== PLATFORM-BASED SEARCHES ===
-• platform_name:'Windows'
-• platform_name:'Linux'+product_type_desc:'Server'
-• platform_name:'Mac'+product_type_desc:'Workstation'
-
-=== HOSTNAME SEARCHES ===
-• hostname:'PC*'
-• hostname:'*server*'
-• hostname:'DESKTOP-ABC123'
-
-=== STATUS-BASED SEARCHES ===
-• status:'normal'
-• status:'contained'
-• reduced_functionality_mode:'yes'
-
-=== NETWORK-BASED SEARCHES ===
-• local_ip.raw:*'192.168.1.*'
-• external_ip:'203.0.113.10'
-• mac_address:'00:50:56:*'
-
-=== TIME-BASED SEARCHES ===
-• last_seen:>'2024-01-20T00:00:00Z'
-• first_seen:>='2024-01-15T00:00:00Z'+first_seen:<='2024-01-20T00:00:00Z'
-• last_seen:<'2024-01-15T00:00:00Z'
-
-=== AGENT & VERSION SEARCHES ===
-• agent_version:'7.26.*'
-• agent_version:<'7.20.0'
-• os_version:'*Windows 10*'
-
-=== CLOUD & INFRASTRUCTURE SEARCHES ===
-• service_provider:'AZURE'
-• service_provider:'AWS'
-• deployment_type:'DaemonSet'
-• k8s_cluster_id:*
-
-=== HARDWARE-BASED SEARCHES ===
-• system_manufacturer:'VMware*'
-• system_manufacturer:'Microsoft Corporation'
-• bios_manufacturer:'American Megatrends*'
-
-=== ADVANCED COMBINED SEARCHES ===
-• platform_name:'Windows'+product_type_desc:'Server'+status:'normal'
-• platform_name:'Linux'+machine_domain:'company.local'
-• platform_name:'Windows'+product_type_desc:'Workstation'+status:'contained'
-• service_provider:'AZURE'+platform_name:'Linux'+product_type_desc:'Server'+last_seen:>'2024-01-18T00:00:00Z'
-• tags:'*production*'
-
-=== BULK FILTERING SEARCHES ===
-• (platform_name:'Windows'),(platform_name:'Linux')
-• (product_type_desc:'Server'),(product_type_desc:'Workstation')
-• (local_ip.raw:*'192.168.1.*'),(local_ip.raw:*'10.0.1.*')
-
-=== TROUBLESHOOTING SEARCHES ===
-• (status:'containment_pending'),(status:'contained'),(reduced_functionality_mode:'yes')
-• last_seen:<'2024-01-15T00:00:00Z'
-• (rtr_state:!'')+status:'normal'
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| Name                 | Type                      | Operators| Description                                                      |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| device_id            | String                    | No       | The ID of the device.                                            |
+|                      |                           |          | Ex: 061a51ec742c44624a176f079d742052                             |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| agent_load_flags     | String                    | No       | CrowdStrike agent configuration notes                            |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| agent_version        | String                    | No       | CrowdStrike agent configuration notes                            |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| bios_manufacturer    | String                    | No       | Bios manufacture name.                                           |
+|                      |                           |          | Ex: Phoenix Technologies LTD                                     |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| bios_version         | String                    | No       | Bios version.                                                    |
+|                      |                           |          | Ex: 6.00                                                         |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| config_id_base       | String                    | No       | CrowdStrike agent configuration notes                            |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| config_id_build      | String                    | No       | CrowdStrike agent configuration notes                            |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| config_id_platform   | String                    | No       | CrowdStrike agent configuration notes                            |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| cpu_signature        | String                    | Yes      | The CPU signature of the device.                                 |
+|                      |                           |          | Ex: GenuineIntel                                                 |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| deployment_type      | String                    | Yes      | Linux deployment type:                                           |
+|                      |                           |          | - Standard                                                       |
+|                      |                           |          | - DaemonSet                                                      |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| external_ip          | IP Address                | Yes      | External IP of the device, as seen by CrowdStrike.               |
+|                      |                           |          | Ex: 192.0.2.100                                                  |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| first_seen           | Timestamp                 | Yes      | Timestamp of device's first connection to Falcon,                |
+|                      |                           |          | in UTC date format ("YYYY-MM-DDTHH:MM:SSZ").                     |
+|                      |                           |          | Ex: 2016-07-19T11:14:15Z                                         |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| hostname             | String                    | No       | The name of the machine. Supports prefix and suffix              |
+|                      |                           |          | searching with wildcard, so you can search for                   |
+|                      |                           |          | terms like abc and *abc.                                         |
+|                      |                           |          | Ex: WinPC9251                                                    |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| last_login_timestamp | Timestamp                 | Yes      | User logon event timestamp, once a week.                         |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| last_seen            | Timestamp                 | Yes      | Timestamp of device's most recent connection to Falcon,          |
+|                      |                           |          | in UTC date format ("YYYY-MM-DDTHH:MM:SSZ").                     |
+|                      |                           |          | Ex: 2016-07-19T11:14:15Z                                         |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| linux_sensor_mode    | String                    | Yes      | Linux sensor mode:                                               |
+|                      |                           |          | - Kernel Mode                                                    |
+|                      |                           |          | - User Mode                                                      |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| local_ip             | IP Address                | No       | The device's local IP address. As a device management            |
+|                      |                           |          | parameter, this is the IP address of this device at the          |
+|                      |                           |          | last time it connected to the CrowdStrike Cloud.                 |
+|                      |                           |          | Ex: 192.0.2.1                                                    |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| local_ip.raw         | IP Address with wildcards | No       | A portion of the device's local IP address, used only for        |
+|                      | (*)                       |          | searches that include wildcard characters. Using a wildcard      |
+|                      |                           |          | requires specific syntax: when you specify an IP address with    |
+|                      |                           |          | this parameter, prefix the IP address with an asterisk (*)       |
+|                      |                           |          | and enclose the IP address in single quotes.                     |
+|                      |                           |          |                                                                  |
+|                      |                           |          | Search for a device with the IP address 192.0.2.100:             |
+|                      |                           |          | local_ip.raw:*'192.0.2.*'                                       |
+|                      |                           |          | local_ip.raw:*'*.0.2.100'                                        |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| mac_address          | String                    | No       | The MAC address of the device                                    |
+|                      |                           |          | Ex: 2001:db8:ffff:ffff:ffff:ffff:ffff:ffff                       |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| machine_domain       | String                    | No       | Active Directory domain name.                                    |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| major_version        | String                    | No       | Major version of the Operating System                            |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| minor_version        | String                    | No       | Minor version of the Operating System                            |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| modified_timestamp   | Timestamp                 | Yes      | The last time that the machine record was updated. Can include   |
+|                      |                           |          | status like containment status changes or configuration          |
+|                      |                           |          | group changes.                                                   |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| os_version           | String                    | No       | Operating system version.                                        |
+|                      |                           |          | Ex: Windows 7                                                    |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| ou                   | String                    | No       | Active Directory organizational unit name.                        |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| platform_id          | String                    | No       | CrowdStrike agent configuration notes                            |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| platform_name        | String                    | No       | Operating system platform.                                       |
+|                      |                           |          |                                                                  |
+|                      |                           |          | Available options:                                               |
+|                      |                           |          | - Windows                                                        |
+|                      |                           |          | - Mac                                                            |
+|                      |                           |          | - Linux                                                          |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| product_type_desc    | String                    | No       | Name of product type.                                            |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| reduced_functionality| String                    | Yes      | Reduced functionality mode (RFM) status:                         |
+| _mode                |                           |          | - yes                                                            |
+|                      |                           |          | - no                                                             |
+|                      |                           |          | - Unknown (displayed as a blank string)                          |
+|                      |                           |          |                                                                  |
+|                      |                           |          | Unknown is used for hosts with an unavailable RFM status:        |
+|                      |                           |          | - The sensor was deployed less than 24 hours ago and has not     |
+|                      |                           |          |   yet provided an RFM status.                                    |
+|                      |                           |          | - The sensor version does not support RFM.                       |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| release_group        | String                    | No       | Name of the Falcon deployment group, if the this machine is      |
+|                      |                           |          | part of a Falcon sensor deployment group.                        |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| serial_number        | String                    | Yes      | Serial number of the device.                                     |
+|                      |                           |          | Ex: C42AFKEBM563                                                 |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| site_name            | String                    | No       | Active Directory site name.                                      |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| status               | String                    | No       | Containment Status of the machine. "Normal" denotes good         |
+|                      |                           |          | operations; other values might mean reduced functionality        |
+|                      |                           |          | or support.                                                      |
+|                      |                           |          |                                                                  |
+|                      |                           |          | Possible values:                                                 |
+|                      |                           |          | - normal                                                         |
+|                      |                           |          | - containment_pending                                            |
+|                      |                           |          | - contained                                                      |
+|                      |                           |          | - lift_containment_pending                                       |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| system_manufacturer  | String                    | No       | Name of system manufacturer                                      |
+|                      |                           |          | Ex: VMware, Inc.                                                 |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| system_product_name  | String                    | No       | Name of system product                                           |
+|                      |                           |          | Ex: VMware Virtual Platform                                      |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
+| tags                 | String                    | No       | Falcon grouping tags                                             |
++----------------------+---------------------------+----------+------------------------------------------------------------------+
 
 === IMPORTANT NOTES ===
 • Use single quotes around string values: 'value'
@@ -178,6 +170,4 @@ property_name:[operator]'value'
 • Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
 • Hostname supports wildcards: 'PC*', '*server*'
 • IP wildcards require local_ip.raw with specific syntax
-• Complex queries may take longer to execute
-• Status values: normal, containment_pending, contained, lift_containment_pending
 """
