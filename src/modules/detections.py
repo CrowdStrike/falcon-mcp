@@ -5,6 +5,7 @@ Detections module for Falcon MCP Server
 This module provides tools for accessing and analyzing CrowdStrike Falcon detections.
 """
 from typing import Dict, List, Optional, Any
+from textwrap import dedent
 
 from mcp.server import FastMCP
 from pydantic import Field
@@ -52,31 +53,36 @@ class DetectionsModule(BaseModule):
         limit: Optional[int] = Field(default=100, ge=1, le=9999, description="The maximum number of detections to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results."),
         offset: Optional[int] = Field(default=0, ge=0, description="The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results."),
         q: Optional[str] = Field(default=None, description="Search all detection metadata for the provided string"),
-        sort: Optional[str] = Field(default=None, description="""Sort detections using these options:
+        sort: Optional[str] = Field(
+            default=None,
+            description=dedent("""
+                Sort detections using these options:
 
-    timestamp: Timestamp when the alert occurred
-    created_timestamp: When the alert was created
-    updated_timestamp: When the alert was last modified
-    severity: Severity level of the alert (1-100, recommended when filtering by severity)
-    confidence: Confidence level of the alert (1-100)
-    agent_id: Agent ID associated with the alert
+                timestamp: Timestamp when the detection occurred
+                created_timestamp: When the detection was created
+                updated_timestamp: When the detection was last modified
+                severity: Severity level of the detection (1-100, recommended when filtering by severity)
+                confidence: Confidence level of the detection (1-100)
+                agent_id: Agent ID associated with the detection
 
-    Sort either asc (ascending) or desc (descending).
-    Both formats are supported: 'severity.desc' or 'severity|desc'
+                Sort either asc (ascending) or desc (descending).
+                Both formats are supported: 'severity.desc' or 'severity|desc'
 
-    When searching for high severity alerts, use 'severity.desc' to get the highest severity alerts first.
-    For chronological ordering, use 'timestamp.desc' for most recent alerts first.
+                When searching for high severity detections, use 'severity.desc' to get the highest severity detections first.
+                For chronological ordering, use 'timestamp.desc' for most recent detections first.
 
-    Examples: 'severity.desc', 'timestamp.desc'
-""", examples={"severity.desc", "timestamp.desc"}),
+                Examples: 'severity.desc', 'timestamp.desc'
+            """).strip(),
+            examples={"severity.desc", "timestamp.desc"}
+        ),
         include_hidden: Optional[bool] = Field(default=True),
     ) -> List[Dict[str, Any]]:
         """Search for detections in your CrowdStrike environment.
 
-        IMPORTANT: You must use the tool `falcon_search_detections_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_detections` tool.
+        IMPORTANT: You must use the tool `falcon_search_detections_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_detections` tool.
 
         Returns:
-            List of detection details
+            List of detections with details
         """
         # Prepare parameters
         params = prepare_api_parameters({
@@ -137,17 +143,18 @@ class DetectionsModule(BaseModule):
 
     def get_detection_details(
         self,
-        ids: List[str] = Field(),
-        include_hidden: Optional[bool] = Field(default=True),
+        ids: List[str] = Field(default=None, description="Detection ID(s) to retrieve details for. Specify one or more detection IDs (max 1000 per request)."),
+        include_hidden: Optional[bool] = Field(default=True, description="Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility."),
     ) -> List[Dict[str, Any]]|Dict[str, Any]:
-        """View information about detections. Gets detailed information about a specific detection.
+        """Retrieve detailed information for specified detection IDs.
 
-        Args:
-            ids: ID(s) of the detections to retrieve. View key attributes of detections, including the associated host, disposition, objective/tactic/technique, adversary, and more. Specify one or more detection IDs (max 1000 per request). Find detection IDs with the search_detections operation, the Falcon console, or the Streaming API.
-            include_hidden: Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility.
+        This tool returns comprehensive detection details for one or more detection IDs.
+        Use this when you already have specific detection IDs and need their full details.
+        For searching/discovering detections, use the `falcon_search_detections` tool instead.
 
         Returns:
-            Detection details
+            List of detection details with comprehensive information including host data,
+            disposition, objective/tactic/technique, adversary information, and more
         """
         logger.debug("Getting detection details for ID: %s", ids)
 

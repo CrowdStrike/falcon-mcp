@@ -30,114 +30,211 @@ property_name:[operator]'value'
 • , = OR condition
 • ( ) = Group expressions
 
-=== falcon_search_detections FQL filter options ===
+🚨 DETECTION PROPERTIES (Complete List):
 
-Filter options are broken out into four categories:
+=== IDENTIFICATION & CORE ===
+• composite_id: Unique detection identifier
+• aggregate_id: Related detection group identifier
+• cid: Customer ID
+• agent_id: Falcon agent identifier
+• pattern_id: Detection pattern identifier
 
-• General
-• Behavioral
-• Devices
-• Miscellaneous
+=== ASSIGNMENT & WORKFLOW ===
+• assigned_to_name: Person assigned to this detection
+• assigned_to_uid: Assigned user identifier
+• assigned_to_uuid: Assigned user UUID
+• status: Detection status (new, in_progress, closed, reopened)
 
-==== General ====
+=== TIMESTAMPS ===
+• created_timestamp: When detection was created
+• updated_timestamp: Last modification time
+• timestamp: Detection occurrence timestamp
 
-• adversary_ids
-• assigned_to_name
-• cid
-• date_updated
-• detection_id
-• first_behavior
-• last_behavior
-• max_confidence
-• max_severity
-• max_severity_displayname
-• seconds_to_resolved
-• seconds_to_triaged
-• status
+=== THREAT INTELLIGENCE ===
+• confidence: Confidence level (1-100)
+• severity: Detection severity level
+• tactic: MITRE ATT&CK tactic
+• tactic_id: MITRE ATT&CK tactic ID
+• technique: MITRE ATT&CK technique
+• technique_id: MITRE ATT&CK technique ID
+• objective: Attack objective description
 
-==== Behavioral ====
+=== DETECTION METADATA ===
+• name: Detection name/title
+• display_name: Human-readable detection name
+• description: Detection description
+• type: Detection type classification
+• scenario: Detection scenario
 
-• alleged_filetype
-• behavior_id
-• cmdline
-• confidence
-• contral_graph_id
-• device_id
-• filename
-• ioc_source
-• ioc_type
-• ioc_value
-• md5
-• objective
-• parent_details.parent_cmdline
-• parent_details.parent_md5
-• parent_details.parent_process_graph_id
-• parent_details.parent_process_id
-• parent_details.parent_sha256
-• pattern_disposition
-• scenario
-• severity
-• sha256
-• tactic
-• technique
-• timestamp
-• triggering_process_graph_id
-• triggering_process_id
-• user_id
-• user_name
+=== SYSTEM & PLATFORM ===
+• platform: Operating system platform
+• show_in_ui: Whether detection appears in UI (true/false)
+• data_domains: Data classification domains
 
-Example: behaviors.ioc_type
+=== PRODUCT FILTERING ===
+• product: Source Falcon product
+    - 'epp' (Endpoint Protection)
+    - 'idp' (Identity Protection)
+    - 'mobile' (Falcon for Mobile)
+    - 'xdr' (Falcon XDR)
+    - 'overwatch' (OverWatch)
+    - 'cwpp' (Cloud Workload Protection)
+    - 'ngsiem' (Next-Gen SIEM)
+    - 'thirdparty' (Third party data)
+    - 'data-protection' (Data Protection)
 
-==== Devices ====
+=== SOURCE INFORMATION ===
+• source_products: Products that generated this detection
+• source_vendors: Vendor sources for the detection
 
-• agent_load_flags
-• agent_local_time
-• agent_version
-• bios_manufacturer
-• bios_version
-• cid
-• config_id_base
-• config_id_build
-• config_id_platform
-• cpu_signature
-• device_id
-• external_ip
-• first_seen
-• hostname
-• last_seen
-• local_ip
-• mac_address
-• machine_domain
-• major_version
-• minor_version
-• modified_timestamp
-• os_version
-• ou
-• platform_id
-• platform_name
-• product_type
-• product_type_desc
-• reduced_functionality_mode
-• release_group
-• serial_number
-• site_name
-• status
-• system_manufacturer
-• system_product_name
+=== TAGS & CLASSIFICATION ===
+• tags: Detection classification tags
 
-Example: device.platform_name
+💡 PRACTICAL DETECTION SEARCH EXAMPLES:
 
-==== Miscellaneous ====
+=== STATUS-BASED SEARCHES ===
+Find new detections:
+status:'new'
 
-• hostinfo.active_directory_dn_display
-• hostinfo.domain
-• quarantined_files.id
-• quarantined_files.paths
-• quarantined_files.sha256
-• quarantined_files.state
+Find detections in progress:
+status:'in_progress'
 
-=== IMPORTANT NOTES ===
+Find closed detections:
+status:'closed'
+
+Find reopened detections:
+status:'reopened'
+
+=== PRODUCT-SPECIFIC SEARCHES ===
+Find endpoint protection detections:
+product:'epp'
+
+Find identity protection detections:
+product:'idp'
+
+Find XDR detections:
+product:'xdr'
+
+Find OverWatch detections:
+product:'overwatch'
+
+=== SEVERITY & CONFIDENCE SEARCHES ===
+Find high confidence detections:
+confidence:>80
+
+Find medium to high confidence:
+confidence:>=50
+
+🔥 SEVERITY NUMERIC MAPPING (Critical for Proper Filtering):
+Based on CrowdStrike Falcon API data:
+• Critical: severity:>=90 (or severity:90 exactly)
+• High: severity:>=70 (or severity:70 exactly)
+• Medium: severity:>=50 (or severity:50 exactly)
+• Low: severity:>=20 (covers range 20-40)
+• Informational: severity:<=10 (covers range 2-5)
+
+Find critical severity detections only:
+severity:>=90
+
+Find high severity detections (includes critical):
+severity:>=70
+
+Find medium severity and above (includes high & critical):
+severity:>=50
+
+Find high severity detections only (excludes critical):
+severity:70
+
+Find informational detections:
+severity:<=10
+
+=== ASSIGNMENT SEARCHES ===
+Find unassigned detections:
+assigned_to_name:!*
+
+Find detections assigned to specific analyst:
+assigned_to_name:'john.doe'
+
+=== TIME-BASED SEARCHES ===
+Find recent detections (last 24 hours):
+created_timestamp:>'2024-01-20T00:00:00Z'
+
+Find detections from specific date range:
+created_timestamp:>='2024-01-15T00:00:00Z'+created_timestamp:<='2024-01-20T00:00:00Z'
+
+Find recently updated detections:
+updated_timestamp:>'2024-01-19T00:00:00Z'
+
+=== THREAT INTELLIGENCE SEARCHES ===
+Find detections with specific tactic:
+tactic:'Persistence'
+
+Find detections with technique ID:
+technique_id:'T1055'
+
+Find detections with specific objective:
+objective:'*credential*'
+
+=== ADVANCED COMBINED SEARCHES ===
+Find new high-confidence endpoint detections:
+status:'new'+confidence:>75+product:'epp'
+
+Find assigned XDR detections that are in progress:
+product:'xdr'+status:'in_progress'+assigned_to_name:*
+
+Find recent high-severity unassigned detections:
+created_timestamp:>'2024-01-18T00:00:00Z'+assigned_to_name:!*+confidence:>80
+
+Find OverWatch detections with persistence tactics:
+product:'overwatch'+tactic:'Persistence'
+
+=== BULK FILTERING SEARCHES ===
+Find detections from multiple products:
+(product:'epp'),(product:'xdr'),(product:'idp')
+
+Find detections in various active states:
+(status:'new'),(status:'in_progress')
+
+Find detections needing attention (new or reopened):
+(status:'new'),(status:'reopened')
+
+=== INVESTIGATION-FOCUSED SEARCHES ===
+Find detections with specific pattern:
+pattern_id:'12345'
+
+Find related detections by aggregate:
+aggregate_id:'agg-67890'
+
+Find detections with specific tags:
+tags:'malware'
+
+Find detections that show in UI:
+show_in_ui:true
+
+🚀 USAGE EXAMPLES:
+
+# Find new endpoint protection detections sorted by severity
+falcon_search_detections(filter="status:'new'+product:'epp'", limit=50, sort="severity.desc")
+
+# Find high-confidence XDR detections from last week
+falcon_search_detections(filter="product:'xdr'+confidence:>80+created_timestamp:>'2024-01-15T00:00:00Z'", limit=25)
+
+# Find unassigned detections across all products
+falcon_search_detections(filter="assigned_to_name:!*", limit=100, sort="timestamp.desc")
+
+# Find OverWatch detections with specific tactics
+falcon_search_detections(filter="product:'overwatch'+tactic:'Initial Access'", limit=50)
+
+# Find detections that need immediate attention
+falcon_search_detections(filter="(status:'new'),(status:'reopened')+confidence:>75", sort="timestamp.desc")
+
+⚠️ IMPORTANT NOTES:
 • Use single quotes around string values: 'value'
 • Use square brackets for exact matches: ['exact_value']
 • Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
+• Status values are: new, in_progress, closed, reopened
+• Product filtering enables product-specific detection analysis
+• Confidence values range from 1-100
+• Complex queries may take longer to execute
+• include_hidden parameter shows previously hidden detections
 """
