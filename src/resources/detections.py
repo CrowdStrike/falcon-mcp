@@ -32,133 +32,112 @@ property_name:[operator]'value'
 
 === falcon_search_detections FQL filter options ===
 
-=== IDENTIFICATION & CORE ===
-• composite_id: Unique detection identifier
-• aggregate_id: Related detection group identifier
-• cid: Customer ID
-• agent_id: Falcon agent identifier
-• pattern_id: Detection pattern identifier
+Filter options are broken out into four categories:
 
-=== ASSIGNMENT & WORKFLOW ===
-• assigned_to_name: Person assigned to this detection
-• assigned_to_uid: Assigned user identifier
-• assigned_to_uuid: Assigned user UUID
-• status: Detection status (new, in_progress, closed, reopened)
+• General
+• Behavioral
+• Devices
+• Miscellaneous
 
-=== TIMESTAMPS ===
-• created_timestamp: When detection was created
-• updated_timestamp: Last modification time
-• timestamp: Detection occurrence timestamp
+==== General ====
 
-=== THREAT INTELLIGENCE ===
-• confidence: Confidence level (1-100)
-• severity: Detection severity level
-• tactic: MITRE ATT&CK tactic
-• tactic_id: MITRE ATT&CK tactic ID
-• technique: MITRE ATT&CK technique
-• technique_id: MITRE ATT&CK technique ID
-• objective: Attack objective description
+• adversary_ids
+• assigned_to_name
+• cid
+• date_updated
+• detection_id
+• first_behavior
+• last_behavior
+• max_confidence
+• max_severity
+• max_severity_displayname
+• seconds_to_resolved
+• seconds_to_triaged
+• status
 
-=== DETECTION METADATA ===
-• name: Detection name/title
-• display_name: Human-readable detection name
-• description: Detection description
-• type: Detection type classification
-• scenario: Detection scenario
+==== Behavioral ====
 
-=== SYSTEM & PLATFORM ===
-• platform: Operating system platform
-• show_in_ui: Whether detection appears in UI (true/false)
-• data_domains: Data classification domains
+• alleged_filetype
+• behavior_id
+• cmdline
+• confidence
+• contral_graph_id
+• device_id
+• filename
+• ioc_source
+• ioc_type
+• ioc_value
+• md5
+• objective
+• parent_details.parent_cmdline
+• parent_details.parent_md5
+• parent_details.parent_process_graph_id
+• parent_details.parent_process_id
+• parent_details.parent_sha256
+• pattern_disposition
+• scenario
+• severity
+• sha256
+• tactic
+• technique
+• timestamp
+• triggering_process_graph_id
+• triggering_process_id
+• user_id
+• user_name
 
-=== PRODUCT FILTERING ===
-• product: Source Falcon product
-    - 'epp' (Endpoint Protection)
-    - 'idp' (Identity Protection)
-    - 'mobile' (Falcon for Mobile)
-    - 'xdr' (Falcon XDR)
-    - 'overwatch' (OverWatch)
-    - 'cwpp' (Cloud Workload Protection)
-    - 'ngsiem' (Next-Gen SIEM)
-    - 'thirdparty' (Third party data)
-    - 'data-protection' (Data Protection)
+Example: behaviors.ioc_type
 
-=== SOURCE INFORMATION ===
-• source_products: Products that generated this detection
-• source_vendors: Vendor sources for the detection
+==== Devices ====
 
-=== TAGS & CLASSIFICATION ===
-• tags: Detection classification tags
+• agent_load_flags
+• agent_local_time
+• agent_version
+• bios_manufacturer
+• bios_version
+• cid
+• config_id_base
+• config_id_build
+• config_id_platform
+• cpu_signature
+• device_id
+• external_ip
+• first_seen
+• hostname
+• last_seen
+• local_ip
+• mac_address
+• machine_domain
+• major_version
+• minor_version
+• modified_timestamp
+• os_version
+• ou
+• platform_id
+• platform_name
+• product_type
+• product_type_desc
+• reduced_functionality_mode
+• release_group
+• serial_number
+• site_name
+• status
+• system_manufacturer
+• system_product_name
 
-=== EXAMPLE USAGE ===
+Example: device.platform_name
 
-=== STATUS-BASED SEARCHES ===
-• status:'new'
-• status:'in_progress'
-• status:'closed'
-• status:'reopened'
+==== Miscellaneous ====
 
-=== PRODUCT-SPECIFIC SEARCHES ===
-• product:'epp'
-• product:'idp'
-• product:'xdr'
-• product:'overwatch'
-
-=== SEVERITY & CONFIDENCE SEARCHES ===
-• confidence:>80
-• confidence:>=50
-
-🔥 SEVERITY NUMERIC MAPPING (Critical for Proper Filtering):
-• Critical: severity:>=90 (or severity:90 exactly)
-• High: severity:>=70 (or severity:70 exactly)
-• Medium: severity:>=50 (or severity:50 exactly)
-• Low: severity:>=20 (covers range 20-40)
-• Informational: severity:<=10 (covers range 2-5)
-
-• severity:>=90
-• severity:>=70
-• severity:>=50
-• severity:70
-• severity:<=10
-
-=== ASSIGNMENT SEARCHES ===
-• assigned_to_name:!*
-• assigned_to_name:'john.doe'
-
-=== TIME-BASED SEARCHES ===
-• created_timestamp:>'2024-01-20T00:00:00Z'
-• created_timestamp:>='2024-01-15T00:00:00Z'+created_timestamp:<='2024-01-20T00:00:00Z'
-• updated_timestamp:>'2024-01-19T00:00:00Z'
-
-=== THREAT INTELLIGENCE SEARCHES ===
-• tactic:'Persistence'
-• technique_id:'T1055'
-• objective:'*credential*'
-
-=== ADVANCED COMBINED SEARCHES ===
-• status:'new'+confidence:>75+product:'epp'
-• product:'xdr'+status:'in_progress'+assigned_to_name:*
-• created_timestamp:>'2024-01-18T00:00:00Z'+assigned_to_name:!*+confidence:>80
-• product:'overwatch'+tactic:'Persistence'
-
-=== BULK FILTERING SEARCHES ===
-• (product:'epp'),(product:'xdr'),(product:'idp')
-• (status:'new'),(status:'in_progress')
-• (status:'new'),(status:'reopened')
-
-=== INVESTIGATION-FOCUSED SEARCHES ===
-• pattern_id:'12345'
-• aggregate_id:'agg-67890'
-• tags:'malware'
-• show_in_ui:true
+• hostinfo.active_directory_dn_display
+• hostinfo.domain
+• quarantined_files.id
+• quarantined_files.paths
+• quarantined_files.sha256
+• quarantined_files.state
 
 === IMPORTANT NOTES ===
 • Use single quotes around string values: 'value'
 • Use square brackets for exact matches: ['exact_value']
 • Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
-• Status values are: new, in_progress, closed, reopened
-• Product filtering enables product-specific detection analysis
-• Confidence values range from 1-100
-• Complex queries may take longer to execute
-• include_hidden parameter shows previously hidden detections
 """
