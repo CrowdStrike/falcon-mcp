@@ -76,9 +76,9 @@ class IntelModule(BaseModule):
         sort: Optional[str] = Field(default=None, description="The property to sort by. Example: 'created_date|desc'", examples={"created_date|desc"}),
         q: Optional[str] = Field(default=None, description="Free text search across all indexed fields.", examples={"BEAR"}),
     ) -> List[Dict[str, Any]]:
-        """Get info about actors that match provided FQL filters. Use this when you need to query for actor entities matching certain criteria.
+        """Research threat actors and adversary groups tracked by CrowdStrike intelligence.
 
-        IMPORTANT: You must use the tool `falcon_query_actor_entities_fql_filter_guide` whenver you want to use the `filter` parameter. This tool continas the guide on how to build the FQL `filter` parameter for `search_actors` tool.
+        IMPORTANT: You must use the tool `falcon_query_actor_entities_fql_filter_guide` when you want to use the `filter` parameter. This tool contians the guide on how to build the FQL `filter` parameter for `falcon_search_actors` tool.
 
         Returns:
             Information about actors that match the provided filters.
@@ -131,9 +131,9 @@ class IntelModule(BaseModule):
         include_deleted: Optional[bool] = Field(default=False, description="Flag indicating if both published and deleted indicators should be returned."),
         include_relations: Optional[bool] = Field(default=False, description="Flag indicating if related indicators should be returned."),
     ) -> List[Dict[str, Any]]:
-        """Get info about indicators that match provided FQL filters.
+        """Search for threat indicators and indicators of compromise (IOCs) from CrowdStrike intelligence.
 
-        IMPORTANT: You must use the tool `falcon_search_indicators_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_indicators` tool.
+        IMPORTANT: You must use the tool `falcon_search_indicators_fql_filter_guide` when you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_indicators` tool.
 
         Returns:
             List of indicators that match the provided filters.
@@ -186,13 +186,13 @@ class IntelModule(BaseModule):
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)"),
         q: Optional[str] = Field(default=None, description="Free text search across all indexed fields."),
     ) -> List[Dict[str, Any]]:
-        """Retrieve intelligence reports that match provided FQL filters.
+        """Access CrowdStrike intelligence publications and threat reports.
 
         This tool returns comprehensive intelligence report details based on your search criteria.
-        Use this when you need to find threat intelligence reports matching specific conditions.
+        Use this when you need to find CrowdStrike intelligence publications matching specific conditions.
         For guidance on building FQL filters, use the `falcon_search_reports_fql_filter_guide` tool.
 
-        IMPORTANT: You must use the tool `falcon_search_reports_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_reports` tool.
+        IMPORTANT: You must use the tool `falcon_search_reports_fql_filter_guide` when you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_reports` tool.
 
         Returns:
             List of intelligence reports with comprehensive information including content,

@@ -84,9 +84,9 @@ class IncidentsModule(BaseModule):
         offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="TThe property to sort by. (Ex: modified_timestamp.desc)", examples={"modified_timestamp.desc"}),
     ) -> Dict[str, Any]:
-        """Query environment wide CrowdScore and return the entity data.
+        """View calculated CrowdScores and security posture metrics for your environment.
 
-        IMPORTANT: You must use the tool `falcon_show_crowd_score_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `show_crowd_score` tool.
+        IMPORTANT: You must use the tool `falcon_show_crowd_score_fql_filter_guide` when you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_show_crowd_score` tool.
 
         Returns:
             Tool returns the CrowdScore entity data.
@@ -156,9 +156,9 @@ class IncidentsModule(BaseModule):
         offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. FQL syntax. Ex: state.asc, name.desc"),
     ) -> List[Dict[str, Any]]:
-        """Search for incidents by providing a FQL filter, sorting, and paging details.
+        """Find and analyze security incidents to understand coordinated activity in your environment.
 
-        IMPORTANT: You must use the tool `falcon_search_incidents_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_incidents` tool.
+        IMPORTANT: You must use the tool `falcon_search_incidents_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_incidents` tool.
 
         Returns:
             Tool returns CrowdStrike incidents.
@@ -192,7 +192,7 @@ class IncidentsModule(BaseModule):
         self,
         ids: List[str] = Field(description="Incident ID(s) to retrieve."),
     ) -> List[Dict[str, Any]]:
-        """Retrieve detailed information for specified incident IDs.
+        """Get comprehensive incident details to understand attack patterns and coordinated activities.
 
         This tool returns comprehensive incident details for one or more incident IDs.
         Use this when you already have specific incident IDs and need their full details.
@@ -219,12 +219,12 @@ class IncidentsModule(BaseModule):
         offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: modified_timestamp.desc)"),
     ) -> List[Dict[str, Any]]:
-        """Search for behaviors by providing a FQL filter, sorting, and paging details.
+        """Find and analyze behaviors to understand suspicious activity in your environment.
 
         Use this when you need to find behaviors matching certain criteria rather than retrieving specific behaviors by ID.
         For retrieving details of known behavior IDs, use falcon_get_behavior_details instead.
 
-        IMPORTANT: You must use the tool `falcon_search_behaviors_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_behaviors` tool.
+        IMPORTANT: You must use the tool `falcon_search_behaviors_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_behaviors` tool.
 
         Returns:
             Tool returns CrowdStrike behaviors.
@@ -258,10 +258,10 @@ class IncidentsModule(BaseModule):
         self,
         ids: List[str] = Field(description="Behavior ID(s) to retrieve."),
     ) -> List[Dict[str, Any]]:
-        """Retrieve detailed information for specified behavior IDs.
+        """Get detailed behavior information to understand attack techniques and tactics.
 
         Use this when you already know the specific behavior ID(s) and need to retrieve their details.
-        For searching behaviors based on criteria, use the search_behaviors tool instead.
+        For searching behaviors based on criteria, use the `falcon_search_behaviors` tool instead.
 
         Returns:
             List of behavior details with comprehensive information including techniques,

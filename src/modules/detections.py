@@ -77,9 +77,9 @@ class DetectionsModule(BaseModule):
         ),
         include_hidden: Optional[bool] = Field(default=True),
     ) -> List[Dict[str, Any]]:
-        """Search for detections in your CrowdStrike environment.
+        """Find and analyze detections to understand malicious activity in your environment.
 
-        IMPORTANT: You must use the tool `falcon_search_detections_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_detections` tool.
+        IMPORTANT: You must use the tool `falcon_search_detections_fql_filter_guide` when you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_detections` tool.
 
         Returns:
             List of detections with details
@@ -146,7 +146,7 @@ class DetectionsModule(BaseModule):
         ids: List[str] = Field(default=None, description="Detection ID(s) to retrieve details for. Specify one or more detection IDs (max 1000 per request)."),
         include_hidden: Optional[bool] = Field(default=True, description="Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility."),
     ) -> List[Dict[str, Any]]|Dict[str, Any]:
-        """Retrieve detailed information for specified detection IDs.
+        """Get comprehensive detection details for specific detection IDs to understand security threats.
 
         This tool returns comprehensive detection details for one or more detection IDs.
         Use this when you already have specific detection IDs and need their full details.
