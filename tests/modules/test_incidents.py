@@ -3,7 +3,7 @@ Tests for the Incidents module.
 """
 import unittest
 
-from src.modules.incidents import IncidentsModule
+from falcon_mcp.modules.incidents import IncidentsModule
 from tests.modules.utils.test_modules import TestModules
 
 

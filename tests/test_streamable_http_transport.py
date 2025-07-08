@@ -4,15 +4,15 @@ Tests for streamable-http transport functionality.
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src.server import FalconMCPServer
+from falcon_mcp.server import FalconMCPServer
 
 
 class TestStreamableHttpTransport(unittest.TestCase):
     """Test cases for streamable-http transport."""
 
-    @patch('src.server.FalconClient')
-    @patch('src.server.FastMCP')
-    @patch('src.server.uvicorn')
+    @patch('falcon_mcp.server.FalconClient')
+    @patch('falcon_mcp.server.FastMCP')
+    @patch('falcon_mcp.server.uvicorn')
     def test_streamable_http_transport_initialization(self, mock_uvicorn, mock_fastmcp, mock_client):
         """Test streamable-http transport initialization."""
         # Setup mocks
@@ -42,9 +42,9 @@ class TestStreamableHttpTransport(unittest.TestCase):
         # Verify streamable_http_app was called
         mock_server_instance.streamable_http_app.assert_called_once()
 
-    @patch('src.server.FalconClient')
-    @patch('src.server.FastMCP')
-    @patch('src.server.uvicorn')
+    @patch('falcon_mcp.server.FalconClient')
+    @patch('falcon_mcp.server.FastMCP')
+    @patch('falcon_mcp.server.uvicorn')
     def test_streamable_http_default_parameters(self, mock_uvicorn, mock_fastmcp, mock_client):
         """Test streamable-http transport with default parameters."""
         # Setup mocks
@@ -71,8 +71,8 @@ class TestStreamableHttpTransport(unittest.TestCase):
             log_level="info"
         )
 
-    @patch('src.server.FalconClient')
-    @patch('src.server.FastMCP')
+    @patch('falcon_mcp.server.FalconClient')
+    @patch('falcon_mcp.server.FastMCP')
     def test_non_streamable_http_transport_unchanged(self, mock_fastmcp, mock_client):
         """Test that non-streamable-http transports use the original method."""
         # Setup mocks
@@ -95,9 +95,9 @@ class TestStreamableHttpTransport(unittest.TestCase):
         # Verify streamable_http_app was NOT called
         mock_server_instance.streamable_http_app.assert_not_called()
 
-    @patch('src.server.FalconClient')
-    @patch('src.server.FastMCP')
-    @patch('src.server.uvicorn')
+    @patch('falcon_mcp.server.FalconClient')
+    @patch('falcon_mcp.server.FastMCP')
+    @patch('falcon_mcp.server.uvicorn')
     def test_streamable_http_custom_parameters(self, mock_uvicorn, mock_fastmcp, mock_client):
         """Test streamable-http transport with custom parameters."""
         # Setup mocks
@@ -124,9 +124,9 @@ class TestStreamableHttpTransport(unittest.TestCase):
             log_level="debug"
         )
 
-    @patch('src.server.FalconClient')
-    @patch('src.server.FastMCP')
-    @patch('src.server.uvicorn')
+    @patch('falcon_mcp.server.FalconClient')
+    @patch('falcon_mcp.server.FastMCP')
+    @patch('falcon_mcp.server.uvicorn')
     def test_streamable_http_logging_levels(self, mock_uvicorn, mock_fastmcp, mock_client):
         """Test streamable-http transport logging level configuration."""
         # Setup mocks

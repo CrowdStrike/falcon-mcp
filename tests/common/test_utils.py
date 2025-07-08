@@ -4,7 +4,7 @@ Tests for the utility functions.
 import unittest
 from unittest.mock import patch
 
-from src.common.utils import (
+from falcon_mcp.common.utils import (
     filter_none_values,
     prepare_api_parameters,
     extract_resources,
@@ -129,7 +129,7 @@ class TestUtilFunctions(unittest.TestCase):
         # Verify default was returned
         self.assertEqual(resources, default)
 
-    @patch('src.common.utils._format_error_response')
+    @patch('falcon_mcp.common.utils._format_error_response')
     def test_extract_first_resource(self, mock_format_error):
         """Test extract_first_resource function."""
         # Mock format_error_response

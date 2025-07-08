@@ -7,7 +7,7 @@ This script demonstrates how to initialize and run the Falcon MCP server with SS
 import os
 from dotenv import load_dotenv
 
-from src.server import FalconMCPServer
+from falcon_mcp.server import FalconMCPServer
 
 
 def main():

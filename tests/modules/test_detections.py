@@ -3,7 +3,7 @@ Tests for the Detections module.
 """
 import unittest
 
-from src.modules.detections import DetectionsModule
+from falcon_mcp.modules.detections import DetectionsModule
 from tests.modules.utils.test_modules import TestModules
 
 

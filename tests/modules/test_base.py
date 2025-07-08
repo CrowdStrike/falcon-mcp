@@ -4,7 +4,7 @@ Tests for the Base module.
 """
 import unittest
 
-from src.modules.base import BaseModule
+from falcon_mcp.modules.base import BaseModule
 from tests.modules.utils.test_modules import TestModules
 
 

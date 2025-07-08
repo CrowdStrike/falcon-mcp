@@ -5,8 +5,8 @@ Tests for the error handling utilities.
 import unittest
 from unittest.mock import patch
 
-from src.common.api_scopes import API_SCOPE_REQUIREMENTS, get_required_scopes
-from src.common.errors import (
+from falcon_mcp.common.api_scopes import API_SCOPE_REQUIREMENTS, get_required_scopes
+from falcon_mcp.common.errors import (
     FalconError,
     AuthenticationError,
     APIError,
@@ -67,7 +67,7 @@ class TestErrorUtils(unittest.TestCase):
         # Unknown operation
         self.assertEqual(get_required_scopes("UnknownOperation"), [])
 
-    @patch("src.common.errors.logger")
+    @patch("falcon_mcp.common.errors.logger")
     def test_format_error_response(self, mock_logger):
         """Test format_error_response function."""
         # Basic error

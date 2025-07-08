@@ -3,14 +3,14 @@ from unittest.mock import call, MagicMock
 
 from mcp.server import FastMCP
 
-from src.client import FalconClient
+from falcon_mcp.client import FalconClient
 
 
 class TestModules(unittest.TestCase):
     def setup_module(self, module_class):
         """
         Set up test fixtures with the specified module class.
-        
+
         Args:
             module_class: The module class to instantiate
         """
@@ -19,14 +19,14 @@ class TestModules(unittest.TestCase):
 
         # Create a mock server
         self.mock_server = MagicMock(spec=FastMCP)
-        
+
         # Create the module
         self.module = module_class(self.mock_client)
 
     def assert_tools_registered(self, expected_tools):
         """
         Helper method to verify that a module correctly registers its tools.
-        
+
         Args:
             expected_tools: List of tool names that should be registered
         """

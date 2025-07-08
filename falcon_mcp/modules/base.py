@@ -9,8 +9,8 @@ from typing import Any, Callable, Dict, List
 from mcp import Resource
 from mcp.server import FastMCP
 
-from src.common.errors import handle_api_response
-from src.common.utils import prepare_api_parameters
+from ..common.errors import handle_api_response
+from ..common.utils import prepare_api_parameters
 
 from ..client import FalconClient
 from ..common.logging import get_logger

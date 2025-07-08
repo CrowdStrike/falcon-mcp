@@ -8,7 +8,7 @@ with streamable-http transport for custom integrations and web-based deployments
 import os
 from dotenv import load_dotenv
 
-from src.server import FalconMCPServer
+from falcon_mcp.server import FalconMCPServer
 
 
 def main():

@@ -4,14 +4,14 @@ Tests for the Falcon API client.
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src.client import FalconClient
+from falcon_mcp.client import FalconClient
 
 
 class TestFalconClient(unittest.TestCase):
     """Test cases for the Falcon API client."""
 
-    @patch('src.client.os.environ.get')
-    @patch('src.client.APIHarnessV2')
+    @patch('falcon_mcp.client.os.environ.get')
+    @patch('falcon_mcp.client.APIHarnessV2')
     def test_client_initialization(self, mock_apiharness, mock_environ_get):
         """Test client initialization with base URL."""
         # Setup mock environment variables
@@ -34,8 +34,8 @@ class TestFalconClient(unittest.TestCase):
         self.assertEqual(call_args["base_url"], "https://api.test.crowdstrike.com")
         self.assertTrue(call_args["debug"])
 
-    @patch('src.client.os.environ.get')
-    @patch('src.client.APIHarnessV2')
+    @patch('falcon_mcp.client.os.environ.get')
+    @patch('falcon_mcp.client.APIHarnessV2')
     def test_client_initialization_with_env_vars(self, mock_apiharness, mock_environ_get):
         """Test client initialization with environment variables."""
         # Setup mock environment variables
@@ -56,7 +56,7 @@ class TestFalconClient(unittest.TestCase):
         self.assertEqual(call_args["base_url"], "https://api.env.crowdstrike.com")
         self.assertFalse(call_args["debug"])
 
-    @patch('src.client.os.environ.get')
+    @patch('falcon_mcp.client.os.environ.get')
     def test_client_initialization_missing_credentials(self, mock_environ_get):
         """Test client initialization with missing credentials."""
         # Setup mock environment variables (missing credentials)
@@ -66,8 +66,8 @@ class TestFalconClient(unittest.TestCase):
         with self.assertRaises(ValueError):
             FalconClient()
 
-    @patch('src.client.os.environ.get')
-    @patch('src.client.APIHarnessV2')
+    @patch('falcon_mcp.client.os.environ.get')
+    @patch('falcon_mcp.client.APIHarnessV2')
     def test_authenticate(self, mock_apiharness, mock_environ_get):
         """Test authenticate method."""
         # Setup mock environment variables
@@ -89,8 +89,8 @@ class TestFalconClient(unittest.TestCase):
         mock_instance.login.assert_called_once()
         self.assertTrue(result)
 
-    @patch('src.client.os.environ.get')
-    @patch('src.client.APIHarnessV2')
+    @patch('falcon_mcp.client.os.environ.get')
+    @patch('falcon_mcp.client.APIHarnessV2')
     def test_is_authenticated(self, mock_apiharness, mock_environ_get):
         """Test is_authenticated method."""
         # Setup mock environment variables
@@ -111,8 +111,8 @@ class TestFalconClient(unittest.TestCase):
         # Verify result is correct
         self.assertTrue(result)
 
-    @patch('src.client.os.environ.get')
-    @patch('src.client.APIHarnessV2')
+    @patch('falcon_mcp.client.os.environ.get')
+    @patch('falcon_mcp.client.APIHarnessV2')
     def test_get_headers(self, mock_apiharness, mock_environ_get):
         """Test get_headers method."""
         # Setup mock environment variables
@@ -133,8 +133,8 @@ class TestFalconClient(unittest.TestCase):
         # Verify headers are correct
         self.assertEqual(headers, {"Authorization": "Bearer test-token"})
 
-    @patch('src.client.os.environ.get')
-    @patch('src.client.APIHarnessV2')
+    @patch('falcon_mcp.client.os.environ.get')
+    @patch('falcon_mcp.client.APIHarnessV2')
     def test_command(self, mock_apiharness, mock_environ_get):
         """Test command method."""
         # Setup mock environment variables

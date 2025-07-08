@@ -3,7 +3,7 @@ Tests for the Hosts module.
 """
 import unittest
 
-from src.modules.hosts import HostsModule
+from falcon_mcp.modules.hosts import HostsModule
 from tests.modules.utils.test_modules import TestModules
 
 

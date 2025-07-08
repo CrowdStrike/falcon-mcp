@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from mcp_use import MCPAgent, MCPClient
 
-from src.server import FalconMCPServer
+from falcon_mcp.server import FalconMCPServer
 
 # Load environment variables from .env file for local development
 load_dotenv()
@@ -93,7 +93,7 @@ class SharedTestServer:
         )
         self.patchers["env"].start()
 
-        self.patchers["api"] = patch("src.client.APIHarnessV2")
+        self.patchers["api"] = patch("falcon_mcp.client.APIHarnessV2")
         mock_apiharness_class = self.patchers["api"].start()
 
         self.patchers["mock_api_instance"] = MagicMock()

@@ -3,7 +3,7 @@ Tests for the Intel module.
 """
 import unittest
 
-from src.modules.intel import IntelModule
+from falcon_mcp.modules.intel import IntelModule
 from tests.modules.utils.test_modules import TestModules
 
 

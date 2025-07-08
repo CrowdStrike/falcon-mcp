@@ -4,8 +4,8 @@ Tests for the module registry.
 import unittest
 from unittest.mock import MagicMock
 
-from src import registry
-from src.modules.base import BaseModule
+from falcon_mcp import registry
+from falcon_mcp.modules.base import BaseModule
 
 
 class TestRegistry(unittest.TestCase):

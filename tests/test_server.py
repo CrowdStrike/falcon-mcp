@@ -4,8 +4,8 @@ Tests for the Falcon MCP server.
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src import registry
-from src.server import FalconMCPServer
+from falcon_mcp import registry
+from falcon_mcp.server import FalconMCPServer
 
 
 class TestFalconMCPServer(unittest.TestCase):
@@ -16,8 +16,8 @@ class TestFalconMCPServer(unittest.TestCase):
         # Ensure modules are discovered before each test
         registry.discover_modules()
 
-    @patch('src.server.FalconClient')
-    @patch('src.server.FastMCP')
+    @patch('falcon_mcp.server.FalconClient')
+    @patch('falcon_mcp.server.FastMCP')
     def test_server_initialization(self, mock_fastmcp, mock_client):
         """Test server initialization with default settings."""
         # Setup mocks
@@ -58,8 +58,8 @@ class TestFalconMCPServer(unittest.TestCase):
         for module_name in available_module_names:
             self.assertIn(module_name, server.modules)
 
-    @patch('src.server.FalconClient')
-    @patch('src.server.FastMCP')
+    @patch('falcon_mcp.server.FalconClient')
+    @patch('falcon_mcp.server.FastMCP')
     def test_server_with_specific_modules(self, mock_fastmcp, mock_client):
         """Test server initialization with specific modules."""
         # Setup mocks
@@ -79,7 +79,7 @@ class TestFalconMCPServer(unittest.TestCase):
         self.assertEqual(len(server.modules), 1)
         self.assertIn("detections", server.modules)
 
-    @patch('src.server.FalconClient')
+    @patch('falcon_mcp.server.FalconClient')
     def test_authentication_failure(self, mock_client):
         """Test server initialization with authentication failure."""
         # Setup mock
@@ -91,7 +91,7 @@ class TestFalconMCPServer(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             FalconMCPServer()
 
-    @patch('src.server.FalconClient')
+    @patch('falcon_mcp.server.FalconClient')
     def test_falcon_check_connectivity(self, mock_client):
         """Test checking Falcon API connectivity."""
         # Setup mock
@@ -113,7 +113,7 @@ class TestFalconMCPServer(unittest.TestCase):
         expected_result = {"connected": True}
         self.assertEqual(result, expected_result)
 
-    @patch('src.server.FalconClient')
+    @patch('falcon_mcp.server.FalconClient')
     def test_get_available_modules(self, mock_client):
         """Test getting available modules."""
         # Setup mock

@@ -4,7 +4,7 @@ Tests for the API scope utilities.
 
 import unittest
 
-from src.common.api_scopes import API_SCOPE_REQUIREMENTS, get_required_scopes
+from falcon_mcp.common.api_scopes import API_SCOPE_REQUIREMENTS, get_required_scopes
 
 
 class TestApiScopes(unittest.TestCase):
