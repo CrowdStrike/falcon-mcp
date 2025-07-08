@@ -4,7 +4,7 @@
       "name": "falcon-stdio",
       "transport": {
         "type": "stdio",
-        "command": "python -m src.server"
+        "command": "python -m falcon_mcp.server"
       }
     },
     {

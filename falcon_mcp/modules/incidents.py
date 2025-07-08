@@ -9,14 +9,14 @@ from typing import Dict, List, Optional, Any
 from mcp.server import FastMCP
 from pydantic import Field
 
-from ..common.errors import handle_api_response
-from ..common.utils import prepare_api_parameters
-from ..resources.incidents import (
+from falcon_mcp.common.errors import handle_api_response
+from falcon_mcp.common.utils import prepare_api_parameters
+from falcon_mcp.resources.incidents import (
     CROWD_SCORE_FQL_DOCUMENTATION,
     SEARCH_INCIDENTS_FQL_DOCUMENTATION,
     SEARCH_BEHAVIORS_FQL_DOCUMENTATION
 )
-from .base import BaseModule
+from falcon_mcp.modules.base import BaseModule
 
 
 class IncidentsModule(BaseModule):

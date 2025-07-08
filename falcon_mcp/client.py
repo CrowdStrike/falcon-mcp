@@ -9,7 +9,7 @@ from typing import Dict, Optional, Any
 # Import the APIHarnessV2 from FalconPy
 from falconpy import APIHarnessV2
 
-from .common.logging import get_logger
+from falcon_mcp.common.logging import get_logger
 
 logger = get_logger(__name__)
 

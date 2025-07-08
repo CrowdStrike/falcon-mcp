@@ -29,10 +29,10 @@ First, define the content for your resource. This could be:
 - Structured data in a Python dictionary
 - Reference information in a dedicated module
 
-For text-based resources, it's recommended to store the content in a separate file in the `src/resources` directory:
+For text-based resources, it's recommended to store the content in a separate file in the `falcon_mcp/resources` directory:
 
 ```python
-# src/resources/your_resource.py
+# falcon_mcp/resources/your_resource.py
 YOUR_RESOURCE_CONTENT = """
 Detailed documentation or reference information goes here.
 This can be multi-line text with formatting.
@@ -187,7 +187,7 @@ class IntelModule(BaseModule):
 
 In this example:
 
-1. The resource content (`QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION`) is defined in a separate file (`src/resources/intel.py`)
+1. The resource content (`QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION`) is defined in a separate file (`falcon_mcp/resources/intel.py`)
 2. The resource is created as a `TextResource` with a clear URI, name, and description
 3. The resource is registered with the server using the `_add_resource` method
 4. The resource complements the `search_actors` tool by providing documentation for its `filter` parameter

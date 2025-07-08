@@ -9,15 +9,15 @@ from typing import Dict, List, Optional, Any
 from mcp.server import FastMCP
 from pydantic import Field
 
-from ..common.logging import get_logger
-from ..common.errors import handle_api_response
-from ..common.utils import prepare_api_parameters
-from ..resources.intel import (
+from falcon_mcp.common.logging import get_logger
+from falcon_mcp.common.errors import handle_api_response
+from falcon_mcp.common.utils import prepare_api_parameters
+from falcon_mcp.resources.intel import (
     QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION,
     QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION,
     QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION
 )
-from .base import BaseModule
+from falcon_mcp.modules.base import BaseModule
 
 logger = get_logger(__name__)
 

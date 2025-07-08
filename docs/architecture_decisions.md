@@ -14,7 +14,7 @@ adding them to an `AVAILABLE_MODULES` dictionary. This created a cyclic import i
 
 ### Decision
 
-We implemented a dedicated module registry system in `src/modules/registry.py` that:
+We implemented a dedicated module registry system in `falcon_mcp/modules/registry.py` that:
 
 1. Provides a central location for module registration
 2. Breaks the cyclic import dependency
@@ -41,7 +41,7 @@ This approach had several drawbacks:
 1. It required function calls in the `__init__.py` file, which is not a common Python pattern
 2. Adding new modules required remembering to register them explicitly
 3. The server needed to import BaseModule to use `__subclasses__()` for discovery
-4. The explicit import of `src.modules` in server.py created a non-standard import pattern
+4. The explicit import of `falcon_mcp.modules` in server.py created a non-standard import pattern
 
 ### Decision
 

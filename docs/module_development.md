@@ -15,7 +15,7 @@ Each module should:
 
 ### 1. Create a New Module File
 
-Create a new file in the `src/modules` directory:
+Create a new file in the `falcon_mcp/modules` directory:
 
 ```python
 """
@@ -27,10 +27,10 @@ from typing import Dict, List, Optional, Any
 
 from mcp.server import FastMCP
 
-from ..common.logging import get_logger
-from ..common.errors import handle_api_response
-from ..common.utils import prepare_api_parameters, extract_first_resource
-from .base import BaseModule
+from falcon_mcp.common.logging import get_logger
+from falcon_mcp.common.errors import handle_api_response
+from falcon_mcp.common.utils import prepare_api_parameters, extract_first_resource
+from falcon_mcp.modules.base import BaseModule
 
 
 class YourModule(BaseModule):
@@ -84,7 +84,7 @@ class YourModule(BaseModule):
 
 ### 2. Update API Scope Requirements
 
-Add your API operations to the `API_SCOPE_REQUIREMENTS` dictionary in `src/common/errors.py`:
+Add your API operations to the `API_SCOPE_REQUIREMENTS` dictionary in `falcon_mcp/common/errors.py`:
 
 ```python
 API_SCOPE_REQUIREMENTS = {
@@ -98,12 +98,12 @@ API_SCOPE_REQUIREMENTS = {
 
 Modules are automatically registered by the server once they're discovered. You don't need to call any registration functions, but you do need to:
 
-1. Create your module class in the `src/modules` directory (e.g., `your_module.py`)
+1. Create your module class in the `falcon_mcp/modules` directory (e.g., `your_module.py`)
 2. Make sure it inherits from `BaseModule`
-3. Import it in `src/modules/__init__.py` to make it available for discovery:
+3. Import it in `falcon_mcp/modules/__init__.py` to make it available for discovery:
 
 ```python
-# In src/modules/__init__.py
+# In falcon_mcp/modules/__init__.py
 from .your_module import YourModule
 ```
 
@@ -128,7 +128,7 @@ Create a test file in the `tests/modules` directory that inherits from the `Test
 """
 Tests for the YourModule module.
 """
-from src.modules.your_module import YourModule
+from falcon_mcp.modules.your_module import YourModule
 from tests.modules.utils.test_modules import TestModules
 
 
@@ -252,24 +252,24 @@ if isinstance(result, dict) and "error" in result:
 
 ## Common Utilities Reference
 
-### Configuration (`src/common/config.py`)
+### Configuration (`falcon_mcp/common/config.py`)
 
 - `FalconConfig`: Configuration class for the Falcon MCP server
 - `load_config`: Load configuration from environment variables and arguments
 
-### Logging (`src/common/logging.py`)
+### Logging (`falcon_mcp/common/logging.py`)
 
 - `configure_logging`: Configure logging for the Falcon MCP server
 - `get_logger`: Get a logger with the specified name
 
-### Error Handling (`src/common/errors.py`)
+### Error Handling (`falcon_mcp/common/errors.py`)
 
 - `is_success_response`: Check if an API response indicates success
 - `get_required_scopes`: Get the required API scopes for a specific operation
 - `_format_error_response`: Format an error as a standardized response
 - `handle_api_response`: Handle an API response, returning either the result or an error
 
-### Utilities (`src/common/utils.py`)
+### Utilities (`falcon_mcp/common/utils.py`)
 
 - `filter_none_values`: Remove None values from a dictionary
 - `prepare_api_parameters`: Prepare parameters for Falcon API requests
@@ -290,9 +290,9 @@ from typing import Dict, List, Optional, Any
 
 from mcp.server import FastMCP
 
-from ..common.errors import handle_api_response
-from ..common.utils import prepare_api_parameters, extract_resources, extract_first_resource
-from .base import BaseModule
+from falcon_mcp.common.errors import handle_api_response
+from falcon_mcp.common.utils import prepare_api_parameters, extract_resources, extract_first_resource
+from falcon_mcp.modules.base import BaseModule
 
 
 class HostsModule(BaseModule):
@@ -431,7 +431,7 @@ class HostsModule(BaseModule):
         return {"count": len(host_ids)}
 ```
 
-Don't forget to update the `API_SCOPE_REQUIREMENTS` dictionary in `src/common/errors.py`:
+Don't forget to update the `API_SCOPE_REQUIREMENTS` dictionary in `falcon_mcp/common/errors.py`:
 
 ```python
 API_SCOPE_REQUIREMENTS = {
@@ -442,8 +442,8 @@ API_SCOPE_REQUIREMENTS = {
 }
 ```
 
-And import the module in the `src/modules/__init__.py` file:
+And import the module in the `falcon_mcp/modules/__init__.py` file:
 
 ```python
-# In src/modules/__init__.py
+# In falcon_mcp/modules/__init__.py
 from .hosts import HostsModule

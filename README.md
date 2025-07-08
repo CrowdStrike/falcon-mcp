@@ -89,7 +89,7 @@ docker run --rm -p 8080:8080 -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT
 
 # Run with specific modules
 docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
-  falcon-mcp --modules detections incidents
+  falcon-mcp --modules detections,incidents
 ```
 
 **Note**: When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
@@ -99,7 +99,7 @@ docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_
 Run with specific modules:
 
 ```bash
-falcon-mcp --modules detections
+falcon-mcp --modules detections,hosts
 ```
 
 For all available options:
@@ -111,7 +111,7 @@ falcon-mcp --help
 #### As a Library
 
 ```python
-from src.server import FalconMCPServer
+from falcon_mcp.server import FalconMCPServer
 
 # Create and run the server
 server = FalconMCPServer(
@@ -304,7 +304,7 @@ To use the Falcon MCP server with AI assistants, you can use the provided `examp
       "name": "falcon-stdio",
       "transport": {
         "type": "stdio",
-        "command": "python -m src.server"
+        "command": "python -m falcon_mcp.server"
       }
     },
     {

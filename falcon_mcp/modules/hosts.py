@@ -10,11 +10,11 @@ from textwrap import dedent
 from mcp.server import FastMCP
 from pydantic import Field
 
-from ..common.logging import get_logger
-from ..common.errors import handle_api_response
-from ..common.utils import prepare_api_parameters
-from ..resources.hosts import SEARCH_HOSTS_FQL_DOCUMENTATION
-from .base import BaseModule
+from falcon_mcp.common.logging import get_logger
+from falcon_mcp.common.errors import handle_api_response
+from falcon_mcp.common.utils import prepare_api_parameters
+from falcon_mcp.resources.hosts import SEARCH_HOSTS_FQL_DOCUMENTATION
+from falcon_mcp.modules.base import BaseModule
 
 logger = get_logger(__name__)
 
