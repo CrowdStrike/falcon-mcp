@@ -207,45 +207,49 @@ def parse_args():
     parser.add_argument(
         "--transport", "-t",
         choices=["stdio", "sse", "streamable-http"],
-        default="stdio",
-        help="Transport protocol to use (default: stdio)"
+        default=os.environ.get('FALCON_MCP_TRANSPORT', 'stdio'),
+        help="Transport protocol to use (default: stdio, env: FALCON_MCP_TRANSPORT)"
     )
 
     # Module selection
     available_modules = registry.get_module_names()
+    modules_default = os.environ.get('FALCON_MCP_MODULES')
     parser.add_argument(
         "--modules", "-m",
         type=parse_modules_list,
+        default=parse_modules_list(modules_default) if modules_default else None,
         metavar="MODULE1,MODULE2,...",
         help=f"Comma-separated list of modules to enable. Available: {', '.join(available_modules)}. "
-             f"Can also be set via FALCON_MODULES environment variable (default: all modules)"
+             f"Can also be set via FALCON_MCP_MODULES environment variable (default: all modules)"
     )
 
     # Debug mode
     parser.add_argument(
         "--debug", "-d",
         action="store_true",
-        help="Enable debug logging"
+        default=os.environ.get('FALCON_MCP_DEBUG', '').lower() in ('true', '1', 'yes', 'on'),
+        help="Enable debug logging (env: FALCON_MCP_DEBUG)"
     )
 
     # API base URL
     parser.add_argument(
         "--base-url",
+        default=os.environ.get('FALCON_BASE_URL'),
         help="Falcon API base URL (defaults to FALCON_BASE_URL env var)"
     )
 
     # HTTP transport configuration
     parser.add_argument(
         "--host",
-        default="127.0.0.1",
-        help="Host to bind to for HTTP transports (default: 127.0.0.1)"
+        default=os.environ.get('FALCON_MCP_HOST', '127.0.0.1'),
+        help="Host to bind to for HTTP transports (default: 127.0.0.1, env: FALCON_MCP_HOST)"
     )
 
     parser.add_argument(
         "--port", "-p",
         type=int,
-        default=8000,
-        help="Port to listen on for HTTP transports (default: 8000)"
+        default=int(os.environ.get('FALCON_MCP_PORT', '8000')),
+        help="Port to listen on for HTTP transports (default: 8000, env: FALCON_MCP_PORT)"
     )
 
 
@@ -257,32 +261,15 @@ def main():
     # Load environment variables
     load_dotenv()
 
-    # Parse command line arguments
+    # Parse command line arguments (includes environment variable defaults)
     args = parse_args()
 
-    # Get debug setting
-    debug = args.debug or os.environ.get("DEBUG", "").lower() == "true"
-
-    # Determine which modules to enable with proper precedence
-    enabled_modules = None
-
-    # 1. Command-line arguments take precedence
+    # Determine which modules to enable
     if args.modules is not None:
         enabled_modules = set(args.modules)
-        logger.debug("Using modules from command line: %s", ', '.join(args.modules))
-
-    # 2. Fall back to FALCON_MODULES environment variable
-    elif os.environ.get("FALCON_MODULES"):
-        try:
-            env_modules = parse_modules_list(os.environ.get("FALCON_MODULES"))
-            enabled_modules = set(env_modules)
-            logger.debug("Using modules from FALCON_MODULES environment variable: %s", ', '.join(env_modules))
-        except argparse.ArgumentTypeError as e:
-            logger.error("Invalid FALCON_MODULES environment variable: %s", e)
-            sys.exit(1)
-
-    # 3. Default to all modules if none specified
-    if enabled_modules is None:
+        logger.debug("Using modules: %s", ', '.join(args.modules))
+    else:
+        # Default to all modules if none specified
         all_modules = registry.get_module_names()
         enabled_modules = set(all_modules)
         logger.debug("Using all available modules: %s", ', '.join(all_modules))
@@ -291,7 +278,7 @@ def main():
         # Create and run the server
         server = FalconMCPServer(
             base_url=args.base_url,
-            debug=debug,
+            debug=args.debug,
             enabled_modules=enabled_modules
         )
         logger.info("Starting server with %s transport", args.transport)

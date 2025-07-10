@@ -34,8 +34,13 @@ CrowdStrike Falcon capabilities.
    FALCON_CLIENT_ID=your-client-id
    FALCON_CLIENT_SECRET=your-client-secret
    FALCON_BASE_URL=https://api.us-2.crowdstrike.com  # Or your appropriate region
-   # Optional: Specify which modules to enable (comma-separated)
-   FALCON_MODULES=detections,incidents,intel,hosts
+
+   # Optional: Configure server behavior with environment variables
+   FALCON_MCP_MODULES=detections,incidents,intel,hosts  # Modules to enable
+   FALCON_MCP_TRANSPORT=stdio                           # Transport method
+   FALCON_MCP_DEBUG=false                               # Debug logging
+   FALCON_MCP_HOST=127.0.0.1                          # Host for HTTP transports
+   FALCON_MCP_PORT=8000                                # Port for HTTP transports
    ```
 
 ### Usage
@@ -114,15 +119,15 @@ falcon-mcp --modules detections
 
 ##### 2. Environment Variable (fallback)
 
-Set the `FALCON_MODULES` environment variable:
+Set the `FALCON_MCP_MODULES` environment variable:
 
 ```bash
 # Export environment variable
-export FALCON_MODULES=detections,incidents,intel
+export FALCON_MCP_MODULES=detections,incidents,intel
 falcon-mcp
 
 # Or set inline
-FALCON_MODULES=detections,incidents,intel falcon-mcp
+FALCON_MCP_MODULES=detections,incidents,intel falcon-mcp
 ```
 
 ##### 3. Default Behavior (all modules)
@@ -132,7 +137,7 @@ If no modules are specified via command line or environment variable, all availa
 **Module Priority Order:**
 
 1. Command line `--modules` argument (overrides all)
-2. `FALCON_MODULES` environment variable (fallback)
+2. `FALCON_MCP_MODULES` environment variable (fallback)
 3. All modules (default when none specified)
 
 #### Additional Command Line Options
