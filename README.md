@@ -34,6 +34,8 @@ CrowdStrike Falcon capabilities.
    FALCON_CLIENT_ID=your-client-id
    FALCON_CLIENT_SECRET=your-client-secret
    FALCON_BASE_URL=https://api.us-2.crowdstrike.com  # Or your appropriate region
+   # Optional: Specify which modules to enable (comma-separated)
+   FALCON_MODULES=detections,incidents,intel,hosts
    ```
 
 ### Usage
@@ -94,13 +96,46 @@ docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_
 
 **Note**: When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
 
-#### Additional Command Line Options
+#### Module Configuration
 
-Run with specific modules:
+The Falcon MCP Server supports multiple ways to specify which modules to enable:
+
+##### 1. Command Line Arguments (highest priority)
+
+Specify modules using comma-separated lists:
 
 ```bash
-falcon-mcp --modules detections,hosts
+# Enable specific modules
+falcon-mcp --modules detections,incidents,intel
+
+# Enable only one module
+falcon-mcp --modules detections
 ```
+
+##### 2. Environment Variable (fallback)
+
+Set the `FALCON_MODULES` environment variable:
+
+```bash
+# Export environment variable
+export FALCON_MODULES=detections,incidents,intel
+falcon-mcp
+
+# Or set inline
+FALCON_MODULES=detections,incidents,intel falcon-mcp
+```
+
+##### 3. Default Behavior (all modules)
+
+If no modules are specified via command line or environment variable, all available modules are enabled by default.
+
+**Module Priority Order:**
+
+1. Command line `--modules` argument (overrides all)
+2. `FALCON_MODULES` environment variable (fallback)
+3. All modules (default when none specified)
+
+#### Additional Command Line Options
 
 For all available options:
 

@@ -169,6 +169,36 @@ class FalconMCPServer:
             self.server.run(transport)
 
 
+def parse_modules_list(modules_string):
+    """Parse and validate comma-separated module list.
+
+    Args:
+        modules_string: Comma-separated string of module names
+
+    Returns:
+        List of validated module names
+
+    Raises:
+        argparse.ArgumentTypeError: If any module names are invalid
+    """
+    if not modules_string:
+        return []
+
+    # Split by comma and clean up whitespace
+    modules = [m.strip() for m in modules_string.split(',') if m.strip()]
+
+    # Validate against available modules
+    available_modules = registry.get_module_names()
+    invalid_modules = [m for m in modules if m not in available_modules]
+    if invalid_modules:
+        raise argparse.ArgumentTypeError(
+            f"Invalid modules: {', '.join(invalid_modules)}. "
+            f"Available modules: {', '.join(available_modules)}"
+        )
+
+    return modules
+
+
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Falcon MCP Server")
@@ -185,11 +215,10 @@ def parse_args():
     available_modules = registry.get_module_names()
     parser.add_argument(
         "--modules", "-m",
-        nargs="+",
-        choices=available_modules,
-        default=available_modules,
-        metavar="MODULE",
-        help=f"Modules to enable. Available: {', '.join(available_modules)} (default: {','.join(available_modules)})"
+        type=parse_modules_list,
+        metavar="MODULE1,MODULE2,...",
+        help=f"Comma-separated list of modules to enable. Available: {', '.join(available_modules)}. "
+             f"Can also be set via FALCON_MODULES environment variable (default: all modules)"
     )
 
     # Debug mode
@@ -234,12 +263,36 @@ def main():
     # Get debug setting
     debug = args.debug or os.environ.get("DEBUG", "").lower() == "true"
 
+    # Determine which modules to enable with proper precedence
+    enabled_modules = None
+
+    # 1. Command-line arguments take precedence
+    if args.modules is not None:
+        enabled_modules = set(args.modules)
+        logger.debug("Using modules from command line: %s", ', '.join(args.modules))
+
+    # 2. Fall back to FALCON_MODULES environment variable
+    elif os.environ.get("FALCON_MODULES"):
+        try:
+            env_modules = parse_modules_list(os.environ.get("FALCON_MODULES"))
+            enabled_modules = set(env_modules)
+            logger.debug("Using modules from FALCON_MODULES environment variable: %s", ', '.join(env_modules))
+        except argparse.ArgumentTypeError as e:
+            logger.error("Invalid FALCON_MODULES environment variable: %s", e)
+            sys.exit(1)
+
+    # 3. Default to all modules if none specified
+    if enabled_modules is None:
+        all_modules = registry.get_module_names()
+        enabled_modules = set(all_modules)
+        logger.debug("Using all available modules: %s", ', '.join(all_modules))
+
     try:
         # Create and run the server
         server = FalconMCPServer(
             base_url=args.base_url,
             debug=debug,
-            enabled_modules=set(args.modules)
+            enabled_modules=enabled_modules
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport, host=args.host, port=args.port)

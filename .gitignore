@@ -194,3 +194,7 @@ memory-bank/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# E2E artifacts
+static_test_report.html
+test_results.json
