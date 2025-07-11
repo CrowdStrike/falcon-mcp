@@ -32,7 +32,7 @@ class FalconMCPServer:
         """Initialize the Falcon MCP server.
 
         Args:
-            base_url: Falcon API base URL (defaults to FALCON_BASE_URL env var)
+            base_url: Falcon API base URL
             debug: Enable debug logging
             enabled_modules: Set of module names to enable (defaults to all modules)
         """
@@ -176,19 +176,22 @@ def parse_modules_list(modules_string):
         modules_string: Comma-separated string of module names
 
     Returns:
-        List of validated module names
+        List of validated module names (returns all available modules if empty string)
 
     Raises:
         argparse.ArgumentTypeError: If any module names are invalid
     """
+    # Get available modules
+    available_modules = registry.get_module_names()
+
+    # If empty string, return all available modules (default behavior)
     if not modules_string:
-        return []
+        return available_modules
 
     # Split by comma and clean up whitespace
     modules = [m.strip() for m in modules_string.split(',') if m.strip()]
 
     # Validate against available modules
-    available_modules = registry.get_module_names()
     invalid_modules = [m for m in modules if m not in available_modules]
     if invalid_modules:
         raise argparse.ArgumentTypeError(
@@ -213,21 +216,21 @@ def parse_args():
 
     # Module selection
     available_modules = registry.get_module_names()
-    modules_default = os.environ.get('FALCON_MCP_MODULES')
+
     parser.add_argument(
         "--modules", "-m",
         type=parse_modules_list,
-        default=parse_modules_list(modules_default) if modules_default else None,
+        default=parse_modules_list(os.environ.get('FALCON_MCP_MODULES', '')),
         metavar="MODULE1,MODULE2,...",
-        help=f"Comma-separated list of modules to enable. Available: {', '.join(available_modules)}. "
-             f"Can also be set via FALCON_MCP_MODULES environment variable (default: all modules)"
+        help=f"Comma-separated list of modules to enable. Available: [{', '.join(available_modules)}] "
+             f"(default: all modules, env: FALCON_MCP_MODULES)"
     )
 
     # Debug mode
     parser.add_argument(
         "--debug", "-d",
         action="store_true",
-        default=os.environ.get('FALCON_MCP_DEBUG', '').lower() in ('true', '1', 'yes', 'on'),
+        default=os.environ.get("FALCON_MCP_DEBUG", "").lower() == "true",
         help="Enable debug logging (env: FALCON_MCP_DEBUG)"
     )
 
@@ -235,7 +238,7 @@ def parse_args():
     parser.add_argument(
         "--base-url",
         default=os.environ.get('FALCON_BASE_URL'),
-        help="Falcon API base URL (defaults to FALCON_BASE_URL env var)"
+        help="Falcon API base URL (env: FALCON_BASE_URL)"
     )
 
     # HTTP transport configuration
@@ -264,22 +267,12 @@ def main():
     # Parse command line arguments (includes environment variable defaults)
     args = parse_args()
 
-    # Determine which modules to enable
-    if args.modules is not None:
-        enabled_modules = set(args.modules)
-        logger.debug("Using modules: %s", ', '.join(args.modules))
-    else:
-        # Default to all modules if none specified
-        all_modules = registry.get_module_names()
-        enabled_modules = set(all_modules)
-        logger.debug("Using all available modules: %s", ', '.join(all_modules))
-
     try:
         # Create and run the server
         server = FalconMCPServer(
             base_url=args.base_url,
             debug=args.debug,
-            enabled_modules=enabled_modules
+            enabled_modules=set(args.modules)
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport, host=args.host, port=args.port)
