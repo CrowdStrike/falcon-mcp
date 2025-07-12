@@ -3,6 +3,7 @@ API scope definitions and utilities for Falcon MCP Server
 
 This module provides API scope definitions and related utilities for the Falcon MCP server.
 """
+
 from typing import List, Optional
 
 from .logging import get_logger
@@ -31,6 +32,10 @@ API_SCOPE_REQUIREMENTS = {
     "QueryIntelReportEntities": ["reports-falcon-intelligence:read"],
     # Spotlight operations
     "combinedQueryVulnerabilities": ["spotlight-vulnerabilities:read"],
+    # Cloud operations
+    "ReadContainerCombined": ["falcon-container-image:read"],
+    "ReadContainerCount": ["falcon-container-image:read"],
+    "ReadCombinedVulnerabilities": ["falcon-container-image:read"],
     # Add more mappings as needed
 }
 
