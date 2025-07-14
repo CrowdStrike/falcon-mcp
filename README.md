@@ -61,6 +61,9 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 
 ## Available Modules & Tools
 
+> [!IMPORTANT]
+> ⚠️ **Important Note on FQL Guide Tools**: Several modules include FQL (Falcon Query Language) guide tools that provide comprehensive query documentation and examples. While these tools are designed to assist AI assistants and users with query construction, **FQL has nuanced syntax requirements and field-specific behaviors** that may not be immediately apparent. AI-generated FQL filters should be **tested and validated** before use in production environments. We recommend starting with simple queries and gradually building complexity while verifying results in a test environment first.
+
 ### Core Functionality (Built into Server)
 
 **API Scopes**: *None required beyond basic API access*
