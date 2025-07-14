@@ -174,8 +174,7 @@ class TestCloudModuleE2E(BaseE2ETest):
                 fixtures
             )
 
-            # fmt: off
-            prompt = "Find top 1 kubernetes container that is running and have image vulnerabilities."
+            prompt = "Find top 1 kubernetes container that is running and have image vulnerabilities." # fmt: skip
             return await self._run_agent_stream(prompt)
 
         def assertions(tools, result):

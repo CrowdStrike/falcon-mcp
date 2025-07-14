@@ -134,7 +134,7 @@ class CloudModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to perform operation",
-            default_result={},
+            default_result=[],
         )
 
     def count_kubernetes_containers(
@@ -172,7 +172,7 @@ class CloudModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to perform operation",
-            default_result={},
+            default_result=[],
         )
 
     def kubernetes_containers_fql_filter_guide(self) -> str:
@@ -252,7 +252,7 @@ class CloudModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to perform operation",
-            default_result={},
+            default_result=[],
         )
 
     def images_vulnerabilities_fql_filter_guide(self) -> str:

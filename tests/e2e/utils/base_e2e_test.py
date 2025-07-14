@@ -242,8 +242,7 @@ class BaseE2ETest(unittest.TestCase):
                 result += str(data["chunk"].content)
         return tools, result
 
-    # fmt: off
-    def run_test_with_retries(self, test_name: str, test_logic_coro: callable, assertion_logic: callable):
+    def run_test_with_retries(self, test_name: str, test_logic_coro: callable, assertion_logic: callable): # fmt: skip
         """
         Run a given test logic multiple times against different models and check for a success threshold.
 
@@ -331,7 +330,6 @@ class BaseE2ETest(unittest.TestCase):
                 # Catch any other exception that might occur during agent streaming or test execution
                 # fmt: off
                 run_result["failure_reason"] = f"Test execution failed: {type(e).__name__}: {str(e)}"
-                # fmt: off
                 print(f"Test execution failed with model {model_name}, try {i + 1}: {type(e).__name__}: {e}")
             finally:
                 self.test_results.append(run_result)
