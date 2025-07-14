@@ -36,6 +36,8 @@ API_SCOPE_REQUIREMENTS = {
     "ReadContainerCombined": ["falcon-container-image:read"],
     "ReadContainerCount": ["falcon-container-image:read"],
     "ReadCombinedVulnerabilities": ["falcon-container-image:read"],
+    # Identity Protection operations
+    "api_preempt_proxy_post_graphql": ["identity-protection-graphql:read"],
     # Add more mappings as needed
 }
 
