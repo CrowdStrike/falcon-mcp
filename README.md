@@ -31,6 +31,7 @@ Bridge the gap between AI assistants and CrowdStrike Falcon, enabling intelligen
   - [Running Tests](#running-tests)
   - [Developer Documentation](#developer-documentation)
 - [License](#license)
+- [Support](#support)
 
 ## API Credentials & Required Scopes
 
@@ -413,4 +414,10 @@ pytest --run-e2e -v -s tests/e2e/
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
+
+## Support
+
+This is a community-driven, open source project. While it is not an official CrowdStroke product, it is actively maintained by CrowdStrike and supported in collaboration with the open source developer community.
+
+For more information, please see our [SUPPORT](SUPPORT.md) file.
