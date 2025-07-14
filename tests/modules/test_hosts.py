@@ -18,7 +18,6 @@ class TestHostsModule(TestModules):
         """Test registering tools with the server."""
         expected_tools = [
             "falcon_search_hosts",
-            "falcon_search_hosts_fql_filter_guide",
             "falcon_get_host_details",
         ]
         self.assert_tools_registered(expected_tools)

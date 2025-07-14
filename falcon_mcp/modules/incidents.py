@@ -7,7 +7,8 @@ This module provides tools for accessing and analyzing CrowdStrike Falcon incide
 from typing import Dict, List, Optional, Any
 
 from mcp.server import FastMCP
-from pydantic import Field
+from mcp.server.fastmcp.resources import TextResource
+from pydantic import Field, AnyUrl
 
 from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.utils import prepare_api_parameters
@@ -37,20 +38,8 @@ class IncidentsModule(BaseModule):
 
         self._add_tool(
             server,
-            self.show_crowd_score_fql_filter_guide,
-            name="show_crowd_score_fql_filter_guide"
-        )
-
-        self._add_tool(
-            server,
             self.search_incidents,
             name="search_incidents"
-        )
-
-        self._add_tool(
-            server,
-            self.search_incidents_fql_filter_guide,
-            name="search_incidents_fql_filter_guide"
         )
 
         self._add_tool(
@@ -67,26 +56,51 @@ class IncidentsModule(BaseModule):
 
         self._add_tool(
             server,
-            self.search_behaviors_fql_filter_guide,
-            name="search_behaviors_fql_filter_guide"
-        )
-
-        self._add_tool(
-            server,
             self.get_behavior_details,
             name="get_behavior_details"
         )
 
+    def register_resources(self, server: FastMCP) -> None:
+        """Register resources with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
+        crowd_score_fql_resource = TextResource(
+            uri=AnyUrl("falcon://incidents/crowd-score/fql-guide"),
+            name="falcon_show_crowd_score_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_show_crowd_score` tool.",
+            text=CROWD_SCORE_FQL_DOCUMENTATION
+        )
+
+        search_incidents_fql_resource = TextResource(
+            uri=AnyUrl("falcon://incidents/search/fql-guide"),
+            name="falcon_search_incidents_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_incidents` tool.",
+            text=SEARCH_INCIDENTS_FQL_DOCUMENTATION
+        )
+
+        search_behaviors_fql_resource = TextResource(
+            uri=AnyUrl("falcon://incidents/behaviors/fql-guide"),
+            name="falcon_search_behaviors_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_behaviors` tool.",
+            text=SEARCH_BEHAVIORS_FQL_DOCUMENTATION
+        )
+
+        self._add_resource(server, crowd_score_fql_resource)
+        self._add_resource(server, search_incidents_fql_resource)
+        self._add_resource(server, search_behaviors_fql_resource)
+
     def show_crowd_score(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_show_crowd_score_fql_filter_guide` tool when building this filter parameter."),
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/crowd-score/fql-guide` resource when building this filter parameter."),
         limit: Optional[int] = Field(default=100, ge=1, le=2500, description="Maximum number of records to return. (Max: 2500)"),
         offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="TThe property to sort by. (Ex: modified_timestamp.desc)", examples={"modified_timestamp.desc"}),
     ) -> Dict[str, Any]:
         """View calculated CrowdScores and security posture metrics for your environment.
 
-        IMPORTANT: You must use the tool `falcon_show_crowd_score_fql_filter_guide` when you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_show_crowd_score` tool.
+        IMPORTANT: You must use the `falcon://incidents/crowd-score/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_show_crowd_score` tool.
 
         Returns:
             Tool returns the CrowdScore entity data.
@@ -141,24 +155,16 @@ class IncidentsModule(BaseModule):
 
         return result
 
-    def show_crowd_score_fql_filter_guide(self) -> str:
-        """
-        Returns the guide for the `filter` param of the `falcon_show_crowd_score` tool.
-
-        IMPORTANT: Before running `falcon_show_crowd_score`, always call this tool to get information about how to build the FQL for the filter.
-        """
-        return CROWD_SCORE_FQL_DOCUMENTATION
-
     def search_incidents(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_search_incidents_fql_filter_guide` tool when building this filter parameter."),
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/search/fql-guide` resource when building this filter parameter."),
         limit: int = Field(default=100, ge=1, le=500, description="Maximum number of records to return. (Max: 500)"),
         offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. FQL syntax. Ex: state.asc, name.desc"),
     ) -> List[Dict[str, Any]]:
         """Find and analyze security incidents to understand coordinated activity in your environment.
 
-        IMPORTANT: You must use the tool `falcon_search_incidents_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_incidents` tool.
+        IMPORTANT: You must use the `falcon://incidents/search/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_incidents` tool.
 
         Returns:
             Tool returns CrowdStrike incidents.
@@ -179,14 +185,6 @@ class IncidentsModule(BaseModule):
             return self.get_incident_details(incident_ids)
 
         return []
-
-    def search_incidents_fql_filter_guide(self) -> str:
-        """
-        Returns the guide for the `filter` param of the `falcon_search_incidents` tool.
-
-        IMPORTANT: Before running `falcon_search_incidents`, always call this tool to get information about how to build the FQL for the filter.
-        """
-        return SEARCH_INCIDENTS_FQL_DOCUMENTATION
 
     def get_incident_details(
         self,
@@ -214,7 +212,7 @@ class IncidentsModule(BaseModule):
 
     def search_behaviors(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_search_behaviors_fql_filter_guide` tool when building this filter parameter."),
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/behaviors/fql-guide` resource when building this filter parameter."),
         limit: int = Field(default=100, ge=1, le=500, description="Maximum number of records to return. (Max: 500)"),
         offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: modified_timestamp.desc)"),
@@ -224,7 +222,7 @@ class IncidentsModule(BaseModule):
         Use this when you need to find behaviors matching certain criteria rather than retrieving specific behaviors by ID.
         For retrieving details of known behavior IDs, use falcon_get_behavior_details instead.
 
-        IMPORTANT: You must use the tool `falcon_search_behaviors_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_behaviors` tool.
+        IMPORTANT: You must use the `falcon://incidents/behaviors/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_behaviors` tool.
 
         Returns:
             Tool returns CrowdStrike behaviors.
@@ -245,14 +243,6 @@ class IncidentsModule(BaseModule):
             return self.get_behavior_details(behavior_ids)
 
         return []
-
-    def search_behaviors_fql_filter_guide(self) -> str:
-        """
-        Returns the guide for the `filter` param of the `falcon_search_behaviors` tool.
-
-        IMPORTANT: Before running `falcon_search_behaviors`, always call this tool to get information about how to build the FQL for the filter.
-        """
-        return SEARCH_BEHAVIORS_FQL_DOCUMENTATION
 
     def get_behavior_details(
         self,

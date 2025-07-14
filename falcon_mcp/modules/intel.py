@@ -7,7 +7,8 @@ This module provides tools for accessing and analyzing CrowdStrike Falcon intell
 from typing import Dict, List, Optional, Any
 
 from mcp.server import FastMCP
-from pydantic import Field
+from mcp.server.fastmcp.resources import TextResource
+from pydantic import Field, AnyUrl
 
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.errors import handle_api_response
@@ -40,20 +41,8 @@ class IntelModule(BaseModule):
 
         self._add_tool(
             server,
-            self.search_actors_fql_filter_guide,
-            name="search_actors_fql_filter_guide"
-        )
-
-        self._add_tool(
-            server,
             self.query_indicator_entities,
             name="search_indicators"
-        )
-
-        self._add_tool(
-            server,
-            self.search_indicators_fql_filter_guide,
-            name="search_indicators_fql_filter_guide"
         )
 
         self._add_tool(
@@ -62,15 +51,40 @@ class IntelModule(BaseModule):
             name="search_reports"
         )
 
-        self._add_tool(
-            server,
-            self.search_reports_fql_filter_guide,
-            name="search_reports_fql_filter_guide"
+    def register_resources(self, server: FastMCP) -> None:
+        """Register resources with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
+        search_actors_fql_resource = TextResource(
+            uri=AnyUrl("falcon://intel/actors/fql-guide"),
+            name="falcon_search_actors_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_actors` tool.",
+            text=QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION
         )
+
+        search_indicators_fql_resource = TextResource(
+            uri=AnyUrl("falcon://intel/indicators/fql-guide"),
+            name="falcon_search_indicators_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_indicators` tool.",
+            text=QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION
+        )
+
+        search_reports_fql_resource = TextResource(
+            uri=AnyUrl("falcon://intel/reports/fql-guide"),
+            name="falcon_search_reports_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_reports` tool.",
+            text=QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION
+        )
+
+        self._add_resource(server, search_actors_fql_resource)
+        self._add_resource(server, search_indicators_fql_resource)
+        self._add_resource(server, search_reports_fql_resource)
 
     def query_actor_entities(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon_query_actor_entities_fql_filter_guide` tool when building this filter parameter."),
+        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/actors/fql-guide` resource when building this filter parameter."),
         limit: Optional[int] = Field(default=100, ge=1, le=5000, description="Maximum number of records to return. Max 5000", examples={10, 20, 100}),
         offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids.", examples={0,10}),
         sort: Optional[str] = Field(default=None, description="The property to sort by. Example: 'created_date|desc'", examples={"created_date|desc"}),
@@ -78,7 +92,7 @@ class IntelModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Research threat actors and adversary groups tracked by CrowdStrike intelligence.
 
-        IMPORTANT: You must use the tool `falcon_query_actor_entities_fql_filter_guide` when you want to use the `filter` parameter. This tool contians the guide on how to build the FQL `filter` parameter for `falcon_search_actors` tool.
+        IMPORTANT: You must use the `falcon://intel/actors/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_actors` tool.
 
         Returns:
             Information about actors that match the provided filters.
@@ -113,17 +127,9 @@ class IntelModule(BaseModule):
 
         return api_response
 
-    def search_actors_fql_filter_guide(self) -> str:
-        """
-        Returns the guide for the `filter` param of the `falcon_search_actors` tool.
-
-        IMPORTANT: Before running `falcon_search_actors`, always call this tool to get information about how to build the FQL for the filter.
-        """
-        return QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION
-
     def query_indicator_entities(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon_search_indicators_fql_filter_guide` tool when building this filter parameter."),
+        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/indicators/fql-guide` resource when building this filter parameter."),
         limit: Optional[int] = Field(default=100, ge=1, le=5000, description="Maximum number of records to return. (Max: 5000)"),
         offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)"),
@@ -133,7 +139,7 @@ class IntelModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for threat indicators and indicators of compromise (IOCs) from CrowdStrike intelligence.
 
-        IMPORTANT: You must use the tool `falcon_search_indicators_fql_filter_guide` when you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_indicators` tool.
+        IMPORTANT: You must use the `falcon://intel/indicators/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_indicators` tool.
 
         Returns:
             List of indicators that match the provided filters.
@@ -170,17 +176,9 @@ class IntelModule(BaseModule):
 
         return api_response
 
-    def search_indicators_fql_filter_guide(self) -> str:
-        """
-        Returns the guide for the `filter` param of the `falcon_search_indicators` tool.
-
-        IMPORTANT: Before running `falcon_search_indicators`, always call this tool to get information about how to build the FQL for the filter.
-        """
-        return QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION
-
     def query_report_entities(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon_search_reports_fql_filter_guide` tool when building this filter parameter."),
+        filter: Optional[str] = Field(default=None, description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/reports/fql-guide` resource when building this filter parameter."),
         limit: int = Field(default=100, ge=1, le=5000, description="Maximum number of records to return. (Max: 5000)"),
         offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
         sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: created_date|desc)"),
@@ -190,9 +188,9 @@ class IntelModule(BaseModule):
 
         This tool returns comprehensive intelligence report details based on your search criteria.
         Use this when you need to find CrowdStrike intelligence publications matching specific conditions.
-        For guidance on building FQL filters, use the `falcon_search_reports_fql_filter_guide` tool.
+        For guidance on building FQL filters, use the `falcon://intel/reports/fql-guide` resource.
 
-        IMPORTANT: You must use the tool `falcon_search_reports_fql_filter_guide` when you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_reports` tool.
+        IMPORTANT: You must use the `falcon://intel/reports/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_reports` tool.
 
         Returns:
             List of intelligence reports with comprehensive information including content,
@@ -229,11 +227,3 @@ class IntelModule(BaseModule):
             return [api_response]
 
         return api_response
-
-    def search_reports_fql_filter_guide(self) -> str:
-        """
-        Returns the guide for the `filter` param of the `falcon_search_reports` tool.
-
-        IMPORTANT: Before running `falcon_search_reports`, always call this tool to get information about how to build the FQL for the filter.
-        """
-        return QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION

@@ -8,7 +8,8 @@ from typing import Dict, List, Optional, Any
 from textwrap import dedent
 
 from mcp.server import FastMCP
-from pydantic import Field
+from mcp.server.fastmcp.resources import TextResource
+from pydantic import Field, AnyUrl
 
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.errors import handle_api_response
@@ -37,19 +38,31 @@ class DetectionsModule(BaseModule):
 
         self._add_tool(
             server,
-            self.search_detections_fql_filter_guide,
-            name="search_detections_fql_filter_guide"
-        )
-
-        self._add_tool(
-            server,
             self.get_detection_details,
             name="get_detection_details"
         )
 
+    def register_resources(self, server: FastMCP) -> None:
+        """Register resources with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
+        search_detections_fql_resource = TextResource(
+            uri=AnyUrl("falcon://detections/search/fql-guide"),
+            name="falcon_search_detections_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_detections` tool.",
+            text=SEARCH_DETECTIONS_FQL_DOCUMENTATION
+        )
+
+        self._add_resource(
+            server,
+            search_detections_fql_resource
+        )
+
     def search_detections(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_search_detections_fql_filter_guide` tool when building this filter parameter.", examples={"agent_id:'77d11725xxxxxxxxxxxxxxxxxxxxc48ca19'", "status:'new'"}),
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://detections/search/fql-guide` resource when building this filter parameter.", examples={"agent_id:'77d11725xxxxxxxxxxxxxxxxxxxxc48ca19'", "status:'new'"}),
         limit: Optional[int] = Field(default=100, ge=1, le=9999, description="The maximum number of detections to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results."),
         offset: Optional[int] = Field(default=0, ge=0, description="The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results."),
         q: Optional[str] = Field(default=None, description="Search all detection metadata for the provided string"),
@@ -79,7 +92,7 @@ class DetectionsModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Find and analyze detections to understand malicious activity in your environment.
 
-        IMPORTANT: You must use the tool `falcon_search_detections_fql_filter_guide` when you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_detections` tool.
+        IMPORTANT: You must use the `falcon://detections/search/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_detections` tool.
 
         Returns:
             List of detections with details
@@ -132,14 +145,6 @@ class DetectionsModule(BaseModule):
             return details
 
         return []
-
-    def search_detections_fql_filter_guide(self) -> str:
-        """
-        Returns the guide for the `filter` param of the `falcon_search_detections` tool.
-
-        IMPORTANT: Before running `falcon_search_detections`, always call this tool to get information about how to build the FQL for the filter.
-        """
-        return SEARCH_DETECTIONS_FQL_DOCUMENTATION
 
     def get_detection_details(
         self,

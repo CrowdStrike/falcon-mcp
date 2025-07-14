@@ -8,7 +8,8 @@ from typing import Dict, List, Optional, Any
 from textwrap import dedent
 
 from mcp.server import FastMCP
-from pydantic import Field
+from mcp.server.fastmcp.resources import TextResource
+from pydantic import Field, AnyUrl
 
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.errors import handle_api_response
@@ -37,19 +38,28 @@ class HostsModule(BaseModule):
 
         self._add_tool(
             server,
-            self.search_hosts_fql_filter_guide,
-            name="search_hosts_fql_filter_guide"
-        )
-
-        self._add_tool(
-            server,
             self.get_host_details,
             name="get_host_details"
         )
 
+    def register_resources(self, server: FastMCP) -> None:
+        """Register resources with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
+        search_hosts_fql_resource = TextResource(
+            uri=AnyUrl("falcon://hosts/search/fql-guide"),
+            name="falcon_search_hosts_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_hosts` tool.",
+            text=SEARCH_HOSTS_FQL_DOCUMENTATION
+        )
+
+        self._add_resource(server, search_hosts_fql_resource)
+
     def search_hosts(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_search_hosts_fql_filter_guide` tool when building this filter parameter.", examples={"platform_name:'Windows'", "hostname:'PC*'"}),
+        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://hosts/search/fql-guide` resource when building this filter parameter.", examples={"platform_name:'Windows'", "hostname:'PC*'"}),
         limit: Optional[int] = Field(default=100, ge=1, le=5000, description="The maximum records to return. [1-5000]"),
         offset: Optional[int] = Field(default=0, ge=0, description="The offset to start retrieving records from."),
         sort: Optional[str] = Field(
@@ -76,7 +86,7 @@ class HostsModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for hosts in your CrowdStrike environment.
 
-        IMPORTANT: You must use the tool `falcon_search_hosts_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_hosts` tool.
+        IMPORTANT: You must use the `falcon://hosts/search/fql-guide` resource whenever you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_hosts` tool.
 
         Returns:
             List of host details
@@ -127,14 +137,6 @@ class HostsModule(BaseModule):
             return details
 
         return []
-
-    def search_hosts_fql_filter_guide(self) -> str:
-        """
-        Returns the guide for the `filter` param of the `falcon_search_hosts` tool.
-
-        IMPORTANT: Before running `falcon_search_hosts`, always call this tool to get information about how to build the FQL for the filter.
-        """
-        return SEARCH_HOSTS_FQL_DOCUMENTATION
 
     def get_host_details(
         self,

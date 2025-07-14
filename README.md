@@ -7,7 +7,7 @@ Bridge the gap between AI assistants and CrowdStrike Falcon, enabling intelligen
 - [API Credentials \& Required Scopes](#api-credentials--required-scopes)
   - [Setting Up CrowdStrike API Credentials](#setting-up-crowdstrike-api-credentials)
   - [Required API Scopes by Module](#required-api-scopes-by-module)
-- [Available Modules \& Tools](#available-modules--tools)
+- [Available Modules, Tools \& Resources](#available-modules-tools--resources)
   - [Core Functionality (Built into Server)](#core-functionality-built-into-server)
   - [Detections Module](#detections-module)
   - [Incidents Module](#incidents-module)
@@ -60,10 +60,12 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Hosts** | `Hosts:read` | Manage and query host/device information |
 | **Spotlight** | `Vulnerabilities:read` | Manage and analyze vulnerability data and security assessments |
 
-## Available Modules & Tools
+## Available Modules, Tools & Resources
 
 > [!IMPORTANT]
-> ⚠️ **Important Note on FQL Guide Tools**: Several modules include FQL (Falcon Query Language) guide tools that provide comprehensive query documentation and examples. While these tools are designed to assist AI assistants and users with query construction, **FQL has nuanced syntax requirements and field-specific behaviors** that may not be immediately apparent. AI-generated FQL filters should be **tested and validated** before use in production environments. We recommend starting with simple queries and gradually building complexity while verifying results in a test environment first.
+> ⚠️ **Important Note on FQL Guide Resources**: Several modules include FQL (Falcon Query Language) guide resources that provide comprehensive query documentation and examples. While these resources are designed to assist AI assistants and users with query construction, **FQL has nuanced syntax requirements and field-specific behaviors** that may not be immediately apparent. AI-generated FQL filters should be **tested and validated** before use in production environments. We recommend starting with simple queries and gradually building complexity while verifying results in a test environment first.
+
+**About Tools & Resources**: This server provides both tools (actions you can perform) and resources (documentation and context). Tools execute operations like searching for detections or analyzing threats, while resources provide comprehensive documentation like FQL query guides that AI assistants can reference for context without requiring tool calls.
 
 ### Core Functionality (Built into Server)
 
@@ -81,8 +83,11 @@ The server provides core tools for interacting with the Falcon API:
 Provides tools for accessing and analyzing CrowdStrike Falcon detections:
 
 - `falcon_search_detections`: Find and analyze detections to understand malicious activity in your environment
-- `falcon_search_detections_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_detections tool
 - `falcon_get_detection_details`: Get comprehensive detection details for specific detection IDs to understand security threats
+
+**Resources**:
+
+- `falcon://detections/search/fql-guide`: Comprehensive FQL documentation and examples for detection searches
 
 **Use Cases**: Threat hunting, security analysis, incident response, malware investigation
 
@@ -93,13 +98,16 @@ Provides tools for accessing and analyzing CrowdStrike Falcon detections:
 Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
 
 - `falcon_show_crowd_score`: View calculated CrowdScores and security posture metrics for your environment
-- `falcon_show_crowd_score_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_show_crowd_score tool
 - `falcon_search_incidents`: Find and analyze security incidents to understand coordinated activity in your environment
-- `falcon_search_incidents_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_incidents tool
 - `falcon_get_incident_details`: Get comprehensive incident details to understand attack patterns and coordinated activities
 - `falcon_search_behaviors`: Find and analyze behaviors to understand suspicious activity in your environment
-- `falcon_search_behaviors_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_behaviors tool
 - `falcon_get_behavior_details`: Get detailed behavior information to understand attack techniques and tactics
+
+**Resources**:
+
+- `falcon://incidents/crowd-score/fql-guide`: Comprehensive FQL documentation for CrowdScore queries
+- `falcon://incidents/search/fql-guide`: Comprehensive FQL documentation and examples for incident searches
+- `falcon://incidents/behaviors/fql-guide`: Comprehensive FQL documentation and examples for behavior searches
 
 **Use Cases**: Incident management, threat assessment, attack pattern analysis, security posture monitoring
 
@@ -114,11 +122,14 @@ Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
 Provides tools for accessing and analyzing CrowdStrike Intelligence:
 
 - `falcon_search_actors`: Research threat actors and adversary groups tracked by CrowdStrike intelligence
-- `falcon_search_actors_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_actors tool
 - `falcon_search_indicators`: Search for threat indicators and indicators of compromise (IOCs) from CrowdStrike intelligence
-- `falcon_search_indicators_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_indicators tool
 - `falcon_search_reports`: Access CrowdStrike intelligence publications and threat reports
-- `falcon_search_reports_fql_filter_guide`: Get comprehensive FQL documentation for the search_reports tool
+
+**Resources**:
+
+- `falcon://intel/actors/fql-guide`: Comprehensive FQL documentation and examples for threat actor searches
+- `falcon://intel/indicators/fql-guide`: Comprehensive FQL documentation and examples for indicator searches
+- `falcon://intel/reports/fql-guide`: Comprehensive FQL documentation and examples for intelligence report searches
 
 **Use Cases**: Threat intelligence research, adversary tracking, IOC analysis, threat landscape assessment
 
@@ -129,8 +140,11 @@ Provides tools for accessing and analyzing CrowdStrike Intelligence:
 Provides tools for accessing and managing CrowdStrike Falcon hosts/devices:
 
 - `falcon_search_hosts`: Search for hosts in your CrowdStrike environment
-- `falcon_search_hosts_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_hosts tool
 - `falcon_get_host_details`: Retrieve detailed information for specified host device IDs
+
+**Resources**:
+
+- `falcon://hosts/search/fql-guide`: Comprehensive FQL documentation and examples for host searches
 
 **Use Cases**: Asset management, device inventory, host monitoring, compliance reporting
 
@@ -141,7 +155,10 @@ Provides tools for accessing and managing CrowdStrike Falcon hosts/devices:
 Provides tools for accessing and managing CrowdStrike Spotlight vulnerabilities:
 
 - `falcon_search_vulnerabilities`: Search for vulnerabilities in your CrowdStrike environment
-- `falcon_search_vulnerabilities_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_vulnerabilities tool
+
+**Resources**:
+
+- `falcon://spotlight/vulnerabilities/fql-guide`: Comprehensive FQL documentation and examples for vulnerability searches
 
 **Use Cases**: Vulnerability management, security assessments, compliance reporting, risk analysis, patch prioritization
 

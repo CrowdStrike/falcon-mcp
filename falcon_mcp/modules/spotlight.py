@@ -8,7 +8,8 @@ from typing import Dict, List, Optional, Any
 from textwrap import dedent
 
 from mcp.server import FastMCP
-from pydantic import Field
+from mcp.server.fastmcp.resources import TextResource
+from pydantic import Field, AnyUrl
 
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.errors import handle_api_response
@@ -35,15 +36,24 @@ class SpotlightModule(BaseModule):
             name="search_vulnerabilities"
         )
 
-        self._add_tool(
-            server,
-            self.search_vulnerabilities_fql_filter_guide,
-            name="search_vulnerabilities_fql_filter_guide"
+    def register_resources(self, server: FastMCP) -> None:
+        """Register resources with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
+        search_vulnerabilities_fql_resource = TextResource(
+            uri=AnyUrl("falcon://spotlight/vulnerabilities/fql-guide"),
+            name="falcon_search_vulnerabilities_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_vulnerabilities` tool.",
+            text=SEARCH_VULNERABILITIES_FQL_DOCUMENTATION
         )
+
+        self._add_resource(server, search_vulnerabilities_fql_resource)
 
     def search_vulnerabilities(
         self,
-        filter: str = Field(description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_search_vulnerabilities_fql_filter_guide` tool when building this filter parameter.", examples={"status:'open'", "cve.severity:'HIGH'"}),
+        filter: str = Field(description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://spotlight/vulnerabilities/fql-guide` resource when building this filter parameter.", examples={"status:'open'", "cve.severity:'HIGH'"}),
         limit: Optional[int] = Field(default=100, ge=1, le=5000, description="Maximum number of results to return. (Max: 5000, Default: 100)"),
         offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return results."),
         sort: Optional[str] = Field(
@@ -73,7 +83,7 @@ class SpotlightModule(BaseModule):
 
                 Supported values:
                 • host_info: Include host/asset information and context
-                • remediation: Include remediation and fix information  
+                • remediation: Include remediation and fix information
                 • cve: Include CVE details, scoring, and metadata
                 • evaluation_logic: Include vulnerability assessment methodology
 
@@ -87,7 +97,7 @@ class SpotlightModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for vulnerabilities in your CrowdStrike environment.
 
-        IMPORTANT: You must use the tool `falcon_search_vulnerabilities_fql_filter_guide` whenever you want to use the `filter` parameter. This tool contains the guide on how to build the FQL `filter` parameter for `search_vulnerabilities` tool.
+        IMPORTANT: You must use the `falcon://spotlight/vulnerabilities/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `search_vulnerabilities` tool.
 
         Returns:
             List of vulnerability details with comprehensive information including CVE data,
@@ -125,11 +135,3 @@ class SpotlightModule(BaseModule):
             return [vulnerabilities]
 
         return vulnerabilities
-
-    def search_vulnerabilities_fql_filter_guide(self) -> str:
-        """
-        Returns the guide for the `filter` param of the `falcon_search_vulnerabilities` tool.
-
-        IMPORTANT: Before running `falcon_search_vulnerabilities`, always call this tool to get information about how to build the FQL for the filter.
-        """
-        return SEARCH_VULNERABILITIES_FQL_DOCUMENTATION

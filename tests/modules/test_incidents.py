@@ -18,13 +18,10 @@ class TestIncidentsModule(TestModules):
         """Test registering tools with the server."""
         expected_tools = [
             "falcon_show_crowd_score",
-            "falcon_show_crowd_score_fql_filter_guide",
             "falcon_get_incident_details",
             "falcon_search_incidents",
-            "falcon_search_incidents_fql_filter_guide",
             "falcon_get_behavior_details",
             "falcon_search_behaviors",
-            "falcon_search_behaviors_fql_filter_guide",
         ]
         self.assert_tools_registered(expected_tools)
 
