@@ -8,6 +8,8 @@ from typing import Any, Callable, Dict, List
 
 from mcp import Resource
 from mcp.server import FastMCP
+from mcp.server.fastmcp.resources import TextResource
+from pydantic import AnyUrl
 
 from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.utils import prepare_api_parameters
@@ -20,7 +22,7 @@ logger = get_logger(__name__)
 class BaseModule(ABC):
     """Base class for all Falcon MCP server modules."""
 
-    def __init__(self, client: FalconClient):
+    def __init__(self, client: FalconClient, guides_as_resources: bool = False):
         """Initialize the module.
 
         Args:
@@ -28,6 +30,7 @@ class BaseModule(ABC):
         """
         self.client = client
         self.tools = []  # List to track registered tools
+        self.guides_as_resources = guides_as_resources
 
     @abstractmethod
     def register_tools(self, server: FastMCP) -> None:
@@ -53,6 +56,20 @@ class BaseModule(ABC):
             name: Tool name
         """
         prefixed_name = f"falcon_{name}"
+
+        if self.guides_as_resources and name.endswith("fql_filter_guide"):
+            your_resource = TextResource(
+                uri=AnyUrl(f"falcon://{prefixed_name}"),
+                name=prefixed_name,
+                description=callable.__doc__,
+                text=method()
+            )
+            self._add_resource(
+                server=server,
+                resource=your_resource,
+            )
+            return
+
         server.add_tool(method, name=prefixed_name)
         self.tools.append(prefixed_name)
         logger.debug("Added tool: %s", prefixed_name)

@@ -28,6 +28,7 @@ class FalconMCPServer:
         base_url: Optional[str] = None,
         debug: bool = False,
         enabled_modules: Optional[Set[str]] = None,
+        guides_as_resources: bool = False,
     ):
         """Initialize the Falcon MCP server.
 
@@ -71,7 +72,7 @@ class FalconMCPServer:
         for module_name in self.enabled_modules:
             if module_name in available_modules:
                 module_class = available_modules[module_name]
-                self.modules[module_name] = module_class(self.falcon_client)
+                self.modules[module_name] = module_class(self.falcon_client, guides_as_resources)
                 logger.debug("Initialized module: %s", module_name)
 
         # Register tools and resources from modules
@@ -234,6 +235,14 @@ def parse_args():
         help="Enable debug logging (env: FALCON_MCP_DEBUG)"
     )
 
+    # Set all FQL guides as resources
+    parser.add_argument(
+        "--guides-as-resources", "-gar",
+        action="stores_true",
+        default=os.environ.get("GUIDES_AS_RESOURCES", "").lower() == "true",
+        help="FQL guides are resources instead of tools (env: GUIDES_AS_RESOURCES)"
+    )
+
     # API base URL
     parser.add_argument(
         "--base-url",
@@ -272,7 +281,8 @@ def main():
         server = FalconMCPServer(
             base_url=args.base_url,
             debug=args.debug,
-            enabled_modules=set(args.modules)
+            enabled_modules=set(args.modules),
+            guides_as_resources=set(args.guides_as_resources)
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport, host=args.host, port=args.port)
