@@ -13,6 +13,7 @@ Bridge the gap between AI assistants and CrowdStrike Falcon, enabling intelligen
   - [Incidents Module](#incidents-module)
   - [Intel Module](#intel-module)
   - [Hosts Module](#hosts-module)
+  - [Spotlight Module](#spotlight-module)
 - [Installation \& Setup](#installation--setup)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
@@ -56,6 +57,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
 | **Hosts** | `Hosts:read` | Manage and query host/device information |
+| **Spotlight** | `Vulnerabilities:read` | Manage and analyze vulnerability data and security assessments |
 
 ## Available Modules & Tools
 
@@ -128,6 +130,17 @@ Provides tools for accessing and managing CrowdStrike Falcon hosts/devices:
 
 **Use Cases**: Asset management, device inventory, host monitoring, compliance reporting
 
+### Spotlight Module
+
+**API Scopes Required**: `Vulnerabilities:read`
+
+Provides tools for accessing and managing CrowdStrike Spotlight vulnerabilities:
+
+- `falcon_search_vulnerabilities`: Search for vulnerabilities in your CrowdStrike environment
+- `falcon_search_vulnerabilities_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_vulnerabilities tool
+
+**Use Cases**: Vulnerability management, security assessments, compliance reporting, risk analysis, patch prioritization
+
 ## Installation & Setup
 
 ### Prerequisites
@@ -164,7 +177,7 @@ FALCON_CLIENT_SECRET=your-client-secret
 FALCON_BASE_URL=https://api.us-2.crowdstrike.com  # Choose your region
 
 # Optional: Server Configuration
-FALCON_MCP_MODULES=detections,incidents,intel,hosts  # Modules to enable
+FALCON_MCP_MODULES=detections,incidents,intel,hosts,spotlight  # Modules to enable
 FALCON_MCP_TRANSPORT=stdio                           # Transport method
 FALCON_MCP_DEBUG=false                               # Debug logging
 FALCON_MCP_HOST=127.0.0.1                          # Host for HTTP transports
@@ -211,7 +224,7 @@ Specify modules using comma-separated lists:
 
 ```bash
 # Enable specific modules
-falcon-mcp --modules detections,incidents,intel
+falcon-mcp --modules detections,incidents,intel,spotlight
 
 # Enable only one module
 falcon-mcp --modules detections
@@ -223,11 +236,11 @@ Set the `FALCON_MCP_MODULES` environment variable:
 
 ```bash
 # Export environment variable
-export FALCON_MCP_MODULES=detections,incidents,intel
+export FALCON_MCP_MODULES=detections,incidents,intel,spotlight
 falcon-mcp
 
 # Or set inline
-FALCON_MCP_MODULES=detections,incidents,intel falcon-mcp
+FALCON_MCP_MODULES=detections,incidents,intel,spotlight falcon-mcp
 ```
 
 #### 3. Default Behavior (all modules)
@@ -257,7 +270,7 @@ from falcon_mcp.server import FalconMCPServer
 server = FalconMCPServer(
     base_url="https://api.us-2.crowdstrike.com",  # Optional, defaults to env var
     debug=True,  # Optional, enable debug logging
-    enabled_modules=["detections", "incidents"]  # Optional, defaults to all modules
+    enabled_modules=["detections", "incidents", "spotlight"]  # Optional, defaults to all modules
 )
 
 # Run with stdio transport (default)
@@ -311,7 +324,7 @@ docker run --rm -p 8080:8080 -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT
 
 # Run with specific modules
 docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
-  falcon-mcp --modules detections,incidents
+  falcon-mcp --modules detections,incidents,spotlight
 ```
 
 **Note**: When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
