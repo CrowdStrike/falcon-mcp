@@ -333,6 +333,13 @@ Provides tools for accessing and managing CrowdStrike Falcon hosts/devices:
 - `falcon_search_hosts_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_hosts tool
 - `falcon_get_host_details`: Retrieve detailed information for specified host device IDs
 
+### Spotlight Module
+
+Provides tools for accessing and managing CrowdStrike Spotlight Vulnerabilities:
+
+- `falcon_search_vulnerabilities`: Search for vulnerabilities in your CrowdStrike environment
+- `search_vulnerabilities_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_vulnerabilities tool
+
 ## MCP Configuration
 
 To use the Falcon MCP server with AI assistants, you can use the provided `examples/mcp_config.json` file:

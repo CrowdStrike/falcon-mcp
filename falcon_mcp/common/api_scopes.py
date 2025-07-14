@@ -29,6 +29,8 @@ API_SCOPE_REQUIREMENTS = {
     "QueryIntelActorEntities": ["actors-falcon-intelligence:read"],
     "QueryIntelIndicatorEntities": ["indicators-falcon-intelligence:read"],
     "QueryIntelReportEntities": ["reports-falcon-intelligence:read"],
+    # Spotlight operations
+    "combinedQueryVulnerabilities": ["spotlight-vulnerabilities:read"],
     # Add more mappings as needed
 }
 
