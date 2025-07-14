@@ -338,7 +338,7 @@ Provides tools for accessing and managing CrowdStrike Falcon hosts/devices:
 Provides tools for accessing and managing CrowdStrike Spotlight Vulnerabilities:
 
 - `falcon_search_vulnerabilities`: Search for vulnerabilities in your CrowdStrike environment
-- `search_vulnerabilities_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_vulnerabilities tool
+- `falcon_search_vulnerabilities_fql_filter_guide`: Get comprehensive FQL documentation for the falcon_search_vulnerabilities tool
 
 ## MCP Configuration
 
