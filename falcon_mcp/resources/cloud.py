@@ -1,8 +1,8 @@
-from .fql import FQL_DOCUMENTATION
-
 """
 Contains Cloud resources.
 """
+
+from .fql import FQL_DOCUMENTATION
 
 SEARCH_KUBERNETES_CONTAINERS_FQL_DOCUMENTATION = (
     FQL_DOCUMENTATION

@@ -46,9 +46,7 @@ class CloudModule(BaseModule):
             name="search_kubernetes_containers",
         )
 
-        self._add_tool(
-            server, self.count_kubernetes_containers, name="count_kubernetes_containers"
-        )
+        self._add_tool(server, self.count_kubernetes_containers, name="count_kubernetes_containers")
 
         self._add_tool(
             server,
@@ -82,7 +80,8 @@ class CloudModule(BaseModule):
         ),
         sort: Optional[str] = Field(
             default=None,
-            description=dedent("""
+            description=dedent(
+                """
                 Sort kubernetes containers using these options:
 
                 cloud_name: Cloud provider name
@@ -100,7 +99,8 @@ class CloudModule(BaseModule):
                 When searching containers running vulnerable images, use 'image_vulnerability_count.desc' to get container with most images vulnerabilities.
 
                 Examples: 'container_name.desc', 'last_seen.desc'
-            """).strip(),
+            """
+            ).strip(),
             examples={"container_name.desc", "last_seen.desc"},
         ),
     ) -> List[Dict[str, Any]]:
@@ -204,7 +204,8 @@ class CloudModule(BaseModule):
         ),
         sort: Optional[str] = Field(
             default=None,
-            description=dedent("""
+            description=dedent(
+                """
                 Sort images vulnerabilities using these options:
 
                 cps_current_rating: CSP rating of the image vulnerability
@@ -216,7 +217,8 @@ class CloudModule(BaseModule):
                 Both formats are supported: 'container_name.desc' or 'container_name|desc'
 
                 Examples: 'cvss_score.desc', 'cps_current_rating.asc'
-            """).strip(),
+            """
+            ).strip(),
             examples={"cvss_score.desc", "cps_current_rating.asc"},
         ),
     ) -> List[Dict[str, Any]]:
