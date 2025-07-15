@@ -2,11 +2,9 @@
 """
 Identity Protection (IDP) module for Falcon MCP Server
 
-This module provides tools for accessing and managing CrowdStrike Falcon Identity Protection capabilities.
-Focuses on three core use cases:
+This module provides tool for accessing and managing CrowdStrike Falcon Identity Protection capabilities.
+Core use cases:
 1. Entity Lookup & Investigation
-2. User Correlation and Linking
-3. Enhanced Watchlist Management
 """
 import json
 from datetime import datetime
@@ -933,7 +931,3 @@ class IdpModule(BaseModule):
                     })
 
         return patterns
-
-    def _is_error(self, result: Dict[str, Any]) -> bool:
-        """Check if a result contains an error."""
-        return "error" in result
