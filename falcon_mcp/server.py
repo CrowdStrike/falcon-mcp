@@ -28,6 +28,7 @@ class FalconMCPServer:
         base_url: Optional[str] = None,
         debug: bool = False,
         enabled_modules: Optional[Set[str]] = None,
+        custom_user_agent: Optional[str] = None,
     ):
         """Initialize the Falcon MCP server.
 
@@ -39,6 +40,7 @@ class FalconMCPServer:
         # Store configuration
         self.base_url = base_url
         self.debug = debug
+        self.custom_user_agent = custom_user_agent
 
         self.enabled_modules = enabled_modules or set(registry.get_module_names())
 
@@ -49,7 +51,8 @@ class FalconMCPServer:
         # Initialize the Falcon client
         self.falcon_client = FalconClient(
             base_url=self.base_url,
-            debug=self.debug
+            debug=self.debug,
+            custom_user_agent=self.custom_user_agent,
         )
 
         # Authenticate with the Falcon API
@@ -255,6 +258,11 @@ def parse_args():
         help="Port to listen on for HTTP transports (default: 8000, env: FALCON_MCP_PORT)"
     )
 
+    parser.add_argument(
+        "--user-agent", "-ua",
+        default=os.environ.get('USER_AGENT'),
+        help="User agent string to be appended to the default user agent header"
+    )
 
     return parser.parse_args()
 
@@ -272,7 +280,8 @@ def main():
         server = FalconMCPServer(
             base_url=args.base_url,
             debug=args.debug,
-            enabled_modules=set(args.modules)
+            enabled_modules=set(args.modules),
+            custom_user_agent=args.user_agent,
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport, host=args.host, port=args.port)

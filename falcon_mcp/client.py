@@ -24,6 +24,7 @@ class FalconClient:
         self,
         base_url: Optional[str] = None,
         debug: bool = False,
+        custom_user_agent: Optional[str] = None,
     ):
         """Initialize the Falcon client.
 
@@ -36,6 +37,7 @@ class FalconClient:
         self.client_secret = os.environ.get("FALCON_CLIENT_SECRET")
         self.base_url = base_url or os.environ.get("FALCON_BASE_URL", "https://api.crowdstrike.com")
         self.debug = debug
+        self.custom_user_agent = custom_user_agent
 
         if not self.client_id or not self.client_secret:
             raise ValueError(
@@ -49,7 +51,7 @@ class FalconClient:
             client_secret=self.client_secret,
             base_url=self.base_url,
             debug=debug,
-            user_agent=self.get_user_agent(),
+            user_agent=self.get_user_agent(self.custom_user_agent),
         )
 
         logger.debug("Initialized Falcon client with base URL: %s", self.base_url)
@@ -82,11 +84,11 @@ class FalconClient:
         """
         return self.client.command(operation, **kwargs)
 
-    def get_user_agent(self) -> str:
+    def get_user_agent(self, custom_user_agent: Optional[str] = None) -> str:
         """Get the user agent string for API requests.
 
         Returns:
-            str: User agent string in the format "falcon-mcp/VERSION (falconpy/VERSION; Python/VERSION; Platform/VERSION)"
+            str: User agent string in the format "falcon-mcp/VERSION (falconpy/VERSION; Python/VERSION; Platform/VERSION; custom_user_agent)"
         """
         # Get falcon-mcp version
         try:
@@ -109,7 +111,14 @@ class FalconClient:
             falconpy_version = "unknown"
             logger.debug("crowdstrike-falconpy package version not found")
 
-        return f"falcon-mcp/{falcon_mcp_version} (falconpy/{falconpy_version}; Python/{python_version}; {platform_info})"
+        # Base user agent
+        base_user_agent = f"falconpy/{falconpy_version}; Python/{python_version}; {platform_info}"
+
+        # Append custom user agent if provided
+        if custom_user_agent:
+            base_user_agent = f"{base_user_agent}; {custom_user_agent.strip()}"
+
+        return f"falcon-mcp/{falcon_mcp_version} ({base_user_agent})"
 
     def get_headers(self) -> Dict[str, str]:
         """Get authentication headers for API requests.

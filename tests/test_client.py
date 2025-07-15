@@ -205,6 +205,46 @@ class TestFalconClient(unittest.TestCase):
         self.assertIn(platform_info, user_agent)
         self.assertIn("falconpy/1.3.4", user_agent)
 
+    @patch('falcon_mcp.client.version')
+    @patch('falcon_mcp.client.os.environ.get')
+    @patch('falcon_mcp.client.APIHarnessV2')
+    def test_get_user_agent_with_custom_user_agent(self, mock_apiharness, mock_environ_get, mock_version):
+        """Test get_user_agent method with a custom user agent."""
+        # Setup mock environment variables
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret"
+        }.get(key, default)
+
+        # Setup mock version calls
+        def version_side_effect(package_name):
+            if package_name == "falcon-mcp":
+                return "1.2.3"
+            if package_name == "crowdstrike-falconpy":
+                return "1.3.4"
+            raise ValueError(f"Unexpected package: {package_name}")
+
+        mock_version.side_effect = version_side_effect
+        mock_apiharness.return_value = MagicMock()
+
+        custom_user_agent = "CustomApp/1.0"
+
+        # Create client with custom user agent
+        client = FalconClient(custom_user_agent=custom_user_agent)
+        user_agent = client.get_user_agent(custom_user_agent)
+
+        # Verify user agent format and content
+        python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        platform_info = f"{platform.system()}/{platform.release()}"
+        expected = f"falcon-mcp/1.2.3 (falconpy/1.3.4; Python/{python_version}; {platform_info}; CustomApp/1.0)"
+
+        self.assertEqual(user_agent, expected)
+
+        # Verify user agent is properly used in APIHarnessV2 initialization
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["user_agent"], expected)
+
 
 if __name__ == '__main__':
     unittest.main()
