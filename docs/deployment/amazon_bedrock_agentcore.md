@@ -21,7 +21,8 @@ We recommend deploying the MCP Server in an existing VPC used for your agentic t
 
 You'll need to run the MCP server with the necessary policies and trust permissions on the execution role. The policies below provide the required permissions for the MCP server to function properly within the Bedrock AgentCore environment.
 
-**Important**: Replace all placeholder values (e.g., `{{region}}`, `{{accountId}}`, `{{agentName}}`) with values specific to your environment.
+> [!IMPORTANT]
+> Replace all placeholder values (e.g., `{{region}}`, `{{accountId}}`, `{{agentName}}`) with values specific to your environment.
 
 ### IAM Policy
 
@@ -34,7 +35,7 @@ You'll need to run the MCP server with the necessary policies and trust permissi
       "Effect": "Allow",
       "Action": ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"],
       "Resource": [
-        "arn:aws:ecr:{{region}}:709825985650:repository/crowdstrike/falcon-mcp"
+        "arn:aws:ecr:us-east-1:709825985650:repository/crowdstrike/falcon-mcp"
       ]
     },
     {
