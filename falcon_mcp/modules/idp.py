@@ -114,20 +114,22 @@ class IdpModule(BaseModule):
         """
         logger.debug("Starting comprehensive entity investigation")
 
-        # Validate that at least one entity identifier is provided
-        if not any([entity_ids, entity_names, email_addresses, ip_addresses]):
-            return {
-                "error": "At least one entity identifier must be provided (entity_ids, entity_names, email_addresses, or ip_addresses)",
-                "investigation_summary": {
-                    "entity_count": 0,
-                    "investigation_types": investigation_types,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "status": "failed"
-                }
-            }
+        # Step 1: Validate inputs
+        validation_error = self._validate_entity_identifiers(
+            entity_ids, entity_names, email_addresses, ip_addresses, investigation_types
+        )
+        if validation_error:
+            return validation_error
 
-        # Step 1: Entity Resolution - Find entities from various identifiers
+        # Step 2: Entity Resolution - Find entities from various identifiers
         logger.debug("Resolving entities from provided identifiers")
+        search_criteria = {
+            "entity_ids": entity_ids,
+            "entity_names": entity_names,
+            "email_addresses": email_addresses,
+            "ip_addresses": ip_addresses
+        }
+
         resolved_entity_ids = self._resolve_entities({
             "entity_ids": entity_ids if entity_ids is not None else None,
             "entity_names": entity_names if entity_names is not None else None,
@@ -138,139 +140,108 @@ class IdpModule(BaseModule):
 
         # Check if entity resolution failed
         if isinstance(resolved_entity_ids, dict) and "error" in resolved_entity_ids:
+            return self._create_error_response(
+                resolved_entity_ids["error"], 0, investigation_types, search_criteria
+            )
+
+        if not resolved_entity_ids:
+            return self._create_error_response(
+                "No entities found matching the provided criteria", 0, investigation_types, search_criteria
+            )
+
+        logger.debug(f"Resolved {len(resolved_entity_ids)} entities for investigation")
+
+        # Step 3: Execute investigations based on requested types
+        investigation_results = {}
+        investigation_params = {
+            "include_associations": include_associations,
+            "include_accounts": include_accounts,
+            "include_incidents": include_incidents,
+            "timeline_start_time": timeline_start_time,
+            "timeline_end_time": timeline_end_time,
+            "timeline_event_types": timeline_event_types,
+            "relationship_depth": relationship_depth,
+            "limit": limit
+        }
+
+        for investigation_type in investigation_types:
+            result = self._execute_single_investigation(investigation_type, resolved_entity_ids, investigation_params)
+            if "error" in result:
+                return self._create_error_response(
+                    f"Investigation failed during {investigation_type}: {result['error']}",
+                    len(resolved_entity_ids), investigation_types
+                )
+            investigation_results[investigation_type] = result
+
+        # Step 4: Synthesize comprehensive response
+        return self._synthesize_investigation_response(resolved_entity_ids, investigation_results, {
+            "investigation_types": investigation_types,
+            "search_criteria": search_criteria
+        })
+
+    # ==========================================
+    # Investigation Helper Methods
+    # ==========================================
+
+    def _validate_entity_identifiers(self, entity_ids, entity_names, email_addresses, ip_addresses, investigation_types):
+        """Validate that at least one entity identifier is provided."""
+        if not any([entity_ids, entity_names, email_addresses, ip_addresses]):
             return {
-                "error": resolved_entity_ids["error"],
+                "error": "At least one entity identifier must be provided (entity_ids, entity_names, email_addresses, or ip_addresses)",
                 "investigation_summary": {
                     "entity_count": 0,
                     "investigation_types": investigation_types,
                     "timestamp": datetime.utcnow().isoformat(),
                     "status": "failed"
-                },
-                "search_criteria": {
-                    "entity_ids": entity_ids,
-                    "entity_names": entity_names,
-                    "email_addresses": email_addresses,
-                    "ip_addresses": ip_addresses
                 }
             }
+        return None
 
-        if not resolved_entity_ids:
-            return {
-                "error": "No entities found matching the provided criteria",
-                "investigation_summary": {
-                    "entity_count": 0,
-                    "investigation_types": investigation_types,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "status": "no_entities_found"
-                },
-                "search_criteria": {
-                    "entity_ids": entity_ids,
-                    "entity_names": entity_names,
-                    "email_addresses": email_addresses,
-                    "ip_addresses": ip_addresses
-                }
+    def _create_error_response(self, error_message, entity_count, investigation_types, search_criteria=None):
+        """Create a standardized error response."""
+        response = {
+            "error": error_message,
+            "investigation_summary": {
+                "entity_count": entity_count,
+                "investigation_types": investigation_types,
+                "timestamp": datetime.utcnow().isoformat(),
+                "status": "failed"
             }
+        }
+        if search_criteria:
+            response["search_criteria"] = search_criteria
+        return response
 
-        logger.debug(f"Resolved {len(resolved_entity_ids)} entities for investigation")
+    def _execute_single_investigation(self, investigation_type, resolved_entity_ids, params):
+        """Execute a single investigation type and return results or error."""
+        logger.debug(f"Executing {investigation_type} investigation")
 
-        # Step 2: Execute investigations based on requested types
-        investigation_results = {}
+        if investigation_type == 'entity_details':
+            return self._get_entity_details_batch(resolved_entity_ids, {
+                "include_associations": params.get("include_associations", True),
+                "include_accounts": params.get("include_accounts", True),
+                "include_incidents": params.get("include_incidents", True)
+            })
+        if investigation_type == 'timeline_analysis':
+            return self._get_entity_timelines_batch(resolved_entity_ids, {
+                "start_time": params.get("timeline_start_time"),
+                "end_time": params.get("timeline_end_time"),
+                "event_types": params.get("timeline_event_types"),
+                "limit": params.get("limit", 50)
+            })
+        if investigation_type == 'relationship_analysis':
+            return self._analyze_relationships_batch(resolved_entity_ids, {
+                "relationship_depth": params.get("relationship_depth", 2),
+                "include_risk_context": True,
+                "limit": params.get("limit", 50)
+            })
+        if investigation_type == 'risk_assessment':
+            return self._assess_risks_batch(resolved_entity_ids, {
+                "include_risk_factors": True
+            })
 
-        for investigation_type in investigation_types:
-            logger.debug(f"Executing {investigation_type} investigation")
-
-            if investigation_type == 'entity_details':
-                result = self._get_entity_details_batch(
-                    resolved_entity_ids, {
-                        "include_associations": include_associations,
-                        "include_accounts": include_accounts,
-                        "include_incidents": include_incidents
-                    }
-                )
-                if "error" in result:
-                    return {
-                        "error": f"Investigation failed during entity_details: {result['error']}",
-                        "investigation_summary": {
-                            "entity_count": len(resolved_entity_ids),
-                            "investigation_types": investigation_types,
-                            "timestamp": datetime.utcnow().isoformat(),
-                            "status": "failed"
-                        }
-                    }
-                investigation_results['entity_details'] = result
-
-            elif investigation_type == 'timeline_analysis':
-                result = self._get_entity_timelines_batch(
-                    resolved_entity_ids, {
-                        "start_time": timeline_start_time if timeline_start_time is not None else None,
-                        "end_time": timeline_end_time if timeline_end_time is not None else None,
-                        "event_types": timeline_event_types if timeline_event_types is not None else None,
-                        "limit": limit
-                    }
-                )
-                if "error" in result:
-                    return {
-                        "error": f"Investigation failed during timeline_analysis: {result['error']}",
-                        "investigation_summary": {
-                            "entity_count": len(resolved_entity_ids),
-                            "investigation_types": investigation_types,
-                            "timestamp": datetime.utcnow().isoformat(),
-                            "status": "failed"
-                        }
-                    }
-                investigation_results['timeline_analysis'] = result
-
-            elif investigation_type == 'relationship_analysis':
-                result = self._analyze_relationships_batch(
-                    resolved_entity_ids, {
-                        "relationship_depth": relationship_depth if relationship_depth is not None else 2,
-                        "include_risk_context": True,
-                        "limit": limit
-                    }
-                )
-                if "error" in result:
-                    return {
-                        "error": f"Investigation failed during relationship_analysis: {result['error']}",
-                        "investigation_summary": {
-                            "entity_count": len(resolved_entity_ids),
-                            "investigation_types": investigation_types,
-                            "timestamp": datetime.utcnow().isoformat(),
-                            "status": "failed"
-                        }
-                    }
-                investigation_results['relationship_analysis'] = result
-
-            elif investigation_type == 'risk_assessment':
-                result = self._assess_risks_batch(
-                    resolved_entity_ids, {
-                        "include_risk_factors": True
-                    }
-                )
-                if "error" in result:
-                    return {
-                        "error": f"Investigation failed during risk_assessment: {result['error']}",
-                        "investigation_summary": {
-                            "entity_count": len(resolved_entity_ids),
-                            "investigation_types": investigation_types,
-                            "timestamp": datetime.utcnow().isoformat(),
-                            "status": "failed"
-                        }
-                    }
-                investigation_results['risk_assessment'] = result
-
-            else:
-                logger.warning(f"Unknown investigation type: {investigation_type}")
-
-        # Step 3: Synthesize comprehensive response
-        return self._synthesize_investigation_response(resolved_entity_ids, investigation_results, {
-            "investigation_types": investigation_types,
-            "search_criteria": {
-                "entity_ids": entity_ids,
-                "entity_names": entity_names,
-                "email_addresses": email_addresses,
-                "ip_addresses": ip_addresses
-            }
-        })
+        logger.warning(f"Unknown investigation type: {investigation_type}")
+        return {"error": f"Unknown investigation type: {investigation_type}"}
 
     # ==========================================
     # GraphQL Query Building Helper Methods
