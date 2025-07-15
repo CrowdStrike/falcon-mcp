@@ -28,6 +28,7 @@ class BaseModule(ABC):
         """
         self.client = client
         self.tools = []  # List to track registered tools
+        self.resources = [] # List to track registered resources
 
     @abstractmethod
     def register_tools(self, server: FastMCP) -> None:
@@ -65,7 +66,10 @@ class BaseModule(ABC):
             resource: Resource object
         """
         server.add_resource(resource=resource)
-        logger.debug("Added resource: %s", resource.uri)
+
+        resource_uri = resource.uri
+        self.resources.append(resource_uri)
+        logger.debug("Added resource: %s", resource_uri)
 
     def _base_get_by_ids(
         self,
