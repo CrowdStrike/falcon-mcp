@@ -227,11 +227,9 @@ class TestFalconClient(unittest.TestCase):
         mock_version.side_effect = version_side_effect
         mock_apiharness.return_value = MagicMock()
 
-        custom_user_agent = "CustomApp/1.0"
-
         # Create client with custom user agent
-        client = FalconClient(custom_user_agent=custom_user_agent)
-        user_agent = client.get_user_agent(custom_user_agent)
+        client = FalconClient(custom_user_agent="CustomApp/1.0")
+        user_agent = client.get_user_agent()
 
         # Verify user agent format and content
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"

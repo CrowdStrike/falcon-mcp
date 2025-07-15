@@ -51,7 +51,7 @@ class FalconClient:
             client_secret=self.client_secret,
             base_url=self.base_url,
             debug=debug,
-            user_agent=self.get_user_agent(self.custom_user_agent),
+            user_agent=self.get_user_agent(),
         )
 
         logger.debug("Initialized Falcon client with base URL: %s", self.base_url)
@@ -84,19 +84,14 @@ class FalconClient:
         """
         return self.client.command(operation, **kwargs)
 
-    def get_user_agent(self, custom_user_agent: Optional[str] = None) -> str:
+    def get_user_agent(self) -> str:
         """Get the user agent string for API requests.
 
         Returns:
             str: User agent string in the format "falcon-mcp/VERSION (falconpy/VERSION; Python/VERSION; Platform/VERSION; custom_user_agent)"
         """
         # Get falcon-mcp version
-        try:
-            falcon_mcp_version = version("falcon-mcp")
-        except PackageNotFoundError:
-            # Fallback for development/uninstalled package
-            falcon_mcp_version = "0.1.0"
-            logger.debug("falcon-mcp package not found, using fallback version: %s", falcon_mcp_version)
+        falcon_mcp_version = get_version()
 
         # Get Python version
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
@@ -115,8 +110,8 @@ class FalconClient:
         base_user_agent = f"falconpy/{falconpy_version}; Python/{python_version}; {platform_info}"
 
         # Append custom user agent if provided
-        if custom_user_agent:
-            base_user_agent = f"{base_user_agent}; {custom_user_agent.strip()}"
+        if self.custom_user_agent:
+            base_user_agent = f"{base_user_agent}; {self.custom_user_agent.strip()}"
 
         return f"falcon-mcp/{falcon_mcp_version} ({base_user_agent})"
 
@@ -130,3 +125,16 @@ class FalconClient:
             Dict[str, str]: Authentication headers including the bearer token
         """
         return self.client.auth_headers
+
+def get_version() -> str:
+    """Get falcon-mcp version
+
+    Returns:
+        str: The version
+    """
+    try:
+        return version("falcon-mcp")
+    except PackageNotFoundError:
+        falcon_mcp_version = "0.1.0"
+        logger.debug("falcon-mcp package not found, using fallback version: %s", falcon_mcp_version)
+        return falcon_mcp_version
