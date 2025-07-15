@@ -28,9 +28,9 @@ class TestApiScopes(unittest.TestCase):
     def test_get_required_scopes(self):
         """Test get_required_scopes function."""
         # Test with known operations
-        self.assertEqual(get_required_scopes("GetQueriesAlertsV2"), ["alerts:read"])
-        self.assertEqual(get_required_scopes("PostEntitiesAlertsV2"), ["alerts:read"])
-        self.assertEqual(get_required_scopes("QueryIncidents"), ["incidents:read"])
+        self.assertEqual(get_required_scopes("GetQueriesAlertsV2"), ["Alerts:read"])
+        self.assertEqual(get_required_scopes("PostEntitiesAlertsV2"), ["Alerts:read"])
+        self.assertEqual(get_required_scopes("QueryIncidents"), ["Incidents:read"])
 
         # Test with unknown operation
         self.assertEqual(get_required_scopes("UnknownOperation"), [])
