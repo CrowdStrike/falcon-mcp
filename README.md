@@ -31,6 +31,7 @@
   - [Running Examples](#running-examples)
 - [Docker Usage](#docker-usage)
 - [Editor/Assitant Integration](#editorassitant-integration)
+- [Additional Deployment Options](#additional-deployment-options)
 - [Contributing](#contributing)
   - [Getting Started for Contributors](#getting-started-for-contributors)
   - [Running Tests](#running-tests)
@@ -421,6 +422,12 @@ You can integrate the Falcon MCP server with your editor or AI assistant in a fe
   ]
 }
 ```
+
+## Additional Deployment Options
+
+### Amazon Bedrock AgentCore
+
+To deploy the MCP Server as a tool in Amazon Bedrock AgentCore, please refer to the [following document](./docs/deployment/amazon_bedrock_agentcore.md).
 
 ## Contributing
 
