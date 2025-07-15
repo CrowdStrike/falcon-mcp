@@ -176,10 +176,9 @@ class TestFalconClient(unittest.TestCase):
         def version_side_effect(package_name):
             if package_name == "falcon-mcp":
                 return "1.2.3"
-            elif package_name == "crowdstrike-falconpy":
+            if package_name == "crowdstrike-falconpy":
                 return "1.3.4"
-            else:
-                raise Exception(f"Unexpected package: {package_name}")
+            raise ValueError(f"Unexpected package: {package_name}")
 
         mock_version.side_effect = version_side_effect
         mock_apiharness.return_value = MagicMock()
