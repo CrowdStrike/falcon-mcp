@@ -58,6 +58,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
 | **Hosts** | `Hosts:read` | Manage and query host/device information |
+| **Cloud** | `Falcon Container Image:read` | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
 | **Spotlight** | `Vulnerabilities:read` | Manage and analyze vulnerability data and security assessments |
 
 ## Available Modules, Tools & Resources
@@ -186,6 +187,25 @@ Provides tools for accessing and managing CrowdStrike Spotlight vulnerabilities:
 
    pip install -e .
    ```
+
+### Cloud Module
+
+**API Scopes Required**:
+
+- `Falcon Container Image:read`
+
+Provides tools for accessing and analyzing CrowdStrike Cloud resources:
+
+- `falcon_search_kubernetes_containers`: Search for containers from CrowdStrike Kubernetes & Containers inventory
+- `falcon_count_kubernetes_containers`: Count for containers by filter criteria from CrowdStrike Kubernetes & Containers inventory
+- `falcon_search_images_vulnerabilities`: Search for images vulnerabilities from CrowdStrike Image Assessments
+
+**Resources**:
+
+- `falcon://cloud/kubernetes-containers/fql-guide`: Comprehensive FQL documentation and examples for kubernetes containers searches
+- `falcon://cloud/images-vulnerabilities/fql-guide`: Comprehensive FQL documentation and examples for images vulnerabilities searches
+
+**Use Cases**: Manage kubernetes containers inventory, container images vulnerabilities analysis
 
 ### Environment Configuration
 
