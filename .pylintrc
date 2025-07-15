@@ -63,7 +63,13 @@ disable=
     use-symbolic-message-instead,
     # Disable line-too-long for now due to docstrings and such
     line-too-long,
-    duplicate-code
+    duplicate-code,
+    # since we use filter for apis this will flag
+    redefined-builtin,
+    # common safe to ignore rules below
+    too-many-arguments,
+    too-many-locals,
+    logging-fstring-interpolation
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
