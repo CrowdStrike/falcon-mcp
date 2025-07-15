@@ -1,7 +1,6 @@
 """
 E2E tests for the Identity Protection (IDP) module.
 """
-import json
 import unittest
 
 import pytest
