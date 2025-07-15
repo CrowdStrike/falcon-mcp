@@ -130,10 +130,10 @@ class IdpModule(BaseModule):
         # Step 1: Entity Resolution - Find entities from various identifiers
         logger.debug("Resolving entities from provided identifiers")
         resolved_entity_ids = self._resolve_entities({
-            "entity_ids": entity_ids,
-            "entity_names": entity_names,
-            "email_addresses": email_addresses,
-            "ip_addresses": ip_addresses,
+            "entity_ids": entity_ids if entity_ids is not None else None,
+            "entity_names": entity_names if entity_names is not None else None,
+            "email_addresses": email_addresses if email_addresses is not None else None,
+            "ip_addresses": ip_addresses if ip_addresses is not None else None,
             "limit": limit
         })
 
@@ -173,16 +173,16 @@ class IdpModule(BaseModule):
             elif investigation_type == 'timeline_analysis':
                 investigation_results['timeline_analysis'] = self._get_entity_timelines_batch(
                     resolved_entity_ids, {
-                        "start_time": timeline_start_time,
-                        "end_time": timeline_end_time,
-                        "event_types": timeline_event_types,
+                        "start_time": timeline_start_time if timeline_start_time is not None else None,
+                        "end_time": timeline_end_time if timeline_end_time is not None else None,
+                        "event_types": timeline_event_types if timeline_event_types is not None else None,
                         "limit": limit
                     }
                 )
             elif investigation_type == 'relationship_analysis':
                 investigation_results['relationship_analysis'] = self._analyze_relationships_batch(
                     resolved_entity_ids, {
-                        "relationship_depth": relationship_depth,
+                        "relationship_depth": relationship_depth if relationship_depth is not None else 2,
                         "include_risk_context": True,
                         "limit": limit
                     }
@@ -227,11 +227,11 @@ class IdpModule(BaseModule):
             "entityId",
             "primaryDisplayName",
             "secondaryDisplayName",
+            "type",
             "riskScore",
             "riskScoreSeverity"
         ]
 
-        # Only add complex fields if specifically requested and use minimal structure
         if include_risk_factors:
             fields.append("""
                 riskFactors {
@@ -240,8 +240,81 @@ class IdpModule(BaseModule):
                 }
             """)
 
-        # Skip problematic fields for now to get basic functionality working
-        # These can be added back once we understand the correct schema
+        if include_associations:
+            fields.append("""
+                associations {
+                    bindingType
+                    ... on EntityAssociation {
+                        entity {
+                            entityId
+                            primaryDisplayName
+                            secondaryDisplayName
+                            type
+                        }
+                    }
+                    ... on LocalAdminLocalUserAssociation {
+                        accountName
+                    }
+                    ... on LocalAdminDomainEntityAssociation {
+                        entityType
+                        entity {
+                            entityId
+                            primaryDisplayName
+                            secondaryDisplayName
+                        }
+                    }
+                }
+            """)
+
+        if include_incidents:
+            fields.append("""
+                openIncidents(first: 10) {
+                    nodes {
+                        type
+                        startTime
+                        endTime
+                        compromisedEntities {
+                            entityId
+                            primaryDisplayName
+                        }
+                    }
+                }
+            """)
+
+        if include_accounts:
+            fields.append("""
+                accounts {
+                    ... on ActiveDirectoryAccountDescriptor {
+                        domain
+                        samAccountName
+                        ou
+                        servicePrincipalNames
+                        passwordAttributes {
+                            lastChange
+                            strength
+                        }
+                        expirationTime
+                    }
+                    ... on SsoUserAccountDescriptor {
+                        dataSource
+                        mostRecentActivity
+                        title
+                        creationTime
+                        passwordAttributes {
+                            lastChange
+                        }
+                    }
+                    ... on AzureCloudServiceAdapterDescriptor {
+                        registeredTenantType
+                        appOwnerOrganizationId
+                        publisherDomain
+                        signInAudience
+                    }
+                    ... on CloudServiceAdapterDescriptor {
+                        dataSourceParticipantIdentifier
+                    }
+                }
+            """)
 
         fields_string = "\n".join(fields)
 
@@ -266,11 +339,11 @@ class IdpModule(BaseModule):
         """Build GraphQL query for entity timeline."""
         filters = [f'sourceEntityQuery: {{entityIds: ["{entity_id}"]}}']
 
-        if start_time:
+        if start_time and isinstance(start_time, str):
             filters.append(f'startTime: "{start_time}"')
-        if end_time:
+        if end_time and isinstance(end_time, str):
             filters.append(f'endTime: "{end_time}"')
-        if event_types:
+        if event_types and isinstance(event_types, list):
             # Format event types as unquoted GraphQL enums
             categories_str = "[" + ", ".join(event_types) + "]"
             filters.append(f'categories: {categories_str}')
@@ -377,22 +450,57 @@ class IdpModule(BaseModule):
                 }
             """
 
+        # Build nested association fields based on relationship_depth
+        def build_association_fields(depth: int) -> str:
+            if depth <= 0:
+                return ""
+
+            nested_associations = ""
+            if depth > 1:
+                nested_associations = build_association_fields(depth - 1)
+
+            return f"""
+                associations {{
+                    bindingType
+                    ... on EntityAssociation {{
+                        entity {{
+                            entityId
+                            primaryDisplayName
+                            secondaryDisplayName
+                            type
+                            {risk_fields}
+                            {nested_associations}
+                        }}
+                    }}
+                    ... on LocalAdminLocalUserAssociation {{
+                        accountName
+                    }}
+                    ... on LocalAdminDomainEntityAssociation {{
+                        entityType
+                        entity {{
+                            entityId
+                            primaryDisplayName
+                            secondaryDisplayName
+                            type
+                            {risk_fields}
+                            {nested_associations}
+                        }}
+                    }}
+                }}
+            """
+
+        association_fields = build_association_fields(relationship_depth)
+
         return f"""
         query {{
             entities(entityIds: ["{entity_id}"], first: {limit}) {{
                 nodes {{
                     entityId
                     primaryDisplayName
-                    associations {{
-                        bindingType
-                        ... on EntityAssociation {{
-                            entity {{
-                                entityId
-                                primaryDisplayName
-                                {risk_fields}
-                            }}
-                        }}
-                    }}
+                    secondaryDisplayName
+                    type
+                    {risk_fields}
+                    {association_fields}
                 }}
             }}
         }}
@@ -440,12 +548,14 @@ class IdpModule(BaseModule):
         resolved_ids = []
 
         # Direct entity IDs - no resolution needed
-        if identifiers.get("entity_ids"):
-            resolved_ids.extend(identifiers["entity_ids"])
+        entity_ids = identifiers.get("entity_ids")
+        if entity_ids and isinstance(entity_ids, list):
+            resolved_ids.extend(entity_ids)
 
         # Resolve entity names to IDs
-        if identifiers.get("entity_names"):
-            for name in identifiers["entity_names"]:
+        entity_names = identifiers.get("entity_names")
+        if entity_names and isinstance(entity_names, list):
+            for name in entity_names:
                 query = f'''
                 query {{
                     entities(
@@ -466,8 +576,9 @@ class IdpModule(BaseModule):
                     resolved_ids.extend([entity["entityId"] for entity in entities])
 
         # Resolve email addresses to entity IDs
-        if identifiers.get("email_addresses"):
-            for email in identifiers["email_addresses"]:
+        email_addresses = identifiers.get("email_addresses")
+        if email_addresses and isinstance(email_addresses, list):
+            for email in email_addresses:
                 query = f'''
                 query {{
                     entities(
@@ -490,8 +601,9 @@ class IdpModule(BaseModule):
                     resolved_ids.extend([entity["entityId"] for entity in entities])
 
         # Resolve IP addresses/endpoints to entity IDs
-        if identifiers.get("ip_addresses"):
-            for ip in identifiers["ip_addresses"]:
+        ip_addresses = identifiers.get("ip_addresses")
+        if ip_addresses and isinstance(ip_addresses, list):
+            for ip in ip_addresses:
                 query = f'''
                 query {{
                     entities(
@@ -593,9 +705,14 @@ class IdpModule(BaseModule):
         relationship_results = []
 
         for entity_id in entity_ids:
+            # Handle FieldInfo objects - extract the actual value
+            relationship_depth = options.get("relationship_depth", 2)
+            if hasattr(relationship_depth, 'default'):
+                relationship_depth = relationship_depth.default
+
             graphql_query = self._build_relationship_analysis_query(
                 entity_id=entity_id,
-                relationship_depth=options.get("relationship_depth", 2),
+                relationship_depth=relationship_depth,
                 include_risk_context=options.get("include_risk_context", True),
                 limit=options.get("limit", 50)
             )
