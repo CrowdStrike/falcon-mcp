@@ -14,30 +14,30 @@ logger = get_logger(__name__)
 # This can be expanded as more modules and operations are added
 API_SCOPE_REQUIREMENTS = {
     # Alerts operations (migrated from detections)
-    "GetQueriesAlertsV2": ["alerts:read"],
-    "PostEntitiesAlertsV2": ["alerts:read"],
+    "GetQueriesAlertsV2": ["Alerts:read"],
+    "PostEntitiesAlertsV2": ["Alerts:read"],
     # Hosts operations
-    "QueryDevicesByFilter": ["hosts:read"],
-    "PostDeviceDetailsV2": ["hosts:read"],
+    "QueryDevicesByFilter": ["Hosts:read"],
+    "PostDeviceDetailsV2": ["Hosts:read"],
     # Incidents operations
-    "QueryIncidents": ["incidents:read"],
-    "GetIncidentDetails": ["incidents:read"],
-    "CrowdScore": ["incidents:read"],
-    "GetIncidents": ["incidents:read"],
-    "GetBehaviors": ["incidents:read"],
-    "QueryBehaviors": ["incidents:read"],
+    "QueryIncidents": ["Incidents:read"],
+    "GetIncidentDetails": ["Incidents:read"],
+    "CrowdScore": ["Incidents:read"],
+    "GetIncidents": ["Incidents:read"],
+    "GetBehaviors": ["Incidents:read"],
+    "QueryBehaviors": ["Incidents:read"],
     # Intel operations
-    "QueryIntelActorEntities": ["actors-falcon-intelligence:read"],
-    "QueryIntelIndicatorEntities": ["indicators-falcon-intelligence:read"],
-    "QueryIntelReportEntities": ["reports-falcon-intelligence:read"],
+    "QueryIntelActorEntities": ["Actors (Falcon Intelligence):read"],
+    "QueryIntelIndicatorEntities": ["Indicators (Falcon Intelligence):read"],
+    "QueryIntelReportEntities": ["Reports (Falcon Intelligence):read"],
     # Spotlight operations
-    "combinedQueryVulnerabilities": ["spotlight-vulnerabilities:read"],
+    "combinedQueryVulnerabilities": ["Vulnerabilities:read"],
     # Cloud operations
-    "ReadContainerCombined": ["falcon-container-image:read"],
-    "ReadContainerCount": ["falcon-container-image:read"],
-    "ReadCombinedVulnerabilities": ["falcon-container-image:read"],
+    "ReadContainerCombined": ["Falcon Container Image:read"],
+    "ReadContainerCount": ["Falcon Container Image:read"],
+    "ReadCombinedVulnerabilities": ["Falcon Container Image:read"],
     # Identity Protection operations
-    "api_preempt_proxy_post_graphql": ["identity-protection-graphql:read"],
+    "api_preempt_proxy_post_graphql": ["Identity Protection GraphQL:read"],
     # Add more mappings as needed
 }
 
