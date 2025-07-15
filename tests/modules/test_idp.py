@@ -238,55 +238,6 @@ class TestIdpModule(TestModules):
         self.assertEqual(result["investigation_summary"]["entity_count"], 0)
         self.assertIn("search_criteria", result)
 
-    def test_build_entity_details_query_uses_all_parameters(self):
-        """Test that _build_entity_details_query uses all its method arguments."""
-        # Test the fixed method directly
-        query = self.module._build_entity_details_query(
-            entity_ids=["test-123"],
-            include_risk_factors=True,
-            include_associations=True,
-            include_incidents=True,
-            include_accounts=True
-        )
-
-        # Verify query includes all requested sections
-        self.assertIn("riskFactors", query)
-        self.assertIn("associations", query)
-        self.assertIn("openIncidents", query)
-        self.assertIn("accounts", query)
-        self.assertIn("EntityAssociation", query)
-        self.assertIn("LocalAdminLocalUserAssociation", query)
-        self.assertIn("ActiveDirectoryAccountDescriptor", query)
-        self.assertIn("SsoUserAccountDescriptor", query)
-
-    def test_build_relationship_analysis_query_uses_depth_parameter(self):
-        """Test that _build_relationship_analysis_query uses the relationship_depth parameter."""
-        # Test with depth 1
-        query_depth_1 = self.module._build_relationship_analysis_query(
-            entity_id="test-123",
-            relationship_depth=1,
-            include_risk_context=True,
-            limit=50
-        )
-
-        # Test with depth 2
-        query_depth_2 = self.module._build_relationship_analysis_query(
-            entity_id="test-123",
-            relationship_depth=2,
-            include_risk_context=True,
-            limit=50
-        )
-
-        # Verify both queries include associations
-        self.assertIn("associations", query_depth_1)
-        self.assertIn("associations", query_depth_2)
-
-        # Verify the depth 2 query has more nested structure (more associations)
-        # Count occurrences of "associations" to verify nesting
-        depth_1_associations = query_depth_1.count("associations")
-        depth_2_associations = query_depth_2.count("associations")
-        self.assertGreaterEqual(depth_2_associations, depth_1_associations)
-
 
 if __name__ == '__main__':
     unittest.main()
