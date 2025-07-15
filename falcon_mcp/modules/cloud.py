@@ -7,9 +7,9 @@ Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets.
 
 from typing import Dict, List, Optional, Any
 from textwrap import dedent
-
+from mcp.server.fastmcp.resources import TextResource
 from mcp.server import FastMCP
-from pydantic import Field
+from pydantic import Field, AnyUrl
 
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.errors import handle_api_response
@@ -17,8 +17,8 @@ from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 
 from falcon_mcp.resources.cloud import (
-    SEARCH_KUBERNETES_CONTAINERS_FQL_DOCUMENTATION,
-    SEARCH_IMAGES_VULNERABILITIES_FQL_DOCUMENTATION,
+    KUBERNETES_CONTAINERS_FQL_DOCUMENTATION,
+    IMAGES_VULNERABILITIES_FQL_DOCUMENTATION,
 )
 
 logger = get_logger(__name__)
@@ -36,22 +36,15 @@ class CloudModule(BaseModule):
         # Register tools
         self._add_tool(
             server,
-            self.kubernetes_containers_fql_filter_guide,
-            name="kubernetes_containers_fql_filter_guide",
-        )
-
-        self._add_tool(
-            server,
             self.search_kubernetes_containers,
             name="search_kubernetes_containers",
         )
 
-        self._add_tool(server, self.count_kubernetes_containers, name="count_kubernetes_containers")
-
+        # fmt: off
         self._add_tool(
             server,
-            self.images_vulnerabilities_fql_filter_guide,
-            name="images_vulnerabilities_fql_filter_guide",
+            self.count_kubernetes_containers,
+            name="count_kubernetes_containers"
         )
 
         self._add_tool(
@@ -60,11 +53,33 @@ class CloudModule(BaseModule):
             name="search_images_vulnerabilities",
         )
 
+    def register_resources(self, server: FastMCP) -> None:
+        """Register resources with the MCP server.
+        Args:
+            server: MCP server instance
+        """
+        kubernetes_containers_fql_resource = TextResource(
+            uri=AnyUrl("falcon://cloud/kubernetes-containers/fql-guide"),
+            name="falcon_kubernetes_containers_fql_filter_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_kubernetes_containers` and `falcon_count_kubernetes_containers` tools.",
+            text=KUBERNETES_CONTAINERS_FQL_DOCUMENTATION,
+        )
+
+        images_vulnerabilities_fql_resource = TextResource(
+            uri=AnyUrl("falcon://cloud/images-vulnerabilities/fql-guide"),
+            name="falcon_images_vulnerabilities_fql_filter_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_images_vulnerabilities` tool.",
+            text=IMAGES_VULNERABILITIES_FQL_DOCUMENTATION,
+        )
+
+        self._add_resource(server, kubernetes_containers_fql_resource)
+        self._add_resource(server, images_vulnerabilities_fql_resource)
+
     def search_kubernetes_containers(
         self,
         filter: Optional[str] = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_kubernetes_containers_fql_filter_guide` tool when building this filter parameter.",
+            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/kubernetes-containers/fql-guide` resource when building this filter parameter.",
             examples={"cloud:'AWS'", "cluster_name:'prod'"},
         ),
         limit: Optional[int] = Field(
@@ -106,8 +121,8 @@ class CloudModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for kubernetes containers in your CrowdStrike Kubernetes & Containers Inventory
 
-        IMPORTANT: You must use the tool `falcon_kubernetes_containers_fql_filter_guide` whenever you want to use the `filter` parameter.
-        This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_kubernetes_containers` tool.
+        IMPORTANT: You must use the `falcon://cloud/kubernetes-containers/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_kubernetes_containers` tool.
 
         Returns:
             List of kubernetes containers
@@ -141,14 +156,14 @@ class CloudModule(BaseModule):
         self,
         filter: Optional[str] = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_kubernetes_containers_fql_filter_guide` tool when building this filter parameter.",
+            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/kubernetes-containers/fql-guide` resource when building this filter parameter.",
             examples={"cloud:'Azure'", "container_name:'service'"},
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> int:
         """Count kubernetes containers in your CrowdStrike Kubernetes & Containers Inventory
 
-        IMPORTANT: You must use the tool `falcon_kubernetes_containers_fql_filter_guide` whenever you want to use the `filter` parameter.
-        This tool contains the guide on how to build the FQL `filter` parameter for `falcon_count_kubernetes_containers` tool.
+        IMPORTANT: You must use the `falcon://cloud/kubernetes-containers/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for `falcon_count_kubernetes_containers` tool.
 
         Returns:
             List with a single count result
@@ -175,20 +190,11 @@ class CloudModule(BaseModule):
             default_result=[],
         )
 
-    def kubernetes_containers_fql_filter_guide(self) -> str:
-        """
-        Returns the guide for the `filter` for kubernetes containers tools.
-
-        IMPORTANT: Before running `falcon_search_kubernetes_containers` or `falcon_count_kubernetes_containers`,
-        always call this tool to get information about how to build the FQL for the filter.
-        """
-        return SEARCH_KUBERNETES_CONTAINERS_FQL_DOCUMENTATION
-
     def search_images_vulnerabilities(
         self,
         filter: Optional[str] = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon_images_vulnerabilities_fql_filter_guide` tool when building this filter parameter.",
+            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/images-vulnerabilities/fql-guide` resource when building this filter parameter.",
             examples={"cve_id:*'*2025*'", "cvss_score:>5"},
         ),
         limit: Optional[int] = Field(
@@ -224,8 +230,8 @@ class CloudModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for images vulnerabilities in your CrowdStrike Image Assessments
 
-        IMPORTANT: You must use the tool `falcon_images_vulnerabilities_fql_filter_guide` whenever you want to use the `filter` parameter.
-        This tool contains the guide on how to build the FQL `filter` parameter for `falcon_search_images_vulnerabilities` tool.
+        IMPORTANT: You must use the `falcon://cloud/images-vulnerabilities/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_images_vulnerabilities` tool.
 
         Returns:
             List of images vulnerabilities
@@ -254,12 +260,3 @@ class CloudModule(BaseModule):
             error_message="Failed to perform operation",
             default_result=[],
         )
-
-    def images_vulnerabilities_fql_filter_guide(self) -> str:
-        """
-        Returns the guide for the `filter` for images vulnerabilities tools.
-
-        IMPORTANT: Before running `falcon_search_images_vulnerabilities`,
-        always call this tool to get information about how to build the FQL for the filter.
-        """
-        return SEARCH_IMAGES_VULNERABILITIES_FQL_DOCUMENTATION
