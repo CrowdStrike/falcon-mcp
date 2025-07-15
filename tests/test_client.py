@@ -208,8 +208,8 @@ class TestFalconClient(unittest.TestCase):
     @patch('falcon_mcp.client.version')
     @patch('falcon_mcp.client.os.environ.get')
     @patch('falcon_mcp.client.APIHarnessV2')
-    def test_get_user_agent_with_custom_user_agent(self, mock_apiharness, mock_environ_get, mock_version):
-        """Test get_user_agent method with a custom user agent."""
+    def test_get_user_agent_with_user_agent_comment(self, mock_apiharness, mock_environ_get, mock_version):
+        """Test get_user_agent method with a user agent comment."""
         # Setup mock environment variables
         mock_environ_get.side_effect = lambda key, default=None: {
             "FALCON_CLIENT_ID": "test-client-id",
@@ -227,14 +227,14 @@ class TestFalconClient(unittest.TestCase):
         mock_version.side_effect = version_side_effect
         mock_apiharness.return_value = MagicMock()
 
-        # Create client with custom user agent
-        client = FalconClient(custom_user_agent="CustomApp/1.0")
+        # Create client with user agent comment
+        client = FalconClient(user_agent_comment="CustomApp/1.0")
         user_agent = client.get_user_agent()
 
-        # Verify user agent format and content
+        # Verify user agent format and content (RFC-compliant format)
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
         platform_info = f"{platform.system()}/{platform.release()}"
-        expected = f"falcon-mcp/1.2.3 (falconpy/1.3.4; Python/{python_version}; {platform_info}; CustomApp/1.0)"
+        expected = f"falcon-mcp/1.2.3 (CustomApp/1.0; falconpy/1.3.4; Python/{python_version}; {platform_info})"
 
         self.assertEqual(user_agent, expected)
 
