@@ -2,6 +2,8 @@
 Tests for the Falcon API client.
 """
 import unittest
+import sys
+import platform
 from unittest.mock import MagicMock, patch
 
 from falcon_mcp.client import FalconClient
@@ -158,6 +160,51 @@ class TestFalconClient(unittest.TestCase):
         # Verify response is correct
         self.assertEqual(response["status_code"], 200)
         self.assertEqual(response["body"]["resources"][0]["id"], "test")
+
+    @patch('falcon_mcp.client.version')
+    @patch('falcon_mcp.client.os.environ.get')
+    @patch('falcon_mcp.client.APIHarnessV2')
+    def test_get_user_agent_best_case_scenario(self, mock_apiharness, mock_environ_get, mock_version):
+        """Test get_user_agent method in the best case scenario with all packages installed."""
+        # Setup mock environment variables
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret"
+        }.get(key, default)
+
+        # Setup mock version calls for best case scenario
+        def version_side_effect(package_name):
+            if package_name == "falcon-mcp":
+                return "1.2.3"
+            elif package_name == "crowdstrike-falconpy":
+                return "1.3.4"
+            else:
+                raise Exception(f"Unexpected package: {package_name}")
+
+        mock_version.side_effect = version_side_effect
+        mock_apiharness.return_value = MagicMock()
+
+        # Create client and get user agent
+        client = FalconClient()
+        user_agent = client.get_user_agent()
+
+        # Verify user agent format and content
+        python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        platform_info = f"{platform.system()}/{platform.release()}"
+        expected = f"falcon-mcp/1.2.3 (falconpy/1.3.4; Python/{python_version}; {platform_info})"
+
+        self.assertEqual(user_agent, expected)
+
+        # Verify user agent is properly used in APIHarnessV2 initialization
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["user_agent"], expected)
+
+        # Verify format components
+        self.assertTrue(user_agent.startswith("falcon-mcp/1.2.3"))
+        self.assertIn(f"Python/{python_version}", user_agent)
+        self.assertIn(platform_info, user_agent)
+        self.assertIn("falconpy/1.3.4", user_agent)
 
 
 if __name__ == '__main__':

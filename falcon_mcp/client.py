@@ -4,7 +4,10 @@ Falcon API Client for MCP Server
 This module provides the Falcon API client and authentication utilities for the Falcon MCP server.
 """
 import os
+import sys
+import platform
 from typing import Dict, Optional, Any
+from importlib.metadata import version, PackageNotFoundError
 
 # Import the APIHarnessV2 from FalconPy
 from falconpy import APIHarnessV2
@@ -45,7 +48,8 @@ class FalconClient:
             client_id=self.client_id,
             client_secret=self.client_secret,
             base_url=self.base_url,
-            debug=debug
+            debug=debug,
+            user_agent=self.get_user_agent(),
         )
 
         logger.debug("Initialized Falcon client with base URL: %s", self.base_url)
@@ -77,6 +81,35 @@ class FalconClient:
             Dict[str, Any]: The API response
         """
         return self.client.command(operation, **kwargs)
+
+    def get_user_agent(self) -> str:
+        """Get the user agent string for API requests.
+
+        Returns:
+            str: User agent string in the format "falcon-mcp/VERSION (falconpy/VERSION; Python/VERSION; Platform/VERSION)"
+        """
+        # Get falcon-mcp version
+        try:
+            falcon_mcp_version = version("falcon-mcp")
+        except PackageNotFoundError:
+            # Fallback for development/uninstalled package
+            falcon_mcp_version = "0.1.0"
+            logger.debug("falcon-mcp package not found, using fallback version: %s", falcon_mcp_version)
+
+        # Get Python version
+        python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+
+        # Get platform information
+        platform_info = f"{platform.system()}/{platform.release()}"
+
+        # Get FalconPy version
+        try:
+            falconpy_version = version("crowdstrike-falconpy")
+        except PackageNotFoundError:
+            falconpy_version = "unknown"
+            logger.debug("crowdstrike-falconpy package version not found")
+
+        return f"falcon-mcp/{falcon_mcp_version} (falconpy/{falconpy_version}; Python/{python_version}; {platform_info})"
 
     def get_headers(self) -> Dict[str, str]:
         """Get authentication headers for API requests.
