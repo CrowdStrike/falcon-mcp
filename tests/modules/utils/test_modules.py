@@ -38,10 +38,31 @@ class TestModules(unittest.TestCase):
 
         # Get the tool names that were registered
         registered_tools = [
-            call.kwargs['name']
-            for call in self.mock_server.add_tool.call_args_list
+            call.kwargs["name"] for call in self.mock_server.add_tool.call_args_list
         ]
 
         # Verify that all expected tools were registered
         for tool in expected_tools:
             self.assertIn(tool, registered_tools)
+
+    def assert_resources_registered(self, expected_resources):
+        """
+        Helper method to verify that a module correctly registers its resources.
+
+        Args:
+            expected_tools: List of resources names that should be registered
+        """
+        # Call register_tools
+        self.module.register_resources(self.mock_server)
+
+        # Verify that add_resource was called for each resource
+        self.assertEqual(self.mock_server.add_resource.call_count, len(expected_resources))
+
+        # Get the tool names that were registered
+        registered_resourceds = [
+            call.kwargs["resource"].name for call in self.mock_server.add_resource.call_args_list
+        ]
+
+        # Verify that all expected tools were registered
+        for tool in expected_resources:
+            self.assertIn(tool, registered_resourceds)

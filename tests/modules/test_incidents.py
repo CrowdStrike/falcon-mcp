@@ -1,6 +1,7 @@
 """
 Tests for the Incidents module.
 """
+
 import unittest
 
 from falcon_mcp.modules.incidents import IncidentsModule
@@ -25,6 +26,15 @@ class TestIncidentsModule(TestModules):
         ]
         self.assert_tools_registered(expected_tools)
 
+    def test_register_resources(self):
+        """Test registering resources with the server."""
+        expected_resources = [
+            "falcon_show_crowd_score_fql_guide",
+            "falcon_search_incidents_fql_guide",
+            "falcon_search_behaviors_fql_guide",
+        ]
+        self.assert_resources_registered(expected_resources)
+
     def test_crowd_score(self):
         """Test querying CrowdScore with successful response."""
         # Setup mock response with sample scores
@@ -33,14 +43,16 @@ class TestIncidentsModule(TestModules):
             "body": {
                 "resources": [
                     {"id": "score1", "score": 50, "adjusted_score": 60},
-                    {"id": "score2", "score": 70, "adjusted_score": 80}
+                    {"id": "score2", "score": 70, "adjusted_score": 80},
                 ]
-            }
+            },
         }
         self.mock_client.command.return_value = mock_response
 
         # Call crowd_score with test parameters
-        result = self.module.show_crowd_score(filter="test filter", limit=100, offset=0, sort="modified_timestamp.desc")
+        result = self.module.show_crowd_score(
+            filter="test filter", limit=100, offset=0, sort="modified_timestamp.desc"
+        )
 
         # Verify client command was called correctly
         self.mock_client.command.assert_called_once_with(
@@ -49,8 +61,8 @@ class TestIncidentsModule(TestModules):
                 "filter": "test filter",
                 "limit": 100,
                 "offset": 0,
-                "sort": "modified_timestamp.desc"
-            }
+                "sort": "modified_timestamp.desc",
+            },
         )
 
         # Verify result contains expected values
@@ -63,12 +75,7 @@ class TestIncidentsModule(TestModules):
     def test_crowd_score_empty_response(self):
         """Test querying CrowdScore with empty response."""
         # Setup mock response with empty resources
-        mock_response = {
-            "status_code": 200,
-            "body": {
-                "resources": []
-            }
-        }
+        mock_response = {"status_code": 200, "body": {"resources": []}}
         self.mock_client.command.return_value = mock_response
 
         # Call crowd_score
@@ -87,12 +94,7 @@ class TestIncidentsModule(TestModules):
     def test_crowd_score_error(self):
         """Test querying CrowdScore with API error."""
         # Setup mock response with error
-        mock_response = {
-            "status_code": 400,
-            "body": {
-                "errors": [{"message": "Invalid query"}]
-            }
-        }
+        mock_response = {"status_code": 400, "body": {"errors": [{"message": "Invalid query"}]}}
         self.mock_client.command.return_value = mock_response
 
         # Call crowd_score
@@ -114,7 +116,7 @@ class TestIncidentsModule(TestModules):
                     {"id": "score1", "score": 30, "adjusted_score": 40},
                     {"id": "score1", "score": 31, "adjusted_score": 41},
                 ]
-            }
+            },
         }
         self.mock_client.command.return_value = mock_response
 
@@ -131,5 +133,5 @@ class TestIncidentsModule(TestModules):
         self.assertEqual(result["average_adjusted_score"], 40)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

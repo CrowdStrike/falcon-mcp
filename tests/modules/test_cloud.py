@@ -18,13 +18,19 @@ class TestCloudModule(TestModules):
     def test_register_tools(self):
         """Test registering tools with the server."""
         expected_tools = [
-            "falcon_kubernetes_containers_fql_filter_guide",
             "falcon_search_kubernetes_containers",
             "falcon_count_kubernetes_containers",
-            "falcon_images_vulnerabilities_fql_filter_guide",
             "falcon_search_images_vulnerabilities",
         ]
         self.assert_tools_registered(expected_tools)
+
+    def test_register_resources(self):
+        """Test registering resources with the server."""
+        expected_resources = [
+            "falcon_kubernetes_containers_fql_filter_guide",
+            "falcon_images_vulnerabilities_fql_filter_guide",
+        ]
+        self.assert_resources_registered(expected_resources)
 
     def test_search_kubernetes_containers(self):
         """Test searching for kubernetes containers."""
