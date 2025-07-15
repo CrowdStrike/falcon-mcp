@@ -86,7 +86,7 @@ class HostsModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for hosts in your CrowdStrike environment.
 
-        IMPORTANT: You must use the `falcon://hosts/search/fql-guide` resource whenever you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_hosts` tool.
+        IMPORTANT: You must use the `falcon://hosts/search/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_hosts` tool.
 
         Returns:
             List of host details

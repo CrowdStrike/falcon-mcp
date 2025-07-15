@@ -97,7 +97,7 @@ class SpotlightModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for vulnerabilities in your CrowdStrike environment.
 
-        IMPORTANT: You must use the `falcon://spotlight/vulnerabilities/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `search_vulnerabilities` tool.
+        IMPORTANT: You must use the `falcon://spotlight/vulnerabilities/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_vulnerabilities` tool.
 
         Returns:
             List of vulnerability details with comprehensive information including CVE data,

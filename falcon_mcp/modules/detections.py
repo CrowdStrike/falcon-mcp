@@ -92,7 +92,7 @@ class DetectionsModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Find and analyze detections to understand malicious activity in your environment.
 
-        IMPORTANT: You must use the `falcon://detections/search/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_detections` tool.
+        IMPORTANT: You must use the `falcon://detections/search/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_detections` tool.
 
         Returns:
             List of detections with details

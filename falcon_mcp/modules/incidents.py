@@ -100,7 +100,7 @@ class IncidentsModule(BaseModule):
     ) -> Dict[str, Any]:
         """View calculated CrowdScores and security posture metrics for your environment.
 
-        IMPORTANT: You must use the `falcon://incidents/crowd-score/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_show_crowd_score` tool.
+        IMPORTANT: You must use the `falcon://incidents/crowd-score/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_show_crowd_score` tool.
 
         Returns:
             Tool returns the CrowdScore entity data.
@@ -164,7 +164,7 @@ class IncidentsModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Find and analyze security incidents to understand coordinated activity in your environment.
 
-        IMPORTANT: You must use the `falcon://incidents/search/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_incidents` tool.
+        IMPORTANT: You must use the `falcon://incidents/search/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_incidents` tool.
 
         Returns:
             Tool returns CrowdStrike incidents.
@@ -222,7 +222,7 @@ class IncidentsModule(BaseModule):
         Use this when you need to find behaviors matching certain criteria rather than retrieving specific behaviors by ID.
         For retrieving details of known behavior IDs, use falcon_get_behavior_details instead.
 
-        IMPORTANT: You must use the `falcon://incidents/behaviors/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_behaviors` tool.
+        IMPORTANT: You must use the `falcon://incidents/behaviors/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_behaviors` tool.
 
         Returns:
             Tool returns CrowdStrike behaviors.
