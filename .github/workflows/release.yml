@@ -1,0 +1,40 @@
+name: release-please
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/release-please-action@v3
+        id: release-please
+        with:
+          release-type: python
+          package-name: falcon-mcp
+          pull-request-header: ':rocket: New Release Incoming! :rocket:'
+          changelog-types: '[{"type":"feat","section":"Features","hidden":false},{"type":"fix","section":"Bug Fixes","hidden":false},{"type":"chore","section":"Miscellaneous","hidden":false}]'
+          # Add any extra files that contain version references
+          # extra-files: |
+          #   README.md
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        if: ${{ steps.release-please.outputs.release_created }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+        if: ${{ steps.release-please.outputs.release_created }}
+
+      - name: Build and publish to PyPI
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          python -m twine upload dist/* --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
+        if: ${{ steps.release-please.outputs.release_created }}

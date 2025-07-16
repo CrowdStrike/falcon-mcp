@@ -2,6 +2,10 @@
 
 # falcon-mcp
 
+[![PyPI version](https://badge.fury.io/py/falcon-mcp.svg)](https://badge.fury.io/py/falcon-mcp)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/falcon-mcp)](https://pypi.org/project/falcon-mcp/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **falcon-mcp** is a Model Context Protocol (MCP) server that connects AI agents with the CrowdStrike Falcon platform, powering intelligent security analysis in your agentic workflows. It delivers programmatic access to essential security capabilities—including detections, incidents, and behaviors—establishing the foundation for advanced security operations and automation.
 
 > [!IMPORTANT]
@@ -211,6 +215,22 @@ Provides tools for accessing and managing CrowdStrike Falcon Identity Protection
 
 ### Installation
 
+#### Option 1: Install from PyPI (Recommended)
+
+Install the latest stable version from PyPI:
+
+```bash
+# Optionally create a virtual environment
+python -m venv .venv && source .venv/bin/activate
+
+# Install falcon-mcp from PyPI
+pip install falcon-mcp
+```
+
+#### Option 2: Install from Source (Development)
+
+For development or to get the latest unreleased features:
+
 1. Clone the repository:
 
    ```bash
@@ -218,7 +238,7 @@ Provides tools for accessing and managing CrowdStrike Falcon Identity Protection
    cd falcon-mcp
    ```
 
-2. Install dependencies:
+2. Install in development mode:
 
    ```bash
    # Optionally create a virtual environment
