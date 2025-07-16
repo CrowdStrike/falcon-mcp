@@ -20,6 +20,7 @@ from falcon_mcp import registry
 logger = get_logger(__name__)
 
 
+# pylint: disable=too-many-instance-attributes
 class FalconMCPServer:
     """Main server class for the Falcon MCP server."""
 
