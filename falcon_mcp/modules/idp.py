@@ -8,12 +8,13 @@ Core use cases:
 """
 import json
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 
 from mcp.server import FastMCP
 from pydantic import Field
 
 from falcon_mcp.common.logging import get_logger
+from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.modules.base import BaseModule
 
 logger = get_logger(__name__)
@@ -113,7 +114,77 @@ class IdpModule(BaseModule):
         """
         logger.debug("Starting comprehensive entity investigation")
 
-        # Validate that at least one entity identifier is provided
+        # Step 1: Validate inputs
+        validation_error = self._validate_entity_identifiers(
+            entity_ids, entity_names, email_addresses, ip_addresses, investigation_types
+        )
+        if validation_error:
+            return validation_error
+
+        # Step 2: Entity Resolution - Find entities from various identifiers
+        logger.debug("Resolving entities from provided identifiers")
+        search_criteria = {
+            "entity_ids": entity_ids,
+            "entity_names": entity_names,
+            "email_addresses": email_addresses,
+            "ip_addresses": ip_addresses
+        }
+
+        resolved_entity_ids = self._resolve_entities({
+            "entity_ids": entity_ids if entity_ids is not None else None,
+            "entity_names": entity_names if entity_names is not None else None,
+            "email_addresses": email_addresses if email_addresses is not None else None,
+            "ip_addresses": ip_addresses if ip_addresses is not None else None,
+            "limit": limit
+        })
+
+        # Check if entity resolution failed
+        if isinstance(resolved_entity_ids, dict) and "error" in resolved_entity_ids:
+            return self._create_error_response(
+                resolved_entity_ids["error"], 0, investigation_types, search_criteria
+            )
+
+        if not resolved_entity_ids:
+            return self._create_error_response(
+                "No entities found matching the provided criteria", 0, investigation_types, search_criteria
+            )
+
+        logger.debug(f"Resolved {len(resolved_entity_ids)} entities for investigation")
+
+        # Step 3: Execute investigations based on requested types
+        investigation_results = {}
+        investigation_params = {
+            "include_associations": include_associations,
+            "include_accounts": include_accounts,
+            "include_incidents": include_incidents,
+            "timeline_start_time": timeline_start_time,
+            "timeline_end_time": timeline_end_time,
+            "timeline_event_types": timeline_event_types,
+            "relationship_depth": relationship_depth,
+            "limit": limit
+        }
+
+        for investigation_type in investigation_types:
+            result = self._execute_single_investigation(investigation_type, resolved_entity_ids, investigation_params)
+            if "error" in result:
+                return self._create_error_response(
+                    f"Investigation failed during {investigation_type}: {result['error']}",
+                    len(resolved_entity_ids), investigation_types
+                )
+            investigation_results[investigation_type] = result
+
+        # Step 4: Synthesize comprehensive response
+        return self._synthesize_investigation_response(resolved_entity_ids, investigation_results, {
+            "investigation_types": investigation_types,
+            "search_criteria": search_criteria
+        })
+
+    # ==========================================
+    # Investigation Helper Methods
+    # ==========================================
+
+    def _validate_entity_identifiers(self, entity_ids, entity_names, email_addresses, ip_addresses, investigation_types):
+        """Validate that at least one entity identifier is provided."""
         if not any([entity_ids, entity_names, email_addresses, ip_addresses]):
             return {
                 "error": "At least one entity identifier must be provided (entity_ids, entity_names, email_addresses, or ip_addresses)",
@@ -124,86 +195,53 @@ class IdpModule(BaseModule):
                     "status": "failed"
                 }
             }
+        return None
 
-        # Step 1: Entity Resolution - Find entities from various identifiers
-        logger.debug("Resolving entities from provided identifiers")
-        resolved_entity_ids = self._resolve_entities({
-            "entity_ids": entity_ids if entity_ids is not None else None,
-            "entity_names": entity_names if entity_names is not None else None,
-            "email_addresses": email_addresses if email_addresses is not None else None,
-            "ip_addresses": ip_addresses if ip_addresses is not None else None,
-            "limit": limit
-        })
-
-        if not resolved_entity_ids:
-            return {
-                "error": "No entities found matching the provided criteria",
-                "investigation_summary": {
-                    "entity_count": 0,
-                    "investigation_types": investigation_types,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "status": "no_entities_found"
-                },
-                "search_criteria": {
-                    "entity_ids": entity_ids,
-                    "entity_names": entity_names,
-                    "email_addresses": email_addresses,
-                    "ip_addresses": ip_addresses
-                }
+    def _create_error_response(self, error_message, entity_count, investigation_types, search_criteria=None):
+        """Create a standardized error response."""
+        response = {
+            "error": error_message,
+            "investigation_summary": {
+                "entity_count": entity_count,
+                "investigation_types": investigation_types,
+                "timestamp": datetime.utcnow().isoformat(),
+                "status": "failed"
             }
+        }
+        if search_criteria:
+            response["search_criteria"] = search_criteria
+        return response
 
-        logger.debug(f"Resolved {len(resolved_entity_ids)} entities for investigation")
+    def _execute_single_investigation(self, investigation_type, resolved_entity_ids, params):
+        """Execute a single investigation type and return results or error."""
+        logger.debug(f"Executing {investigation_type} investigation")
 
-        # Step 2: Execute investigations based on requested types
-        investigation_results = {}
+        if investigation_type == 'entity_details':
+            return self._get_entity_details_batch(resolved_entity_ids, {
+                "include_associations": params.get("include_associations", True),
+                "include_accounts": params.get("include_accounts", True),
+                "include_incidents": params.get("include_incidents", True)
+            })
+        if investigation_type == 'timeline_analysis':
+            return self._get_entity_timelines_batch(resolved_entity_ids, {
+                "start_time": params.get("timeline_start_time"),
+                "end_time": params.get("timeline_end_time"),
+                "event_types": params.get("timeline_event_types"),
+                "limit": params.get("limit", 50)
+            })
+        if investigation_type == 'relationship_analysis':
+            return self._analyze_relationships_batch(resolved_entity_ids, {
+                "relationship_depth": params.get("relationship_depth", 2),
+                "include_risk_context": True,
+                "limit": params.get("limit", 50)
+            })
+        if investigation_type == 'risk_assessment':
+            return self._assess_risks_batch(resolved_entity_ids, {
+                "include_risk_factors": True
+            })
 
-        for investigation_type in investigation_types:
-            logger.debug(f"Executing {investigation_type} investigation")
-
-            if investigation_type == 'entity_details':
-                investigation_results['entity_details'] = self._get_entity_details_batch(
-                    resolved_entity_ids, {
-                        "include_associations": include_associations,
-                        "include_accounts": include_accounts,
-                        "include_incidents": include_incidents
-                    }
-                )
-            elif investigation_type == 'timeline_analysis':
-                investigation_results['timeline_analysis'] = self._get_entity_timelines_batch(
-                    resolved_entity_ids, {
-                        "start_time": timeline_start_time if timeline_start_time is not None else None,
-                        "end_time": timeline_end_time if timeline_end_time is not None else None,
-                        "event_types": timeline_event_types if timeline_event_types is not None else None,
-                        "limit": limit
-                    }
-                )
-            elif investigation_type == 'relationship_analysis':
-                investigation_results['relationship_analysis'] = self._analyze_relationships_batch(
-                    resolved_entity_ids, {
-                        "relationship_depth": relationship_depth if relationship_depth is not None else 2,
-                        "include_risk_context": True,
-                        "limit": limit
-                    }
-                )
-            elif investigation_type == 'risk_assessment':
-                investigation_results['risk_assessment'] = self._assess_risks_batch(
-                    resolved_entity_ids, {
-                        "include_risk_factors": True
-                    }
-                )
-            else:
-                logger.warning(f"Unknown investigation type: {investigation_type}")
-
-        # Step 3: Synthesize comprehensive response
-        return self._synthesize_investigation_response(resolved_entity_ids, investigation_results, {
-            "investigation_types": investigation_types,
-            "search_criteria": {
-                "entity_ids": entity_ids,
-                "entity_names": entity_names,
-                "email_addresses": email_addresses,
-                "ip_addresses": ip_addresses
-            }
-        })
+        logger.warning(f"Unknown investigation type: {investigation_type}")
+        return {"error": f"Unknown investigation type: {investigation_type}"}
 
     # ==========================================
     # GraphQL Query Building Helper Methods
@@ -541,8 +579,13 @@ class IdpModule(BaseModule):
     # Helper Methods
     # ==========================================
 
-    def _resolve_entities(self, identifiers: Dict[str, Any]) -> List[str]:
-        """Resolve entity IDs from various identifier types (names, emails, IPs)."""
+    def _resolve_entities(self, identifiers: Dict[str, Any]) -> Union[List[str], Dict[str, Any]]:
+        """Resolve entity IDs from various identifier types (names, emails, IPs).
+
+        Returns:
+            List[str]: List of resolved entity IDs on success
+            Dict[str, Any]: Error response on failure
+        """
         resolved_ids = []
 
         # Direct entity IDs - no resolution needed
@@ -568,10 +611,19 @@ class IdpModule(BaseModule):
                 }}
                 '''
                 response = self.client.command("api_preempt_proxy_post_graphql", body={"query": query})
-                if response.get("status_code") == 200:
-                    data = response.get("body", {}).get("data", {})
-                    entities = data.get("entities", {}).get("nodes", [])
-                    resolved_ids.extend([entity["entityId"] for entity in entities])
+                result = handle_api_response(
+                    response,
+                    operation="api_preempt_proxy_post_graphql",
+                    error_message=f"Failed to resolve entity name '{name}'",
+                    default_result=None
+                )
+                if self._is_error(result):
+                    return result
+
+                # Extract entities from GraphQL response structure
+                data = response.get("body", {}).get("data", {})
+                entities = data.get("entities", {}).get("nodes", [])
+                resolved_ids.extend([entity["entityId"] for entity in entities])
 
         # Resolve email addresses to entity IDs
         email_addresses = identifiers.get("email_addresses")
@@ -593,10 +645,19 @@ class IdpModule(BaseModule):
                 }}
                 '''
                 response = self.client.command("api_preempt_proxy_post_graphql", body={"query": query})
-                if response.get("status_code") == 200:
-                    data = response.get("body", {}).get("data", {})
-                    entities = data.get("entities", {}).get("nodes", [])
-                    resolved_ids.extend([entity["entityId"] for entity in entities])
+                result = handle_api_response(
+                    response,
+                    operation="api_preempt_proxy_post_graphql",
+                    error_message=f"Failed to resolve email address '{email}'",
+                    default_result=None
+                )
+                if self._is_error(result):
+                    return result
+
+                # Extract entities from GraphQL response structure
+                data = response.get("body", {}).get("data", {})
+                entities = data.get("entities", {}).get("nodes", [])
+                resolved_ids.extend([entity["entityId"] for entity in entities])
 
         # Resolve IP addresses/endpoints to entity IDs
         ip_addresses = identifiers.get("ip_addresses")
@@ -617,10 +678,19 @@ class IdpModule(BaseModule):
                 }}
                 '''
                 response = self.client.command("api_preempt_proxy_post_graphql", body={"query": query})
-                if response.get("status_code") == 200:
-                    data = response.get("body", {}).get("data", {})
-                    entities = data.get("entities", {}).get("nodes", [])
-                    resolved_ids.extend([entity["entityId"] for entity in entities])
+                result = handle_api_response(
+                    response,
+                    operation="api_preempt_proxy_post_graphql",
+                    error_message=f"Failed to resolve IP address '{ip}'",
+                    default_result=None
+                )
+                if self._is_error(result):
+                    return result
+
+                # Extract entities from GraphQL response structure
+                data = response.get("body", {}).get("data", {})
+                entities = data.get("entities", {}).get("nodes", [])
+                resolved_ids.extend([entity["entityId"] for entity in entities])
 
         # Remove duplicates and return
         return list(set(resolved_ids))
@@ -636,20 +706,17 @@ class IdpModule(BaseModule):
         )
 
         response = self.client.command("api_preempt_proxy_post_graphql", body={"query": graphql_query})
+        result = handle_api_response(
+            response,
+            operation="api_preempt_proxy_post_graphql",
+            error_message="Failed to get entity details",
+            default_result=None
+        )
+        if self._is_error(result):
+            return result
 
-        if response.get("status_code") != 200:
-            return {
-                "error": f"Failed to get entity details: {response}",
-                "entities": []
-            }
-
+        # Extract entities from GraphQL response structure
         data = response.get("body", {}).get("data", {})
-        if "errors" in response.get("body", {}):
-            return {
-                "error": f"GraphQL errors: {response['body']['errors']}",
-                "entities": []
-            }
-
         entities = data.get("entities", {}).get("nodes", [])
         return {
             "entities": entities,
@@ -670,28 +737,23 @@ class IdpModule(BaseModule):
             )
 
             response = self.client.command("api_preempt_proxy_post_graphql", body={"query": graphql_query})
+            result = handle_api_response(
+                response,
+                operation="api_preempt_proxy_post_graphql",
+                error_message=f"Failed to get timeline for entity '{entity_id}'",
+                default_result=None
+            )
+            if self._is_error(result):
+                return result
 
-            if response.get("status_code") == 200:
-                data = response.get("body", {}).get("data", {})
-                if "errors" not in response.get("body", {}):
-                    timeline_data = data.get("timeline", {})
-                    timeline_results.append({
-                        "entity_id": entity_id,
-                        "timeline": timeline_data.get("nodes", []),
-                        "page_info": timeline_data.get("pageInfo", {})
-                    })
-                else:
-                    timeline_results.append({
-                        "entity_id": entity_id,
-                        "error": f"GraphQL errors: {response['body']['errors']}",
-                        "timeline": []
-                    })
-            else:
-                timeline_results.append({
-                    "entity_id": entity_id,
-                    "error": f"Request failed: {response}",
-                    "timeline": []
-                })
+            # Extract timeline from GraphQL response structure
+            data = response.get("body", {}).get("data", {})
+            timeline_data = data.get("timeline", {})
+            timeline_results.append({
+                "entity_id": entity_id,
+                "timeline": timeline_data.get("nodes", []),
+                "page_info": timeline_data.get("pageInfo", {})
+            })
 
         return {
             "timelines": timeline_results,
@@ -716,35 +778,30 @@ class IdpModule(BaseModule):
             )
 
             response = self.client.command("api_preempt_proxy_post_graphql", body={"query": graphql_query})
+            result = handle_api_response(
+                response,
+                operation="api_preempt_proxy_post_graphql",
+                error_message=f"Failed to analyze relationships for entity '{entity_id}'",
+                default_result=None
+            )
+            if self._is_error(result):
+                return result
 
-            if response.get("status_code") == 200:
-                data = response.get("body", {}).get("data", {})
-                if "errors" not in response.get("body", {}):
-                    entities = data.get("entities", {}).get("nodes", [])
-                    if entities:
-                        entity_data = entities[0]
-                        relationship_results.append({
-                            "entity_id": entity_id,
-                            "associations": entity_data.get("associations", []),
-                            "relationship_count": len(entity_data.get("associations", []))
-                        })
-                    else:
-                        relationship_results.append({
-                            "entity_id": entity_id,
-                            "associations": [],
-                            "relationship_count": 0
-                        })
-                else:
-                    relationship_results.append({
-                        "entity_id": entity_id,
-                        "error": f"GraphQL errors: {response['body']['errors']}",
-                        "associations": []
-                    })
+            # Extract entities from GraphQL response structure
+            data = response.get("body", {}).get("data", {})
+            entities = data.get("entities", {}).get("nodes", [])
+            if entities:
+                entity_data = entities[0]
+                relationship_results.append({
+                    "entity_id": entity_id,
+                    "associations": entity_data.get("associations", []),
+                    "relationship_count": len(entity_data.get("associations", []))
+                })
             else:
                 relationship_results.append({
                     "entity_id": entity_id,
-                    "error": f"Request failed: {response}",
-                    "associations": []
+                    "associations": [],
+                    "relationship_count": 0
                 })
 
         return {
@@ -760,20 +817,17 @@ class IdpModule(BaseModule):
         )
 
         response = self.client.command("api_preempt_proxy_post_graphql", body={"query": graphql_query})
+        result = handle_api_response(
+            response,
+            operation="api_preempt_proxy_post_graphql",
+            error_message="Failed to assess risks",
+            default_result=None
+        )
+        if self._is_error(result):
+            return result
 
-        if response.get("status_code") != 200:
-            return {
-                "error": f"Failed to assess risks: {response}",
-                "risk_assessments": []
-            }
-
+        # Extract entities from GraphQL response structure
         data = response.get("body", {}).get("data", {})
-        if "errors" in response.get("body", {}):
-            return {
-                "error": f"GraphQL errors: {response['body']['errors']}",
-                "risk_assessments": []
-            }
-
         entities = data.get("entities", {}).get("nodes", [])
         risk_assessments = []
 
@@ -835,13 +889,6 @@ class IdpModule(BaseModule):
         """Generate insights by analyzing results across different investigation types."""
         insights = {}
 
-        # Risk correlation insights
-        if "entity_details" in investigation_results and "risk_assessment" in investigation_results:
-            insights["risk_correlation"] = self._analyze_risk_correlation(
-                investigation_results["entity_details"],
-                investigation_results["risk_assessment"]
-            )
-
         # Timeline and relationship correlation
         if "timeline_analysis" in investigation_results and "relationship_analysis" in investigation_results:
             insights["activity_relationship_correlation"] = self._analyze_activity_relationships(
@@ -854,32 +901,6 @@ class IdpModule(BaseModule):
             insights["multi_entity_patterns"] = self._analyze_multi_entity_patterns(investigation_results, entity_ids)
 
         return insights
-
-    def _analyze_risk_correlation(self, entity_details: Dict[str, Any], risk_assessment: Dict[str, Any]) -> Dict[
-        str, Any]:
-        """Analyze correlation between entity details and risk factors."""
-        correlation = {
-            "high_risk_entities": [],
-            "risk_patterns": []
-        }
-
-        # Extract high-risk entities
-        entities = entity_details.get("entities", [])
-        risk_assessments = risk_assessment.get("risk_assessments", [])
-
-        for entity in entities:
-            risk_score = entity.get("riskScore", 0)
-            risk_severity = entity.get("riskScoreSeverity", "LOW")
-
-            if risk_severity in ["HIGH", "CRITICAL"]:
-                correlation["high_risk_entities"].append({
-                    "entity_id": entity.get("entityId"),
-                    "name": entity.get("primaryDisplayName"),
-                    "risk_score": risk_score,
-                    "risk_severity": risk_severity
-                })
-
-        return correlation
 
     def _analyze_activity_relationships(self, timeline_analysis: Dict[str, Any],
                                         relationship_analysis: Dict[str, Any]) -> Dict[str, Any]:

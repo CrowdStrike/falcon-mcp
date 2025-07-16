@@ -120,7 +120,7 @@ class TestIdpModuleE2E(BaseE2ETest):
             self._mock_api_instance.command.side_effect = self._create_mock_api_side_effect(fixtures)
 
             # Comprehensive question that should trigger entity investigation
-            prompt = "Show me details about the user Wallace Muniz?"
+            prompt = "What can you tell me about the user Wallace Muniz?"
             return await self._run_agent_stream(prompt)
 
         def assertions(tools, result):

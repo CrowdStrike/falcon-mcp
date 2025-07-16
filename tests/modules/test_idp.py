@@ -205,7 +205,7 @@ class TestIdpModule(TestModules):
         # Verify error response
         self.assertIn("error", result)
         self.assertIn("investigation_summary", result)
-        self.assertEqual(result["investigation_summary"]["status"], "no_entities_found")
+        self.assertEqual(result["investigation_summary"]["status"], "failed")
         self.assertEqual(result["investigation_summary"]["entity_count"], 0)
 
         # Verify no API calls were made
@@ -234,7 +234,7 @@ class TestIdpModule(TestModules):
         # Verify result indicates no entities found
         self.assertIn("error", result)
         self.assertIn("investigation_summary", result)
-        self.assertEqual(result["investigation_summary"]["status"], "no_entities_found")
+        self.assertEqual(result["investigation_summary"]["status"], "failed")
         self.assertEqual(result["investigation_summary"]["entity_count"], 0)
         self.assertIn("search_criteria", result)
 
