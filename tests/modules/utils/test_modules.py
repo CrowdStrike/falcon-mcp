@@ -59,10 +59,10 @@ class TestModules(unittest.TestCase):
         self.assertEqual(self.mock_server.add_resource.call_count, len(expected_resources))
 
         # Get the tool names that were registered
-        registered_resourceds = [
+        registered_resources = [
             call.kwargs["resource"].name for call in self.mock_server.add_resource.call_args_list
         ]
 
         # Verify that all expected tools were registered
         for tool in expected_resources:
-            self.assertIn(tool, registered_resourceds)
+            self.assertIn(tool, registered_resources)
