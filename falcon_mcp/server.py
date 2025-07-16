@@ -20,7 +20,6 @@ from falcon_mcp import registry
 logger = get_logger(__name__)
 
 
-# pylint: disable=too-many-instance-attributes
 class FalconMCPServer:
     """Main server class for the Falcon MCP server."""
 
@@ -43,8 +42,6 @@ class FalconMCPServer:
         self.base_url = base_url
         self.debug = debug
         self.user_agent_comment = user_agent_comment
-
-        self.core_tools_count = 0
 
         self.enabled_modules = enabled_modules or set(registry.get_module_names())
 
@@ -82,29 +79,27 @@ class FalconMCPServer:
                 logger.debug("Initialized module: %s", module_name)
 
         # Register tools and resources from modules
-        self._register_tools()
-        self._register_resources()
+        tool_count = self._register_tools()
+        tool_word = "tool" if tool_count == 1 else "tools"
+
+        resource_count = self._register_resources()
+        resource_word = "resource" if resource_count == 1 else "resources"
 
         # Count modules and tools with proper grammar
         module_count = len(self.modules)
         module_word = "module" if module_count == 1 else "modules"
-
-        # Simple count of tools (handles modules without tools attribute)
-        tool_count = sum(len(getattr(m, 'tools', [])) for m in self.modules.values())
-        tool_count += self.core_tools_count
-        tool_word = "tool" if tool_count == 1 else "tools"
-
-        # Simple count of resources (handles modules without resources attribute)
-        resource_count = sum(len(getattr(m, 'resources', [])) for m in self.modules.values())
-        resource_word = "resource" if resource_count == 1 else "resources"
 
         logger.info(
             "Initialized %d %s with %d %s and %d %s",
             module_count, module_word, tool_count, tool_word, resource_count, resource_word
         )
 
-    def _register_tools(self):
-        """Register tools from all modules."""
+    def _register_tools(self) -> int:
+        """Register tools from all modules.
+
+        Returns
+            int: Number of tools registered
+        """
         # Register core tools directly
         self.server.add_tool(
             self.falcon_check_connectivity,
@@ -118,19 +113,29 @@ class FalconMCPServer:
             description="Get information about available modules."
         )
 
-        self.core_tools_count = 2
+        tool_count = 2 # the tools added above
 
         # Register tools from modules
         for module in self.modules.values():
             module.register_tools(self.server)
 
-    def _register_resources(self):
-        """Register resources from all modules."""
+        tool_count += sum(len(getattr(m, 'tools', [])) for m in self.modules.values())
+
+        return tool_count
+
+    def _register_resources(self) -> int:
+        """Register resources from all modules.
+
+        Returns
+            int: Number of resources registered
+        """
         # Register resources from modules
         for module in self.modules.values():
             # Check if the module has a register_resources method
             if hasattr(module, 'register_resources') and callable(module.register_resources):
                 module.register_resources(self.server)
+
+        return sum(len(getattr(m, 'resources', [])) for m in self.modules.values())
 
     def falcon_check_connectivity(self) -> Dict[str, bool]:
         """Check connectivity to the Falcon API.
