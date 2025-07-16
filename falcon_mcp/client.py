@@ -24,20 +24,21 @@ class FalconClient:
         self,
         base_url: Optional[str] = None,
         debug: bool = False,
-        custom_user_agent: Optional[str] = None,
+        user_agent_comment: Optional[str] = None,
     ):
         """Initialize the Falcon client.
 
         Args:
             base_url: Falcon API base URL (defaults to FALCON_BASE_URL env var)
             debug: Enable debug logging
+            user_agent_comment: Additional information to include in the User-Agent comment section
         """
         # Get credentials from environment variables
         self.client_id = os.environ.get("FALCON_CLIENT_ID")
         self.client_secret = os.environ.get("FALCON_CLIENT_SECRET")
         self.base_url = base_url or os.environ.get("FALCON_BASE_URL", "https://api.crowdstrike.com")
         self.debug = debug
-        self.custom_user_agent = custom_user_agent
+        self.user_agent_comment = user_agent_comment or os.environ.get("FALCON_MCP_USER_AGENT_COMMENT")
 
         if not self.client_id or not self.client_secret:
             raise ValueError(
@@ -85,10 +86,10 @@ class FalconClient:
         return self.client.command(operation, **kwargs)
 
     def get_user_agent(self) -> str:
-        """Get the user agent string for API requests.
+        """Get RFC-compliant user agent string for API requests.
 
         Returns:
-            str: User agent string in the format "falcon-mcp/VERSION (falconpy/VERSION; Python/VERSION; Platform/VERSION; custom_user_agent)"
+            str: User agent string in RFC format "falcon-mcp/VERSION (comment; falconpy/VERSION; Python/VERSION; Platform/VERSION)"
         """
         # Get falcon-mcp version
         falcon_mcp_version = get_version()
@@ -106,14 +107,17 @@ class FalconClient:
             falconpy_version = "unknown"
             logger.debug("crowdstrike-falconpy package version not found")
 
-        # Base user agent
-        base_user_agent = f"falconpy/{falconpy_version}; Python/{python_version}; {platform_info}"
+        # Build comment section components (RFC-compliant format)
+        comment_parts = []
+        if self.user_agent_comment:
+            comment_parts.append(self.user_agent_comment.strip())
+        comment_parts.extend([
+            f"falconpy/{falconpy_version}",
+            f"Python/{python_version}",
+            platform_info
+        ])
 
-        # Append custom user agent if provided
-        if self.custom_user_agent:
-            base_user_agent = f"{base_user_agent}; {self.custom_user_agent.strip()}"
-
-        return f"falcon-mcp/{falcon_mcp_version} ({base_user_agent})"
+        return f"falcon-mcp/{falcon_mcp_version} ({'; '.join(comment_parts)})"
 
     def get_headers(self) -> Dict[str, str]:
         """Get authentication headers for API requests.
@@ -127,14 +131,44 @@ class FalconClient:
         return self.client.auth_headers
 
 def get_version() -> str:
-    """Get falcon-mcp version
+    """Get falcon-mcp version with multiple fallback methods.
+
+    This function tries multiple methods to determine the version:
+    1. importlib.metadata (works when package is properly installed)
+    2. pyproject.toml (works in development/Docker environments)
+    3. Hardcoded fallback
 
     Returns:
-        str: The version
+        str: The version string
     """
+    # Try importlib.metadata first (works when properly installed)
     try:
         return version("falcon-mcp")
     except PackageNotFoundError:
-        falcon_mcp_version = "0.1.0"
-        logger.debug("falcon-mcp package not found, using fallback version: %s", falcon_mcp_version)
-        return falcon_mcp_version
+        logger.debug("falcon-mcp package not found via importlib.metadata, trying pyproject.toml")
+
+    # Try reading from pyproject.toml (works in development/Docker)
+    try:
+        import tomllib  # Python 3.11+ # pylint: disable=import-outside-toplevel
+        import pathlib  # pylint: disable=import-outside-toplevel
+
+        # Look for pyproject.toml in current directory and parent directories
+        current_path = pathlib.Path(__file__).parent
+        for _ in range(3):  # Check up to 3 levels up
+            pyproject_path = current_path / "pyproject.toml"
+            if pyproject_path.exists():
+                with open(pyproject_path, "rb") as f:
+                    data = tomllib.load(f)
+                    version_str = data["project"]["version"]
+                    logger.debug("Found version %s in pyproject.toml at %s", version_str, pyproject_path)
+                    return version_str
+            current_path = current_path.parent
+
+        logger.debug("pyproject.toml not found in current or parent directories")
+    except (KeyError, ImportError, OSError, TypeError) as e:
+        logger.debug("Failed to read version from pyproject.toml: %s", e)
+
+    # Final fallback
+    fallback_version = "0.1.0"
+    logger.debug("Using fallback version: %s", fallback_version)
+    return fallback_version
