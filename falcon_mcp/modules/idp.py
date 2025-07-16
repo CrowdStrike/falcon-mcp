@@ -42,72 +42,72 @@ class IdpModule(BaseModule):
     # ==========================================
 
     def investigate_entity(
-            self,
-            # Entity Identification (Required - at least one)
-            entity_ids: Optional[List[str]] = Field(
-                default=None,
-                description="List of specific entity IDs to investigate (e.g., ['entity-001'])"
-            ),
-            entity_names: Optional[List[str]] = Field(
-                default=None,
-                description="List of entity names to search for (e.g., ['Administrator', 'John Doe']). When combined with other parameters, uses AND logic."
-            ),
-            email_addresses: Optional[List[str]] = Field(
-                default=None,
-                description="List of email addresses to investigate (e.g., ['user@example.com']). When combined with other parameters, uses AND logic."
-            ),
-            ip_addresses: Optional[List[str]] = Field(
-                default=None,
-                description="List of IP addresses/endpoints to investigate (e.g., ['1.1.1.1']). When combined with other parameters, uses AND logic."
-            ),
-            domain_names: Optional[List[str]] = Field(
-                default=None,
-                description="List of domain names to search for (e.g., ['XDRHOLDINGS.COM', 'CORP.LOCAL']). When combined with other parameters, uses AND logic. Example: entity_names=['Administrator'] + domain_names=['DOMAIN.COM'] finds Administrator user in that specific domain."
-            ),
+        self,
+        # Entity Identification (Required - at least one)
+        entity_ids: Optional[List[str]] = Field(
+            default=None,
+            description="List of specific entity IDs to investigate (e.g., ['entity-001'])"
+        ),
+        entity_names: Optional[List[str]] = Field(
+            default=None,
+            description="List of entity names to search for (e.g., ['Administrator', 'John Doe']). When combined with other parameters, uses AND logic."
+        ),
+        email_addresses: Optional[List[str]] = Field(
+            default=None,
+            description="List of email addresses to investigate (e.g., ['user@example.com']). When combined with other parameters, uses AND logic."
+        ),
+        ip_addresses: Optional[List[str]] = Field(
+            default=None,
+            description="List of IP addresses/endpoints to investigate (e.g., ['1.1.1.1']). When combined with other parameters, uses AND logic."
+        ),
+        domain_names: Optional[List[str]] = Field(
+            default=None,
+            description="List of domain names to search for (e.g., ['XDRHOLDINGS.COM', 'CORP.LOCAL']). When combined with other parameters, uses AND logic. Example: entity_names=['Administrator'] + domain_names=['DOMAIN.COM'] finds Administrator user in that specific domain."
+        ),
 
-            # Investigation Scope Control
-            investigation_types: Optional[List[str]] = Field(
-                default=["entity_details"],
-                description="Types of investigation to perform: 'entity_details', 'timeline_analysis', 'relationship_analysis', 'risk_assessment'. Use multiple for comprehensive analysis."
-            ),
+        # Investigation Scope Control
+        investigation_types: Optional[List[str]] = Field(
+            default=["entity_details"],
+            description="Types of investigation to perform: 'entity_details', 'timeline_analysis', 'relationship_analysis', 'risk_assessment'. Use multiple for comprehensive analysis."
+        ),
 
-            # Timeline Parameters (when timeline_analysis is included)
-            timeline_start_time: Optional[str] = Field(
-                default=None,
-                description="Start time for timeline analysis in ISO format (e.g., '2024-01-01T00:00:00Z')"
-            ),
-            timeline_end_time: Optional[str] = Field(
-                default=None,
-                description="End time for timeline analysis in ISO format"
-            ),
-            timeline_event_types: Optional[List[str]] = Field(
-                default=None,
-                description="Filter timeline by event types: 'ACTIVITY', 'NOTIFICATION', 'THREAT', 'ENTITY', 'AUDIT', 'POLICY', 'SYSTEM'"
-            ),
+        # Timeline Parameters (when timeline_analysis is included)
+        timeline_start_time: Optional[str] = Field(
+            default=None,
+            description="Start time for timeline analysis in ISO format (e.g., '2024-01-01T00:00:00Z')"
+        ),
+        timeline_end_time: Optional[str] = Field(
+            default=None,
+            description="End time for timeline analysis in ISO format"
+        ),
+        timeline_event_types: Optional[List[str]] = Field(
+            default=None,
+            description="Filter timeline by event types: 'ACTIVITY', 'NOTIFICATION', 'THREAT', 'ENTITY', 'AUDIT', 'POLICY', 'SYSTEM'"
+        ),
 
-            # Relationship Parameters (when relationship_analysis is included)
-            relationship_depth: Optional[int] = Field(
-                default=2, ge=1, le=3,
-                description="Depth of relationship analysis (1-3 levels)"
-            ),
+        # Relationship Parameters (when relationship_analysis is included)
+        relationship_depth: Optional[int] = Field(
+            default=2, ge=1, le=3,
+            description="Depth of relationship analysis (1-3 levels)"
+        ),
 
-            # General Parameters
-            limit: Optional[int] = Field(
-                default=50, ge=1, le=200,
-                description="Maximum number of results to return"
-            ),
-            include_associations: Optional[bool] = Field(
-                default=True,
-                description="Include entity associations and relationships in results"
-            ),
-            include_accounts: Optional[bool] = Field(
-                default=True,
-                description="Include account information in results"
-            ),
-            include_incidents: Optional[bool] = Field(
-                default=True,
-                description="Include open security incidents in results"
-            )
+        # General Parameters
+        limit: Optional[int] = Field(
+            default=50, ge=1, le=200,
+            description="Maximum number of results to return"
+        ),
+        include_associations: Optional[bool] = Field(
+            default=True,
+            description="Include entity associations and relationships in results"
+        ),
+        include_accounts: Optional[bool] = Field(
+            default=True,
+            description="Include account information in results"
+        ),
+        include_incidents: Optional[bool] = Field(
+            default=True,
+            description="Include open security incidents in results"
+        )
     ) -> Dict[str, Any]:
         """Comprehensive entity investigation tool.
 
@@ -256,12 +256,12 @@ class IdpModule(BaseModule):
     # ==========================================
 
     def _build_entity_details_query(
-            self,
-            entity_ids: List[str],
-            include_risk_factors: bool,
-            include_associations: bool,
-            include_incidents: bool,
-            include_accounts: bool
+        self,
+        entity_ids: List[str],
+        include_risk_factors: bool,
+        include_associations: bool,
+        include_incidents: bool,
+        include_accounts: bool
     ) -> str:
         """Build GraphQL query for detailed entity information."""
         entity_ids_json = json.dumps(entity_ids)
@@ -373,12 +373,12 @@ class IdpModule(BaseModule):
         """
 
     def _build_timeline_query(
-            self,
-            entity_id: str,
-            start_time: Optional[str],
-            end_time: Optional[str],
-            event_types: Optional[List[str]],
-            limit: int
+        self,
+        entity_id: str,
+        start_time: Optional[str],
+        end_time: Optional[str],
+        event_types: Optional[List[str]],
+        limit: int
     ) -> str:
         """Build GraphQL query for entity timeline."""
         filters = [f'sourceEntityQuery: {{entityIds: ["{entity_id}"]}}']
@@ -476,11 +476,11 @@ class IdpModule(BaseModule):
         """
 
     def _build_relationship_analysis_query(
-            self,
-            entity_id: str,
-            relationship_depth: int,
-            include_risk_context: bool,
-            limit: int
+        self,
+        entity_id: str,
+        relationship_depth: int,
+        include_risk_context: bool,
+        limit: int
     ) -> str:
         """Build GraphQL query for relationship analysis."""
         risk_fields = ""
@@ -551,9 +551,9 @@ class IdpModule(BaseModule):
         """
 
     def _build_risk_assessment_query(
-            self,
-            entity_ids: List[str],
-            include_risk_factors: bool
+        self,
+        entity_ids: List[str],
+        include_risk_factors: bool
     ) -> str:
         """Build GraphQL query for risk assessment."""
         entity_ids_json = json.dumps(entity_ids)
@@ -860,10 +860,10 @@ class IdpModule(BaseModule):
         }
 
     def _synthesize_investigation_response(
-            self,
-            entity_ids: List[str],
-            investigation_results: Dict[str, Any],
-            metadata: Dict[str, Any]
+        self,
+        entity_ids: List[str],
+        investigation_results: Dict[str, Any],
+        metadata: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Synthesize comprehensive investigation response from multiple API results."""
 

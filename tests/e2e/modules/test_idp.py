@@ -130,7 +130,8 @@ class TestIdpModuleE2E(BaseE2ETest):
             # Check that the IDP investigate entity tool was used
             used_tool = tools[-1]  # Get the last tool used
             tool_name = used_tool['input']['tool_name']
-            self.assertEqual(tool_name, "falcon_idp_investigate_entity", f"Expected idp_investigate_entity tool, got: {tool_name}")
+            self.assertEqual(tool_name, "falcon_idp_investigate_entity",
+                             f"Expected idp_investigate_entity tool, got: {tool_name}")
 
             # Check that the tool was called with Wallace Muniz in entity_names
             tool_input = used_tool['input']['tool_input']
@@ -153,7 +154,8 @@ class TestIdpModuleE2E(BaseE2ETest):
             )
 
             # Check that the mock API was called at least twice (entity resolution + details)
-            self.assertGreaterEqual(self._mock_api_instance.command.call_count, 2, "API should be called at least twice for comprehensive investigation")
+            self.assertGreaterEqual(self._mock_api_instance.command.call_count, 2,
+                                    "API should be called at least twice for comprehensive investigation")
 
             # Verify the API calls were made with expected GraphQL queries
             api_calls = self._mock_api_instance.command.call_args_list
