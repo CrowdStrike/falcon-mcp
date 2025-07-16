@@ -46,6 +46,41 @@ property_name:[operator]'value'
 KUBERNETES_CONTAINERS_FQL_DOCUMENTATION = (
     FQL_DOCUMENTATION
     + """
+=== QUICK REFERENCE - COMMON SEARCHES ===
+
+🔍 CONTAINER STATUS SEARCHES:
+• Find running containers: running_status:true
+• Find stopped containers: running_status:false
+
+🔍 SECURITY SEARCHES:
+• Find vulnerable containers: image_vulnerability_count:>0
+• Find containers with specific CVE: cve_id:'CVE-2025-1234'
+• Find privileged containers: privileged:true
+• Find containers running as root: run_as_root_user:true
+
+🔍 INFRASTRUCTURE SEARCHES:
+• Find AWS containers: cloud_name:'AWS'
+• Find Azure containers: cloud_name:'Azure'
+• Find production containers: cluster_name:'production'
+• Find containers in specific namespace: namespace:'default'
+
+🔍 COMBINED SEARCHES:
+• Running containers with vulnerabilities: running_status:true+image_vulnerability_count:>0
+• AWS production containers that are running: cloud_name:'AWS'+cluster_name:'production'+running_status:true
+• Recently seen running containers: running_status:true+last_seen:>'2025-01-01T00:00:00Z'
+
+=== NATURAL LANGUAGE TO FQL MAPPING ===
+
+When users ask for:                          Use this FQL filter:
+"running containers"                    →    running_status:true
+"stopped containers"                    →    running_status:false
+"containers with vulnerabilities"       →    image_vulnerability_count:>0
+"AWS containers"                        →    cloud_name:'AWS'
+"production containers"                 →    cluster_name:'production'
+"containers in default namespace"       →    namespace:'default'
+"privileged containers"                 →    privileged:true
+"containers running as root"            →    run_as_root_user:true
+
 === falcon_search_kubernetes_containers FQL filter available fields ===
 
 +----------------------------+---------------------------+--------------------------------------------------------+
@@ -173,36 +208,73 @@ KUBERNETES_CONTAINERS_FQL_DOCUMENTATION = (
 |                            |                           | Ex: true                                               |
 +----------------------------+---------------------------+--------------------------------------------------------+
 
-=== falcon_search_kubernetes_containers FQL filter examples ===
+=== ENHANCED EXAMPLES ===
 
-# Find kubernetes containers that are running and have 1 or more image vulnerabilities
-image_vulnerability_count:>0+running_status:true
+# BASIC STATUS FILTERING
+# Find all running containers
+running_status:true
 
-# Find kubernetes containers seen in the last 7 days and by the CVE ID found in their container images
-cve_id:'CVE-2025-1234'+last_seen:>'2025-03-15T00:00:00Z'
+# Find all stopped containers
+running_status:false
 
-# Find kubernetes containers whose cloud_name is in a list
-cloud_name:['AWS', 'Azure']
+# SECURITY FOCUSED SEARCHES
+# Find running containers with vulnerabilities
+running_status:true+image_vulnerability_count:>0
 
-# Find kubernetes containers whose names starts with "app-"
-container_name:*'app-*'
+# Find running containers that are privileged
+running_status:true+privileged:true
 
-# Find kubernetes containers whose cluster or namespace name is "prod"
-cluster_name:'prod',namespace:'prod'
+# Find running containers with specific CVE
+running_status:true+cve_id:'CVE-2025-1234'
 
-=== falcon_count_kubernetes_containers FQL filter examples ===
+# INFRASTRUCTURE FOCUSED SEARCHES
+# Find running containers in AWS production cluster
+running_status:true+cloud_name:'AWS'+cluster_name:'production'
 
-# Count kubernetes containers by cluster name
-cluster_name:'staging'
+# Find running containers in specific namespace
+running_status:true+namespace:'default'
 
-# Count kubernetes containers by agent type
-agent_type:'Kubernetes'
+# TIME-BASED SEARCHES
+# Find containers that were running and seen recently
+running_status:true+last_seen:>'2025-01-01T00:00:00Z'
+
+# Find containers that started running after a specific date
+running_status:true+first_seen:>'2025-01-01T00:00:00Z'
+
+# ADVANCED COMBINATIONS
+# Find running vulnerable containers in production AWS clusters
+running_status:true+image_vulnerability_count:>10+cloud_name:'AWS'+cluster_name:*'*prod*'
+
+# Find running containers with high vulnerability count, sorted by vulnerability count
+running_status:true+image_vulnerability_count:>50
+# Use with sort parameter: image_vulnerability_count.desc
 """
 )
 
 IMAGES_VULNERABILITIES_FQL_DOCUMENTATION = (
     FQL_DOCUMENTATION
     + """
+=== QUICK REFERENCE - COMMON SEARCHES ===
+
+🔍 SECURITY SEARCHES:
+• Find vulnerabilities in image registries: registry:'docker.io'
+• Find vulnerabilities in image repositories: repository:'test'
+• Find vulnerabilities in images tag: repositories:'test'
+• Find vulnerabilities with critical severity: severity:'Critical'
+• Find vulnerabilities in kubernetes containers: container_id:'fac328f651c64041adadadda746b05c5'
+• Find vulnerabilities in running containers: container_running_status:true
+
+🔍 COMBINED SEARCHES:
+• High severity vulnerabilities in an image repository: severity:'High'+repository:'app'
+• Critical vulnerabilities in running containers: severity:'Critical'+container_running_status:true
+• Vulnerabilities with critical CPS rating in image registry: cps_rating:'Critical'+registry:'docker.io'
+
+=== NATURAL LANGUAGE TO FQL MAPPING ===
+
+When users ask for:                         Use this FQL filter:
+"vulnerabilities in running containers"     →    container_running_status:true
+"vulnerabilities in a specific container"   →    container_id:'3731eafd590b46b182638e43a91d4a9d'
+
 === falcon_search_kubernetes_containers FQL filter options ===
 
 +----------------------------+---------------------------+--------------------------------------------------------+
@@ -264,8 +336,9 @@ container_id:'12341223'
 # Find images vulnerabilities by a list of container IDs
 container_id:['12341223', '199929292', '1000101']
 
-# Find images vulnerabilities by CVSS score and container with running status true
-cvss_score:>5+container_running_status:true
+# ADVANCED COMBINATIONS
+# Find critical vulnerabilities in running containers with an image registry
+severity:'Critical'+container_running_status:true+registry:'docker.io'
 
 # Find images vulnerabilities by image registry using wildcard
 registry:*'*docker*'

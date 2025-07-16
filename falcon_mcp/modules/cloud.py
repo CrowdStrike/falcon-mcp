@@ -79,8 +79,25 @@ class CloudModule(BaseModule):
         self,
         filter: Optional[str] = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/kubernetes-containers/fql-guide` resource when building this filter parameter.",
-            examples={"cloud:'AWS'", "cluster_name:'prod'"},
+            description=dedent(
+                """FQL Syntax formatted string used to limit the results.
+
+                COMMON SEARCH SCENARIOS:
+                • For RUNNING containers: use 'running_status:true'
+                • For STOPPED containers: use 'running_status:false'
+                • For containers with VULNERABILITIES: use 'image_vulnerability_count:>0'
+                • For specific CLOUD provider: use 'cloud_name:\'AWS\'' or 'cloud_name:\'Azure\''
+                • For specific CLUSTER: use 'cluster_name:\'production\''
+
+                IMPORTANT: Use the `falcon://cloud/kubernetes-containers/fql-guide` resource for complete FQL syntax and available fields.""",
+            ),
+            examples=[
+                "running_status:true",
+                "running_status:true+cloud_name:'AWS'",
+                "image_vulnerability_count:>0+running_status:true",
+                "cluster_name:'prod'",
+                "namespace:'default'+running_status:true",
+            ],
         ),
         limit: Optional[int] = Field(
             default=10,
@@ -116,13 +133,20 @@ class CloudModule(BaseModule):
                 Examples: 'container_name.desc', 'last_seen.desc'
             """
             ).strip(),
-            examples={"container_name.desc", "last_seen.desc"},
+            examples=["container_name.desc", "last_seen.desc"],
         ),
     ) -> List[Dict[str, Any]]:
         """Search for kubernetes containers in your CrowdStrike Kubernetes & Containers Inventory
 
-        IMPORTANT: You must use the `falcon://cloud/kubernetes-containers/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_kubernetes_containers` tool.
+        This tool helps you find containers based on various criteria. When users ask for:
+        - "running containers" → use filter: running_status:true
+        - "stopped containers" → use filter: running_status:false
+        - "vulnerable containers" → use filter: image_vulnerability_count:>0
+        - "containers in AWS" → use filter: cloud_name:'AWS'
+        - "production containers" → use filter: cluster_name:'production'
+
+        IMPORTANT: Always use the `falcon://cloud/kubernetes-containers/fql-guide` resource when building complex filters.
+        The resource contains comprehensive field documentation and advanced filtering examples.
 
         Returns:
             List of kubernetes containers
@@ -156,14 +180,40 @@ class CloudModule(BaseModule):
         self,
         filter: Optional[str] = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/kubernetes-containers/fql-guide` resource when building this filter parameter.",
-            examples={"cloud:'Azure'", "container_name:'service'"},
+            description=dedent(
+                """FQL Syntax formatted string used to limit the results.
+
+                COMMON SEARCH SCENARIOS:
+                • For RUNNING containers: use 'running_status:true'
+                • For STOPPED containers: use 'running_status:false'
+                • For containers with VULNERABILITIES: use 'image_vulnerability_count:>0'
+                • For specific CLOUD provider: use 'cloud_name:\'AWS\'' or 'cloud_name:\'Azure\''
+                • For specific CLUSTER: use 'cluster_name:\'production\''
+                • For containers whose image have a CVE ID 'cve_id:\'CVE-2025-1234\''
+
+                IMPORTANT: Use the `falcon://cloud/kubernetes-containers/fql-guide` resource for complete FQL syntax and available fields.""",
+            ),
+            examples=[
+                "running_status:true",
+                "running_status:true+cloud_name:'AWS'",
+                "image_vulnerability_count:>0+running_status:true",
+                "cluster_name:'prod'",
+                "namespace:'default'+running_status:true",
+            ],
         ),
     ) -> int:
         """Count kubernetes containers in your CrowdStrike Kubernetes & Containers Inventory
 
-        IMPORTANT: You must use the `falcon://cloud/kubernetes-containers/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for `falcon_count_kubernetes_containers` tool.
+        This tool helps you count containers based on various criteria. When users ask for:
+        - "count running containers" → use filter: running_status:true
+        - "count stopped containers" → use filter: running_status:false
+        - "count vulnerable containers" → use filter: image_vulnerability_count:>0
+        - "count containers in AWS" → use filter: cloud_name:'AWS'
+        - "count production containers" → use filter: cluster_name:'production'
+        - "count containers by CVE ID" → use filter: cve_id:'CVE-2025-1234'
+
+        IMPORTANT: Always use the `falcon://cloud/kubernetes-containers/fql-guide` resource when building complex filters.
+        The resource contains comprehensive field documentation and advanced filtering examples.
 
         Returns:
             List with a single count result
@@ -194,8 +244,19 @@ class CloudModule(BaseModule):
         self,
         filter: Optional[str] = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/images-vulnerabilities/fql-guide` resource when building this filter parameter.",
-            examples={"cve_id:*'*2025*'", "cvss_score:>5"},
+            description=dedent(
+                """
+                FQL Syntax formatted string used to limit the results.
+
+                COMMON SEARCH SCENARIOS:
+                • For vulnerabilities in RUNNING containers: use 'container_running_status:true'
+                • For CRITICAL vulnerabilities: use 'severity:\'Critical\''
+                • For CONTAINER vulnerabilities: use 'container_id:\'56debe4feb724fbe97955bba1affc494\''
+
+                IMPORTANT: use the `falcon://cloud/images-vulnerabilities/fql-guide` resource when building this filter parameter.
+                """
+            ),
+            examples=["cve_id:*'*2025*'", "cvss_score:>5"],
         ),
         limit: Optional[int] = Field(
             default=10,
@@ -225,7 +286,7 @@ class CloudModule(BaseModule):
                 Examples: 'cvss_score.desc', 'cps_current_rating.asc'
             """
             ).strip(),
-            examples={"cvss_score.desc", "cps_current_rating.asc"},
+            examples=["cvss_score.desc", "cps_current_rating.asc"],
         ),
     ) -> List[Dict[str, Any]]:
         """Search for images vulnerabilities in your CrowdStrike Image Assessments
