@@ -97,7 +97,7 @@ class FalconMCPServer:
     def _register_tools(self) -> int:
         """Register tools from all modules.
 
-        Returns
+        Returns:
             int: Number of tools registered
         """
         # Register core tools directly
@@ -126,7 +126,7 @@ class FalconMCPServer:
     def _register_resources(self) -> int:
         """Register resources from all modules.
 
-        Returns
+        Returns:
             int: Number of resources registered
         """
         # Register resources from modules
