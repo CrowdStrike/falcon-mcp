@@ -43,6 +43,8 @@ class FalconMCPServer:
         self.debug = debug
         self.user_agent_comment = user_agent_comment
 
+        self.core_tools_count = 0
+
         self.enabled_modules = enabled_modules or set(registry.get_module_names())
 
         # Configure logging
@@ -88,7 +90,7 @@ class FalconMCPServer:
 
         # Simple count of tools (handles modules without tools attribute)
         tool_count = sum(len(getattr(m, 'tools', [])) for m in self.modules.values())
-        tool_count += 2 # include falcon_check_connectivity and falcon_get_available_modules in the tool count as well
+        tool_count += self.core_tools_count
         tool_word = "tool" if tool_count == 1 else "tools"
 
         # Simple count of resources (handles modules without resources attribute)
@@ -114,6 +116,8 @@ class FalconMCPServer:
             name="falcon_get_available_modules",
             description="Get information about available modules."
         )
+
+        self.core_tools_count = 2
 
         # Register tools from modules
         for module in self.modules.values():
