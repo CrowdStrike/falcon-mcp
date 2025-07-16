@@ -19,8 +19,8 @@
   - [Intel Module](#intel-module)
   - [Hosts Module](#hosts-module)
   - [Spotlight Module](#spotlight-module)
-  - [Cloud Module](#cloud-module)
-  - [IDP Module](#idp-module)
+  - [Cloud Security Module](#cloud-security-module)
+  - [Identity Protection Module](#identity-protection-module)
 - [Installation \& Setup](#installation--setup)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
@@ -67,9 +67,9 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
 | **Hosts** | `Hosts:read` | Manage and query host/device information |
-| **Cloud** | `Falcon Container Image:read` | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
+| **Cloud Security** | `Falcon Container Image:read` | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
 | **Spotlight** | `Vulnerabilities:read` | Manage and analyze vulnerability data and security assessments |
-| **IDP** | `Identity Protection GraphQL:read` | Comprehensive entity investigation and identity protection analysis |
+| **Identity Protection** | `Identity Protection GraphQL:read` | Comprehensive entity investigation and identity protection analysis |
 
 ## Available Modules, Tools & Resources
 
@@ -173,13 +173,13 @@ Provides tools for accessing and managing CrowdStrike Spotlight vulnerabilities:
 
 **Use Cases**: Vulnerability management, security assessments, compliance reporting, risk analysis, patch prioritization
 
-### Cloud Module
+### Cloud Security Module
 
 **API Scopes Required**:
 
 - `Falcon Container Image:read`
 
-Provides tools for accessing and analyzing CrowdStrike Cloud resources:
+Provides tools for accessing and analyzing CrowdStrike Cloud Security resources:
 
 - `falcon_search_kubernetes_containers`: Search for containers from CrowdStrike Kubernetes & Containers inventory
 - `falcon_count_kubernetes_containers`: Count for containers by filter criteria from CrowdStrike Kubernetes & Containers inventory
@@ -192,7 +192,7 @@ Provides tools for accessing and analyzing CrowdStrike Cloud resources:
 
 **Use Cases**: Manage kubernetes containers inventory, container images vulnerabilities analysis
 
-### IDP Module
+### Identity Protection Module
 
 **API Scopes Required**: `Identity Protection GraphQL:read`
 
