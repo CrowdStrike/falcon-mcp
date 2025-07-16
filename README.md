@@ -69,7 +69,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Hosts** | `Hosts:read` | Manage and query host/device information |
 | **Cloud Security** | `Falcon Container Image:read` | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
 | **Spotlight** | `Vulnerabilities:read` | Manage and analyze vulnerability data and security assessments |
-| **Identity Protection** | `Identity Protection GraphQL:read` | Comprehensive entity investigation and identity protection analysis |
+| **Identity Protection** | `Identity Protection GraphQL:write` | Comprehensive entity investigation and identity protection analysis |
 
 ## Available Modules, Tools & Resources
 
@@ -194,7 +194,7 @@ Provides tools for accessing and analyzing CrowdStrike Cloud Security resources:
 
 ### Identity Protection Module
 
-**API Scopes Required**: `Identity Protection GraphQL:read`
+**API Scopes Required**: `Identity Protection GraphQL:write`
 
 Provides tools for accessing and managing CrowdStrike Falcon Identity Protection capabilities:
 
