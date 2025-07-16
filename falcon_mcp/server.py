@@ -88,6 +88,7 @@ class FalconMCPServer:
 
         # Simple count of tools (handles modules without tools attribute)
         tool_count = sum(len(getattr(m, 'tools', [])) for m in self.modules.values())
+        tool_count += 2 # include falcon_check_connectivity and falcon_get_available_modules in the tool count as well
         tool_word = "tool" if tool_count == 1 else "tools"
 
         # Simple count of resources (handles modules without resources attribute)
