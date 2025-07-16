@@ -4,7 +4,13 @@ This document provides guidance on running and understanding the end-to-end test
 
 ## Configuration
 
-The E2E tests can be configured using environment variables or a `.env` file:
+The E2E tests can be configured using environment variables or a `.env` file. For development and testing, copy the development example file:
+
+```bash
+cp .env.dev.example .env
+```
+
+Then configure the E2E testing variables:
 
 ### LLM Configuration
 
