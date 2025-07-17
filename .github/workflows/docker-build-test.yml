@@ -1,0 +1,53 @@
+name: Docker Build Test
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Dockerfile'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'requirements.txt'
+      - 'falcon_mcp/**'
+      - '.github/workflows/docker-build-test.yml'
+
+jobs:
+  docker-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build multi-platform Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            falcon-mcp:test
+            falcon-mcp:pr-${{ github.event.pull_request.number }}
+
+      - name: Test Docker image (amd64)
+        run: |
+          # Build for local testing (amd64 only for running tests)
+          docker buildx build \
+            --platform linux/amd64 \
+            --load \
+            --tag falcon-mcp:test-local \
+            .
+
+          # Test basic functionality - should show help without errors
+          echo "Testing falcon-mcp --help..."
+          docker run --rm falcon-mcp:test-local --help
+
+          # Test version command | TBD: Add version check
+          #echo "Testing falcon-mcp --version..."
+          #docker run --rm falcon-mcp:test-local --version || true
+
+          echo "✅ Docker image smoke tests passed!"
