@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/crowdstrike-falcon-mcp-badge.png)](https://mseep.ai/app/crowdstrike-falcon-mcp)
+
 ![CrowdStrike Falcon](https://raw.githubusercontent.com/CrowdStrike/falconpy/main/docs/asset/cs-logo.png)
 
 # falcon-mcp
