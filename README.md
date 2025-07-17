@@ -35,7 +35,9 @@
   - [Additional Command Line Options](#additional-command-line-options)
   - [As a Library](#as-a-library)
   - [Running Examples](#running-examples)
-- [Docker Usage](#docker-usage)
+- [Container Usage](#container-usage)
+  - [Using Pre-built Image (Recommended)](#using-pre-built-image-recommended)
+  - [Building Locally (Development)](#building-locally-development)
 - [Editor/Assitant Integration](#editorassitant-integration)
 - [Additional Deployment Options](#additional-deployment-options)
   - [Amazon Bedrock AgentCore](#amazon-bedrock-agentcore)
@@ -388,32 +390,54 @@ python examples/sse_usage.py
 python examples/streamable_http_usage.py
 ```
 
-## Docker Usage
+## Container Usage
 
-The Falcon MCP Server can be run in Docker containers for easy deployment:
+The Falcon MCP Server is available as a pre-built container image for easy deployment:
+
+### Using Pre-built Image (Recommended)
+
+```bash
+# Pull the latest pre-built image
+docker pull quay.io/crowdstrike/falcon-mcp:latest
+
+# Run with .env file (recommended)
+docker run --rm --env-file /path/to/.env quay.io/crowdstrike/falcon-mcp:latest
+
+# Run with .env file and SSE transport
+docker run --rm -p 8000:8000 --env-file /path/to/.env \
+  quay.io/crowdstrike/falcon-mcp:latest --transport sse --host 0.0.0.0
+
+# Run with .env file and streamable-http transport
+docker run --rm -p 8000:8000 --env-file /path/to/.env \
+  quay.io/crowdstrike/falcon-mcp:latest --transport streamable-http --host 0.0.0.0
+
+# Run with .env file and custom port
+docker run --rm -p 8080:8080 --env-file /path/to/.env \
+  quay.io/crowdstrike/falcon-mcp:latest --transport streamable-http --host 0.0.0.0 --port 8080
+
+# Run with .env file and specific modules
+docker run --rm --env-file /path/to/.env \
+  quay.io/crowdstrike/falcon-mcp:latest --modules detections,incidents,spotlight,idp
+
+# Use a specific version instead of latest
+docker run --rm --env-file /path/to/.env \
+  quay.io/crowdstrike/falcon-mcp:1.2.3
+
+# Alternative: Individual environment variables
+docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
+  quay.io/crowdstrike/falcon-mcp:latest
+```
+
+### Building Locally (Development)
+
+For development or customization purposes, you can build the image locally:
 
 ```bash
 # Build the Docker image
 docker build -t falcon-mcp .
 
-# Run with stdio transport (default)
+# Run the locally built image
 docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret falcon-mcp
-
-# Run with SSE transport
-docker run --rm -p 8000:8000 -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
-  falcon-mcp --transport sse --host 0.0.0.0
-
-# Run with streamable-http transport
-docker run --rm -p 8000:8000 -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
-  falcon-mcp --transport streamable-http --host 0.0.0.0
-
-# Run with custom port
-docker run --rm -p 8080:8080 -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
-  falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8080
-
-# Run with specific modules
-docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
-  falcon-mcp --modules detections,incidents,spotlight,idp
 ```
 
 **Note**: When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
@@ -443,7 +467,7 @@ You can integrate the Falcon MCP server with your editor or AI assistant in a fe
           "--rm",
           "--env-file",
           "/full/path/to/.env",
-          "falcon-mcp"
+          "quay.io/crowdstrike/falcon-mcp:latest"
         ]
       }
     },
