@@ -47,20 +47,56 @@ Never made an open source contribution before? Wondering how contributions work 
     - `test:` - Adding missing tests or correcting existing tests
     - `chore:` - Changes to build process, auxiliary tools, or maintenance
 
-    **Examples:**
+    **Examples with Good Scoping (Recommended):**
 
     ```bash
-    # Adding a new module
-    git commit -m "feat(modules): add spotlight vulnerability management module"
+    # Module changes with specific scopes (preferred)
+    git commit -m "feat(modules/cloud): add list kubernetes clusters tool"
+    git commit -m "feat(modules/hosts): add list devices tool"
+    git commit -m "fix(modules/detections): resolve authentication error"
 
-    # Fixing a bug
-    git commit -m "fix: resolve module discovery issue in help menu"
+    # Resource changes
+    git commit -m "refactor(resources): reword FQL guide in cloud resource"
+    git commit -m "feat(resources): add FQL guide for hosts module"
 
-    # Documentation updates
-    git commit -m "docs: update contributing guide with conventional commits"
+    # Documentation changes with scope
+    git commit -m "docs(contributing): update conventional commits guidance"
+    git commit -m "docs(modules): enhance module development guide"
 
-    # Adding Docker support
-    git commit -m "feat: add Docker support for containerized deployment"
+    # Infrastructure changes
+    git commit -m "feat(ci): add automated testing workflow"
+    git commit -m "chore(docker): update container configurations"
+    ```
+
+    **How Scoped Commits Improve Changelogs:**
+
+    The above commits would generate organized changelog entries like:
+
+    ```markdown
+    # Features
+    - modules/cloud: add list kubernetes clusters tool
+    - modules/hosts: add list devices tool
+    - resources: add FQL guide for hosts module
+    - ci: add automated testing workflow
+
+    # Bug Fixes
+    - modules/detections: resolve authentication error
+
+    # Refactors
+    - resources: reword FQL guide in cloud resource
+
+    # Documentation
+    - contributing: update conventional commits guidance
+    - modules: enhance module development guide
+    ```
+
+    **Basic Examples (Less Preferred but Acceptable):**
+
+    ```bash
+    # General examples without specific scopes
+    git commit -m "feat: add new functionality"
+    git commit -m "fix: resolve issue in application"
+    git commit -m "docs: update documentation"
     ```
 
     **Breaking Changes:**

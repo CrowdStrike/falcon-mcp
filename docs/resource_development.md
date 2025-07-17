@@ -221,6 +221,44 @@ Note how:
 2. The docstring explicitly mentions the resource that should be consulted
 3. This creates a clear link between the tool and its supporting documentation
 
+## Contributing Resource Changes
+
+When contributing new resources or changes to existing resources, please follow these guidelines:
+
+### Conventional Commits for Resources
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated releases and clear commit history. When contributing resource-related changes, use these commit message patterns:
+
+**Adding New Resources:**
+
+```bash
+git commit -m "feat(resources): add FQL guide for [module-name] module"
+git commit -m "feat(resources): add documentation for [specific-topic]"
+# Examples:
+git commit -m "feat(resources): add FQL guide for cloud module"
+git commit -m "feat(resources): add hosts search documentation"
+```
+
+**Modifying Existing Resources:**
+
+```bash
+git commit -m "refactor(resources): reword FQL guide in cloud resource"
+git commit -m "fix(resources): correct formatting in intel FQL documentation"
+git commit -m "docs(resources): update resource development guide"
+# Examples:
+git commit -m "refactor(resources): improve clarity in detections FQL guide"
+git commit -m "fix(resources): correct syntax examples in incidents resource"
+```
+
+**Resource Tests and Infrastructure:**
+
+```bash
+git commit -m "test(resources): add validation tests for resource content"
+git commit -m "chore(resources): update resource registration patterns"
+```
+
+See the main [CONTRIBUTING.md](CONTRIBUTING.md) guide for complete conventional commits guidelines.
+
 ## Conclusion
 
 Resources are a powerful way to provide context and documentation to the model. By following the guidelines in this document, you can create effective resources that complement your tools and enhance the overall functionality of the Falcon MCP server.

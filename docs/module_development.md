@@ -214,7 +214,27 @@ git commit -m "feat(modules): add spotlight module for vulnerability management"
 git commit -m "feat(modules): add intel module for threat intelligence analysis"
 ```
 
+**Adding Tools to Existing Modules (Preferred - More Specific Scoping):**
+
+```bash
+git commit -m "feat(modules/[module-name]): add [specific-functionality]"
+# Examples:
+git commit -m "feat(modules/cloud): add list kubernetes clusters tool"
+git commit -m "feat(modules/hosts): add list devices tool"
+git commit -m "feat(modules/detections): add advanced filtering capability"
+```
+
 **Modifying Existing Modules:**
+
+```bash
+git commit -m "feat(modules/[module-name]): enhance [specific-functionality]"
+git commit -m "fix(modules/[module-name]): resolve [specific-issue]"
+# Examples:
+git commit -m "feat(modules/detections): enhance FQL filtering with new operators"
+git commit -m "fix(modules/hosts): resolve authentication error in search function"
+```
+
+**General Module Changes (Less Preferred but Acceptable):**
 
 ```bash
 git commit -m "feat(modules): enhance [module-name] with [new-functionality]"
