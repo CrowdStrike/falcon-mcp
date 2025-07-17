@@ -482,6 +482,9 @@ To contribute to the Falcon MCP Server, first install the development dependenci
 pip install -e ".[dev]"
 ```
 
+> [!IMPORTANT]
+> This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated releases and semantic versioning. Please follow the commit message format outlined in our [Contributing Guide](docs/CONTRIBUTING.md) when submitting changes.
+
 ### Running Tests
 
 ```bash
