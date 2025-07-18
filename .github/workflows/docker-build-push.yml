@@ -23,32 +23,16 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
 
-      - name: Extract metadata (Main Branch)
-        if: github.event_name == 'push'
-        id: meta-main
+      - name: Extract metadata
+        id: meta
         uses: docker/metadata-action@v5
         with:
           images: quay.io/crowdstrike/falcon-mcp
           tags: |
-            type=raw,value=latest
-          labels: |
-            org.opencontainers.image.title=Falcon MCP Server
-            org.opencontainers.image.description=Model Context Protocol server for CrowdStrike Falcon
-            org.opencontainers.image.vendor=CrowdStrike
-            org.opencontainers.image.licenses=MIT
-            org.opencontainers.image.source=https://github.com/CrowdStrike/falcon-mcp
-            org.opencontainers.image.documentation=https://github.com/CrowdStrike/falcon-mcp/blob/main/README.md
-
-      - name: Extract metadata (Release)
-        if: github.event_name == 'release'
-        id: meta-release
-        uses: docker/metadata-action@v5
-        with:
-          images: quay.io/crowdstrike/falcon-mcp
-          tags: |
-            type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' }}
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
           flavor: |
-            latest=false
+            latest=${{ github.event_name == 'push' }}
           labels: |
             org.opencontainers.image.title=Falcon MCP Server
             org.opencontainers.image.description=Model Context Protocol server for CrowdStrike Falcon
@@ -63,21 +47,22 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta-main.outputs.tags || steps.meta-release.outputs.tags }}
-          labels: ${{ steps.meta-main.outputs.labels || steps.meta-release.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Generate image summary
         run: |
+          # Get generated tags and extract the actual tag for pull command
+          TAGS="${{ steps.meta.outputs.tags }}"
+          FULL_TAG=$(echo "$TAGS" | head -n1)
+          TAG_ONLY=$(echo "$FULL_TAG" | sed 's/.*://')
+
           if [ "${{ github.event_name }}" = "push" ]; then
-            TAGS="${{ steps.meta-main.outputs.tags }}"
             EVENT_TYPE="Main Branch Push"
-            REF="${{ github.ref_name }}"
           else
-            TAGS="${{ steps.meta-release.outputs.tags }}"
             EVENT_TYPE="Release"
-            REF="${{ github.ref_name }}"
           fi
 
           echo "## 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY
@@ -93,9 +78,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Pull Command:**" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "docker pull quay.io/crowdstrike/falcon-mcp:latest"
-          else
-            echo "docker pull quay.io/crowdstrike/falcon-mcp:$REF"
-          fi >> $GITHUB_STEP_SUMMARY
+          echo "docker pull quay.io/crowdstrike/falcon-mcp:$TAG_ONLY" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
