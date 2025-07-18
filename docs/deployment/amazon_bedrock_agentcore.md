@@ -164,12 +164,12 @@ Create a trust policy that allows the Bedrock AgentCore service to assume the ex
       },
       "Action": "sts:AssumeRole",
       "Condition": {
-            "StringEquals": {
-                "aws:SourceAccount": "{{accountId}}"
-            },
-            "ArnLike": {
-                "aws:SourceArn": "arn:aws:bedrock-agentcore:{{region}}:{{accountId}}:*"
-            }
+        "StringEquals": {
+          "aws:SourceAccount": "{{accountId}}"
+        },
+        "ArnLike": {
+          "aws:SourceArn": "arn:aws:bedrock-agentcore:{{region}}:{{accountId}}:*"
+        }
       }
     }
   ]
