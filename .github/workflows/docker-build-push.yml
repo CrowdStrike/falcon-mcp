@@ -1,11 +1,13 @@
-name: Docker Release
+name: Docker Build & Push
 
 on:
+  push:
+    branches: [main]
   release:
     types: [published]
 
 jobs:
-  docker-release:
+  docker-build-push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,13 +23,32 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
 
-      - name: Extract metadata
-        id: meta
+      - name: Extract metadata (Main Branch)
+        if: github.event_name == 'push'
+        id: meta-main
+        uses: docker/metadata-action@v5
+        with:
+          images: quay.io/crowdstrike/falcon-mcp
+          tags: |
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=Falcon MCP Server
+            org.opencontainers.image.description=Model Context Protocol server for CrowdStrike Falcon
+            org.opencontainers.image.vendor=CrowdStrike
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.source=https://github.com/CrowdStrike/falcon-mcp
+            org.opencontainers.image.documentation=https://github.com/CrowdStrike/falcon-mcp/blob/main/README.md
+
+      - name: Extract metadata (Release)
+        if: github.event_name == 'release'
+        id: meta-release
         uses: docker/metadata-action@v5
         with:
           images: quay.io/crowdstrike/falcon-mcp
           tags: |
             type=semver,pattern={{version}}
+          flavor: |
+            latest=false
           labels: |
             org.opencontainers.image.title=Falcon MCP Server
             org.opencontainers.image.description=Model Context Protocol server for CrowdStrike Falcon
@@ -42,24 +63,39 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-main.outputs.tags || steps.meta-release.outputs.tags }}
+          labels: ${{ steps.meta-main.outputs.labels || steps.meta-release.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Generate image summary
         run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAGS="${{ steps.meta-main.outputs.tags }}"
+            EVENT_TYPE="Main Branch Push"
+            REF="${{ github.ref_name }}"
+          else
+            TAGS="${{ steps.meta-release.outputs.tags }}"
+            EVENT_TYPE="Release"
+            REF="${{ github.ref_name }}"
+          fi
+
           echo "## 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Event:** $EVENT_TYPE" >> $GITHUB_STEP_SUMMARY
           echo "**Registry:** quay.io/crowdstrike/falcon-mcp" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "$TAGS" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Pull Command:**" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "docker pull quay.io/crowdstrike/falcon-mcp:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "docker pull quay.io/crowdstrike/falcon-mcp:latest"
+          else
+            echo "docker pull quay.io/crowdstrike/falcon-mcp:$REF"
+          fi >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
