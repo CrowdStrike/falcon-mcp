@@ -2,239 +2,247 @@
 Contains Detections resources.
 """
 
-SEARCH_DETECTIONS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Detections Guide
+SEARCH_DETECTIONS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Detections/Alerts Guide
 
 === BASIC SYNTAX ===
-property_name:[operator]'value'
+field_name:[operator]'value'
 
-=== AVAILABLE OPERATORS ===
-• No operator = equals (default)
-• ! = not equal to
-• > = greater than
-• >= = greater than or equal
-• < = less than
-• <= = less than or equal
-• ~ = text match (ignores case, spaces, punctuation)
-• !~ = does not text match
-• * = wildcard matching (one or more characters)
+=== OPERATORS ===
+• = (default): field_name:'value'
+• !: field_name:!'value' (not equal)
+• >, >=, <, <=: field_name:>50 (comparison)
+• ~: field_name:~'partial' (text match, case insensitive)
+• !~: field_name:!~'exclude' (not text match)
+• *: field_name:'prefix*' or field_name:'*suffix*' (wildcards)
 
-=== DATA TYPES & SYNTAX ===
-• Strings: 'value' or ['exact_value'] for exact match
-• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
-• Booleans: true or false (no quotes)
-• Numbers: 123 (no quotes)
-• Wildcards: 'partial*' or '*partial' or '*partial*'
+=== DATA TYPES ===
+• String: 'value'
+• Number: 123 (no quotes)
+• Boolean: true/false (no quotes)
+• Timestamp: 'YYYY-MM-DDTHH:MM:SSZ'
+• Array: ['value1', 'value2']
 
-=== COMBINING CONDITIONS ===
-• + = AND condition
-• , = OR condition
-• ( ) = Group expressions
+=== WILDCARDS ===
+✅ **String & Number fields**: field_name:'pattern*' (prefix), field_name:'*pattern' (suffix), field_name:'*pattern*' (contains)
+❌ **Timestamp fields**: Not supported (causes errors)
+⚠️ **Number wildcards**: Require quotes: pattern_id:'123*'
 
-🚨 DETECTION PROPERTIES (Complete List):
+=== COMBINING ===
+• + = AND: status:'new'+severity:>=70
+• , = OR: product:'epp',product:'xdr'
 
-=== IDENTIFICATION & CORE ===
-• composite_id: Unique detection identifier
-• aggregate_id: Related detection group identifier
-• cid: Customer ID
-• agent_id: Falcon agent identifier
-• pattern_id: Detection pattern identifier
+=== COMMON PATTERNS ===
 
-=== ASSIGNMENT & WORKFLOW ===
-• assigned_to_name: Person assigned to this detection
-• assigned_to_uid: Assigned user identifier
-• assigned_to_uuid: Assigned user UUID
-• status: Detection status (new, in_progress, closed, reopened)
+🔍 ESSENTIAL FILTERS:
+• Status: status:'new' | status:'in_progress' | status:'closed' | status:'reopened'
+• Severity: severity:>=90 (critical) | severity:>=70 (high+) | severity:>=50 (medium+) | severity:>=20 (low+)
+• Product: product:'epp' | product:'idp' | product:'xdr' | product:'overwatch' (see field table for all)
+• Assignment: assigned_to_name:!* (unassigned) | assigned_to_name:* (assigned) | assigned_to_name:'user.name'
+• Timestamps: created_timestamp:>'2025-01-01T00:00:00Z' | created_timestamp:>='date1'+created_timestamp:<='date2'
+• Wildcards: name:'EICAR*' | description:'*credential*' | agent_id:'77d11725*' | pattern_id:'301*'
+• Combinations: status:'new'+severity:>=70+product:'epp' | product:'epp',product:'xdr' | status:'new',status:'reopened'
 
-=== TIMESTAMPS ===
-• created_timestamp: When detection was created
-• updated_timestamp: Last modification time
-• timestamp: Detection occurrence timestamp
+=== falcon_search_detections FQL filter available fields ===
 
-=== THREAT INTELLIGENCE ===
-• confidence: Confidence level (1-100)
-• severity: Detection severity level
-• tactic: MITRE ATT&CK tactic
-• tactic_id: MITRE ATT&CK tactic ID
-• technique: MITRE ATT&CK technique
-• technique_id: MITRE ATT&CK technique ID
-• objective: Attack objective description
++----------------------------+---------------------------+--------------------------------------------------------+
+| Name                       | Type                      | Description                                            |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **CORE IDENTIFICATION**                                                                                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| agent_id                   | String                    | Agent ID associated with the alert.                   |
+|                            |                           | Ex: 77d11725xxxxxxxxxxxxxxxxxxxxc48ca19               |
++----------------------------+---------------------------+--------------------------------------------------------+
+| aggregate_id               | String                    | Unique identifier linking multiple related alerts      |
+|                            |                           | that represent a logical grouping (like legacy        |
+|                            |                           | detection_id). Use this to correlate related alerts.  |
+|                            |                           | Ex: aggind:77d1172532c8xxxxxxxxxxxxxxxxxxxx49030016385|
++----------------------------+---------------------------+--------------------------------------------------------+
+| composite_id               | String                    | Global unique identifier for the individual alert.     |
+|                            |                           | This replaces the legacy detection_id for individual  |
+|                            |                           | alerts in the new Alerts API.                         |
+|                            |                           | Ex: d615:ind:77d1172xxxxxxxxxxxxxxxxx6c48ca19         |
++----------------------------+---------------------------+--------------------------------------------------------+
+| cid                        | String                    | Customer ID.                                           |
+|                            |                           | Ex: d61501xxxxxxxxxxxxxxxxxxxxa2da2158                |
++----------------------------+---------------------------+--------------------------------------------------------+
+| pattern_id                 | Number                    | Detection pattern identifier.                          |
+|                            |                           | Ex: 67                                                 |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **ASSIGNMENT & WORKFLOW**                                                                                       |
++----------------------------+---------------------------+--------------------------------------------------------+
+| assigned_to_name           | String                    | Name of assigned Falcon user.                         |
+|                            |                           | Ex: Alice Anderson                                    |
++----------------------------+---------------------------+--------------------------------------------------------+
+| assigned_to_uid            | String                    | User ID of assigned Falcon user.                      |
+|                            |                           | Ex: alice.anderson@example.com                        |
++----------------------------+---------------------------+--------------------------------------------------------+
+| assigned_to_uuid           | String                    | UUID of assigned Falcon user.                         |
+|                            |                           | Ex: dc54xxxxxxxxxxxxxxxx1658                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| status                     | String                    | Alert status. Possible values:                         |
+|                            |                           | - new: Newly detected, needs triage                   |
+|                            |                           | - in_progress: Being investigated                      |
+|                            |                           | - closed: Investigation completed                      |
+|                            |                           | - reopened: Previously closed, now active again       |
+|                            |                           | Ex: new                                                |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **TIMESTAMPS**                                                                                                   |
++----------------------------+---------------------------+--------------------------------------------------------+
+| created_timestamp          | Timestamp                 | When alert was created in UTC format.                 |
+|                            |                           | Ex: 2024-02-22T14:16:04.973070837Z                    |
++----------------------------+---------------------------+--------------------------------------------------------+
+| updated_timestamp          | Timestamp                 | Last modification time in UTC format.                  |
+|                            |                           | Ex: 2024-02-22T15:15:05.637481021Z                    |
++----------------------------+---------------------------+--------------------------------------------------------+
+| timestamp                  | Timestamp                 | Alert occurrence timestamp in UTC format.             |
+|                            |                           | Ex: 2024-02-22T14:15:03.112Z                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| crawled_timestamp          | Timestamp                 | Internal timestamp for processing in UTC format.      |
+|                            |                           | Ex: 2024-02-22T15:15:05.637684718Z                    |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **THREAT ASSESSMENT**                                                                                            |
++----------------------------+---------------------------+--------------------------------------------------------+
+| confidence                 | Number                    | Confidence level (1-100). Higher values indicate      |
+|                            |                           | greater confidence in the detection.                   |
+|                            |                           | Ex: 80                                                 |
++----------------------------+---------------------------+--------------------------------------------------------+
+| severity                   | Number                    | Security risk level (1-100). Use numeric values:      |
+|                            |                           | - Critical: severity:>=90                              |
+|                            |                           | - High: severity:>=70                                 |
+|                            |                           | - Medium: severity:>=50                               |
+|                            |                           | - Low: severity:>=20                                  |
+|                            |                           | Ex: 90                                                 |
++----------------------------+---------------------------+--------------------------------------------------------+
+| tactic                     | String                    | MITRE ATT&CK tactic name.                              |
+|                            |                           | Ex: Credential Access                                  |
++----------------------------+---------------------------+--------------------------------------------------------+
+| tactic_id                  | String                    | MITRE ATT&CK tactic identifier.                        |
+|                            |                           | Ex: TA0006                                             |
++----------------------------+---------------------------+--------------------------------------------------------+
+| technique                  | String                    | MITRE ATT&CK technique name.                           |
+|                            |                           | Ex: OS Credential Dumping                              |
++----------------------------+---------------------------+--------------------------------------------------------+
+| technique_id               | String                    | MITRE ATT&CK technique identifier.                     |
+|                            |                           | Ex: T1003                                              |
++----------------------------+---------------------------+--------------------------------------------------------+
+| objective                  | String                    | Attack objective description.                          |
+|                            |                           | Ex: Gain Access                                        |
++----------------------------+---------------------------+--------------------------------------------------------+
+| scenario                   | String                    | Detection scenario classification.                     |
+|                            |                           | Ex: credential_theft                                   |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **PRODUCT & PLATFORM**                                                                                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| product                    | String                    | Source Falcon product. Possible values:               |
+|                            |                           | - epp: Endpoint Protection Platform                    |
+|                            |                           | - idp: Identity Protection                             |
+|                            |                           | - mobile: Mobile Device Protection                     |
+|                            |                           | - xdr: Extended Detection and Response                 |
+|                            |                           | - overwatch: Managed Threat Hunting                   |
+|                            |                           | - cwpp: Cloud Workload Protection                     |
+|                            |                           | - ngsiem: Next-Gen SIEM                               |
+|                            |                           | - thirdparty: Third-party integrations                |
+|                            |                           | - data-protection: Data Loss Prevention               |
+|                            |                           | Ex: epp                                                |
++----------------------------+---------------------------+--------------------------------------------------------+
+| platform                   | String                    | Operating system platform.                            |
+|                            |                           | Ex: Windows, Linux, Mac                                |
++----------------------------+---------------------------+--------------------------------------------------------+
+| data_domains               | Array                     | Domain to which this alert belongs to. Possible       |
+|                            |                           | values: Endpoint, Identity, Cloud, Email, Web,        |
+|                            |                           | Network (array field).                                |
+|                            |                           | Ex: ["Endpoint"]                                      |
++----------------------------+---------------------------+--------------------------------------------------------+
+| source_products            | Array                     | Products associated with the source of this alert     |
+|                            |                           | (array field).                                        |
+|                            |                           | Ex: ["Falcon Insight"]                               |
++----------------------------+---------------------------+--------------------------------------------------------+
+| source_vendors             | Array                     | Vendors associated with the source of this alert      |
+|                            |                           | (array field).                                        |
+|                            |                           | Ex: ["CrowdStrike"]                                   |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **DETECTION METADATA**                                                                                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| name                       | String                    | Detection pattern name.                                |
+|                            |                           | Ex: NtdsFileAccessedViaVss                            |
++----------------------------+---------------------------+--------------------------------------------------------+
+| display_name               | String                    | Human-readable detection name.                         |
+|                            |                           | Ex: NtdsFileAccessedViaVss                            |
++----------------------------+---------------------------+--------------------------------------------------------+
+| description                | String                    | Detection description.                                 |
+|                            |                           | Ex: Process accessed credential-containing NTDS.dit   |
+|                            |                           | in a Volume Shadow Snapshot                           |
++----------------------------+---------------------------+--------------------------------------------------------+
+| type                       | String                    | Detection type classification. Possible values:       |
+|                            |                           | - ldt: Legacy Detection Technology                     |
+|                            |                           | - ods: On-sensor Detection System                     |
+|                            |                           | - xdr: Extended Detection and Response                |
+|                            |                           | - ofp: Offline Protection                             |
+|                            |                           | - ssd: Suspicious Script Detection                    |
+|                            |                           | - windows_legacy: Windows Legacy Detection            |
+|                            |                           | Ex: ldt                                                |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **UI & WORKFLOW**                                                                                               |
++----------------------------+---------------------------+--------------------------------------------------------+
+| show_in_ui                 | Boolean                   | Whether detection appears in UI.                      |
+|                            |                           | Ex: true                                               |
++----------------------------+---------------------------+--------------------------------------------------------+
+| email_sent                 | Boolean                   | Whether email was sent for this detection.            |
+|                            |                           | Ex: true                                               |
++----------------------------+---------------------------+--------------------------------------------------------+
+| seconds_to_resolved        | Number                    | Time in seconds to move from new to closed status.    |
+|                            |                           | Ex: 3600                                               |
++----------------------------+---------------------------+--------------------------------------------------------+
+| seconds_to_triaged         | Number                    | Time in seconds to move from new to in_progress.      |
+|                            |                           | Ex: 1800                                               |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **COMMENTS & TAGS**                                                                                             |
++----------------------------+---------------------------+--------------------------------------------------------+
+| comments.value             | String                    | A single term in an alert comment. Matching is        |
+|                            |                           | case sensitive. Partial match and wildcard search     |
+|                            |                           | are not supported.                                     |
+|                            |                           | Ex: suspicious                                         |
++----------------------------+---------------------------+--------------------------------------------------------+
+| tags                       | Array                     | Contains a separated list of FalconGroupingTags       |
+|                            |                           | and SensorGroupingTags (array field).                 |
+|                            |                           | Ex: ["fc/offering/falcon_complete",                   |
+|                            |                           | "fc/exclusion/pre-epp-migration", "fc/exclusion/nonlive"]|
++----------------------------+---------------------------+--------------------------------------------------------+
+| **INTERNAL FIELDS**                                                                                             |
++----------------------------+---------------------------+--------------------------------------------------------+
+| external                   | Boolean                   | A field reserved for internal use.                    |
+|                            |                           | Ex: false                                              |
++----------------------------+---------------------------+--------------------------------------------------------+
 
-=== DETECTION METADATA ===
-• name: Detection name/title
-• display_name: Human-readable detection name
-• description: Detection description
-• type: Detection type classification
-• scenario: Detection scenario
+=== COMPLEX FILTER EXAMPLES ===
 
-=== SYSTEM & PLATFORM ===
-• platform: Operating system platform
-• show_in_ui: Whether detection appears in UI (true/false)
-• data_domains: Data classification domains
+# New high-severity endpoint alerts
+status:'new'+severity:>=70+product:'epp'
 
-=== PRODUCT FILTERING ===
-• product: Source Falcon product
-    - 'epp' (Endpoint Protection)
-    - 'idp' (Identity Protection)
-    - 'mobile' (Falcon for Mobile)
-    - 'xdr' (Falcon XDR)
-    - 'overwatch' (OverWatch)
-    - 'cwpp' (Cloud Workload Protection)
-    - 'ngsiem' (Next-Gen SIEM)
-    - 'thirdparty' (Third party data)
-    - 'data-protection' (Data Protection)
+# Unassigned critical alerts from last 24 hours
+assigned_to_name:!*+severity:>=90+created_timestamp:>'2025-01-19T00:00:00Z'
 
-=== SOURCE INFORMATION ===
-• source_products: Products that generated this detection
-• source_vendors: Vendor sources for the detection
+# OverWatch alerts with credential access tactics
+product:'overwatch'+tactic:'Credential Access'
 
-=== TAGS & CLASSIFICATION ===
-• tags: Detection classification tags
+# XDR alerts with high confidence from specific technique
+product:'xdr'+confidence:>=80+technique_id:'T1003'
 
-💡 PRACTICAL DETECTION SEARCH EXAMPLES:
+# Find alerts by aggregate_id (related alerts)
+aggregate_id:'aggind:77d1172532c8xxxxxxxxxxxxxxxxxxxx49030016385'
 
-=== STATUS-BASED SEARCHES ===
-Find new detections:
-status:'new'
+# Find alerts from multiple products
+product:['epp', 'xdr', 'overwatch']
 
-Find detections in progress:
-status:'in_progress'
+# Recently updated alerts assigned to specific analyst
+assigned_to_name:'alice.anderson'+updated_timestamp:>'2025-01-18T12:00:00Z'
 
-Find closed detections:
-status:'closed'
+# Find alerts with specific MITRE ATT&CK tactics
+tactic:['Credential Access', 'Persistence', 'Privilege Escalation']
 
-Find reopened detections:
-status:'reopened'
+# Closed alerts resolved quickly (under 1 hour)
+status:'closed'+seconds_to_resolved:<3600
 
-=== PRODUCT-SPECIFIC SEARCHES ===
-Find endpoint protection detections:
-product:'epp'
-
-Find identity protection detections:
-product:'idp'
-
-Find XDR detections:
-product:'xdr'
-
-Find OverWatch detections:
-product:'overwatch'
-
-=== SEVERITY & CONFIDENCE SEARCHES ===
-Find high confidence detections:
-confidence:>80
-
-Find medium to high confidence:
-confidence:>=50
-
-🔥 SEVERITY NUMERIC MAPPING (Critical for Proper Filtering):
-Based on CrowdStrike Falcon API data:
-• Critical: severity:>=90 (or severity:90 exactly)
-• High: severity:>=70 (or severity:70 exactly)
-• Medium: severity:>=50 (or severity:50 exactly)
-• Low: severity:>=20 (covers range 20-40)
-• Informational: severity:<=10 (covers range 2-5)
-
-Find critical severity detections only:
-severity:>=90
-
-Find high severity detections (includes critical):
-severity:>=70
-
-Find medium severity and above (includes high & critical):
-severity:>=50
-
-Find high severity detections only (excludes critical):
-severity:70
-
-Find informational detections:
-severity:<=10
-
-=== ASSIGNMENT SEARCHES ===
-Find unassigned detections:
-assigned_to_name:!*
-
-Find detections assigned to specific analyst:
-assigned_to_name:'john.doe'
-
-=== TIME-BASED SEARCHES ===
-Find recent detections (last 24 hours):
-created_timestamp:>'2024-01-20T00:00:00Z'
-
-Find detections from specific date range:
-created_timestamp:>='2024-01-15T00:00:00Z'+created_timestamp:<='2024-01-20T00:00:00Z'
-
-Find recently updated detections:
-updated_timestamp:>'2024-01-19T00:00:00Z'
-
-=== THREAT INTELLIGENCE SEARCHES ===
-Find detections with specific tactic:
-tactic:'Persistence'
-
-Find detections with technique ID:
-technique_id:'T1055'
-
-Find detections with specific objective:
-objective:'*credential*'
-
-=== ADVANCED COMBINED SEARCHES ===
-Find new high-confidence endpoint detections:
-status:'new'+confidence:>75+product:'epp'
-
-Find assigned XDR detections that are in progress:
-product:'xdr'+status:'in_progress'+assigned_to_name:*
-
-Find recent high-severity unassigned detections:
-created_timestamp:>'2024-01-18T00:00:00Z'+assigned_to_name:!*+confidence:>80
-
-Find OverWatch detections with persistence tactics:
-product:'overwatch'+tactic:'Persistence'
-
-=== BULK FILTERING SEARCHES ===
-Find detections from multiple products:
-(product:'epp'),(product:'xdr'),(product:'idp')
-
-Find detections in various active states:
-(status:'new'),(status:'in_progress')
-
-Find detections needing attention (new or reopened):
-(status:'new'),(status:'reopened')
-
-=== INVESTIGATION-FOCUSED SEARCHES ===
-Find detections with specific pattern:
-pattern_id:'12345'
-
-Find related detections by aggregate:
-aggregate_id:'agg-67890'
-
-Find detections with specific tags:
-tags:'malware'
-
-Find detections that show in UI:
-show_in_ui:true
-
-🚀 USAGE EXAMPLES:
-
-# Find new endpoint protection detections sorted by severity
-falcon_search_detections(filter="status:'new'+product:'epp'", limit=50, sort="severity.desc")
-
-# Find high-confidence XDR detections from last week
-falcon_search_detections(filter="product:'xdr'+confidence:>80+created_timestamp:>'2024-01-15T00:00:00Z'", limit=25)
-
-# Find unassigned detections across all products
-falcon_search_detections(filter="assigned_to_name:!*", limit=100, sort="timestamp.desc")
-
-# Find OverWatch detections with specific tactics
-falcon_search_detections(filter="product:'overwatch'+tactic:'Initial Access'", limit=50)
-
-# Find detections that need immediate attention
-falcon_search_detections(filter="(status:'new'),(status:'reopened')+confidence:>75", sort="timestamp.desc")
-
-⚠️ IMPORTANT NOTES:
-• Use single quotes around string values: 'value'
-• Use square brackets for exact matches: ['exact_value']
-• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
-• Status values are: new, in_progress, closed, reopened
-• Product filtering enables product-specific detection analysis
-• Confidence values range from 1-100
-• Complex queries may take longer to execute
-• include_hidden parameter shows previously hidden detections
+# Date range with multiple products and severity
+created_timestamp:>='2025-01-15T00:00:00Z'+created_timestamp:<='2025-01-20T00:00:00Z'+product:'epp',product:'xdr'+severity:>=70
 """
