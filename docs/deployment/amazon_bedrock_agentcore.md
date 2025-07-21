@@ -36,7 +36,7 @@ The MCP server requires specific IAM permissions to function within the Amazon B
 >
 > - `{{region}}` - Your AWS region (e.g., `us-east-1`)
 > - `{{accountId}}` - Your AWS account ID
-> - `{{agentName}}` - Your agent name with no spaces or special characters (e.g., `falcon`)
+> - `{{agentName}}` - Your agent name with no spaces or special characters (e.g., `falcon`). You'll need to decide the agent name **before** creating the role and AgentCore Runtime.
 
 ### Step 1: Create the IAM Execution Role
 
@@ -146,7 +146,7 @@ Create an IAM role with the following policy that grants the necessary permissio
 ```
 
 > [!NOTE]
-> Save the ARN of the IAM role you created - you'll need it for the deployment of the Amazon Bedrock AgentCore agent.
+> Save the ARN of the IAM role - you'll need it for the deployment of the Amazon Bedrock AgentCore agent.
 
 ### Step 2: Create the IAM Trust Policy
 
@@ -182,4 +182,43 @@ Attach the trust policy to the IAM execution role you created in Step 1. This co
 
 ## Next Steps
 
-With your IAM configuration complete and environment variables prepared, you can now return to the **AWS Marketplace listing** to complete the deployment of your Falcon MCP Server agent in Amazon Bedrock AgentCore.
+### Important Variables
+
+To host this agent in Amazon Bedrock AgentCore, the following variables will need to be known:
+
+| Variable | Description |
+| :--- | :--- |
+| `FALCON_CLIENT_ID` | The Client ID for your Falcon API credentials |
+| `FALCON_CLIENT_SECRET` | The Client Secret for your Falcon API credentials |
+| `FALCON_BASE_URL` | The base URL for your Falcon API environment |
+| `AGENT_NAME` | The name of the agent (_ex: falconmcp_) |
+| `AGENT_DESCRIPTION` | A description of the agent |
+| `AGENT_ROLE_ARN` | The ARN of the IAM execution role created in Step 1 |
+
+With your IAM configuration complete and variables prepared, you can now return to the **AWS Marketplace listing** to complete the deployment of your Falcon MCP Server agent in Amazon Bedrock AgentCore.
+
+#### Example Deployment
+
+```bash
+aws bedrock-agentcore-control create-agent-runtime \
+  --region us-east-1 \
+  --agent-runtime-name "falconmcp" \
+  --description "Falcon MCP Server Agent" \
+  --agent-runtime-artifact '{
+    "containerConfiguration": {
+      "containerUri": "709825985650.dkr.ecr.us-east-1.amazonaws.com/crowdstrike/falcon-mcp:0.1.1"
+    }
+  }' \
+  --role-arn "arn:aws:iam::example:role/bedrock-core-falcon-role" \
+  --network-configuration '{
+    "networkMode": "PUBLIC"
+  }' \
+  --protocol-configuration '{
+    "serverProtocol": "MCP"
+  }' \
+  --environment-variables '{
+    "FALCON_CLIENT_ID": "FALCON_CLIENT_ID_VALUE",
+    "FALCON_CLIENT_SECRET": "FALCON_CLIENT_SECRET_VALUE",
+    "FALCON_BASE_URL": "https://api.crowdstrike.com"
+  }'
+```
