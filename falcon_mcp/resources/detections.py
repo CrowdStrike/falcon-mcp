@@ -42,6 +42,14 @@ field_name:[operator]'value'
 • Wildcards: name:'EICAR*' | description:'*credential*' | agent_id:'77d11725*' | pattern_id:'301*'
 • Combinations: status:'new'+severity:>=70+product:'epp' | product:'epp',product:'xdr' | status:'new',status:'reopened'
 
+🔍 EPP-SPECIFIC PATTERNS:
+• Device targeting: product:'epp'+device.hostname:'DC*' | product:'epp'+device.external_ip:'192.168.*'
+• Process analysis: product:'epp'+filename:'*cmd*'+cmdline:'*password*' | product:'epp'+filepath:'*system32*'
+• Hash investigation: product:'epp'+sha256:'abc123...' | product:'epp'+md5:'def456...'
+• Incident correlation: product:'epp'+incident.id:'inc_12345' | product:'epp'+incident.score:>=80
+• User activity: product:'epp'+user_name:'admin*' | product:'epp'+logon_domain:'CORP'
+• Nested queries: product:'epp'+device.agent_version:'7.*' | product:'epp'+parent_details.filename:'*explorer*'
+
 === falcon_search_detections FQL filter available fields ===
 
 +----------------------------+---------------------------+--------------------------------------------------------+
@@ -208,10 +216,210 @@ field_name:[operator]'value'
 |                            |                           | Ex: ["fc/offering/falcon_complete",                   |
 |                            |                           | "fc/exclusion/pre-epp-migration", "fc/exclusion/nonlive"]|
 +----------------------------+---------------------------+--------------------------------------------------------+
-| **INTERNAL FIELDS**                                                                                             |
+| **PROCESS & EXECUTION** (EPP-specific fields)                                                                   |
 +----------------------------+---------------------------+--------------------------------------------------------+
-| external                   | Boolean                   | A field reserved for internal use.                    |
-|                            |                           | Ex: false                                              |
+| alleged_filetype           | String                    | The alleged file type of the executable.              |
+|                            |                           | Ex: exe                                                |
++----------------------------+---------------------------+--------------------------------------------------------+
+| cmdline                    | String                    | Command line arguments used to start the process.     |
+|                            |                           | Ex: powershell.exe -ExecutionPolicy Bypass           |
++----------------------------+---------------------------+--------------------------------------------------------+
+| filename                   | String                    | Process filename without path.                        |
+|                            |                           | Ex: powershell.exe                                    |
++----------------------------+---------------------------+--------------------------------------------------------+
+| filepath                   | String                    | Full file path of the executable.                     |
+|                            |                           | Ex: C:\Windows\System32\WindowsPowerShell\v1.0\      |
+|                            |                           | powershell.exe                                        |
++----------------------------+---------------------------+--------------------------------------------------------+
+| process_id                 | String                    | Process identifier.                                    |
+|                            |                           | Ex: pid:12345:abcdef                                  |
++----------------------------+---------------------------+--------------------------------------------------------+
+| parent_process_id          | String                    | Parent process identifier.                             |
+|                            |                           | Ex: pid:12344:ghijkl                                  |
++----------------------------+---------------------------+--------------------------------------------------------+
+| local_process_id           | Number                    | Local process ID number.                               |
+|                            |                           | Ex: 12345                                              |
++----------------------------+---------------------------+--------------------------------------------------------+
+| process_start_time         | Number                    | Process start timestamp (epoch).                      |
+|                            |                           | Ex: 1724347200                                         |
++----------------------------+---------------------------+--------------------------------------------------------+
+| process_end_time           | Number                    | Process end timestamp (epoch).                        |
+|                            |                           | Ex: 1724347800                                         |
++----------------------------+---------------------------+--------------------------------------------------------+
+| tree_id                    | String                    | Process tree identifier.                               |
+|                            |                           | Ex: tree:77d11725:abcd1234                            |
++----------------------------+---------------------------+--------------------------------------------------------+
+| tree_root                  | String                    | Process tree root identifier.                          |
+|                            |                           | Ex: root:77d11725:efgh5678                            |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **DEVICE INFORMATION** (EPP-specific nested fields)                                                             |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.agent_load_flags    | String                    | Agent load flags configuration.                        |
+|                            |                           | Ex: 0x00000001                                        |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.agent_local_time    | Timestamp                 | Agent local timestamp in UTC format.                  |
+|                            |                           | Ex: 2024-02-22T14:15:03.112Z                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.agent_version       | String                    | CrowdStrike Falcon agent version.                     |
+|                            |                           | Ex: 7.10.19103.0                                      |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.bios_manufacturer   | String                    | System BIOS manufacturer name.                         |
+|                            |                           | Ex: Dell Inc.                                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.bios_version        | String                    | System BIOS version information.                       |
+|                            |                           | Ex: 2.18.0                                             |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.config_id_base      | String                    | Base configuration identifier.                         |
+|                            |                           | Ex: 65994753                                           |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.config_id_build     | String                    | Build configuration identifier.                        |
+|                            |                           | Ex: 19103                                              |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.config_id_platform  | String                    | Platform configuration identifier.                     |
+|                            |                           | Ex: 3                                                  |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.device_id           | String                    | Unique device identifier.                              |
+|                            |                           | Ex: 77d11725xxxxxxxxxxxxxxxxxxxxc48ca19               |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.external_ip         | String                    | Device external/public IP address.                     |
+|                            |                           | Ex: 203.0.113.5                                       |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.first_seen          | Timestamp                 | First time device was seen in UTC format.             |
+|                            |                           | Ex: 2024-01-15T10:30:00.000Z                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.hostname            | String                    | Device hostname or computer name.                      |
+|                            |                           | Ex: DESKTOP-ABC123                                    |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.last_seen           | Timestamp                 | Last time device was seen in UTC format.              |
+|                            |                           | Ex: 2024-02-22T14:15:03.112Z                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.local_ip            | String                    | Device local/private IP address.                       |
+|                            |                           | Ex: 192.168.1.100                                     |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.major_version       | String                    | Operating system major version.                        |
+|                            |                           | Ex: 10                                                 |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.minor_version       | String                    | Operating system minor version.                        |
+|                            |                           | Ex: 0                                                  |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.modified_timestamp  | Timestamp                 | Device record last modified timestamp in UTC format.   |
+|                            |                           | Ex: 2024-02-22T15:15:05.637Z                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.os_version          | String                    | Complete operating system version string.             |
+|                            |                           | Ex: Windows 10                                         |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.ou                  | String                    | Organizational unit or domain path.                    |
+|                            |                           | Ex: OU=Computers,DC=example,DC=com                    |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.platform_id         | String                    | Platform identifier code.                              |
+|                            |                           | Ex: 0                                                  |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.platform_name       | String                    | Operating system platform name.                       |
+|                            |                           | Ex: Windows                                            |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.product_type        | String                    | Product type identifier.                               |
+|                            |                           | Ex: 1                                                  |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.product_type_desc   | String                    | Product type description.                              |
+|                            |                           | Ex: Workstation                                       |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.status              | String                    | Device connection status.                              |
+|                            |                           | Ex: normal                                             |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.system_manufacturer | String                    | System hardware manufacturer.                          |
+|                            |                           | Ex: Dell Inc.                                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| device.system_product_name | String                    | System product model name.                             |
+|                            |                           | Ex: OptiPlex 7090                                     |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **HASH & PREVALENCE** (EPP-specific fields)                                                                     |
++----------------------------+---------------------------+--------------------------------------------------------+
+| md5                        | String                    | MD5 hash of the file.                                 |
+|                            |                           | Ex: 5d41402abc4b2a76b9719d911017c592                  |
++----------------------------+---------------------------+--------------------------------------------------------+
+| sha1                       | String                    | SHA1 hash of the file.                                |
+|                            |                           | Ex: aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| sha256                     | String                    | SHA256 hash of the file.                              |
+|                            |                           | Ex: 2cf24dba4f21d4288094c19329d73459e4449065644a8   |
+|                            |                           | 9ed6534746b7d2cbe0e9a4c8e8e8bf7                      |
++----------------------------+---------------------------+--------------------------------------------------------+
+| global_prevalence          | String                    | Global prevalence rating of the file.                 |
+|                            |                           | Ex: rare                                               |
++----------------------------+---------------------------+--------------------------------------------------------+
+| local_prevalence           | String                    | Local prevalence rating within the organization.       |
+|                            |                           | Ex: common                                             |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **INCIDENT & TRIAGE** (EPP-specific nested fields)                                                              |
++----------------------------+---------------------------+--------------------------------------------------------+
+| charlotte.can_triage       | Boolean                   | Whether alert can be triaged automatically.           |
+|                            |                           | Ex: true                                               |
++----------------------------+---------------------------+--------------------------------------------------------+
+| charlotte.triage_status    | String                    | Automated triage status.                              |
+|                            |                           | Ex: triaged                                            |
++----------------------------+---------------------------+--------------------------------------------------------+
+| incident.created           | Timestamp                 | Incident creation timestamp in UTC format.            |
+|                            |                           | Ex: 2024-02-22T14:15:03.112Z                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| incident.end               | Timestamp                 | Incident end timestamp in UTC format.                 |
+|                            |                           | Ex: 2024-02-22T14:45:03.112Z                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| incident.id                | String                    | Unique incident identifier.                            |
+|                            |                           | Ex: inc_12345abcdef                                   |
++----------------------------+---------------------------+--------------------------------------------------------+
+| incident.score             | Number                    | Incident severity score (1-100).                      |
+|                            |                           | Ex: 85                                                 |
++----------------------------+---------------------------+--------------------------------------------------------+
+| incident.start             | Timestamp                 | Incident start timestamp in UTC format.               |
+|                            |                           | Ex: 2024-02-22T14:15:03.112Z                          |
++----------------------------+---------------------------+--------------------------------------------------------+
+| indicator_id               | String                    | Threat indicator identifier.                           |
+|                            |                           | Ex: ind_67890wxyz                                     |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **PROCESS LINEAGE** (EPP-specific nested object fields)                                                         |
++----------------------------+---------------------------+--------------------------------------------------------+
+| parent_details.*           | Object                    | Parent process information object. Use dot notation    |
+|                            |                           | for specific fields like parent_details.cmdline,      |
+|                            |                           | parent_details.filename, parent_details.filepath,     |
+|                            |                           | parent_details.process_id, etc.                       |
+|                            |                           | Ex: parent_details.filename:'explorer.exe'            |
++----------------------------+---------------------------+--------------------------------------------------------+
+| grandparent_details.*      | Object                    | Grandparent process information object. Use dot       |
+|                            |                           | notation for specific fields like                     |
+|                            |                           | grandparent_details.cmdline,                          |
+|                            |                           | grandparent_details.filename, etc.                    |
+|                            |                           | Ex: grandparent_details.filepath:'*winlogon*'         |
++----------------------------+---------------------------+--------------------------------------------------------+
+| child_process_ids          | Array                     | List of child process identifiers spawned by this     |
+|                            |                           | process (array field).                                |
+|                            |                           | Ex: ["pid:12346:abcdef", "pid:12347:ghijkl"]         |
++----------------------------+---------------------------+--------------------------------------------------------+
+| triggering_process_graph_id| String                    | Process graph identifier for the triggering process   |
+|                            |                           | in the attack chain.                                   |
+|                            |                           | Ex: graph:77d11725:trigger123                        |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **IOC & INDICATORS** (EPP-specific fields)                                                                      |
++----------------------------+---------------------------+--------------------------------------------------------+
+| ioc_context                | Array                     | IOC context information and metadata (array field).   |
+|                            |                           | Ex: ["malware_family", "apt_group"]                  |
++----------------------------+---------------------------+--------------------------------------------------------+
+| ioc_values                 | Array                     | IOC values associated with the alert (array field).   |
+|                            |                           | Ex: ["192.168.1.100", "malicious.exe"]               |
++----------------------------+---------------------------+--------------------------------------------------------+
+| falcon_host_link           | String                    | Direct link to Falcon console for this host.         |
+|                            |                           | Ex: https://falcon.crowdstrike.com/hosts/detail/     |
+|                            |                           | 77d11725xxxxxxxxxxxxxxxxxxxxc48ca19                  |
++----------------------------+---------------------------+--------------------------------------------------------+
+| **USER & AUTHENTICATION** (EPP-specific fields)                                                                 |
++----------------------------+---------------------------+--------------------------------------------------------+
+| user_id                    | String                    | User identifier associated with the process.          |
+|                            |                           | Ex: S-1-5-21-1234567890-987654321-1122334455-1001    |
++----------------------------+---------------------------+--------------------------------------------------------+
+| user_name                  | String                    | Username associated with the process.                  |
+|                            |                           | Ex: administrator                                      |
++----------------------------+---------------------------+--------------------------------------------------------+
+| logon_domain               | String                    | Logon domain name for the user.                       |
+|                            |                           | Ex: CORP                                               |
 +----------------------------+---------------------------+--------------------------------------------------------+
 
 === COMPLEX FILTER EXAMPLES ===
