@@ -2,7 +2,7 @@
 Contains Detections resources.
 """
 
-SEARCH_DETECTIONS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Detections/Alerts Guide
+SEARCH_DETECTIONS_FQL_DOCUMENTATION = r"""Falcon Query Language (FQL) - Search Detections/Alerts Guide
 
 === BASIC SYNTAX ===
 field_name:[operator]'value'
