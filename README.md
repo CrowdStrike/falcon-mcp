@@ -225,8 +225,11 @@ Install the latest stable version from PyPI:
 # Optionally create a virtual environment
 python -m venv .venv && source .venv/bin/activate
 
+# If you don't have it globally installed
+pip install uv
+
 # Install falcon-mcp from PyPI
-pip install falcon-mcp
+uv pip install falcon-mcp
 ```
 
 #### Option 2: Install from Source (Development)
@@ -246,7 +249,7 @@ For development or to get the latest unreleased features:
    # Optionally create a virtual environment
    python -m venv .venv && source .venv/bin/activate
 
-   pip install -e .
+   uv pip install -e .
    ```
 
 ### Environment Configuration
@@ -503,7 +506,7 @@ To contribute to the Falcon MCP Server, first install the development dependenci
 
 ```bash
 # Install development dependencies
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 ```
 
 > [!IMPORTANT]
