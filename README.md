@@ -213,23 +213,15 @@ Provides tools for accessing and managing CrowdStrike Falcon Identity Protection
 ### Prerequisites
 
 - Python 3.11 or higher
+- [`uv`](https://docs.astral.sh/uv/)
 - CrowdStrike Falcon API credentials (see above)
 
 ### Installation
 
-#### Option 1: Install from PyPI (Recommended)
-
-Install the latest stable version from PyPI:
+#### Option 1: Using uvx (Recommended)
 
 ```bash
-# Optionally create a virtual environment
-python -m venv .venv && source .venv/bin/activate
-
-# If you don't have it globally installed
-pip install uv
-
-# Install falcon-mcp from PyPI
-uv pip install falcon-mcp
+uvx falcon-mcp
 ```
 
 #### Option 2: Install from Source (Development)
@@ -246,9 +238,7 @@ For development or to get the latest unreleased features:
 2. Install in development mode:
 
    ```bash
-   # Optionally create a virtual environment
-   python -m venv .venv && source .venv/bin/activate
-
+   uv sync
    uv pip install -e .
    ```
 
