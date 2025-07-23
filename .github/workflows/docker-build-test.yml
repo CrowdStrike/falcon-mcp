@@ -7,7 +7,6 @@ on:
       - 'Dockerfile'
       - 'pyproject.toml'
       - 'uv.lock'
-      - 'requirements.txt'
       - 'falcon_mcp/**'
       - '.github/workflows/docker-build-test.yml'
 
