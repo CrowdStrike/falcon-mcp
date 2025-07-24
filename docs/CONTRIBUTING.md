@@ -23,11 +23,15 @@ Never made an open source contribution before? Wondering how contributions work 
 
 5. Make the appropriate changes for the issue you are trying to address or the feature you would like to add.
 
-6. Add the file contents of the changed files to the "snapshot" git uses to manage the state of the project (also known as the index). Here is the git command that will add your changes:
+6. Run `isort` to make sure imports are sorted correctly. This helps maintain consistent code style across the project.
+
+    ``isort .``
+
+7. Add the file contents of the changed files to the "snapshot" git uses to manage the state of the project (also known as the index). Here is the git command that will add your changes:
 
     ``git add insert-paths-of-changed-files-here``
 
-7. **Use conventional commits** to store the contents of the index with a descriptive, standardized message. This project uses [Conventional Commits](https://www.conventionalcommits.org/) to enable automated release workflows and maintain proper semantic versioning.
+8. **Use conventional commits** to store the contents of the index with a descriptive, standardized message. This project uses [Conventional Commits](https://www.conventionalcommits.org/) to enable automated release workflows and maintain proper semantic versioning.
 
     **Conventional Commit Format:**
 
@@ -117,15 +121,15 @@ Never made an open source contribution before? Wondering how contributions work 
 
     For more details, see the [Conventional Commits specification](https://www.conventionalcommits.org/).
 
-8. Push your local changes back to your account on github.com:
+9. Push your local changes back to your account on github.com:
 
     ``git push origin BRANCH-NAME-HERE``
 
-9. Submit a pull request to the upstream project. Documentation on this process, including screen shots, can be found at [https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request-from-a-fork](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request-from-a-fork)
+10. Submit a pull request to the upstream project. Documentation on this process, including screen shots, can be found at [https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request-from-a-fork](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request-from-a-fork)
 
-10. Once submitted, a maintainer will review your pull request. They may ask for additional changes, or clarification, so keep an eye out for communication! GitHub automatically sends an email to your email address whenever someone comments on your pull request.
+11. Once submitted, a maintainer will review your pull request. They may ask for additional changes, or clarification, so keep an eye out for communication! GitHub automatically sends an email to your email address whenever someone comments on your pull request.
 
-11. While not all pull requests may be merged, celebrate your contribution whether or not your pull request is merged! All changes move the project forward, and we thank you for helping the community!
+12. While not all pull requests may be merged, celebrate your contribution whether or not your pull request is merged! All changes move the project forward, and we thank you for helping the community!
 
 ### Rebase Early, Rebase Often
 
