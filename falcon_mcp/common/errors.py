@@ -3,6 +3,7 @@ Error handling utilities for Falcon MCP Server
 
 This module provides error handling utilities for the Falcon MCP server.
 """
+
 from typing import Any, Dict, Optional
 
 from .api_scopes import get_required_scopes
@@ -17,7 +18,7 @@ ERROR_CODE_DESCRIPTIONS = {
     404: "Resource not found. The requested resource does not exist.",
     429: "Rate limit exceeded. Too many requests in a short period.",
     500: "Server error. An unexpected error occurred on the server.",
-    503: "Service unavailable. The service is temporarily unavailable."
+    503: "Service unavailable. The service is temporarily unavailable.",
 }
 
 
@@ -31,12 +32,13 @@ class AuthenticationError(FalconError):
 
 class APIError(FalconError):
     """Raised when a Falcon API request fails."""
+
     def __init__(
         self,
         message: str,
         status_code: Optional[int] = None,
         body: Optional[Dict[str, Any]] = None,
-        operation: Optional[str] = None
+        operation: Optional[str] = None,
     ):
         self.status_code = status_code
         self.body = body
@@ -56,11 +58,10 @@ def is_success_response(response: Dict[str, Any]) -> bool:
     return response.get("status_code") == 200
 
 
-
 def _format_error_response(
     message: str,
     details: Optional[Dict[str, Any]] = None,
-    operation: Optional[str] = None
+    operation: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Format an error as a standardized response.
 
@@ -83,7 +84,7 @@ def _format_error_response(
             required_scopes = get_required_scopes(operation)
             if required_scopes:
                 response["required_scopes"] = required_scopes
-                scopes_list = ', '.join(required_scopes)
+                scopes_list = ", ".join(required_scopes)
                 response["resolution"] = (
                     f"This operation requires the following API scopes: {scopes_list}. "
                     "Please ensure your API client has been granted these scopes in the "
@@ -100,8 +101,8 @@ def handle_api_response(
     response: Dict[str, Any],
     operation: str,
     error_message: str = "API request failed",
-    default_result: Any = None
-) -> Dict[str, Any]|Any:
+    default_result: Any = None,
+) -> Dict[str, Any] | Any:
     """Handle an API response, returning either the result or an error.
 
     Args:
@@ -118,8 +119,7 @@ def handle_api_response(
     if status_code != 200:
         # Get a more descriptive error message based on status code
         status_message = ERROR_CODE_DESCRIPTIONS.get(
-            status_code,
-            f"Request failed with status code {status_code}"
+            status_code, f"Request failed with status code {status_code}"
         )
 
         # For permission errors, add more context
@@ -132,9 +132,7 @@ def handle_api_response(
         logger.error("Error: %s: %s", error_message, status_message)
 
         return _format_error_response(
-            f"{error_message}: {status_message}",
-            details=response,
-            operation=operation
+            f"{error_message}: {status_message}", details=response, operation=operation
         )
 
     # Extract resources from the response body

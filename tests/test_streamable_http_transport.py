@@ -1,6 +1,7 @@
 """
 Tests for streamable-http transport functionality.
 """
+
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -10,10 +11,12 @@ from falcon_mcp.server import FalconMCPServer
 class TestStreamableHttpTransport(unittest.TestCase):
     """Test cases for streamable-http transport."""
 
-    @patch('falcon_mcp.server.FalconClient')
-    @patch('falcon_mcp.server.FastMCP')
-    @patch('falcon_mcp.server.uvicorn')
-    def test_streamable_http_transport_initialization(self, mock_uvicorn, mock_fastmcp, mock_client):
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_streamable_http_transport_initialization(
+        self, mock_uvicorn, mock_fastmcp, mock_client
+    ):
         """Test streamable-http transport initialization."""
         # Setup mocks
         mock_client_instance = MagicMock()
@@ -33,19 +36,18 @@ class TestStreamableHttpTransport(unittest.TestCase):
 
         # Verify uvicorn was called with correct parameters
         mock_uvicorn.run.assert_called_once_with(
-            mock_app,
-            host="0.0.0.0",
-            port=8080,
-            log_level="debug"
+            mock_app, host="0.0.0.0", port=8080, log_level="debug"
         )
 
         # Verify streamable_http_app was called
         mock_server_instance.streamable_http_app.assert_called_once()
 
-    @patch('falcon_mcp.server.FalconClient')
-    @patch('falcon_mcp.server.FastMCP')
-    @patch('falcon_mcp.server.uvicorn')
-    def test_streamable_http_default_parameters(self, mock_uvicorn, mock_fastmcp, mock_client):
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_streamable_http_default_parameters(
+        self, mock_uvicorn, mock_fastmcp, mock_client
+    ):
         """Test streamable-http transport with default parameters."""
         # Setup mocks
         mock_client_instance = MagicMock()
@@ -65,14 +67,11 @@ class TestStreamableHttpTransport(unittest.TestCase):
 
         # Verify uvicorn was called with default parameters
         mock_uvicorn.run.assert_called_once_with(
-            mock_app,
-            host="127.0.0.1",
-            port=8000,
-            log_level="info"
+            mock_app, host="127.0.0.1", port=8000, log_level="info"
         )
 
-    @patch('falcon_mcp.server.FalconClient')
-    @patch('falcon_mcp.server.FastMCP')
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
     def test_non_streamable_http_transport_unchanged(self, mock_fastmcp, mock_client):
         """Test that non-streamable-http transports use the original method."""
         # Setup mocks
@@ -95,10 +94,12 @@ class TestStreamableHttpTransport(unittest.TestCase):
         # Verify streamable_http_app was NOT called
         mock_server_instance.streamable_http_app.assert_not_called()
 
-    @patch('falcon_mcp.server.FalconClient')
-    @patch('falcon_mcp.server.FastMCP')
-    @patch('falcon_mcp.server.uvicorn')
-    def test_streamable_http_custom_parameters(self, mock_uvicorn, mock_fastmcp, mock_client):
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_streamable_http_custom_parameters(
+        self, mock_uvicorn, mock_fastmcp, mock_client
+    ):
         """Test streamable-http transport with custom parameters."""
         # Setup mocks
         mock_client_instance = MagicMock()
@@ -118,16 +119,15 @@ class TestStreamableHttpTransport(unittest.TestCase):
 
         # Verify uvicorn was called with custom parameters
         mock_uvicorn.run.assert_called_once_with(
-            mock_app,
-            host="192.168.1.100",
-            port=9000,
-            log_level="debug"
+            mock_app, host="192.168.1.100", port=9000, log_level="debug"
         )
 
-    @patch('falcon_mcp.server.FalconClient')
-    @patch('falcon_mcp.server.FastMCP')
-    @patch('falcon_mcp.server.uvicorn')
-    def test_streamable_http_logging_levels(self, mock_uvicorn, mock_fastmcp, mock_client):
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_streamable_http_logging_levels(
+        self, mock_uvicorn, mock_fastmcp, mock_client
+    ):
         """Test streamable-http transport logging level configuration."""
         # Setup mocks
         mock_client_instance = MagicMock()
@@ -145,10 +145,7 @@ class TestStreamableHttpTransport(unittest.TestCase):
 
         # Verify debug log level
         mock_uvicorn.run.assert_called_with(
-            mock_app,
-            host="127.0.0.1",
-            port=8000,
-            log_level="debug"
+            mock_app, host="127.0.0.1", port=8000, log_level="debug"
         )
 
         # Reset mock
@@ -160,12 +157,9 @@ class TestStreamableHttpTransport(unittest.TestCase):
 
         # Verify info log level
         mock_uvicorn.run.assert_called_with(
-            mock_app,
-            host="127.0.0.1",
-            port=8000,
-            log_level="info"
+            mock_app, host="127.0.0.1", port=8000, log_level="info"
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

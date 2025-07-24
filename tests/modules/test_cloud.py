@@ -40,7 +40,9 @@ class TestCloudModule(TestModules):
         }
         self.mock_client.command.return_value = mock_response
 
-        result = self.module.search_kubernetes_containers(filter="cloud_name:'AWS'", limit=1)
+        result = self.module.search_kubernetes_containers(
+            filter="cloud_name:'AWS'", limit=1
+        )
 
         self.assertEqual(self.mock_client.command.call_count, 1)
 
@@ -97,7 +99,9 @@ class TestCloudModule(TestModules):
         mock_response = {"status_code": 200, "body": {"resources": ["cve_id_1"]}}
         self.mock_client.command.return_value = mock_response
 
-        result = self.module.search_images_vulnerabilities(filter="cvss_score:>5", limit=1)
+        result = self.module.search_images_vulnerabilities(
+            filter="cvss_score:>5", limit=1
+        )
 
         self.assertEqual(self.mock_client.command.call_count, 1)
 

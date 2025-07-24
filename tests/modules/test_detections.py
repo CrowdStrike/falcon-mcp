@@ -33,7 +33,10 @@ class TestDetectionsModule(TestModules):
     def test_search_detections(self):
         """Test searching for detections."""
         # Setup mock responses for both API calls
-        query_response = {"status_code": 200, "body": {"resources": ["detection1", "detection2"]}}
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["detection1", "detection2"]},
+        }
         details_response = {
             "status_code": 200,
             "body": {"resources": []},  # Empty resources for PostEntitiesAlertsV2
@@ -41,7 +44,9 @@ class TestDetectionsModule(TestModules):
         self.mock_client.command.side_effect = [query_response, details_response]
 
         # Call search_detections
-        result = self.module.search_detections(filter="test query", limit=10, include_hidden=True)
+        result = self.module.search_detections(
+            filter="test query", limit=10, include_hidden=True
+        )
 
         # Verify client commands were called correctly
         self.assertEqual(self.mock_client.command.call_count, 2)
@@ -53,7 +58,10 @@ class TestDetectionsModule(TestModules):
         self.assertEqual(first_call[1]["parameters"]["limit"], 10)
         self.mock_client.command.assert_any_call(
             "PostEntitiesAlertsV2",
-            body={"composite_ids": ["detection1", "detection2"], "include_hidden": True},
+            body={
+                "composite_ids": ["detection1", "detection2"],
+                "include_hidden": True,
+            },
         )
 
         # Verify result
@@ -64,7 +72,10 @@ class TestDetectionsModule(TestModules):
     def test_search_detections_with_details(self):
         """Test searching for detections with details."""
         # Setup mock responses
-        query_response = {"status_code": 200, "body": {"resources": ["detection1", "detection2"]}}
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["detection1", "detection2"]},
+        }
         details_response = {
             "status_code": 200,
             "body": {
@@ -77,7 +88,9 @@ class TestDetectionsModule(TestModules):
         self.mock_client.command.side_effect = [query_response, details_response]
 
         # Call search_detections
-        result = self.module.search_detections(filter="test query", limit=10, include_hidden=True)
+        result = self.module.search_detections(
+            filter="test query", limit=10, include_hidden=True
+        )
 
         # Verify client commands were called correctly
         self.assertEqual(self.mock_client.command.call_count, 2)
@@ -89,7 +102,10 @@ class TestDetectionsModule(TestModules):
         self.assertEqual(first_call[1]["parameters"]["limit"], 10)
         self.mock_client.command.assert_any_call(
             "PostEntitiesAlertsV2",
-            body={"composite_ids": ["detection1", "detection2"], "include_hidden": True},
+            body={
+                "composite_ids": ["detection1", "detection2"],
+                "include_hidden": True,
+            },
         )
 
         # Verify result
@@ -102,7 +118,10 @@ class TestDetectionsModule(TestModules):
     def test_search_detections_error(self):
         """Test searching for detections with API error."""
         # Setup mock response with error
-        mock_response = {"status_code": 400, "body": {"errors": [{"message": "Invalid query"}]}}
+        mock_response = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid query"}]},
+        }
         self.mock_client.command.return_value = mock_response
 
         # Call search_detections
@@ -127,7 +146,8 @@ class TestDetectionsModule(TestModules):
 
         # Verify client command was called correctly
         self.mock_client.command.assert_called_once_with(
-            "PostEntitiesAlertsV2", body={"composite_ids": ["detection1"], "include_hidden": True}
+            "PostEntitiesAlertsV2",
+            body={"composite_ids": ["detection1"], "include_hidden": True},
         )
 
         # Verify result - handle_api_response returns a list of resources
@@ -150,7 +170,10 @@ class TestDetectionsModule(TestModules):
     def test_search_detections_include_hidden_false(self):
         """Test searching for detections with include_hidden=False."""
         # Setup mock responses for both API calls
-        query_response = {"status_code": 200, "body": {"resources": ["detection1", "detection2"]}}
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["detection1", "detection2"]},
+        }
         details_response = {
             "status_code": 200,
             "body": {"resources": [{"id": "detection1", "name": "Test Detection 1"}]},
@@ -158,7 +181,9 @@ class TestDetectionsModule(TestModules):
         self.mock_client.command.side_effect = [query_response, details_response]
 
         # Call search_detections with include_hidden=False
-        result = self.module.search_detections(filter="test query", include_hidden=False)
+        result = self.module.search_detections(
+            filter="test query", include_hidden=False
+        )
 
         # Verify client commands were called correctly
         self.assertEqual(self.mock_client.command.call_count, 2)
@@ -166,7 +191,10 @@ class TestDetectionsModule(TestModules):
         # Check that the second call includes include_hidden=False
         self.mock_client.command.assert_any_call(
             "PostEntitiesAlertsV2",
-            body={"composite_ids": ["detection1", "detection2"], "include_hidden": False},
+            body={
+                "composite_ids": ["detection1", "detection2"],
+                "include_hidden": False,
+            },
         )
 
         # Verify result
@@ -187,7 +215,8 @@ class TestDetectionsModule(TestModules):
 
         # Verify client command was called correctly with include_hidden=False
         self.mock_client.command.assert_called_once_with(
-            "PostEntitiesAlertsV2", body={"composite_ids": ["detection1"], "include_hidden": False}
+            "PostEntitiesAlertsV2",
+            body={"composite_ids": ["detection1"], "include_hidden": False},
         )
 
         # Verify result

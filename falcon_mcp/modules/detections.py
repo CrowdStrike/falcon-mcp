@@ -4,6 +4,7 @@ Detections module for Falcon MCP Server
 
 This module provides tools for accessing and analyzing CrowdStrike Falcon detections.
 """
+
 from textwrap import dedent
 from typing import Any, Dict, List, Optional
 
@@ -30,17 +31,9 @@ class DetectionsModule(BaseModule):
             server: MCP server instance
         """
         # Register tools
-        self._add_tool(
-            server,
-            self.search_detections,
-            name="search_detections"
-        )
+        self._add_tool(server, self.search_detections, name="search_detections")
 
-        self._add_tool(
-            server,
-            self.get_detection_details,
-            name="get_detection_details"
-        )
+        self._add_tool(server, self.get_detection_details, name="get_detection_details")
 
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.
@@ -52,20 +45,33 @@ class DetectionsModule(BaseModule):
             uri=AnyUrl("falcon://detections/search/fql-guide"),
             name="falcon_search_detections_fql_guide",
             description="Contains the guide for the `filter` param of the `falcon_search_detections` tool.",
-            text=SEARCH_DETECTIONS_FQL_DOCUMENTATION
+            text=SEARCH_DETECTIONS_FQL_DOCUMENTATION,
         )
 
-        self._add_resource(
-            server,
-            search_detections_fql_resource
-        )
+        self._add_resource(server, search_detections_fql_resource)
 
     def search_detections(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://detections/search/fql-guide` resource when building this filter parameter.", examples={"agent_id:'77d11725xxxxxxxxxxxxxxxxxxxxc48ca19'", "status:'new'"}),
-        limit: Optional[int] = Field(default=100, ge=1, le=9999, description="The maximum number of detections to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results."),
-        offset: Optional[int] = Field(default=0, ge=0, description="The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results."),
-        q: Optional[str] = Field(default=None, description="Search all detection metadata for the provided string"),
+        filter: Optional[str] = Field(
+            default=None,
+            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://detections/search/fql-guide` resource when building this filter parameter.",
+            examples={"agent_id:'77d11725xxxxxxxxxxxxxxxxxxxxc48ca19'", "status:'new'"},
+        ),
+        limit: Optional[int] = Field(
+            default=100,
+            ge=1,
+            le=9999,
+            description="The maximum number of detections to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results.",
+        ),
+        offset: Optional[int] = Field(
+            default=0,
+            ge=0,
+            description="The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results.",
+        ),
+        q: Optional[str] = Field(
+            default=None,
+            description="Search all detection metadata for the provided string",
+        ),
         sort: Optional[str] = Field(
             default=None,
             description=dedent("""
@@ -86,7 +92,7 @@ class DetectionsModule(BaseModule):
 
                 Examples: 'severity.desc', 'timestamp.desc'
             """).strip(),
-            examples={"severity.desc", "timestamp.desc"}
+            examples={"severity.desc", "timestamp.desc"},
         ),
         include_hidden: Optional[bool] = Field(default=True),
     ) -> List[Dict[str, Any]]:
@@ -98,13 +104,15 @@ class DetectionsModule(BaseModule):
             List of detections with details
         """
         # Prepare parameters
-        params = prepare_api_parameters({
-            "filter": filter,
-            "limit": limit,
-            "offset": offset,
-            "q": q,
-            "sort": sort,
-        })
+        params = prepare_api_parameters(
+            {
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "q": q,
+                "sort": sort,
+            }
+        )
 
         # Define the operation name
         operation = "GetQueriesAlertsV2"
@@ -119,7 +127,7 @@ class DetectionsModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to search detections",
-            default_result=[]
+            default_result=[],
         )
 
         # If handle_api_response returns an error dict instead of a list,
@@ -134,7 +142,7 @@ class DetectionsModule(BaseModule):
                 operation="PostEntitiesAlertsV2",
                 ids=detection_ids,
                 id_key="composite_ids",
-                include_hidden=include_hidden
+                include_hidden=include_hidden,
             )
 
             # If handle_api_response returns an error dict instead of a list,
@@ -148,9 +156,15 @@ class DetectionsModule(BaseModule):
 
     def get_detection_details(
         self,
-        ids: List[str] = Field(default=None, description="Detection ID(s) to retrieve details for. Specify one or more detection IDs (max 1000 per request)."),
-        include_hidden: Optional[bool] = Field(default=True, description="Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility."),
-    ) -> List[Dict[str, Any]]|Dict[str, Any]:
+        ids: List[str] = Field(
+            default=None,
+            description="Detection ID(s) to retrieve details for. Specify one or more detection IDs (max 1000 per request).",
+        ),
+        include_hidden: Optional[bool] = Field(
+            default=True,
+            description="Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility.",
+        ),
+    ) -> List[Dict[str, Any]] | Dict[str, Any]:
         """Get comprehensive detection details for specific detection IDs to understand security threats.
 
         This tool returns comprehensive detection details for one or more detection IDs.

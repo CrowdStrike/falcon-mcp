@@ -1,6 +1,7 @@
 """
 Tests for the IDP (Identity Protection) module.
 """
+
 import unittest
 
 from falcon_mcp.modules.idp import IdpModule
@@ -36,20 +37,18 @@ class TestIdpModule(TestModules):
                                 "secondaryDisplayName": "test@example.com",
                                 "type": "USER",
                                 "riskScore": 75,
-                                "riskScoreSeverity": "MEDIUM"
+                                "riskScoreSeverity": "MEDIUM",
                             }
                         ]
                     }
                 }
-            }
+            },
         }
         self.mock_client.command.return_value = mock_response
 
         # Call investigate_entity with basic parameters
         result = self.module.investigate_entity(
-            entity_names=["Test User"],
-            investigation_types=["entity_details"],
-            limit=10
+            entity_names=["Test User"], investigation_types=["entity_details"], limit=10
         )
 
         # Verify client command was called (at least for entity resolution)
@@ -75,12 +74,12 @@ class TestIdpModule(TestModules):
                                 {
                                     "entityId": "test-entity-456",
                                     "primaryDisplayName": "Admin User",
-                                    "secondaryDisplayName": "admin@example.com"
+                                    "secondaryDisplayName": "admin@example.com",
                                 }
                             ]
                         }
                     }
-                }
+                },
             },
             # Entity details response
             {
@@ -97,13 +96,16 @@ class TestIdpModule(TestModules):
                                     "riskScore": 85,
                                     "riskScoreSeverity": "HIGH",
                                     "riskFactors": [
-                                        {"type": "PRIVILEGED_ACCESS", "severity": "HIGH"}
-                                    ]
+                                        {
+                                            "type": "PRIVILEGED_ACCESS",
+                                            "severity": "HIGH",
+                                        }
+                                    ],
                                 }
                             ]
                         }
                     }
-                }
+                },
             },
             # Timeline response
             {
@@ -115,13 +117,13 @@ class TestIdpModule(TestModules):
                                 {
                                     "eventId": "event-123",
                                     "eventType": "AUTHENTICATION",
-                                    "timestamp": "2024-01-01T12:00:00Z"
+                                    "timestamp": "2024-01-01T12:00:00Z",
                                 }
                             ],
-                            "pageInfo": {"hasNextPage": False}
+                            "pageInfo": {"hasNextPage": False},
                         }
                     }
-                }
+                },
             },
             # Relationship analysis response
             {
@@ -138,15 +140,15 @@ class TestIdpModule(TestModules):
                                             "bindingType": "OWNERSHIP",
                                             "entity": {
                                                 "entityId": "server-789",
-                                                "primaryDisplayName": "Test Server"
-                                            }
+                                                "primaryDisplayName": "Test Server",
+                                            },
                                         }
-                                    ]
+                                    ],
                                 }
                             ]
                         }
                     }
-                }
+                },
             },
             # Risk assessment response
             {
@@ -161,25 +163,33 @@ class TestIdpModule(TestModules):
                                     "riskScore": 85,
                                     "riskScoreSeverity": "HIGH",
                                     "riskFactors": [
-                                        {"type": "PRIVILEGED_ACCESS", "severity": "HIGH"}
-                                    ]
+                                        {
+                                            "type": "PRIVILEGED_ACCESS",
+                                            "severity": "HIGH",
+                                        }
+                                    ],
                                 }
                             ]
                         }
                     }
-                }
-            }
+                },
+            },
         ]
         self.mock_client.command.side_effect = mock_responses
 
         # Call investigate_entity with multiple investigation types
         result = self.module.investigate_entity(
             email_addresses=["admin@example.com"],
-            investigation_types=["entity_details", "timeline_analysis", "relationship_analysis", "risk_assessment"],
+            investigation_types=[
+                "entity_details",
+                "timeline_analysis",
+                "relationship_analysis",
+                "risk_assessment",
+            ],
             limit=50,
             include_associations=True,
             include_accounts=True,
-            include_incidents=True
+            include_incidents=True,
         )
 
         # Verify multiple client commands were called
@@ -216,20 +226,12 @@ class TestIdpModule(TestModules):
         # Setup mock response with no entities
         mock_response = {
             "status_code": 200,
-            "body": {
-                "data": {
-                    "entities": {
-                        "nodes": []
-                    }
-                }
-            }
+            "body": {"data": {"entities": {"nodes": []}}},
         }
         self.mock_client.command.return_value = mock_response
 
         # Call investigate_entity
-        result = self.module.investigate_entity(
-            entity_names=["NonExistent User"]
-        )
+        result = self.module.investigate_entity(entity_names=["NonExistent User"])
 
         # Verify result indicates no entities found
         self.assertIn("error", result)
@@ -239,5 +241,5 @@ class TestIdpModule(TestModules):
         self.assertIn("search_criteria", result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

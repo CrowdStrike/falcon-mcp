@@ -1,6 +1,7 @@
 """
 Tests for the module registry.
 """
+
 import unittest
 from unittest.mock import MagicMock
 
@@ -39,16 +40,16 @@ class TestRegistry(unittest.TestCase):
         """Test that get_module_names returns the correct list of module names."""
         # Manually populate AVAILABLE_MODULES with some test modules
         registry.AVAILABLE_MODULES = {
-            'test1': MagicMock(),
-            'test2': MagicMock(),
-            'test3': MagicMock()
+            "test1": MagicMock(),
+            "test2": MagicMock(),
+            "test3": MagicMock(),
         }
 
         # Call get_module_names
         module_names = registry.get_module_names()
 
         # Verify that the returned list contains all the expected module names
-        self.assertEqual(set(module_names), {'test1', 'test2', 'test3'})
+        self.assertEqual(set(module_names), {"test1", "test2", "test3"})
         self.assertEqual(len(module_names), 3)
 
     def test_get_module_names_lazy_discovery(self):
@@ -63,7 +64,7 @@ class TestRegistry(unittest.TestCase):
         self.assertGreater(len(module_names), 0)
 
         # Verify that the expected modules are discovered
-        expected_modules = ['detections', 'incidents', 'intel']
+        expected_modules = ["detections", "incidents", "intel"]
         for module_name in expected_modules:
             self.assertIn(module_name, module_names)
 
@@ -77,7 +78,7 @@ class TestRegistry(unittest.TestCase):
 
         # Get the list of expected module names based on the project structure
         # This assumes that the project has modules like 'incidents', 'intel'
-        expected_modules = ['incidents', 'intel']
+        expected_modules = ["incidents", "intel"]
 
         # Verify that all expected modules are discovered
         for module_name in expected_modules:
@@ -88,5 +89,5 @@ class TestRegistry(unittest.TestCase):
             self.assertTrue(issubclass(module_class, BaseModule))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

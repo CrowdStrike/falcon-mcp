@@ -33,7 +33,10 @@ class TestHostsModule(TestModules):
     def test_search_hosts(self):
         """Test searching for hosts."""
         # Setup mock responses for both API calls
-        query_response = {"status_code": 200, "body": {"resources": ["device1", "device2"]}}
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["device1", "device2"]},
+        }
         details_response = {
             "status_code": 200,
             "body": {"resources": []},  # Empty resources for PostDeviceDetailsV2
@@ -49,7 +52,9 @@ class TestHostsModule(TestModules):
         # Check that the first call was to QueryDevicesByFilter with the right filter and limit
         first_call = self.mock_client.command.call_args_list[0]
         self.assertEqual(first_call[0][0], "QueryDevicesByFilter")
-        self.assertEqual(first_call[1]["parameters"]["filter"], "platform_name:'Windows'")
+        self.assertEqual(
+            first_call[1]["parameters"]["filter"], "platform_name:'Windows'"
+        )
         self.assertEqual(first_call[1]["parameters"]["limit"], 50)
         self.mock_client.command.assert_any_call(
             "PostDeviceDetailsV2", body={"ids": ["device1", "device2"]}
@@ -63,13 +68,24 @@ class TestHostsModule(TestModules):
     def test_search_hosts_with_details(self):
         """Test searching for hosts with details."""
         # Setup mock responses
-        query_response = {"status_code": 200, "body": {"resources": ["device1", "device2"]}}
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["device1", "device2"]},
+        }
         details_response = {
             "status_code": 200,
             "body": {
                 "resources": [
-                    {"device_id": "device1", "hostname": "TEST-HOST-1", "platform_name": "Windows"},
-                    {"device_id": "device2", "hostname": "TEST-HOST-2", "platform_name": "Linux"},
+                    {
+                        "device_id": "device1",
+                        "hostname": "TEST-HOST-1",
+                        "platform_name": "Windows",
+                    },
+                    {
+                        "device_id": "device2",
+                        "hostname": "TEST-HOST-2",
+                        "platform_name": "Linux",
+                    },
                 ]
             },
         }
@@ -84,7 +100,9 @@ class TestHostsModule(TestModules):
         # Check that the first call was to QueryDevicesByFilter with the right filter and limit
         first_call = self.mock_client.command.call_args_list[0]
         self.assertEqual(first_call[0][0], "QueryDevicesByFilter")
-        self.assertEqual(first_call[1]["parameters"]["filter"], "platform_name:'Windows'")
+        self.assertEqual(
+            first_call[1]["parameters"]["filter"], "platform_name:'Windows'"
+        )
         self.assertEqual(first_call[1]["parameters"]["limit"], 50)
         self.mock_client.command.assert_any_call(
             "PostDeviceDetailsV2", body={"ids": ["device1", "device2"]}
@@ -92,15 +110,26 @@ class TestHostsModule(TestModules):
 
         # Verify result
         expected_result = [
-            {"device_id": "device1", "hostname": "TEST-HOST-1", "platform_name": "Windows"},
-            {"device_id": "device2", "hostname": "TEST-HOST-2", "platform_name": "Linux"},
+            {
+                "device_id": "device1",
+                "hostname": "TEST-HOST-1",
+                "platform_name": "Windows",
+            },
+            {
+                "device_id": "device2",
+                "hostname": "TEST-HOST-2",
+                "platform_name": "Linux",
+            },
         ]
         self.assertEqual(result, expected_result)
 
     def test_search_hosts_error(self):
         """Test searching for hosts with API error."""
         # Setup mock response with error
-        mock_response = {"status_code": 400, "body": {"errors": [{"message": "Invalid filter"}]}}
+        mock_response = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid filter"}]},
+        }
         self.mock_client.command.return_value = mock_response
 
         # Call search_hosts
@@ -157,7 +186,11 @@ class TestHostsModule(TestModules):
             "status_code": 200,
             "body": {
                 "resources": [
-                    {"device_id": "device1", "hostname": "TEST-HOST-1", "platform_name": "Windows"}
+                    {
+                        "device_id": "device1",
+                        "hostname": "TEST-HOST-1",
+                        "platform_name": "Windows",
+                    }
                 ]
             },
         }
@@ -173,7 +206,11 @@ class TestHostsModule(TestModules):
 
         # Verify result
         expected_result = [
-            {"device_id": "device1", "hostname": "TEST-HOST-1", "platform_name": "Windows"}
+            {
+                "device_id": "device1",
+                "hostname": "TEST-HOST-1",
+                "platform_name": "Windows",
+            }
         ]
         self.assertEqual(result, expected_result)
 
@@ -184,8 +221,16 @@ class TestHostsModule(TestModules):
             "status_code": 200,
             "body": {
                 "resources": [
-                    {"device_id": "device1", "hostname": "TEST-HOST-1", "platform_name": "Windows"},
-                    {"device_id": "device2", "hostname": "TEST-HOST-2", "platform_name": "Linux"},
+                    {
+                        "device_id": "device1",
+                        "hostname": "TEST-HOST-1",
+                        "platform_name": "Windows",
+                    },
+                    {
+                        "device_id": "device2",
+                        "hostname": "TEST-HOST-2",
+                        "platform_name": "Linux",
+                    },
                 ]
             },
         }
@@ -201,8 +246,16 @@ class TestHostsModule(TestModules):
 
         # Verify result
         expected_result = [
-            {"device_id": "device1", "hostname": "TEST-HOST-1", "platform_name": "Windows"},
-            {"device_id": "device2", "hostname": "TEST-HOST-2", "platform_name": "Linux"},
+            {
+                "device_id": "device1",
+                "hostname": "TEST-HOST-1",
+                "platform_name": "Windows",
+            },
+            {
+                "device_id": "device2",
+                "hostname": "TEST-HOST-2",
+                "platform_name": "Linux",
+            },
         ]
         self.assertEqual(result, expected_result)
 
@@ -221,7 +274,10 @@ class TestHostsModule(TestModules):
     def test_get_host_details_error(self):
         """Test getting host details with API error."""
         # Setup mock response with error
-        mock_response = {"status_code": 404, "body": {"errors": [{"message": "Device not found"}]}}
+        mock_response = {
+            "status_code": 404,
+            "body": {"errors": [{"message": "Device not found"}]},
+        }
         self.mock_client.command.return_value = mock_response
 
         # Call get_host_details
@@ -244,13 +300,24 @@ class TestHostsModule(TestModules):
     def test_search_hosts_windows_platform(self):
         """Test searching for Windows hosts."""
         # Setup mock responses
-        query_response = {"status_code": 200, "body": {"resources": ["win-host-1", "win-host-2"]}}
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["win-host-1", "win-host-2"]},
+        }
         details_response = {
             "status_code": 200,
             "body": {
                 "resources": [
-                    {"device_id": "win-host-1", "platform_name": "Windows", "hostname": "WIN-01"},
-                    {"device_id": "win-host-2", "platform_name": "Windows", "hostname": "WIN-02"},
+                    {
+                        "device_id": "win-host-1",
+                        "platform_name": "Windows",
+                        "hostname": "WIN-01",
+                    },
+                    {
+                        "device_id": "win-host-2",
+                        "platform_name": "Windows",
+                        "hostname": "WIN-02",
+                    },
                 ]
             },
         }
@@ -266,7 +333,9 @@ class TestHostsModule(TestModules):
 
         # Verify filter was applied correctly
         first_call = self.mock_client.command.call_args_list[0]
-        self.assertEqual(first_call[1]["parameters"]["filter"], "platform_name:'Windows'")
+        self.assertEqual(
+            first_call[1]["parameters"]["filter"], "platform_name:'Windows'"
+        )
 
     def test_search_hosts_linux_platform(self):
         """Test searching for Linux hosts."""
@@ -276,7 +345,11 @@ class TestHostsModule(TestModules):
             "status_code": 200,
             "body": {
                 "resources": [
-                    {"device_id": "linux-host-1", "platform_name": "Linux", "hostname": "LINUX-01"}
+                    {
+                        "device_id": "linux-host-1",
+                        "platform_name": "Linux",
+                        "hostname": "LINUX-01",
+                    }
                 ]
             },
         }

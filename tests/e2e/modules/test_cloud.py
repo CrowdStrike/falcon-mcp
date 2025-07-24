@@ -81,8 +81,8 @@ class TestCloudModuleE2E(BaseE2ETest):
                 },
             ]
 
-            self._mock_api_instance.command.side_effect = self._create_mock_api_side_effect(
-                fixtures
+            self._mock_api_instance.command.side_effect = (
+                self._create_mock_api_side_effect(fixtures)
             )
 
             prompt = "Find all kubernetes containers that are running"
@@ -91,7 +91,9 @@ class TestCloudModuleE2E(BaseE2ETest):
         def assertions(tools, result):
             self.assertGreaterEqual(len(tools), 1, "Expected at least 1 tool call")
             used_tool = tools[len(tools) - 1]
-            self.assertEqual(used_tool["input"]["tool_name"], "falcon_search_kubernetes_containers")
+            self.assertEqual(
+                used_tool["input"]["tool_name"], "falcon_search_kubernetes_containers"
+            )
 
             # Check for the filter for running status
             tool_input_str = json.dumps(used_tool["input"]["tool_input"]).lower()
@@ -170,18 +172,20 @@ class TestCloudModuleE2E(BaseE2ETest):
                 },
             ]
 
-            self._mock_api_instance.command.side_effect = self._create_mock_api_side_effect(
-                fixtures
+            self._mock_api_instance.command.side_effect = (
+                self._create_mock_api_side_effect(fixtures)
             )
 
-            prompt = "Find top 1 kubernetes container that is running and have image vulnerabilities." # fmt: skip
+            prompt = "Find top 1 kubernetes container that is running and have image vulnerabilities."  # fmt: skip
             return await self._run_agent_stream(prompt)
 
         def assertions(tools, result):
             self.assertGreaterEqual(len(tools), 1, "Expected at least 1 tool call")
             used_tool = tools[len(tools) - 1]
 
-            self.assertEqual(used_tool["input"]["tool_name"], "falcon_search_kubernetes_containers")
+            self.assertEqual(
+                used_tool["input"]["tool_name"], "falcon_search_kubernetes_containers"
+            )
 
             # Check for the filter for image_vulnerability_count
             tool_input_str = json.dumps(used_tool["input"]["tool_input"]).lower()
@@ -240,8 +244,8 @@ class TestCloudModuleE2E(BaseE2ETest):
                 },
             ]
 
-            self._mock_api_instance.command.side_effect = self._create_mock_api_side_effect(
-                fixtures
+            self._mock_api_instance.command.side_effect = (
+                self._create_mock_api_side_effect(fixtures)
             )
 
             prompt = "How many kubernetes containers do I have in cloud provider AWS?"
@@ -250,7 +254,9 @@ class TestCloudModuleE2E(BaseE2ETest):
         def assertions(tools, result):
             self.assertGreaterEqual(len(tools), 1, "Expected at least 1 tool call")
             used_tool = tools[len(tools) - 1]
-            self.assertEqual(used_tool["input"]["tool_name"], "falcon_count_kubernetes_containers")
+            self.assertEqual(
+                used_tool["input"]["tool_name"], "falcon_count_kubernetes_containers"
+            )
 
             # Check for the filter for cloud_name
             tool_input_str = json.dumps(used_tool["input"]["tool_input"]).lower()
@@ -321,8 +327,8 @@ class TestCloudModuleE2E(BaseE2ETest):
                 },
             ]
 
-            self._mock_api_instance.command.side_effect = self._create_mock_api_side_effect(
-                fixtures
+            self._mock_api_instance.command.side_effect = (
+                self._create_mock_api_side_effect(fixtures)
             )
 
             prompt = 'Search images vulnerabilities for the container "container-001"'

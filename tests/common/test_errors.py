@@ -82,7 +82,10 @@ class TestErrorUtils(unittest.TestCase):
         self.assertEqual(response["details"], details)
 
         # Permission error with operation
-        details = {"status_code": 403, "body": {"errors": [{"message": "Access denied"}]}}
+        details = {
+            "status_code": 403,
+            "body": {"errors": [{"message": "Access denied"}]},
+        }
         response = _format_error_response(
             "Permission denied", details=details, operation="GetQueriesAlertsV2"
         )
@@ -109,20 +112,30 @@ class TestErrorUtils(unittest.TestCase):
 
         # Success response with empty resources and default
         response = {"status_code": 200, "body": {"resources": []}}
-        result = handle_api_response(response, "TestOperation", default_result={"default": True})
+        result = handle_api_response(
+            response, "TestOperation", default_result={"default": True}
+        )
         self.assertEqual(result, {"default": True})
 
     def test_handle_api_response_error(self):
         """Test handle_api_response function with error response."""
         # Error response
-        response = {"status_code": 400, "body": {"errors": [{"message": "Bad request"}]}}
-        result = handle_api_response(response, "TestOperation", error_message="Test failed")
+        response = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Bad request"}]},
+        }
+        result = handle_api_response(
+            response, "TestOperation", error_message="Test failed"
+        )
         self.assertIn("error", result)
         self.assertIn("Test failed", result["error"])
         self.assertEqual(result["details"], response)
 
         # Permission error
-        response = {"status_code": 403, "body": {"errors": [{"message": "Access denied"}]}}
+        response = {
+            "status_code": 403,
+            "body": {"errors": [{"message": "Access denied"}]},
+        }
         # Add a test operation to API_SCOPE_REQUIREMENTS
         original_scopes = API_SCOPE_REQUIREMENTS.copy()
         API_SCOPE_REQUIREMENTS["TestOperation"] = ["test:read"]

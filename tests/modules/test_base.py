@@ -2,6 +2,7 @@
 """
 Tests for the Base module.
 """
+
 import unittest
 
 from falcon_mcp.modules.base import BaseModule
@@ -64,9 +65,9 @@ class TestBaseModule(TestModules):
             "body": {
                 "resources": [
                     {"id": "test1", "name": "Test Item 1"},
-                    {"id": "test2", "name": "Test Item 2"}
+                    {"id": "test2", "name": "Test Item 2"},
                 ]
-            }
+            },
         }
         self.mock_client.command.return_value = mock_response
 
@@ -75,14 +76,13 @@ class TestBaseModule(TestModules):
 
         # Verify client command was called correctly with default "ids" key
         self.mock_client.command.assert_called_once_with(
-            "TestOperation",
-            body={"ids": ["test1", "test2"]}
+            "TestOperation", body={"ids": ["test1", "test2"]}
         )
 
         # Verify result
         expected_result = [
             {"id": "test1", "name": "Test Item 1"},
-            {"id": "test2", "name": "Test Item 2"}
+            {"id": "test2", "name": "Test Item 2"},
         ]
         self.assertEqual(result, expected_result)
 
@@ -94,29 +94,26 @@ class TestBaseModule(TestModules):
             "body": {
                 "resources": [
                     {"composite_id": "alert1", "status": "new"},
-                    {"composite_id": "alert2", "status": "closed"}
+                    {"composite_id": "alert2", "status": "closed"},
                 ]
-            }
+            },
         }
         self.mock_client.command.return_value = mock_response
 
         # Call _base_get_by_ids with custom id_key
         result = self.module._base_get_by_ids(
-            "PostEntitiesAlertsV2",
-            ["alert1", "alert2"],
-            id_key="composite_ids"
+            "PostEntitiesAlertsV2", ["alert1", "alert2"], id_key="composite_ids"
         )
 
         # Verify client command was called correctly with custom key
         self.mock_client.command.assert_called_once_with(
-            "PostEntitiesAlertsV2",
-            body={"composite_ids": ["alert1", "alert2"]}
+            "PostEntitiesAlertsV2", body={"composite_ids": ["alert1", "alert2"]}
         )
 
         # Verify result
         expected_result = [
             {"composite_id": "alert1", "status": "new"},
-            {"composite_id": "alert2", "status": "closed"}
+            {"composite_id": "alert2", "status": "closed"},
         ]
         self.assertEqual(result, expected_result)
 
@@ -129,7 +126,7 @@ class TestBaseModule(TestModules):
                 "resources": [
                     {"composite_id": "alert1", "status": "new", "hidden": False}
                 ]
-            }
+            },
         }
         self.mock_client.command.return_value = mock_response
 
@@ -139,7 +136,7 @@ class TestBaseModule(TestModules):
             ["alert1"],
             id_key="composite_ids",
             include_hidden=True,
-            sort_by="created_timestamp"
+            sort_by="created_timestamp",
         )
 
         # Verify client command was called correctly with all parameters
@@ -148,14 +145,12 @@ class TestBaseModule(TestModules):
             body={
                 "composite_ids": ["alert1"],
                 "include_hidden": True,
-                "sort_by": "created_timestamp"
-            }
+                "sort_by": "created_timestamp",
+            },
         )
 
         # Verify result
-        expected_result = [
-            {"composite_id": "alert1", "status": "new", "hidden": False}
-        ]
+        expected_result = [{"composite_id": "alert1", "status": "new", "hidden": False}]
         self.assertEqual(result, expected_result)
 
     def test_base_get_by_ids_error_handling(self):
@@ -163,9 +158,7 @@ class TestBaseModule(TestModules):
         # Setup mock error response
         mock_response = {
             "status_code": 400,
-            "body": {
-                "errors": [{"message": "Invalid request"}]
-            }
+            "body": {"errors": [{"message": "Invalid request"}]},
         }
         self.mock_client.command.return_value = mock_response
 
@@ -179,12 +172,7 @@ class TestBaseModule(TestModules):
     def test_base_get_by_ids_empty_response(self):
         """Test _base_get_by_ids with empty resources."""
         # Setup mock response with empty resources
-        mock_response = {
-            "status_code": 200,
-            "body": {
-                "resources": []
-            }
-        }
+        mock_response = {"status_code": 200, "body": {"resources": []}}
         self.mock_client.command.return_value = mock_response
 
         # Call _base_get_by_ids
@@ -193,5 +181,6 @@ class TestBaseModule(TestModules):
         # Verify result is empty list
         self.assertEqual(result, [])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -94,7 +94,10 @@ class TestIncidentsModule(TestModules):
     def test_crowd_score_error(self):
         """Test querying CrowdScore with API error."""
         # Setup mock response with error
-        mock_response = {"status_code": 400, "body": {"errors": [{"message": "Invalid query"}]}}
+        mock_response = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid query"}]},
+        }
         self.mock_client.command.return_value = mock_response
 
         # Call crowd_score

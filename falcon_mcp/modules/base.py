@@ -3,6 +3,7 @@ Base module for Falcon MCP Server
 
 This module provides the base class for all Falcon MCP server modules.
 """
+
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List
 
@@ -28,7 +29,7 @@ class BaseModule(ABC):
         """
         self.client = client
         self.tools = []  # List to track registered tools
-        self.resources = [] # List to track registered resources
+        self.resources = []  # List to track registered resources
 
     @abstractmethod
     def register_tools(self, server: FastMCP) -> None:
@@ -72,12 +73,8 @@ class BaseModule(ABC):
         logger.debug("Added resource: %s", resource_uri)
 
     def _base_get_by_ids(
-        self,
-        operation: str,
-        ids: List[str],
-        id_key: str = "ids",
-        **additional_params
-    ) -> List[Dict[str, Any]]|Dict[str, Any]:
+        self, operation: str, ids: List[str], id_key: str = "ids", **additional_params
+    ) -> List[Dict[str, Any]] | Dict[str, Any]:
         """Helper method for API operations that retrieve entities by IDs.
 
         Args:
@@ -103,7 +100,7 @@ class BaseModule(ABC):
             response,
             operation=operation,
             error_message="Failed to perform operation",
-            default_result=[]
+            default_result=[],
         )
 
     def _is_error(self, response: Any) -> bool:

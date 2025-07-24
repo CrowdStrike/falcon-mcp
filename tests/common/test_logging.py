@@ -1,6 +1,7 @@
 """
 Tests for the logging utilities.
 """
+
 import logging
 import unittest
 from unittest.mock import MagicMock, patch
@@ -11,8 +12,8 @@ from falcon_mcp.common.logging import configure_logging, get_logger
 class TestLoggingUtils(unittest.TestCase):
     """Test cases for the logging utilities."""
 
-    @patch('falcon_mcp.common.logging.logging.basicConfig')
-    @patch('falcon_mcp.common.logging.logging.getLogger')
+    @patch("falcon_mcp.common.logging.logging.basicConfig")
+    @patch("falcon_mcp.common.logging.logging.getLogger")
     def test_configure_logging_debug(self, mock_get_logger, mock_basic_config):
         """Test configuring logging with debug enabled."""
         # Setup mock
@@ -34,8 +35,8 @@ class TestLoggingUtils(unittest.TestCase):
         # Verify logger was returned
         self.assertEqual(logger, mock_logger)
 
-    @patch('falcon_mcp.common.logging.logging.basicConfig')
-    @patch('falcon_mcp.common.logging.logging.getLogger')
+    @patch("falcon_mcp.common.logging.logging.basicConfig")
+    @patch("falcon_mcp.common.logging.logging.getLogger")
     def test_configure_logging_info(self, mock_get_logger, mock_basic_config):
         """Test configuring logging with debug disabled."""
         # Setup mock
@@ -57,7 +58,7 @@ class TestLoggingUtils(unittest.TestCase):
         # Verify logger was returned
         self.assertEqual(logger, mock_logger)
 
-    @patch('falcon_mcp.common.logging.logging.getLogger')
+    @patch("falcon_mcp.common.logging.logging.getLogger")
     def test_get_logger_with_name(self, mock_get_logger):
         """Test getting a logger with a specific name."""
         # Setup mock
@@ -73,7 +74,7 @@ class TestLoggingUtils(unittest.TestCase):
         # Verify logger was returned
         self.assertEqual(logger, mock_logger)
 
-    @patch('falcon_mcp.common.logging.logging.getLogger')
+    @patch("falcon_mcp.common.logging.logging.getLogger")
     def test_get_logger_default_name(self, mock_get_logger):
         """Test getting a logger with the default name."""
         # Setup mock
@@ -90,5 +91,5 @@ class TestLoggingUtils(unittest.TestCase):
         self.assertEqual(logger, mock_logger)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

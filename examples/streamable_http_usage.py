@@ -5,6 +5,7 @@ Streamable HTTP transport example for Falcon MCP Server.
 This script demonstrates how to initialize and run the Falcon MCP server
 with streamable-http transport for custom integrations and web-based deployments.
 """
+
 import os
 
 from dotenv import load_dotenv

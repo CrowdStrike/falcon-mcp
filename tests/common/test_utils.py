@@ -1,6 +1,7 @@
 """
 Tests for the utility functions.
 """
+
 import unittest
 from unittest.mock import patch
 
@@ -24,18 +25,15 @@ class TestUtilFunctions(unittest.TestCase):
             "key3": 0,
             "key4": False,
             "key5": "",
-            "key6": None
+            "key6": None,
         }
 
         filtered = filter_none_values(data)
 
         # Verify None values were removed
-        self.assertEqual(filtered, {
-            "key1": "value1",
-            "key3": 0,
-            "key4": False,
-            "key5": ""
-        })
+        self.assertEqual(
+            filtered, {"key1": "value1", "key3": 0, "key4": False, "key5": ""}
+        )
 
         # Empty dictionary
         self.assertEqual(filter_none_values({}), {})
@@ -47,20 +45,12 @@ class TestUtilFunctions(unittest.TestCase):
     def test_prepare_api_parameters(self):
         """Test prepare_api_parameters function."""
         # Parameters with None values
-        params = {
-            "filter": "name:test",
-            "limit": 100,
-            "offset": None,
-            "sort": None
-        }
+        params = {"filter": "name:test", "limit": 100, "offset": None, "sort": None}
 
         prepared = prepare_api_parameters(params)
 
         # Verify None values were removed
-        self.assertEqual(prepared, {
-            "filter": "name:test",
-            "limit": 100
-        })
+        self.assertEqual(prepared, {"filter": "name:test", "limit": 100})
 
         # Empty parameters
         self.assertEqual(prepare_api_parameters({}), {})
@@ -77,26 +67,24 @@ class TestUtilFunctions(unittest.TestCase):
             "body": {
                 "resources": [
                     {"id": "resource1", "name": "Resource 1"},
-                    {"id": "resource2", "name": "Resource 2"}
+                    {"id": "resource2", "name": "Resource 2"},
                 ]
-            }
+            },
         }
 
         resources = extract_resources(response)
 
         # Verify resources were extracted
-        self.assertEqual(resources, [
-            {"id": "resource1", "name": "Resource 1"},
-            {"id": "resource2", "name": "Resource 2"}
-        ])
+        self.assertEqual(
+            resources,
+            [
+                {"id": "resource1", "name": "Resource 1"},
+                {"id": "resource2", "name": "Resource 2"},
+            ],
+        )
 
         # Success response with empty resources
-        response = {
-            "status_code": 200,
-            "body": {
-                "resources": []
-            }
-        }
+        response = {"status_code": 200, "body": {"resources": []}}
 
         resources = extract_resources(response)
 
@@ -113,9 +101,7 @@ class TestUtilFunctions(unittest.TestCase):
         # Error response
         response = {
             "status_code": 400,
-            "body": {
-                "errors": [{"message": "Bad request"}]
-            }
+            "body": {"errors": [{"message": "Bad request"}]},
         }
 
         resources = extract_resources(response)
@@ -129,7 +115,7 @@ class TestUtilFunctions(unittest.TestCase):
         # Verify default was returned
         self.assertEqual(resources, default)
 
-    @patch('falcon_mcp.common.utils._format_error_response')
+    @patch("falcon_mcp.common.utils._format_error_response")
     def test_extract_first_resource(self, mock_format_error):
         """Test extract_first_resource function."""
         # Mock format_error_response
@@ -141,9 +127,9 @@ class TestUtilFunctions(unittest.TestCase):
             "body": {
                 "resources": [
                     {"id": "resource1", "name": "Resource 1"},
-                    {"id": "resource2", "name": "Resource 2"}
+                    {"id": "resource2", "name": "Resource 2"},
                 ]
-            }
+            },
         }
 
         resource = extract_first_resource(response, "TestOperation")
@@ -152,14 +138,11 @@ class TestUtilFunctions(unittest.TestCase):
         self.assertEqual(resource, {"id": "resource1", "name": "Resource 1"})
 
         # Success response with empty resources
-        response = {
-            "status_code": 200,
-            "body": {
-                "resources": []
-            }
-        }
+        response = {"status_code": 200, "body": {"resources": []}}
 
-        resource = extract_first_resource(response, "TestOperation", not_found_error="Custom error")
+        resource = extract_first_resource(
+            response, "TestOperation", not_found_error="Custom error"
+        )
 
         # Verify error response was returned
         mock_format_error.assert_called_with("Custom error", operation="TestOperation")
@@ -168,17 +151,17 @@ class TestUtilFunctions(unittest.TestCase):
         # Error response
         response = {
             "status_code": 400,
-            "body": {
-                "errors": [{"message": "Bad request"}]
-            }
+            "body": {"errors": [{"message": "Bad request"}]},
         }
 
         resource = extract_first_resource(response, "TestOperation")
 
         # Verify error response was returned
-        mock_format_error.assert_called_with("Resource not found", operation="TestOperation")
+        mock_format_error.assert_called_with(
+            "Resource not found", operation="TestOperation"
+        )
         self.assertEqual(resource, {"error": "Resource not found"})
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

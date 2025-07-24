@@ -4,6 +4,7 @@ Hosts module for Falcon MCP Server
 
 This module provides tools for accessing and managing CrowdStrike Falcon hosts/devices.
 """
+
 from textwrap import dedent
 from typing import Any, Dict, List, Optional
 
@@ -30,17 +31,9 @@ class HostsModule(BaseModule):
             server: MCP server instance
         """
         # Register tools
-        self._add_tool(
-            server,
-            self.search_hosts,
-            name="search_hosts"
-        )
+        self._add_tool(server, self.search_hosts, name="search_hosts")
 
-        self._add_tool(
-            server,
-            self.get_host_details,
-            name="get_host_details"
-        )
+        self._add_tool(server, self.get_host_details, name="get_host_details")
 
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.
@@ -52,16 +45,27 @@ class HostsModule(BaseModule):
             uri=AnyUrl("falcon://hosts/search/fql-guide"),
             name="falcon_search_hosts_fql_guide",
             description="Contains the guide for the `filter` param of the `falcon_search_hosts` tool.",
-            text=SEARCH_HOSTS_FQL_DOCUMENTATION
+            text=SEARCH_HOSTS_FQL_DOCUMENTATION,
         )
 
         self._add_resource(server, search_hosts_fql_resource)
 
     def search_hosts(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://hosts/search/fql-guide` resource when building this filter parameter.", examples={"platform_name:'Windows'", "hostname:'PC*'"}),
-        limit: Optional[int] = Field(default=100, ge=1, le=5000, description="The maximum records to return. [1-5000]"),
-        offset: Optional[int] = Field(default=0, ge=0, description="The offset to start retrieving records from."),
+        filter: Optional[str] = Field(
+            default=None,
+            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://hosts/search/fql-guide` resource when building this filter parameter.",
+            examples={"platform_name:'Windows'", "hostname:'PC*'"},
+        ),
+        limit: Optional[int] = Field(
+            default=100,
+            ge=1,
+            le=5000,
+            description="The maximum records to return. [1-5000]",
+        ),
+        offset: Optional[int] = Field(
+            default=0, ge=0, description="The offset to start retrieving records from."
+        ),
         sort: Optional[str] = Field(
             default=None,
             description=dedent("""
@@ -81,7 +85,7 @@ class HostsModule(BaseModule):
 
                 Examples: 'hostname.asc', 'last_seen.desc', 'platform_name.asc'
             """).strip(),
-            examples={"hostname.asc", "last_seen.desc"}
+            examples={"hostname.asc", "last_seen.desc"},
         ),
     ) -> List[Dict[str, Any]]:
         """Search for hosts in your CrowdStrike environment.
@@ -92,12 +96,14 @@ class HostsModule(BaseModule):
             List of host details
         """
         # Prepare parameters for QueryDevicesByFilter
-        params = prepare_api_parameters({
-            "filter": filter,
-            "limit": limit,
-            "offset": offset,
-            "sort": sort,
-        })
+        params = prepare_api_parameters(
+            {
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            }
+        )
 
         # Define the operation name
         operation = "QueryDevicesByFilter"
@@ -112,7 +118,7 @@ class HostsModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to search hosts",
-            default_result=[]
+            default_result=[],
         )
 
         # If handle_api_response returns an error dict instead of a list,
@@ -124,9 +130,7 @@ class HostsModule(BaseModule):
         if device_ids:
             # Use the base method to get device details
             details = self._base_get_by_ids(
-                operation="PostDeviceDetailsV2",
-                ids=device_ids,
-                id_key="ids"
+                operation="PostDeviceDetailsV2", ids=device_ids, id_key="ids"
             )
 
             # If handle_api_response returns an error dict instead of a list,
@@ -140,8 +144,10 @@ class HostsModule(BaseModule):
 
     def get_host_details(
         self,
-        ids: List[str] = Field(description="Host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request."),
-    ) -> List[Dict[str, Any]]|Dict[str, Any]:
+        ids: List[str] = Field(
+            description="Host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request."
+        ),
+    ) -> List[Dict[str, Any]] | Dict[str, Any]:
         """Retrieve detailed information for specified host device IDs.
 
         This tool returns comprehensive host details for one or more device IDs.
@@ -160,7 +166,5 @@ class HostsModule(BaseModule):
 
         # Use the base method to get device details
         return self._base_get_by_ids(
-            operation="PostDeviceDetailsV2",
-            ids=ids,
-            id_key="ids"
+            operation="PostDeviceDetailsV2", ids=ids, id_key="ids"
         )

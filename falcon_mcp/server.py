@@ -4,6 +4,7 @@ Falcon MCP Server - Main entry point
 This module provides the main server class for the Falcon MCP server
 and serves as the entry point for the application.
 """
+
 import argparse
 import os
 import sys
@@ -66,7 +67,7 @@ class FalconMCPServer:
             name="Falcon MCP Server",
             instructions="This server provides access to CrowdStrike Falcon capabilities.",
             debug=self.debug,
-            log_level="DEBUG" if self.debug else "INFO"
+            log_level="DEBUG" if self.debug else "INFO",
         )
 
         # Initialize and register modules
@@ -91,7 +92,12 @@ class FalconMCPServer:
 
         logger.info(
             "Initialized %d %s with %d %s and %d %s",
-            module_count, module_word, tool_count, tool_word, resource_count, resource_word
+            module_count,
+            module_word,
+            tool_count,
+            tool_word,
+            resource_count,
+            resource_word,
         )
 
     def _register_tools(self) -> int:
@@ -104,22 +110,22 @@ class FalconMCPServer:
         self.server.add_tool(
             self.falcon_check_connectivity,
             name="falcon_check_connectivity",
-            description="Check connectivity to the Falcon API."
+            description="Check connectivity to the Falcon API.",
         )
 
         self.server.add_tool(
             self.get_available_modules,
             name="falcon_get_available_modules",
-            description="Get information about available modules."
+            description="Get information about available modules.",
         )
 
-        tool_count = 2 # the tools added above
+        tool_count = 2  # the tools added above
 
         # Register tools from modules
         for module in self.modules.values():
             module.register_tools(self.server)
 
-        tool_count += sum(len(getattr(m, 'tools', [])) for m in self.modules.values())
+        tool_count += sum(len(getattr(m, "tools", [])) for m in self.modules.values())
 
         return tool_count
 
@@ -132,10 +138,12 @@ class FalconMCPServer:
         # Register resources from modules
         for module in self.modules.values():
             # Check if the module has a register_resources method
-            if hasattr(module, 'register_resources') and callable(module.register_resources):
+            if hasattr(module, "register_resources") and callable(
+                module.register_resources
+            ):
                 module.register_resources(self.server)
 
-        return sum(len(getattr(m, 'resources', [])) for m in self.modules.values())
+        return sum(len(getattr(m, "resources", [])) for m in self.modules.values())
 
     def falcon_check_connectivity(self) -> Dict[str, bool]:
         """Check connectivity to the Falcon API.
@@ -169,7 +177,12 @@ class FalconMCPServer:
             app = self.server.streamable_http_app()
 
             # Run with uvicorn for custom host/port configuration
-            uvicorn.run(app, host=host, port=port, log_level="info" if not self.debug else "debug")
+            uvicorn.run(
+                app,
+                host=host,
+                port=port,
+                log_level="info" if not self.debug else "debug",
+            )
         elif transport == "sse":
             # For sse, use uvicorn directly for custom host/port (same pattern as streamable-http)
             logger.info("Starting sse server on %s:%d", host, port)
@@ -178,7 +191,12 @@ class FalconMCPServer:
             app = self.server.sse_app()
 
             # Run with uvicorn for custom host/port configuration
-            uvicorn.run(app, host=host, port=port, log_level="info" if not self.debug else "debug")
+            uvicorn.run(
+                app,
+                host=host,
+                port=port,
+                log_level="info" if not self.debug else "debug",
+            )
         else:
             # For stdio, use the default FastMCP run method (no host/port needed)
             self.server.run(transport)
@@ -204,7 +222,7 @@ def parse_modules_list(modules_string):
         return available_modules
 
     # Split by comma and clean up whitespace
-    modules = [m.strip() for m in modules_string.split(',') if m.strip()]
+    modules = [m.strip() for m in modules_string.split(",") if m.strip()]
 
     # Validate against available modules
     invalid_modules = [m for m in modules if m not in available_modules]
@@ -223,57 +241,61 @@ def parse_args():
 
     # Transport options
     parser.add_argument(
-        "--transport", "-t",
+        "--transport",
+        "-t",
         choices=["stdio", "sse", "streamable-http"],
-        default=os.environ.get('FALCON_MCP_TRANSPORT', 'stdio'),
-        help="Transport protocol to use (default: stdio, env: FALCON_MCP_TRANSPORT)"
+        default=os.environ.get("FALCON_MCP_TRANSPORT", "stdio"),
+        help="Transport protocol to use (default: stdio, env: FALCON_MCP_TRANSPORT)",
     )
 
     # Module selection
     available_modules = registry.get_module_names()
 
     parser.add_argument(
-        "--modules", "-m",
+        "--modules",
+        "-m",
         type=parse_modules_list,
-        default=parse_modules_list(os.environ.get('FALCON_MCP_MODULES', '')),
+        default=parse_modules_list(os.environ.get("FALCON_MCP_MODULES", "")),
         metavar="MODULE1,MODULE2,...",
         help=f"Comma-separated list of modules to enable. Available: [{', '.join(available_modules)}] "
-             f"(default: all modules, env: FALCON_MCP_MODULES)"
+        f"(default: all modules, env: FALCON_MCP_MODULES)",
     )
 
     # Debug mode
     parser.add_argument(
-        "--debug", "-d",
+        "--debug",
+        "-d",
         action="store_true",
         default=os.environ.get("FALCON_MCP_DEBUG", "").lower() == "true",
-        help="Enable debug logging (env: FALCON_MCP_DEBUG)"
+        help="Enable debug logging (env: FALCON_MCP_DEBUG)",
     )
 
     # API base URL
     parser.add_argument(
         "--base-url",
-        default=os.environ.get('FALCON_BASE_URL'),
-        help="Falcon API base URL (env: FALCON_BASE_URL)"
+        default=os.environ.get("FALCON_BASE_URL"),
+        help="Falcon API base URL (env: FALCON_BASE_URL)",
     )
 
     # HTTP transport configuration
     parser.add_argument(
         "--host",
-        default=os.environ.get('FALCON_MCP_HOST', '127.0.0.1'),
-        help="Host to bind to for HTTP transports (default: 127.0.0.1, env: FALCON_MCP_HOST)"
+        default=os.environ.get("FALCON_MCP_HOST", "127.0.0.1"),
+        help="Host to bind to for HTTP transports (default: 127.0.0.1, env: FALCON_MCP_HOST)",
     )
 
     parser.add_argument(
-        "--port", "-p",
+        "--port",
+        "-p",
         type=int,
-        default=int(os.environ.get('FALCON_MCP_PORT', '8000')),
-        help="Port to listen on for HTTP transports (default: 8000, env: FALCON_MCP_PORT)"
+        default=int(os.environ.get("FALCON_MCP_PORT", "8000")),
+        help="Port to listen on for HTTP transports (default: 8000, env: FALCON_MCP_PORT)",
     )
 
     parser.add_argument(
         "--user-agent-comment",
-        default=os.environ.get('FALCON_MCP_USER_AGENT_COMMENT'),
-        help="Additional information to include in the User-Agent comment section (env: FALCON_MCP_USER_AGENT_COMMENT)"
+        default=os.environ.get("FALCON_MCP_USER_AGENT_COMMENT"),
+        help="Additional information to include in the User-Agent comment section (env: FALCON_MCP_USER_AGENT_COMMENT)",
     )
 
     return parser.parse_args()

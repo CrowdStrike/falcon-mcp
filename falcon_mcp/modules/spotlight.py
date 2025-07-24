@@ -4,6 +4,7 @@ Spotlight module for Falcon MCP Server
 
 This module provides tools for accessing and managing CrowdStrike Falcon Spotlight vulnerabilities.
 """
+
 from textwrap import dedent
 from typing import Any, Dict, List, Optional
 
@@ -31,9 +32,7 @@ class SpotlightModule(BaseModule):
         """
         # Register tools
         self._add_tool(
-            server,
-            self.search_vulnerabilities,
-            name="search_vulnerabilities"
+            server, self.search_vulnerabilities, name="search_vulnerabilities"
         )
 
     def register_resources(self, server: FastMCP) -> None:
@@ -46,16 +45,28 @@ class SpotlightModule(BaseModule):
             uri=AnyUrl("falcon://spotlight/vulnerabilities/fql-guide"),
             name="falcon_search_vulnerabilities_fql_guide",
             description="Contains the guide for the `filter` param of the `falcon_search_vulnerabilities` tool.",
-            text=SEARCH_VULNERABILITIES_FQL_DOCUMENTATION
+            text=SEARCH_VULNERABILITIES_FQL_DOCUMENTATION,
         )
 
         self._add_resource(server, search_vulnerabilities_fql_resource)
 
     def search_vulnerabilities(
         self,
-        filter: str = Field(description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://spotlight/vulnerabilities/fql-guide` resource when building this filter parameter.", examples={"status:'open'", "cve.severity:'HIGH'"}),
-        limit: Optional[int] = Field(default=100, ge=1, le=5000, description="Maximum number of results to return. (Max: 5000, Default: 100)"),
-        offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return results."),
+        filter: str = Field(
+            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://spotlight/vulnerabilities/fql-guide` resource when building this filter parameter.",
+            examples={"status:'open'", "cve.severity:'HIGH'"},
+        ),
+        limit: Optional[int] = Field(
+            default=100,
+            ge=1,
+            le=5000,
+            description="Maximum number of results to return. (Max: 5000, Default: 100)",
+        ),
+        offset: Optional[int] = Field(
+            default=0,
+            ge=0,
+            description="Starting index of overall result set from which to return results.",
+        ),
         sort: Optional[str] = Field(
             default=None,
             description=dedent("""
@@ -71,9 +82,16 @@ class SpotlightModule(BaseModule):
 
                 Examples: 'created_timestamp|desc', 'updated_timestamp|desc', 'closed_timestamp|asc'
             """).strip(),
-            examples={"created_timestamp|desc", "updated_timestamp|desc", "closed_timestamp|asc"}
+            examples={
+                "created_timestamp|desc",
+                "updated_timestamp|desc",
+                "closed_timestamp|asc",
+            },
         ),
-        after: Optional[str] = Field(default=None, description="A pagination token used with the limit parameter to manage pagination of results. On your first request, don't provide an after token. On subsequent requests, provide the after token from the previous response to continue from that place in the results."),
+        after: Optional[str] = Field(
+            default=None,
+            description="A pagination token used with the limit parameter to manage pagination of results. On your first request, don't provide an after token. On subsequent requests, provide the after token from the previous response to continue from that place in the results.",
+        ),
         facet: Optional[str] = Field(
             default=None,
             description=dedent("""
@@ -92,7 +110,7 @@ class SpotlightModule(BaseModule):
 
                 Examples: 'host_info', 'cve', 'remediation'
             """).strip(),
-            examples={"host_info", "cve", "remediation", "evaluation_logic"}
+            examples={"host_info", "cve", "remediation", "evaluation_logic"},
         ),
     ) -> List[Dict[str, Any]]:
         """Search for vulnerabilities in your CrowdStrike environment.
@@ -104,14 +122,16 @@ class SpotlightModule(BaseModule):
             host information, remediation details, and security assessments
         """
         # Prepare parameters for combinedQueryVulnerabilities
-        params = prepare_api_parameters({
-            "filter": filter,
-            "limit": limit,
-            "offset": offset,
-            "sort": sort,
-            "after": after,
-            "facet": facet,
-        })
+        params = prepare_api_parameters(
+            {
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+                "after": after,
+                "facet": facet,
+            }
+        )
 
         # Define the operation name
         operation = "combinedQueryVulnerabilities"
@@ -126,7 +146,7 @@ class SpotlightModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to search vulnerabilities",
-            default_result=[]
+            default_result=[],
         )
 
         # If handle_api_response returns an error dict instead of a list,

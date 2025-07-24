@@ -3,6 +3,7 @@ Common utility functions for Falcon MCP Server
 
 This module provides common utility functions for the Falcon MCP server.
 """
+
 import re
 from typing import Any, Dict, List, Optional
 
@@ -45,8 +46,7 @@ def prepare_api_parameters(params: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def extract_resources(
-    response: Dict[str, Any],
-    default: Optional[List[Dict[str, Any]]] = None
+    response: Dict[str, Any], default: Optional[List[Dict[str, Any]]] = None
 ) -> List[Dict[str, Any]]:
     """Extract resources from an API response.
 
@@ -67,7 +67,7 @@ def extract_resources(
 def extract_first_resource(
     response: Dict[str, Any],
     operation: str,
-    not_found_error: str = "Resource not found"
+    not_found_error: str = "Resource not found",
 ) -> Dict[str, Any]:
     """Extract the first resource from an API response.
 
@@ -100,7 +100,7 @@ def sanitize_input(input_str: str) -> str:
         return str(input_str)
 
     # Remove backslashes, quotes, and control characters that could be used for injection
-    sanitized = re.sub(r'[\\"\'\n\r\t]', '', input_str)
+    sanitized = re.sub(r'[\\"\'\n\r\t]', "", input_str)
 
     # Additional safety: limit length to prevent excessively long inputs
     return sanitized[:255]

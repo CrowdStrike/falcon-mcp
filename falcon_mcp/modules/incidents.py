@@ -4,6 +4,7 @@ Incidents module for Falcon MCP Server
 
 This module provides tools for accessing and analyzing CrowdStrike Falcon incidents.
 """
+
 from typing import Any, Dict, List, Optional
 
 from mcp.server import FastMCP
@@ -30,35 +31,15 @@ class IncidentsModule(BaseModule):
             server: MCP server instance
         """
         # Register tools
-        self._add_tool(
-            server,
-            self.show_crowd_score,
-            name="show_crowd_score"
-        )
+        self._add_tool(server, self.show_crowd_score, name="show_crowd_score")
 
-        self._add_tool(
-            server,
-            self.search_incidents,
-            name="search_incidents"
-        )
+        self._add_tool(server, self.search_incidents, name="search_incidents")
 
-        self._add_tool(
-            server,
-            self.get_incident_details,
-            name="get_incident_details"
-        )
+        self._add_tool(server, self.get_incident_details, name="get_incident_details")
 
-        self._add_tool(
-            server,
-            self.search_behaviors,
-            name="search_behaviors"
-        )
+        self._add_tool(server, self.search_behaviors, name="search_behaviors")
 
-        self._add_tool(
-            server,
-            self.get_behavior_details,
-            name="get_behavior_details"
-        )
+        self._add_tool(server, self.get_behavior_details, name="get_behavior_details")
 
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.
@@ -70,21 +51,21 @@ class IncidentsModule(BaseModule):
             uri=AnyUrl("falcon://incidents/crowd-score/fql-guide"),
             name="falcon_show_crowd_score_fql_guide",
             description="Contains the guide for the `filter` param of the `falcon_show_crowd_score` tool.",
-            text=CROWD_SCORE_FQL_DOCUMENTATION
+            text=CROWD_SCORE_FQL_DOCUMENTATION,
         )
 
         search_incidents_fql_resource = TextResource(
             uri=AnyUrl("falcon://incidents/search/fql-guide"),
             name="falcon_search_incidents_fql_guide",
             description="Contains the guide for the `filter` param of the `falcon_search_incidents` tool.",
-            text=SEARCH_INCIDENTS_FQL_DOCUMENTATION
+            text=SEARCH_INCIDENTS_FQL_DOCUMENTATION,
         )
 
         search_behaviors_fql_resource = TextResource(
             uri=AnyUrl("falcon://incidents/behaviors/fql-guide"),
             name="falcon_search_behaviors_fql_guide",
             description="Contains the guide for the `filter` param of the `falcon_search_behaviors` tool.",
-            text=SEARCH_BEHAVIORS_FQL_DOCUMENTATION
+            text=SEARCH_BEHAVIORS_FQL_DOCUMENTATION,
         )
 
         self._add_resource(server, crowd_score_fql_resource)
@@ -93,10 +74,26 @@ class IncidentsModule(BaseModule):
 
     def show_crowd_score(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/crowd-score/fql-guide` resource when building this filter parameter."),
-        limit: Optional[int] = Field(default=100, ge=1, le=2500, description="Maximum number of records to return. (Max: 2500)"),
-        offset: Optional[int] = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
-        sort: Optional[str] = Field(default=None, description="TThe property to sort by. (Ex: modified_timestamp.desc)", examples={"modified_timestamp.desc"}),
+        filter: Optional[str] = Field(
+            default=None,
+            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/crowd-score/fql-guide` resource when building this filter parameter.",
+        ),
+        limit: Optional[int] = Field(
+            default=100,
+            ge=1,
+            le=2500,
+            description="Maximum number of records to return. (Max: 2500)",
+        ),
+        offset: Optional[int] = Field(
+            default=0,
+            ge=0,
+            description="Starting index of overall result set from which to return ids.",
+        ),
+        sort: Optional[str] = Field(
+            default=None,
+            description="TThe property to sort by. (Ex: modified_timestamp.desc)",
+            examples={"modified_timestamp.desc"},
+        ),
     ) -> Dict[str, Any]:
         """View calculated CrowdScores and security posture metrics for your environment.
 
@@ -106,12 +103,14 @@ class IncidentsModule(BaseModule):
             Tool returns the CrowdScore entity data.
         """
         # Prepare parameters
-        params = prepare_api_parameters({
-            "filter": filter,
-            "limit": limit,
-            "offset": offset,
-            "sort": sort,
-        })
+        params = prepare_api_parameters(
+            {
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            }
+        )
 
         # Define the operation name (used for error handling)
         operation = "CrowdScore"
@@ -124,7 +123,7 @@ class IncidentsModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to perform operation",
-            default_result=[]
+            default_result=[],
         )
 
         # Check if we received an error response
@@ -136,7 +135,7 @@ class IncidentsModule(BaseModule):
         result = {
             "average_score": 0,
             "average_adjusted_score": 0,
-            "scores": api_response  # Include all the scores in the result
+            "scores": api_response,  # Include all the scores in the result
         }
 
         if api_response:  # If we have scores (list of score objects)
@@ -157,10 +156,25 @@ class IncidentsModule(BaseModule):
 
     def search_incidents(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/search/fql-guide` resource when building this filter parameter."),
-        limit: int = Field(default=100, ge=1, le=500, description="Maximum number of records to return. (Max: 500)"),
-        offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
-        sort: Optional[str] = Field(default=None, description="The property to sort by. FQL syntax. Ex: state.asc, name.desc"),
+        filter: Optional[str] = Field(
+            default=None,
+            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/search/fql-guide` resource when building this filter parameter.",
+        ),
+        limit: int = Field(
+            default=100,
+            ge=1,
+            le=500,
+            description="Maximum number of records to return. (Max: 500)",
+        ),
+        offset: int = Field(
+            default=0,
+            ge=0,
+            description="Starting index of overall result set from which to return ids.",
+        ),
+        sort: Optional[str] = Field(
+            default=None,
+            description="The property to sort by. FQL syntax. Ex: state.asc, name.desc",
+        ),
     ) -> List[Dict[str, Any]]:
         """Find and analyze security incidents to understand coordinated activity in your environment.
 
@@ -212,10 +226,25 @@ class IncidentsModule(BaseModule):
 
     def search_behaviors(
         self,
-        filter: Optional[str] = Field(default=None, description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/behaviors/fql-guide` resource when building this filter parameter."),
-        limit: int = Field(default=100, ge=1, le=500, description="Maximum number of records to return. (Max: 500)"),
-        offset: int = Field(default=0, ge=0, description="Starting index of overall result set from which to return ids."),
-        sort: Optional[str] = Field(default=None, description="The property to sort by. (Ex: modified_timestamp.desc)"),
+        filter: Optional[str] = Field(
+            default=None,
+            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/behaviors/fql-guide` resource when building this filter parameter.",
+        ),
+        limit: int = Field(
+            default=100,
+            ge=1,
+            le=500,
+            description="Maximum number of records to return. (Max: 500)",
+        ),
+        offset: int = Field(
+            default=0,
+            ge=0,
+            description="Starting index of overall result set from which to return ids.",
+        ),
+        sort: Optional[str] = Field(
+            default=None,
+            description="The property to sort by. (Ex: modified_timestamp.desc)",
+        ),
     ) -> List[Dict[str, Any]]:
         """Find and analyze behaviors to understand suspicious activity in your environment.
 
@@ -268,15 +297,22 @@ class IncidentsModule(BaseModule):
         return behaviors
 
     def _base_query(
-        self, operation: str, filter: Optional[str] = None, limit: int = 100, offset: int = 0, sort: Optional[str] = None,
-    ) -> List[str]|Dict[str, Any]:
+        self,
+        operation: str,
+        filter: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+        sort: Optional[str] = None,
+    ) -> List[str] | Dict[str, Any]:
         # Prepare parameters
-        params = prepare_api_parameters({
-            "filter": filter,
-            "limit": limit,
-            "offset": offset,
-            "sort": sort,
-        })
+        params = prepare_api_parameters(
+            {
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            }
+        )
 
         # Make the API request
         response = self.client.command(operation, parameters=params)
@@ -286,5 +322,5 @@ class IncidentsModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to perform operation",
-            default_result=[]
+            default_result=[],
         )
