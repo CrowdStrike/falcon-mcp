@@ -140,7 +140,9 @@ class HostsModule(BaseModule):
         if device_ids:
             # Use the base method to get device details
             details = self._base_get_by_ids(
-                operation="PostDeviceDetailsV2", ids=device_ids, id_key="ids"
+                operation="PostDeviceDetailsV2",
+                ids=device_ids,
+                id_key="ids",
             )
 
             # If handle_api_response returns an error dict instead of a list,
