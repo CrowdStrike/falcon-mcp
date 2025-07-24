@@ -31,7 +31,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           MODELS_TO_TEST: ${{ inputs.models }}
         run: |
-          pytest --run-e2e
+          python -m pytest --run-e2e
 
       - name: Generate HTML report
         if: always()

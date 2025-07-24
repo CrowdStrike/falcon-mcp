@@ -24,4 +24,4 @@ jobs:
 
       - name: Lint with Ruff
         run: |
-          ruff check falcon_mcp/ tests/
+          python -m ruff check falcon_mcp/ tests/ examples/
