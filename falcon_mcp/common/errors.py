@@ -3,7 +3,7 @@ Error handling utilities for Falcon MCP Server
 
 This module provides error handling utilities for the Falcon MCP server.
 """
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from .api_scopes import get_required_scopes
 from .logging import get_logger
@@ -101,7 +101,7 @@ def handle_api_response(
     operation: str,
     error_message: str = "API request failed",
     default_result: Any = None
-) -> Union[Dict[str, Any], Any]:
+) -> Dict[str, Any]|Any:
     """Handle an API response, returning either the result or an error.
 
     Args:
@@ -111,7 +111,7 @@ def handle_api_response(
         default_result: The default result to return if the response is empty
 
     Returns:
-        Union[Dict[str, Any], Any]: The result or an error response
+        Dict[str, Any]|Any: The result or an error response
     """
     status_code = response.get("status_code")
 

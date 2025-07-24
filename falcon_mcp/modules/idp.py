@@ -8,7 +8,7 @@ Core use cases:
 """
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from mcp.server import FastMCP
 from pydantic import Field
@@ -583,7 +583,7 @@ class IdpModule(BaseModule):
         }}
         """
 
-    def _resolve_entities(self, identifiers: Dict[str, Any]) -> Union[List[str], Dict[str, Any]]:
+    def _resolve_entities(self, identifiers: Dict[str, Any]) -> List[str]|Dict[str, Any]:
         """Resolve entity IDs from various identifier types using unified AND-based query.
 
         All provided identifiers are combined using AND logic in a single GraphQL query.
