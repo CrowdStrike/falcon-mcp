@@ -482,14 +482,11 @@ To deploy the MCP Server as a tool in Amazon Bedrock AgentCore, please refer to 
 2. Install in development mode:
 
    ```bash
-   # Install dependencies and create .venv
-   uv sync
+   # Create .venv and install dependencies
+   uv sync --extra dev
 
    # Activate the venv
    source .venv/bin/activate
-
-   # Install development dependencies
-   uv pip install -e ".[dev]"
    ```
 
 > [!IMPORTANT]
