@@ -20,10 +20,14 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          activate-environment: true
 
       - name: Install dependencies
         run: |
-          pip install uv
           uv sync --extra dev
 
       - name: Test with pytest
@@ -31,7 +35,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           MODELS_TO_TEST: ${{ inputs.models }}
         run: |
-          python -m pytest --run-e2e
+          pytest --run-e2e
 
       - name: Generate HTML report
         if: always()
