@@ -75,7 +75,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Hosts** | `Hosts:read` | Manage and query host/device information |
 | **Cloud Security** | `Falcon Container Image:read` | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
 | **Spotlight** | `Vulnerabilities:read` | Manage and analyze vulnerability data and security assessments |
-| **Identity Protection** | `Identity Protection GraphQL:write` | Comprehensive entity investigation and identity protection analysis |
+| **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read` <br> `Identity Protection Assessment:read` | Comprehensive entity investigation and identity protection analysis |
 
 ## Available Modules, Tools & Resources
 
