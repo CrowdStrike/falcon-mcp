@@ -231,7 +231,7 @@ class BaseE2ETest(unittest.TestCase):
         result = ""
         tools = []
         await self.agent.initialize()
-        async for event in self.agent.astream(prompt, manage_connector=False):
+        async for event in self.agent.stream_events(prompt, manage_connector=False):
             event_type = event.get("event")
             data = event.get("data", {})
             name = event.get("name")
