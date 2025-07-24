@@ -5,6 +5,7 @@ Basic usage example for Falcon MCP Server.
 This script demonstrates how to initialize and run the Falcon MCP server.
 """
 import os
+
 from dotenv import load_dotenv
 
 from falcon_mcp.server import FalconMCPServer

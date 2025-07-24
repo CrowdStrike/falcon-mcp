@@ -5,6 +5,7 @@ SSE transport example for Falcon MCP Server.
 This script demonstrates how to initialize and run the Falcon MCP server with SSE transport.
 """
 import os
+
 from dotenv import load_dotenv
 
 from falcon_mcp.server import FalconMCPServer

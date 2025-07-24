@@ -6,6 +6,7 @@ import re
 import sys
 from html import escape
 
+
 def generate_static_report(data, template_path='scripts/test_results_viewer.html', output_path='static_test_report.html'):
     """
     Generates a static HTML report from test result data.
