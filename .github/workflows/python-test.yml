@@ -20,12 +20,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
 
       - name: Install dependencies
         run: |
-          pip install uv
           uv sync --extra dev
 
       - name: Test with pytest
         run: |
-          python -m pytest
+          pytest
