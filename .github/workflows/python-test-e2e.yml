@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       models:
-        description: 'Models to test'
+        description: "Models to test"
         required: false
-        default: 'gpt-4.1-mini,gpt-4o-mini'
+        default: "gpt-4.1-mini,gpt-4o-mini"
         type: string
 
 jobs:
@@ -14,33 +14,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-        cache: 'pip'
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . --dependency-group dev
 
-    - name: Test with pytest
-      env:
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        MODELS_TO_TEST: ${{ inputs.models }}
-      run: |
-        pytest --run-e2e
+      - name: Test with pytest
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MODELS_TO_TEST: ${{ inputs.models }}
+        run: |
+          pytest --run-e2e
 
-    - name: Generate HTML report
-      if: always()
-      run: |
-        python scripts/generate_e2e_report.py
+      - name: Generate HTML report
+        if: always()
+        run: |
+          python scripts/generate_e2e_report.py
 
-    - name: Upload HTML report artifact
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: e2e-test-report
-        path: ./static_test_report.html
+      - name: Upload HTML report artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-report
+          path: ./static_test_report.html
