@@ -55,7 +55,10 @@ class DetectionsModule(BaseModule):
             text=SEARCH_DETECTIONS_FQL_DOCUMENTATION,
         )
 
-        self._add_resource(server, search_detections_fql_resource)
+        self._add_resource(
+            server,
+            search_detections_fql_resource,
+        )
 
     def search_detections(
         self,

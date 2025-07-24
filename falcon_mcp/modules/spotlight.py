@@ -49,7 +49,10 @@ class SpotlightModule(BaseModule):
             text=SEARCH_VULNERABILITIES_FQL_DOCUMENTATION,
         )
 
-        self._add_resource(server, search_vulnerabilities_fql_resource)
+        self._add_resource(
+            server,
+            search_vulnerabilities_fql_resource,
+        )
 
     def search_vulnerabilities(
         self,

@@ -78,9 +78,18 @@ class IntelModule(BaseModule):
             text=QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION,
         )
 
-        self._add_resource(server, search_actors_fql_resource)
-        self._add_resource(server, search_indicators_fql_resource)
-        self._add_resource(server, search_reports_fql_resource)
+        self._add_resource(
+            server,
+            search_actors_fql_resource,
+        )
+        self._add_resource(
+            server,
+            search_indicators_fql_resource,
+        )
+        self._add_resource(
+            server,
+            search_reports_fql_resource,
+        )
 
     def query_actor_entities(
         self,

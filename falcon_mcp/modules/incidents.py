@@ -87,9 +87,18 @@ class IncidentsModule(BaseModule):
             text=SEARCH_BEHAVIORS_FQL_DOCUMENTATION,
         )
 
-        self._add_resource(server, crowd_score_fql_resource)
-        self._add_resource(server, search_incidents_fql_resource)
-        self._add_resource(server, search_behaviors_fql_resource)
+        self._add_resource(
+            server,
+            crowd_score_fql_resource,
+        )
+        self._add_resource(
+            server,
+            search_incidents_fql_resource,
+        )
+        self._add_resource(
+            server,
+            search_behaviors_fql_resource,
+        )
 
     def show_crowd_score(
         self,

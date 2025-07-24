@@ -73,7 +73,11 @@ class BaseModule(ABC):
         logger.debug("Added resource: %s", resource_uri)
 
     def _base_get_by_ids(
-        self, operation: str, ids: List[str], id_key: str = "ids", **additional_params
+        self,
+        operation: str,
+        ids: List[str],
+        id_key: str = "ids",
+        **additional_params,
     ) -> List[Dict[str, Any]] | Dict[str, Any]:
         """Helper method for API operations that retrieve entities by IDs.
 

@@ -55,7 +55,10 @@ class HostsModule(BaseModule):
             text=SEARCH_HOSTS_FQL_DOCUMENTATION,
         )
 
-        self._add_resource(server, search_hosts_fql_resource)
+        self._add_resource(
+            server,
+            search_hosts_fql_resource,
+        )
 
     def search_hosts(
         self,
