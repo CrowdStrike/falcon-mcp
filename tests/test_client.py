@@ -1,9 +1,9 @@
 """
 Tests for the Falcon API client.
 """
-import unittest
-import sys
 import platform
+import sys
+import unittest
 from unittest.mock import MagicMock, patch
 
 from falcon_mcp.client import FalconClient

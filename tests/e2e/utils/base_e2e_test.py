@@ -1,14 +1,14 @@
 """Base class for E2E tests."""
 
 import asyncio
+import atexit
+import json
 import os
 import threading
 import time
-from typing import Any
 import unittest
+from typing import Any
 from unittest.mock import MagicMock, patch
-import json
-import atexit
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI

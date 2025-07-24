@@ -7,12 +7,12 @@ from unittest.mock import patch
 
 from falcon_mcp.common.api_scopes import API_SCOPE_REQUIREMENTS, get_required_scopes
 from falcon_mcp.common.errors import (
-    FalconError,
-    AuthenticationError,
     APIError,
-    is_success_response,
-    handle_api_response,
+    AuthenticationError,
+    FalconError,
     _format_error_response,
+    handle_api_response,
+    is_success_response,
 )
 
 

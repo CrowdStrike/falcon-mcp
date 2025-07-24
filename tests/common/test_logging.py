@@ -3,7 +3,7 @@ Tests for the logging utilities.
 """
 import logging
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from falcon_mcp.common.logging import configure_logging, get_logger
 

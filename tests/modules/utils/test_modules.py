@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import call, MagicMock
+from unittest.mock import MagicMock, call
 
 from mcp.server import FastMCP
 

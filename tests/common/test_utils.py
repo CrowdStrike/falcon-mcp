@@ -5,10 +5,10 @@ import unittest
 from unittest.mock import patch
 
 from falcon_mcp.common.utils import (
+    extract_first_resource,
+    extract_resources,
     filter_none_values,
     prepare_api_parameters,
-    extract_resources,
-    extract_first_resource
 )
 
 
