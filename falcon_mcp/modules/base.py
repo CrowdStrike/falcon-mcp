@@ -9,10 +9,10 @@ from typing import Any, Callable, Dict, List
 from mcp import Resource
 from mcp.server import FastMCP
 
-from falcon_mcp.common.errors import handle_api_response
-from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.client import FalconClient
+from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
+from falcon_mcp.common.utils import prepare_api_parameters
 
 logger = get_logger(__name__)
 

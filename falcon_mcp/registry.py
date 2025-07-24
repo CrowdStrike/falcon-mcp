@@ -6,7 +6,7 @@ This module provides a registry of available modules for the Falcon MCP server.
 import importlib
 import os
 import pkgutil
-from typing import Dict, Type, List
+from typing import Dict, List, Type
 
 from falcon_mcp.common.logging import get_logger
 

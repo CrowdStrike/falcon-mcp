@@ -5,20 +5,20 @@ This module provides tools for accessing and analyzing CrowdStrike Falcon cloud 
 Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets.
 """
 
-from typing import Dict, List, Optional, Any
 from textwrap import dedent
-from mcp.server.fastmcp.resources import TextResource
-from mcp.server import FastMCP
-from pydantic import Field, AnyUrl
+from typing import Any, Dict, List, Optional
 
-from falcon_mcp.common.logging import get_logger
+from mcp.server import FastMCP
+from mcp.server.fastmcp.resources import TextResource
+from pydantic import AnyUrl, Field
+
 from falcon_mcp.common.errors import handle_api_response
+from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
-
 from falcon_mcp.resources.cloud import (
-    KUBERNETES_CONTAINERS_FQL_DOCUMENTATION,
     IMAGES_VULNERABILITIES_FQL_DOCUMENTATION,
+    KUBERNETES_CONTAINERS_FQL_DOCUMENTATION,
 )
 
 logger = get_logger(__name__)

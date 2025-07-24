@@ -4,18 +4,18 @@ Hosts module for Falcon MCP Server
 
 This module provides tools for accessing and managing CrowdStrike Falcon hosts/devices.
 """
-from typing import Dict, List, Optional, Any
 from textwrap import dedent
+from typing import Any, Dict, List, Optional
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
-from pydantic import Field, AnyUrl
+from pydantic import AnyUrl, Field
 
-from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.errors import handle_api_response
+from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import prepare_api_parameters
-from falcon_mcp.resources.hosts import SEARCH_HOSTS_FQL_DOCUMENTATION
 from falcon_mcp.modules.base import BaseModule
+from falcon_mcp.resources.hosts import SEARCH_HOSTS_FQL_DOCUMENTATION
 
 logger = get_logger(__name__)
 

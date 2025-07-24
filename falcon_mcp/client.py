@@ -4,10 +4,10 @@ Falcon API Client for MCP Server
 This module provides the Falcon API client and authentication utilities for the Falcon MCP server.
 """
 import os
-import sys
 import platform
-from typing import Dict, Optional, Any
-from importlib.metadata import version, PackageNotFoundError
+import sys
+from importlib.metadata import PackageNotFoundError, version
+from typing import Any, Dict, Optional
 
 # Import the APIHarnessV2 from FalconPy
 from falconpy import APIHarnessV2
@@ -149,8 +149,8 @@ def get_version() -> str:
 
     # Try reading from pyproject.toml (works in development/Docker)
     try:
-        import tomllib  # Python 3.11+ # pylint: disable=import-outside-toplevel
         import pathlib  # pylint: disable=import-outside-toplevel
+        import tomllib  # Python 3.11+ # pylint: disable=import-outside-toplevel
 
         # Look for pyproject.toml in current directory and parent directories
         current_path = pathlib.Path(__file__).parent

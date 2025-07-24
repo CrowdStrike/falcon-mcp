@@ -8,14 +8,14 @@ import argparse
 import os
 import sys
 from typing import Dict, List, Optional, Set
-import uvicorn
 
+import uvicorn
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
+from falcon_mcp import registry
 from falcon_mcp.client import FalconClient
 from falcon_mcp.common.logging import configure_logging, get_logger
-from falcon_mcp import registry
 
 logger = get_logger(__name__)
 

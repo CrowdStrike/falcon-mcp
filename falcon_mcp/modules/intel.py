@@ -4,21 +4,21 @@ Intel module for Falcon MCP Server
 
 This module provides tools for accessing and analyzing CrowdStrike Falcon intelligence data.
 """
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
-from pydantic import Field, AnyUrl
+from pydantic import AnyUrl, Field
 
-from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.errors import handle_api_response
+from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import prepare_api_parameters
+from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.intel import (
     QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION,
     QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION,
-    QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION
+    QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION,
 )
-from falcon_mcp.modules.base import BaseModule
 
 logger = get_logger(__name__)
 
