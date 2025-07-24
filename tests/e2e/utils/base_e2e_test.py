@@ -251,7 +251,12 @@ class BaseE2ETest(unittest.TestCase):
                 result += str(data["chunk"].content)
         return tools, result
 
-    def run_test_with_retries(self, test_name: str, test_logic_coro: callable, assertion_logic: callable):  # fmt: skip
+    def run_test_with_retries(
+        self,
+        test_name: str,
+        test_logic_coro: callable,
+        assertion_logic: callable,
+    ):
         """
         Run a given test logic multiple times against different models and check for a success threshold.
 

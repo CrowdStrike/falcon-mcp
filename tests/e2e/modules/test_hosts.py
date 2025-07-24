@@ -120,7 +120,7 @@ class TestHostsModuleE2E(BaseE2ETest):
 
             # Verify API calls were made correctly
             self.assertGreaterEqual(
-                self._mock_api_instance.command.call_count, 2, "Expected 2 API calls"
+                self._mock_api_instance.command.call_count, 2, "Expected 2 API calls",
             )
 
             # Check first API call (QueryDevicesByFilter)

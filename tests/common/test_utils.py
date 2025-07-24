@@ -32,7 +32,13 @@ class TestUtilFunctions(unittest.TestCase):
 
         # Verify None values were removed
         self.assertEqual(
-            filtered, {"key1": "value1", "key3": 0, "key4": False, "key5": ""}
+            filtered,
+            {
+                "key1": "value1",
+                "key3": 0,
+                "key4": False,
+                "key5": "",
+            },
         )
 
         # Empty dictionary
@@ -45,7 +51,12 @@ class TestUtilFunctions(unittest.TestCase):
     def test_prepare_api_parameters(self):
         """Test prepare_api_parameters function."""
         # Parameters with None values
-        params = {"filter": "name:test", "limit": 100, "offset": None, "sort": None}
+        params = {
+            "filter": "name:test",
+            "limit": 100,
+            "offset": None,
+            "sort": None,
+        }
 
         prepared = prepare_api_parameters(params)
 

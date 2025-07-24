@@ -338,7 +338,8 @@ class TestCloudModuleE2E(BaseE2ETest):
             self.assertGreaterEqual(len(tools), 1, "Expected at least 1 tool call")
             used_tool = tools[len(tools) - 1]
             self.assertEqual(
-                used_tool["input"]["tool_name"], "falcon_search_images_vulnerabilities"
+                used_tool["input"]["tool_name"],
+                "falcon_search_images_vulnerabilities",
             )
 
             # Check for the filter for container_id

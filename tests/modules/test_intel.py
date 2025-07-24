@@ -49,7 +49,11 @@ class TestIntelModule(TestModules):
 
         # Call search_actors with test parameters
         result = self.module.query_actor_entities(
-            filter="name:'Actor*'", limit=100, offset=0, sort="name.asc", q="test"
+            filter="name:'Actor*'",
+            limit=100,
+            offset=0,
+            sort="name.asc",
+            q="test",
         )
 
         # Verify client command was called correctly

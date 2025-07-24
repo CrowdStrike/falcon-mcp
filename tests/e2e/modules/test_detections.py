@@ -130,7 +130,9 @@ class TestDetectionsModuleE2E(BaseE2ETest):
             self.assertIn("detection-3", result)
 
         self.run_test_with_retries(
-            "test_get_top_3_high_severity_detections", test_logic, assertions
+            "test_get_top_3_high_severity_detections",
+            test_logic,
+            assertions,
         )
 
     def test_get_highest_detection_for_ip(self):

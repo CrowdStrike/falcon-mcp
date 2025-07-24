@@ -48,7 +48,9 @@ class TestIdpModule(TestModules):
 
         # Call investigate_entity with basic parameters
         result = self.module.investigate_entity(
-            entity_names=["Test User"], investigation_types=["entity_details"], limit=10
+            entity_names=["Test User"],
+            investigation_types=["entity_details"],
+            limit=10,
         )
 
         # Verify client command was called (at least for entity resolution)

@@ -51,7 +51,10 @@ class TestIncidentsModule(TestModules):
 
         # Call crowd_score with test parameters
         result = self.module.show_crowd_score(
-            filter="test filter", limit=100, offset=0, sort="modified_timestamp.desc"
+            filter="test filter",
+            limit=100,
+            offset=0,
+            sort="modified_timestamp.desc",
         )
 
         # Verify client command was called correctly

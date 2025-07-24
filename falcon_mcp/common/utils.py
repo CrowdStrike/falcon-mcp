@@ -46,7 +46,8 @@ def prepare_api_parameters(params: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def extract_resources(
-    response: Dict[str, Any], default: Optional[List[Dict[str, Any]]] = None
+    response: Dict[str, Any],
+    default: Optional[List[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """Extract resources from an API response.
 

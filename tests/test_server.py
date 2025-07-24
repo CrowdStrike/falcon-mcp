@@ -31,7 +31,8 @@ class TestFalconMCPServer(unittest.TestCase):
 
         # Create server
         server = FalconMCPServer(
-            base_url="https://api.test.crowdstrike.com", debug=True
+            base_url="https://api.test.crowdstrike.com",
+            debug=True,
         )
 
         # Verify client initialization with direct parameters

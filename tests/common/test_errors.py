@@ -125,7 +125,9 @@ class TestErrorUtils(unittest.TestCase):
             "body": {"errors": [{"message": "Bad request"}]},
         }
         result = handle_api_response(
-            response, "TestOperation", error_message="Test failed"
+            response,
+            "TestOperation",
+            error_message="Test failed",
         )
         self.assertIn("error", result)
         self.assertIn("Test failed", result["error"])
@@ -142,7 +144,9 @@ class TestErrorUtils(unittest.TestCase):
 
         try:
             result = handle_api_response(
-                response, "TestOperation", error_message="Permission denied"
+                response,
+                "TestOperation",
+                error_message="Permission denied",
             )
             self.assertIn("error", result)
             self.assertIn("Permission denied", result["error"])
