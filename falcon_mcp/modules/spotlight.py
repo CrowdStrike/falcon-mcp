@@ -61,10 +61,10 @@ class SpotlightModule(BaseModule):
             description=dedent("""
                 Sort vulnerabilities using FQL syntax.
 
-                Only valid fields for sorting are:
-                created_timestamp: When the vulnerability was found
-                closed_timestamp: When the vulnerability was closed
-                updated_timestamp: When the vulnerability was last updated
+                Supported sorting fields:
+                • created_timestamp: When the vulnerability was found
+                • closed_timestamp: When the vulnerability was closed
+                • updated_timestamp: When the vulnerability was last updated
 
                 Sort either asc (ascending) or desc (descending).
                 Format: 'field|direction'
