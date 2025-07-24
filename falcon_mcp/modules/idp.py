@@ -32,7 +32,11 @@ class IdpModule(BaseModule):
             server: MCP server instance
         """
         # Entity Investigation Tool
-        self._add_tool(server, self.investigate_entity, name="idp_investigate_entity")
+        self._add_tool(
+            server=server,
+            method=self.investigate_entity,
+            name="idp_investigate_entity",
+        )
 
     # ==========================================
     #  Entity Investigation Tool

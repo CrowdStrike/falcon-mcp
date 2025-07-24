@@ -44,9 +44,9 @@ class YourModule(BaseModule):
         """
         # Register tools
         self._add_tool(
-            server,
-            self.your_tool_method,
-            name="your_tool_name"
+            server=server,
+            method=self.your_tool_method,
+            name="your_tool_name",
         )
 
         # Add more tools as needed
@@ -64,7 +64,7 @@ class YourModule(BaseModule):
         # Prepare parameters
         params = prepare_api_parameters({
             "param1": param1,
-            "param2": param2
+            "param2": param2,
         })
 
         # Define the operation name (used for error handling)
@@ -78,7 +78,7 @@ class YourModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to perform operation",
-            default_result={}
+            default_result={},
         )
 ```
 
@@ -362,21 +362,21 @@ class HostsModule(BaseModule):
         """
         # Register tools
         self._add_tool(
-            server,
-            self.search_hosts,
-            name="search_hosts"
+            server=server,
+            method=self.search_hosts,
+            name="search_hosts",
         )
 
         self._add_tool(
-            server,
-            self.get_host_details,
-            name="get_host_details"
+            server=server,
+            method=self.get_host_details,
+            name="get_host_details",
         )
 
         self._add_tool(
-            server,
-            self.get_host_count,
-            name="get_host_count"
+            server=server,
+            method=self.get_host_count,
+            name="get_host_count",
         )
 
     def search_hosts(self, query: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
@@ -392,7 +392,7 @@ class HostsModule(BaseModule):
         # Prepare parameters
         params = prepare_api_parameters({
             "filter": query,
-            "limit": limit
+            "limit": limit,
         })
 
         # Define the operation name
@@ -406,7 +406,7 @@ class HostsModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to search hosts",
-            default_result=[]
+            default_result=[],
         )
 
         # If we have host IDs, get the details for each one
@@ -421,7 +421,7 @@ class HostsModule(BaseModule):
                 details_response,
                 operation=details_operation,
                 error_message="Failed to get host details",
-                default_result=[]
+                default_result=[],
             )
 
         return []
@@ -441,14 +441,14 @@ class HostsModule(BaseModule):
         # Make the API request
         response = self.client.command(
             operation,
-            body={"ids": [host_id]}
+            body={"ids": [host_id]},
         )
 
         # Extract the first resource
         return extract_first_resource(
             response,
             operation=operation,
-            not_found_error="Host not found"
+            not_found_error="Host not found",
         )
 
     def get_host_count(self, query: Optional[str] = None) -> Dict[str, int]:
@@ -462,7 +462,7 @@ class HostsModule(BaseModule):
         """
         # Prepare parameters
         params = prepare_api_parameters({
-            "filter": query
+            "filter": query,
         })
 
         # Define the operation name
@@ -476,7 +476,7 @@ class HostsModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to get host count",
-            default_result=[]
+            default_result=[],
         )
 
         # If handle_api_response returns an error dict instead of a list,
@@ -503,3 +503,4 @@ And import the module in the `falcon_mcp/modules/__init__.py` file:
 ```python
 # In falcon_mcp/modules/__init__.py
 from .hosts import HostsModule
+```

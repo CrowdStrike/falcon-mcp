@@ -31,9 +31,17 @@ class HostsModule(BaseModule):
             server: MCP server instance
         """
         # Register tools
-        self._add_tool(server, self.search_hosts, name="search_hosts")
+        self._add_tool(
+            server=server,
+            method=self.search_hosts,
+            name="search_hosts",
+        )
 
-        self._add_tool(server, self.get_host_details, name="get_host_details")
+        self._add_tool(
+            server=server,
+            method=self.get_host_details,
+            name="get_host_details",
+        )
 
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.

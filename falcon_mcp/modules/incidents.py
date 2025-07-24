@@ -31,15 +31,35 @@ class IncidentsModule(BaseModule):
             server: MCP server instance
         """
         # Register tools
-        self._add_tool(server, self.show_crowd_score, name="show_crowd_score")
+        self._add_tool(
+            server=server,
+            method=self.show_crowd_score,
+            name="show_crowd_score",
+        )
 
-        self._add_tool(server, self.search_incidents, name="search_incidents")
+        self._add_tool(
+            server=server,
+            method=self.search_incidents,
+            name="search_incidents",
+        )
 
-        self._add_tool(server, self.get_incident_details, name="get_incident_details")
+        self._add_tool(
+            server=server,
+            method=self.get_incident_details,
+            name="get_incident_details",
+        )
 
-        self._add_tool(server, self.search_behaviors, name="search_behaviors")
+        self._add_tool(
+            server=server,
+            method=self.search_behaviors,
+            name="search_behaviors",
+        )
 
-        self._add_tool(server, self.get_behavior_details, name="get_behavior_details")
+        self._add_tool(
+            server=server,
+            method=self.get_behavior_details,
+            name="get_behavior_details",
+        )
 
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.

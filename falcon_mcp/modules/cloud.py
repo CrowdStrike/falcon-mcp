@@ -35,21 +35,21 @@ class CloudModule(BaseModule):
         """
         # Register tools
         self._add_tool(
-            server,
-            self.search_kubernetes_containers,
+            server=server,
+            method=self.search_kubernetes_containers,
             name="search_kubernetes_containers",
         )
 
         # fmt: off
         self._add_tool(
-            server,
-            self.count_kubernetes_containers,
-            name="count_kubernetes_containers"
+            server=server,
+            method=self.count_kubernetes_containers,
+            name="count_kubernetes_containers",
         )
 
         self._add_tool(
-            server,
-            self.search_images_vulnerabilities,
+            server=server,
+            method=self.search_images_vulnerabilities,
             name="search_images_vulnerabilities",
         )
 

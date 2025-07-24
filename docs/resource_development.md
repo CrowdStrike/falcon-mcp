@@ -79,12 +79,12 @@ class YourModule(BaseModule):
             uri=AnyUrl("falcon://your-module/resource-name"),
             name="your_resource_name",
             description="Description of what this resource provides.",
-            text=YOUR_RESOURCE_CONTENT
+            text=YOUR_RESOURCE_CONTENT,
         )
 
         self._add_resource(
             server,
-            your_resource
+            your_resource,
         )
 ```
 
@@ -119,7 +119,7 @@ text_resource = TextResource(
     uri=AnyUrl("falcon://module/resource-name"),
     name="resource_name",
     description="Resource description",
-    text="Resource content"
+    text="Resource content",
 )
 ```
 
@@ -176,12 +176,12 @@ class IntelModule(BaseModule):
             uri=AnyUrl("falcon://intel/query_actor_entities/fql-guide"),
             name="falcon_query_actor_entities_fql_guide",
             description="Contains the guide for the `filter` param of the `falcon_search_actors` tool.",
-            text=QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION
+            text=QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION,
         )
 
         self._add_resource(
             server,
-            query_actor_entities_resource
+            query_actor_entities_resource,
         )
 ```
 
@@ -201,7 +201,7 @@ def query_actor_entities(
     self,
     filter: Optional[str] = Field(
         default=None,
-        description="FQL query expression that should be used to limit the results. IMPORTANT: use the 'falcon://query_actor_entities_fql_documentation' resource when building this parameter."
+        description="FQL query expression that should be used to limit the results. IMPORTANT: use the 'falcon://query_actor_entities_fql_documentation' resource when building this parameter.",
     ),
     # Other parameters...
 ) -> List[Dict[str, Any]]:

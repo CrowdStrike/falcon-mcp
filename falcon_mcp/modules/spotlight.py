@@ -32,7 +32,9 @@ class SpotlightModule(BaseModule):
         """
         # Register tools
         self._add_tool(
-            server, self.search_vulnerabilities, name="search_vulnerabilities"
+            server=server,
+            method=self.search_vulnerabilities,
+            name="search_vulnerabilities",
         )
 
     def register_resources(self, server: FastMCP) -> None:

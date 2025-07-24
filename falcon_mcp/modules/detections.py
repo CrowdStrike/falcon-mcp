@@ -31,9 +31,17 @@ class DetectionsModule(BaseModule):
             server: MCP server instance
         """
         # Register tools
-        self._add_tool(server, self.search_detections, name="search_detections")
+        self._add_tool(
+            server=server,
+            method=self.search_detections,
+            name="search_detections",
+        )
 
-        self._add_tool(server, self.get_detection_details, name="get_detection_details")
+        self._add_tool(
+            server=server,
+            method=self.get_detection_details,
+            name="get_detection_details",
+        )
 
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.

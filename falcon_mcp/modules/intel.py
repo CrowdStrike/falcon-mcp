@@ -34,11 +34,23 @@ class IntelModule(BaseModule):
             server: MCP server instance
         """
         # Register tools
-        self._add_tool(server, self.query_actor_entities, name="search_actors")
+        self._add_tool(
+            server=server,
+            method=self.query_actor_entities,
+            name="search_actors",
+        )
 
-        self._add_tool(server, self.query_indicator_entities, name="search_indicators")
+        self._add_tool(
+            server=server,
+            method=self.query_indicator_entities,
+            name="search_indicators",
+        )
 
-        self._add_tool(server, self.query_report_entities, name="search_reports")
+        self._add_tool(
+            server=server,
+            method=self.query_report_entities,
+            name="search_reports",
+        )
 
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.

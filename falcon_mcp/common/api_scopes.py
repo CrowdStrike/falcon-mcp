@@ -41,7 +41,7 @@ API_SCOPE_REQUIREMENTS = {
         "Identity Protection Entities:read",
         "Identity Protection Timeline:read",
         "Identity Protection Detections:read",
-        "Identity Protection Assessment:read"
+        "Identity Protection Assessment:read",
     ],
     # Add more mappings as needed
 }
