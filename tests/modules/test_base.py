@@ -1,4 +1,3 @@
-# pylint: disable=protected-access
 """
 Tests for the Base module.
 """

@@ -155,8 +155,8 @@ def get_version() -> str:
 
     # Try reading from pyproject.toml (works in development/Docker)
     try:
-        import pathlib  # pylint: disable=import-outside-toplevel
-        import tomllib  # Python 3.11+ # pylint: disable=import-outside-toplevel
+        import pathlib
+        import tomllib  # Python 3.11+
 
         # Look for pyproject.toml in current directory and parent directories
         current_path = pathlib.Path(__file__).parent

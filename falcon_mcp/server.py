@@ -328,7 +328,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
         sys.exit(0)
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception as e:
         # Catch any other exceptions to ensure graceful shutdown
         logger.error("Unexpected error running server: %s", e)
         sys.exit(1)

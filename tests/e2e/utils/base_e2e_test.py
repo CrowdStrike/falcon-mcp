@@ -293,7 +293,6 @@ class BaseE2ETest(unittest.TestCase):
             memory_enabled=False,
         )
 
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def _run_model_tests(
         self,
         test_name: str,
@@ -337,7 +336,7 @@ class BaseE2ETest(unittest.TestCase):
             except AssertionError as e:
                 run_result["failure_reason"] = f"Assertion failed: {str(e)}"
                 print(f"Assertion failed with model {model_name}, try {i + 1}: {e}")
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except Exception as e:
                 # Catch any other exception that might occur during agent streaming or test execution
                 # fmt: off
                 run_result["failure_reason"] = f"Test execution failed: {type(e).__name__}: {str(e)}"

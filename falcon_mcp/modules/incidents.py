@@ -1,4 +1,3 @@
-# pylint: disable=too-many-arguments,too-many-positional-arguments,redefined-builtin
 """
 Incidents module for Falcon MCP Server
 
