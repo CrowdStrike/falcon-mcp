@@ -26,6 +26,10 @@ jobs:
         run: |
           uv sync --extra dev
 
+      - name: Lint imports with isort
+        run: |
+          isort . --check
+
       - name: Lint with Ruff
         run: |
           ruff check falcon_mcp/ tests/ examples/

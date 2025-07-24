@@ -23,6 +23,10 @@ Never made an open source contribution before? Wondering how contributions work 
 
 1. Make the appropriate changes for the issue you are trying to address or the feature you would like to add.
 
+1. Run [`isort`](https://pycqa.github.io/isort/) to format your imports. This helps maintain consistent code style across the project.
+
+    ``isort .``
+
 1. Run [`ruff`](https://docs.astral.sh/ruff/) to format your code and check for linting issues. This helps maintain consistent code style across the project.
 
     ``ruff format .``
