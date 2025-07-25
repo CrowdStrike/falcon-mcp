@@ -265,7 +265,7 @@ pip install falcon-mcp
 > [!TIP]
 > If `falcon-mcp` isn't found, update your shell PATH.
 
-For installation via code editors/assistants, see the [Editor/Assitant](#editorassitant-integration) section below
+For installation via code editors/assistants, see the [Editor/Assitant](#editorassistant-integration) section below
 
 ## Usage
 
