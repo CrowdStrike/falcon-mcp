@@ -47,6 +47,7 @@ property_name:[operator]'value'
 • motivations.value
 • name
 • name.raw
+• origins
 • short_description
 • slug
 • sub_type
