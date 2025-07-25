@@ -28,7 +28,7 @@
 - [Installation \& Setup](#installation--setup)
   - [Prerequisites](#prerequisites)
   - [Environment Configuration](#environment-configuration)
-  - [Running](#running)
+  - [Installation](#installation)
 - [Usage](#usage)
   - [Command Line](#command-line)
   - [Module Configuration](#module-configuration)
@@ -38,7 +38,11 @@
 - [Container Usage](#container-usage)
   - [Using Pre-built Image (Recommended)](#using-pre-built-image-recommended)
   - [Building Locally (Development)](#building-locally-development)
-- [Editor/Assitant Integration](#editorassitant-integration)
+- [Editor/Assistant Integration](#editorassistant-integration)
+  - [Using `uvx` (recommended)](#using-uvx-recommended)
+  - [With Module Selection](#with-module-selection)
+  - [Using Individual Environment Variables](#using-individual-environment-variables)
+  - [Docker Version](#docker-version)
 - [Additional Deployment Options](#additional-deployment-options)
   - [Amazon Bedrock AgentCore](#amazon-bedrock-agentcore)
 - [Contributing](#contributing)
@@ -213,7 +217,7 @@ Provides tools for accessing and managing CrowdStrike Falcon Identity Protection
 ### Prerequisites
 
 - Python 3.11 or higher
-- [`uv`](https://docs.astral.sh/uv/)
+- [`uv`](https://docs.astral.sh/uv/) or pip
 - CrowdStrike Falcon API credentials (see above)
 
 ### Environment Configuration
@@ -244,11 +248,24 @@ Then edit `.env` with your CrowdStrike API credentials:
 
 > **Important**: Ensure your API client has the necessary scopes for the modules you plan to use. You can always update scopes later in the CrowdStrike console.
 
-### Running
+### Installation
+
+#### Install using uv
 
 ```bash
-uvx falcon-mcp
+uv tool install falcon-mcp
 ```
+
+#### Install using pip
+
+```bash
+pip install falcon-mcp
+```
+
+> [!TIP]
+> If `falcon-mcp` isn't found, update your shell PATH.
+
+For installation via code editors/assistants, see the [Editor/Assitant](#editorassitant-integration) section below
 
 ## Usage
 
@@ -415,50 +432,72 @@ docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_
 
 **Note**: When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
 
-## Editor/Assitant Integration
+## Editor/Assistant Integration
 
-You can integrate the Falcon MCP server with your editor or AI assistant in a few ways:
+You can integrate the Falcon MCP server with your editor or AI assistant. Here are configuration examples for popular MCP clients:
+
+### Using `uvx` (recommended)
 
 ```json
 {
-  "servers": [
-    {
-      "name": "falcon-stdio",
-      "transport": {
-        "type": "stdio",
-        "command": "python -m falcon_mcp.server"
-      }
-    },
-    {
-      "name": "falcon-stdio-docker",
-      "transport": {
-        "type": "stdio",
-        "command": "docker",
-        "args": [
-          "run",
-          "-i",
-          "--rm",
-          "--env-file",
-          "/full/path/to/.env",
-          "quay.io/crowdstrike/falcon-mcp:latest"
-        ]
-      }
-    },
-    {
-      "name": "falcon-sse",
-      "transport": {
-        "type": "sse",
-        "url": "http://127.0.0.1:8000/sse"
-      }
-    },
-    {
-      "name": "falcon-streamable-http",
-      "transport": {
-        "type": "streamable-http",
-        "url": "http://127.0.0.1:8000/mcp"
+  "mcpServers": {
+    "falcon-mcp": {
+      "command": "uvx",
+      "args": ["--env-file", "/path/to/.env", "falcon-mcp"]
+    }
+  }
+}
+```
+
+### With Module Selection
+
+```json
+{
+  "mcpServers": {
+    "falcon-mcp": {
+      "command": "uvx",
+      "args": [
+        "--env-file", "/path/to/.env",
+        "falcon-mcp",
+        "--modules", "detections,incidents,intel"
+      ]
+    }
+  }
+}
+```
+
+### Using Individual Environment Variables
+
+```json
+{
+  "mcpServers": {
+    "falcon-mcp": {
+      "command": "uvx",
+      "args": ["falcon-mcp"],
+      "env": {
+        "FALCON_CLIENT_ID": "your-client-id",
+        "FALCON_CLIENT_SECRET": "your-client-secret",
+        "FALCON_BASE_URL": "https://api.crowdstrike.com"
       }
     }
-  ]
+  }
+}
+```
+
+### Docker Version
+
+```json
+{
+  "mcpServers": {
+    "falcon-mcp-docker": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "--env-file", "/full/path/to/.env",
+        "quay.io/crowdstrike/falcon-mcp:latest"
+      ]
+    }
+  }
 }
 ```
 
@@ -483,7 +522,7 @@ To deploy the MCP Server as a tool in Amazon Bedrock AgentCore, please refer to 
 
    ```bash
    # Create .venv and install dependencies
-   uv sync --extra dev
+   uv sync --all-extras
 
    # Activate the venv
    source .venv/bin/activate
