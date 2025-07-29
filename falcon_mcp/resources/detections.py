@@ -30,17 +30,55 @@ field_name:[operator]'value'
 === COMBINING ===
 • + = AND: status:'new'+severity:>=70
 • , = OR: product:'epp',product:'xdr'
+• () = GROUPING: status:'new'+(severity:>=60+severity:<80)+product:'epp'
 
 === COMMON PATTERNS ===
+🔍 SORT OPTIONS:
+• timestamp: Timestamp when the detection occurred
+• created_timestamp: When the detection was created
+• updated_timestamp: When the detection was last modified
+• severity: Severity level of the detection (1-100, recommended when filtering by severity)
+• confidence: Confidence level of the detection (1-100)
+• agent_id: Agent ID associated with the detection
+
+Sort either asc (ascending) or desc (descending).
+Both formats are supported: 'severity.desc' or 'severity|desc'
+
+When searching for high severity detections, use 'severity.desc' to get the highest severity detections first.
+For chronological ordering, use 'timestamp.desc' for most recent detections first.
+
+Examples: 'severity.desc', 'timestamp.desc'
+
+🔍 SEVERITY RANGES:
+
+**Numeric Ranges (for precise filtering):**
+• Informational: severity:<20
+• Low: severity:>=20+severity:<40
+• Medium: severity:>=40+severity:<60
+• High: severity:>=60+severity:<80
+• Critical: severity:>=80
+
+**Name-based (easier to use):**
+• severity_name:'Informational' (severity 1-19)
+• severity_name:'Low' (severity 20-39)
+• severity_name:'Medium' (severity 40-59)
+• severity_name:'High' (severity 60-79)
+• severity_name:'Critical' (severity 80-100)
+
+**Range Examples:**
+• Medium severity and above: severity:>=40 OR severity_name:'Medium',severity_name:'High',severity_name:'Critical'
+• High severity and above: severity:>=60 OR severity_name:'High',severity_name:'Critical'
+• Critical alerts only: severity:>=80 OR severity_name:'Critical'
 
 🔍 ESSENTIAL FILTERS:
 • Status: status:'new' | status:'in_progress' | status:'closed' | status:'reopened'
-• Severity: severity:>=90 (critical) | severity:>=70 (high+) | severity:>=50 (medium+) | severity:>=20 (low+)
+• Severity (by name): severity_name:'High' | severity_name:'Critical' | severity_name:'Medium' | severity_name:'Low' | severity_name:'Informational'
+• Severity (by range): severity:>=80 (Critical+) | severity:>=60 (High+) | severity:>=40 (Medium+) | severity:>=20 (Low+)
 • Product: product:'epp' | product:'idp' | product:'xdr' | product:'overwatch' (see field table for all)
 • Assignment: assigned_to_name:!* (unassigned) | assigned_to_name:* (assigned) | assigned_to_name:'user.name'
 • Timestamps: created_timestamp:>'2025-01-01T00:00:00Z' | created_timestamp:>='date1'+created_timestamp:<='date2'
 • Wildcards: name:'EICAR*' | description:'*credential*' | agent_id:'77d11725*' | pattern_id:'301*'
-• Combinations: status:'new'+severity:>=70+product:'epp' | product:'epp',product:'xdr' | status:'new',status:'reopened'
+• Combinations: status:'new'+severity_name:'High'+product:'epp' | status:'new'+severity:>=70+product:'epp' | product:'epp',product:'xdr'
 
 🔍 EPP-SPECIFIC PATTERNS:
 • Device targeting: product:'epp'+device.hostname:'DC*' | product:'epp'+device.external_ip:'192.168.*'
@@ -115,11 +153,16 @@ field_name:[operator]'value'
 |                            |                           | Ex: 80                                                 |
 +----------------------------+---------------------------+--------------------------------------------------------+
 | severity                   | Number                    | Security risk level (1-100). Use numeric values:      |
-|                            |                           | - Critical: severity:>=90                              |
-|                            |                           | - High: severity:>=70                                 |
-|                            |                           | - Medium: severity:>=50                               |
-|                            |                           | - Low: severity:>=20                                  |
 |                            |                           | Ex: 90                                                 |
++----------------------------+---------------------------+--------------------------------------------------------+
+| severity_name              | String                    | Human-readable severity level name. Easier to use     |
+|                            |                           | than numeric ranges. Possible values:                 |
+|                            |                           | - Informational: Low-priority alerts                  |
+|                            |                           | - Low: Minor security concerns                         |
+|                            |                           | - Medium: Moderate security risks                      |
+|                            |                           | - High: Significant security threats                   |
+|                            |                           | - Critical: Severe security incidents                 |
+|                            |                           | Ex: High                                               |
 +----------------------------+---------------------------+--------------------------------------------------------+
 | tactic                     | String                    | MITRE ATT&CK tactic name.                              |
 |                            |                           | Ex: Credential Access                                  |
@@ -424,17 +467,32 @@ field_name:[operator]'value'
 
 === COMPLEX FILTER EXAMPLES ===
 
-# New high-severity endpoint alerts
-status:'new'+severity:>=70+product:'epp'
+# New high-severity endpoint alerts (numeric approach)
+status:'new'+(severity:>=60+severity:<80)+product:'epp'
 
-# Unassigned critical alerts from last 24 hours
+# New high-severity endpoint alerts (name-based approach)
+status:'new'+severity_name:'High',severity_name:'Critical'+product:'epp'
+
+# Unassigned critical alerts from last 24 hours (numeric)
 assigned_to_name:!*+severity:>=90+created_timestamp:>'2025-01-19T00:00:00Z'
+
+# Unassigned critical alerts from last 24 hours (name-based)
+assigned_to_name:!*+severity_name:'Critical'+created_timestamp:>'2025-01-19T00:00:00Z'
+
+# Medium severity and above endpoint alerts (numeric - easier for ranges)
+severity:>=40+product:'epp'+status:'new'
+
+# Medium severity and above endpoint alerts (name-based - more explicit)
+severity_name:'Medium',severity_name:'High',severity_name:'Critical'+product:'epp'+status:'new'
 
 # OverWatch alerts with credential access tactics
 product:'overwatch'+tactic:'Credential Access'
 
-# XDR alerts with high confidence from specific technique
-product:'xdr'+confidence:>=80+technique_id:'T1003'
+# XDR high severity alerts with specific technique (name-based)
+product:'xdr'+severity_name:'High'+technique_id:'T1003'
+
+# XDR high severity alerts with specific technique (numeric)
+product:'xdr'+severity:>=60+technique_id:'T1003'
 
 # Find alerts by aggregate_id (related alerts)
 aggregate_id:'aggind:77d1172532c8xxxxxxxxxxxxxxxxxxxx49030016385'
@@ -442,15 +500,27 @@ aggregate_id:'aggind:77d1172532c8xxxxxxxxxxxxxxxxxxxx49030016385'
 # Find alerts from multiple products
 product:['epp', 'xdr', 'overwatch']
 
-# Recently updated alerts assigned to specific analyst
-assigned_to_name:'alice.anderson'+updated_timestamp:>'2025-01-18T12:00:00Z'
+# Recently updated critical alerts assigned to specific analyst
+assigned_to_name:'alice.anderson'+updated_timestamp:>'2025-01-18T12:00:00Z'+severity_name:'Critical'
 
-# Find alerts with specific MITRE ATT&CK tactics
-tactic:['Credential Access', 'Persistence', 'Privilege Escalation']
+# Find low-priority informational alerts for cleanup
+severity_name:'Informational'+status:'closed'+assigned_to_name:!*
 
-# Closed alerts resolved quickly (under 1 hour)
-status:'closed'+seconds_to_resolved:<3600
+# Find alerts with specific MITRE ATT&CK tactics and medium+ severity
+tactic:['Credential Access', 'Persistence', 'Privilege Escalation']+severity:>=40
 
-# Date range with multiple products and severity
-created_timestamp:>='2025-01-15T00:00:00Z'+created_timestamp:<='2025-01-20T00:00:00Z'+product:'epp',product:'xdr'+severity:>=70
+# Closed alerts resolved quickly (under 1 hour) - high severity only
+status:'closed'+seconds_to_resolved:<3600+severity_name:'High',severity_name:'Critical'
+
+# Date range with multiple products and high+ severity (name-based)
+created_timestamp:>='2025-01-15T00:00:00Z'+created_timestamp:<='2025-01-20T00:00:00Z'+product:'epp',product:'xdr'+severity_name:'High',severity_name:'Critical'
+
+# Date range with multiple products and high+ severity (numeric)
+created_timestamp:>='2025-01-15T00:00:00Z'+created_timestamp:<='2025-01-20T00:00:00Z'+product:'epp',product:'xdr'+severity:>=60
+
+# All unassigned alerts except informational (name-based exclusion)
+assigned_to_name:!*+severity_name:!'Informational'
+
+# All unassigned alerts except informational (numeric approach)
+assigned_to_name:!*+severity:>=20
 """
