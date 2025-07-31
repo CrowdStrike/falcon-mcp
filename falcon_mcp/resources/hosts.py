@@ -18,7 +18,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         The ID of the device.
-        
+
         Ex: 061a51ec742c44624a176f079d742052
         """
     ),
@@ -36,7 +36,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         Agent version.
-        
+
         Ex: 7.26.17905.0
         """
     ),
@@ -46,7 +46,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         BIOS manufacturer.
-        
+
         Ex: Phoenix Technologies LTD
         """
     ),
@@ -56,7 +56,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         BIOS version.
-        
+
         Ex: 6.00
         """
     ),
@@ -90,7 +90,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "Yes",
         """
         CPU signature.
-        
+
         Ex: GenuineIntel
         """
     ),
@@ -116,7 +116,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "Yes",
         """
         External IP address.
-        
+
         Ex: 192.0.2.100
         """
     ),
@@ -126,7 +126,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "Yes",
         """
         First connection timestamp (UTC).
-        
+
         Ex: first_seen:>'2016-07-19T11:14:15Z'
         """
     ),
@@ -136,7 +136,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         Host group ID.
-        
+
         Ex: groups:'0bd018b7bd8b47cc8834228a294eabf2'
         """
     ),
@@ -149,7 +149,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         - hostname:'PC*' (prefix) - ✅ WORKS
         - hostname:'*-01' (suffix) - ✅ WORKS
         - hostname:'*server*' (contains) - ❌ FAILS
-        
+
         Ex: hostname:'WinPC9251' or hostname:'PC*'
         """
     ),
@@ -160,7 +160,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         """
         Cloud resource information (EC2 instance ID, Azure VM ID,
         GCP instance ID, etc.).
-        
+
         Ex: instance_id:'i-0dc41d0939384cd15'
         Ex: instance_id:'f9d3cef9-0123-4567-8901-123456789def'
         """
@@ -171,7 +171,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         Kernel version of the host OS.
-        
+
         Ex: kernel_version:'6.1.7601.18741'
         """
     ),
@@ -189,7 +189,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "Yes",
         """
         Last connection timestamp (UTC).
-        
+
         Ex: last_seen:<'2016-07-19T11:14:15Z'
         """
     ),
@@ -207,7 +207,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         Local IP address.
-        
+
         Ex: 192.0.2.1
         """
     ),
@@ -217,7 +217,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         Local IP with wildcard support. Use * prefix:
-        
+
         Ex: local_ip.raw:*'192.0.2.*'
         Ex: local_ip.raw:*'*.0.2.100'
         """
@@ -228,7 +228,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         The MAC address of the device
-        
+
         Ex: 2001:db8:ffff:ffff:ffff:ffff:ffff:ffff
         """
     ),
@@ -270,7 +270,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         Operating system version.
-        
+
         Ex: Windows 7
         """
     ),
@@ -313,7 +313,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "Yes",
         """
         Reduced functionality mode status: yes, no, or ""
-        
+
         Ex: reduced_functionality_mode:'no'
         """
     ),
@@ -331,7 +331,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "Yes",
         """
         Serial number of the device.
-        
+
         Ex: C42AFKEBM563
         """
     ),
@@ -346,7 +346,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         - AWS_EC2_V2
         - AZURE
         - GCP
-        
+
         Ex: service_provider:'AZURE'
         """
     ),
@@ -357,7 +357,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         """
         The cloud account ID (AWS Account ID, Azure Subscription ID,
         GCP Project ID, etc.).
-        
+
         Ex: service_provider_account_id:'99841e6a-b123-4567-8901-123456789abc'
         """
     ),
@@ -391,7 +391,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         Name of system manufacturer
-        
+
         Ex: VMware, Inc.
         """
     ),
@@ -401,7 +401,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "No",
         """
         Name of system product
-        
+
         Ex: VMware Virtual Platform
         """
     ),
