@@ -9,6 +9,7 @@ from falcon_mcp.common.utils import (
     extract_first_resource,
     extract_resources,
     filter_none_values,
+    generate_table,
     prepare_api_parameters,
 )
 
@@ -172,6 +173,203 @@ class TestUtilFunctions(unittest.TestCase):
             "Resource not found", operation="TestOperation"
         )
         self.assertEqual(resource, {"error": "Resource not found"})
+
+    def test_generate_table(self):
+        """Test generate_table function."""
+        # Test data with headers as the first row
+        data = [
+            # Header row
+            (" Name", "    Type", "Operators ", "Description    ", "Extra"),
+            # Data rows
+            (
+                "test_string",
+                "String",
+                "Yes",
+                """\
+This is a test description.
+It has multiple lines.
+For testing purposes.\
+"""
+            ),
+            (
+                "test_bool",
+                "Boolean", 
+                "Yes",
+                "This is a test description.\nIt has multiple lines.\nFor testing purposes.",
+                True,
+            ),
+            (
+                "test_none",
+                " None",
+                "   No",
+                "Single line description.",
+                None,
+            ),
+            (
+                "test_number",
+                "Number ",
+                "No   ",
+                "Single line description.",
+                42,
+            )
+        ]
+
+        # Generate table
+        table = generate_table(data)
+
+        # Expected table format (with exact spacing and formatting)
+        expected_table = """|Name|Type|Operators|Description|Extra|
+|-|-|-|-|-|
+|test_string|String|Yes|This is a test description. It has multiple lines. For testing purposes.||
+|test_bool|Boolean|Yes|This is a test description. It has multiple lines. For testing purposes.|true|
+|test_none|None|No|Single line description.||
+|test_number|Number|No|Single line description.|42|"""
+
+        # Compare the generated table with the expected table
+        self.assertEqual(table, expected_table)
+
+        # Split into lines for easier assertion
+        lines = table.split('\n')
+
+        # Check basic structure
+        self.assertEqual(len(lines), 6)  # header + separator + 4 data rows
+
+        # Check header row exists and contains all headers (stripped of spaces)
+        header_row = lines[0]
+        for header in data[0]:
+            self.assertIn(header.strip(), header_row)
+
+        # Check separator row
+        self.assertEqual(lines[1], "|-|-|-|-|-|")
+
+        # Check data rows exist with correct content
+        self.assertEqual(lines[2], "|test_string|String|Yes|This is a test description. It has multiple lines. For testing purposes.||")
+        self.assertEqual(lines[3], "|test_bool|Boolean|Yes|This is a test description. It has multiple lines. For testing purposes.|true|")
+        self.assertEqual(lines[4], "|test_none|None|No|Single line description.||")
+        self.assertEqual(lines[5], "|test_number|Number|No|Single line description.|42|")
+
+        # Check for multi-line handling - descriptions should be combined with spaces
+        self.assertIn("This is a test description. It has multiple lines. For testing purposes.", lines[2])
+
+        # Check for proper pipe character usage
+        for i in range(6):  # Check all lines
+            self.assertTrue(lines[i].startswith('|'))
+            self.assertTrue(lines[i].endswith('|'))
+            # Should have exactly 6 | characters (start, end, and 4 column separators)
+            self.assertEqual(lines[i].count('|'), 6)
+
+    def test_generate_table_with_non_string_headers(self):
+        """Test generate_table function with non-string headers."""
+        # Test data with non-string headers
+        data = [
+            # Header row with a non-string value
+            ("Name", 123, "Operators", "Description", "Extra"),
+            # Data rows
+            (
+                "test_string",
+                "String",
+                "Yes",
+                "This is a test description.",
+                None,
+            ),
+        ]
+
+        # Verify that TypeError is raised
+        with self.assertRaises(TypeError) as context:
+            generate_table(data)
+
+        # Check the error message
+        self.assertIn("Header values must be strings", str(context.exception))
+        self.assertIn("got int", str(context.exception))
+
+    def test_generate_table_with_single_column(self):
+        """Test generate_table function with a single column."""
+        # Test data with a single column
+        data = [
+            # Header row with a single value
+            ("Name",),
+            # Data rows with a single value
+            ("test_string",),
+            ("test_bool",),
+            ("test_none",),
+        ]
+
+        # Generate table
+        table = generate_table(data)
+
+        # Expected table format (with exact spacing and formatting)
+        expected_table = """|Name|
+|-|
+|test_string|
+|test_bool|
+|test_none|"""
+
+        # Compare the generated table with the expected table
+        self.assertEqual(table, expected_table)
+
+        # Split into lines for easier assertion
+        lines = table.split('\n')
+
+        # Check basic structure
+        self.assertEqual(len(lines), 5)  # header + separator + 3 data rows
+
+        # Check header row exists and contains the header
+        header_row = lines[0]
+        self.assertEqual(header_row, "|Name|")
+
+        # Check separator row
+        self.assertEqual(lines[1], "|-|")
+
+        # Check data rows exist with correct content
+        self.assertEqual(lines[2], "|test_string|")
+        self.assertEqual(lines[3], "|test_bool|")
+        self.assertEqual(lines[4], "|test_none|")
+
+        # Check for proper pipe character usage
+        for i in range(5):  # Check all lines
+            self.assertTrue(lines[i].startswith('|'))
+            self.assertTrue(lines[i].endswith('|'))
+            # Should have exactly 2 | characters (start and end)
+            self.assertEqual(lines[i].count('|'), 2)
+            
+    def test_generate_table_with_empty_header_row(self):
+        """Test generate_table function with an empty header row."""
+        # Test data with an empty header row
+        data = [
+            # Empty header row
+            (),
+            # Data rows
+            ("test_string",),
+        ]
+
+        # Verify that ValueError is raised
+        with self.assertRaises(ValueError) as context:
+            generate_table(data)
+        
+        # Check the error message
+        self.assertIn("Header row cannot be empty", str(context.exception))
+        
+    def test_generate_table_with_insufficient_data(self):
+        """Test generate_table function with insufficient data."""
+        # Test data with only a header row and no data rows
+        data = [
+            # Header row
+            ("Name", "Type"),
+        ]
+
+        # Verify that TypeError is raised
+        with self.assertRaises(TypeError) as context:
+            generate_table(data)
+        
+        # Check the error message
+        self.assertIn("Need at least 2 items", str(context.exception))
+        
+        # Test with empty data
+        with self.assertRaises(TypeError) as context:
+            generate_table([])
+        
+        # Check the error message
+        self.assertIn("Need at least 2 items", str(context.exception))
 
 
 if __name__ == "__main__":

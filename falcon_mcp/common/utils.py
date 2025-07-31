@@ -5,7 +5,7 @@ This module provides common utility functions for the Falcon MCP server.
 """
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .errors import _format_error_response, is_success_response
 from .logging import get_logger
@@ -105,3 +105,78 @@ def sanitize_input(input_str: str) -> str:
 
     # Additional safety: limit length to prevent excessively long inputs
     return sanitized[:255]
+
+
+def generate_table(data: List[Tuple]) -> str:
+    """Generate a Markdown table from a list of tuples.
+
+    This function creates a minimal Markdown table with the provided data.
+    It's designed to minimize token usage while maintaining readability.
+    The first row of data is used as the header row.
+
+    Args:
+        data: List of tuples where the first tuple contains the headers
+              and the remaining tuples contain the table data
+
+    Returns:
+        str: Formatted Markdown table as a string
+
+    Raises:
+        TypeError: If the first row (headers) contains non-string values
+    """
+    if not data or len(data) < 2:
+        raise TypeError(f"Need at least 2 items. The header and a value row")
+
+    # Extract headers from the first row
+    headers = data[0]
+    
+    # Check that the header row is not empty
+    if len(headers) == 0:
+        raise ValueError("Header row cannot be empty")
+    
+    # Check that all headers are strings
+    for header in headers:
+        if not isinstance(header, str):
+            raise TypeError(f"Header values must be strings, got {type(header).__name__}")
+
+    # Use the remaining rows as data
+    rows = data[1:]
+
+    # Create the table header, stripping spaces from header values
+    header_parts = []
+    for h in headers:
+        # Strip spaces from header values
+        header_parts.append(str(h).strip())
+
+    header_row = "|" + "|".join(header_parts) + "|"
+
+    # Create the separator row with the exact expected format
+    separator = "|" + "|".join(["-" for _ in range(len(headers))]) + "|"
+
+    # Build the table
+    table = [header_row, separator]
+
+    for row in rows:
+        # Convert row values to strings and handle special cases
+        row_values = []
+        for i, value in enumerate(row):
+            if i < len(headers):
+                if value is None:
+                    row_values.append("")
+                elif isinstance(value, bool):
+                    row_values.append(str(value).lower())
+                elif isinstance(value, (int, float)):
+                    row_values.append(str(value))
+                else:
+                    # Join multi-line text with spaces and strip leading/trailing spaces
+                    text = str(value)
+                    row_values.append(" ".join(text.split('\n')).strip())
+
+        # Pad the row if it's shorter than headers
+        while len(row_values) < len(headers):
+            row_values.append("")
+
+        # Add the row to the table
+        table.append("|" + "|".join(row_values) + "|")
+
+    return "\n".join(table)
