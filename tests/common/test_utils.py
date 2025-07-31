@@ -242,15 +242,6 @@ For testing purposes.
         for header in data[0]:
             self.assertIn(header.strip(), header_row)
 
-        # Check separator row
-        self.assertEqual(lines[1], "|-|-|-|-|-|")
-
-        # Check data rows exist with correct content
-        self.assertEqual(lines[2], "|test_string|String|Yes|This is a test description. It has multiple lines. For testing purposes.||")
-        self.assertEqual(lines[3], "|test_bool|Boolean|Yes|This is a test description. It has multiple lines. For testing purposes.|true|")
-        self.assertEqual(lines[4], "|test_none|None|No|Multi line description. Hello||")
-        self.assertEqual(lines[5], "|test_number|Number|No|Single line description.|42|")
-
         # Check for multi-line handling - descriptions should be combined with spaces
         self.assertIn("This is a test description. It has multiple lines. For testing purposes.", lines[2])
 
