@@ -37,8 +37,8 @@ field_name:[operator]'value'
 • timestamp: Timestamp when the detection occurred
 • created_timestamp: When the detection was created
 • updated_timestamp: When the detection was last modified
-• severity: Severity level of the detection (1-100, recommended when filtering by severity)
-• confidence: Confidence level of the detection (1-100)
+• severity: Severity level of the detection (recommended when sorting by severity)
+• confidence: Confidence level of the detection
 • agent_id: Agent ID associated with the detection
 
 Sort either asc (ascending) or desc (descending).
@@ -75,7 +75,7 @@ Examples: 'severity.desc', 'timestamp.desc'
 • Severity (by name): severity_name:'High' | severity_name:'Critical' | severity_name:'Medium' | severity_name:'Low' | severity_name:'Informational'
 • Severity (by range): severity:>=80 (Critical+) | severity:>=60 (High+) | severity:>=40 (Medium+) | severity:>=20 (Low+)
 • Product: product:'epp' | product:'idp' | product:'xdr' | product:'overwatch' (see field table for all)
-• Assignment: assigned_to_name:!* (unassigned) | assigned_to_name:* (assigned) | assigned_to_name:'user.name'
+• Assignment: assigned_to_name:!'*' (unassigned) | assigned_to_name:'user.name'
 • Timestamps: created_timestamp:>'2025-01-01T00:00:00Z' | created_timestamp:>='date1'+created_timestamp:<='date2'
 • Wildcards: name:'EICAR*' | description:'*credential*' | agent_id:'77d11725*' | pattern_id:'301*'
 • Combinations: status:'new'+severity_name:'High'+product:'epp' | status:'new'+severity:>=70+product:'epp' | product:'epp',product:'xdr'
@@ -474,10 +474,10 @@ status:'new'+(severity:>=60+severity:<80)+product:'epp'
 status:'new'+severity_name:'High',severity_name:'Critical'+product:'epp'
 
 # Unassigned critical alerts from last 24 hours (numeric)
-assigned_to_name:!*+severity:>=90+created_timestamp:>'2025-01-19T00:00:00Z'
+assigned_to_name:!'*'+severity:>=90+created_timestamp:>'2025-01-19T00:00:00Z'
 
 # Unassigned critical alerts from last 24 hours (name-based)
-assigned_to_name:!*+severity_name:'Critical'+created_timestamp:>'2025-01-19T00:00:00Z'
+assigned_to_name:!'*'+severity_name:'Critical'+created_timestamp:>'2025-01-19T00:00:00Z'
 
 # Medium severity and above endpoint alerts (numeric - easier for ranges)
 severity:>=40+product:'epp'+status:'new'
@@ -504,7 +504,7 @@ product:['epp', 'xdr', 'overwatch']
 assigned_to_name:'alice.anderson'+updated_timestamp:>'2025-01-18T12:00:00Z'+severity_name:'Critical'
 
 # Find low-priority informational alerts for cleanup
-severity_name:'Informational'+status:'closed'+assigned_to_name:!*
+severity_name:'Informational'+status:'closed'+assigned_to_name:!'*'
 
 # Find alerts with specific MITRE ATT&CK tactics and medium+ severity
 tactic:['Credential Access', 'Persistence', 'Privilege Escalation']+severity:>=40
@@ -519,8 +519,8 @@ created_timestamp:>='2025-01-15T00:00:00Z'+created_timestamp:<='2025-01-20T00:00
 created_timestamp:>='2025-01-15T00:00:00Z'+created_timestamp:<='2025-01-20T00:00:00Z'+product:'epp',product:'xdr'+severity:>=60
 
 # All unassigned alerts except informational (name-based exclusion)
-assigned_to_name:!*+severity_name:!'Informational'
+assigned_to_name:!'*'+severity_name:!'Informational'
 
 # All unassigned alerts except informational (numeric approach)
-assigned_to_name:!*+severity:>=20
+assigned_to_name:!'*'+severity:>=20
 """
