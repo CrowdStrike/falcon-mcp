@@ -156,7 +156,11 @@ def generate_table(data: List[Tuple]) -> str:
     # Build the table
     table = [header_row, separator]
 
-    for row in rows:
+    for idx, row in enumerate(rows):
+        # Check if row has more items than headers
+        if len(row) > len(headers):
+            raise ValueError(f"Row {idx+1} has {len(row)} items, which is more than the {len(headers)} headers")
+
         # Convert row values to strings and handle special cases
         row_values = []
         for i, value in enumerate(row):
@@ -168,9 +172,9 @@ def generate_table(data: List[Tuple]) -> str:
                 elif isinstance(value, (int, float)):
                     row_values.append(str(value))
                 else:
-                    # Join multi-line text with spaces and strip leading/trailing spaces
+                    # Join multi-line text with spaces and strip leading/trailing spaces from each line
                     text = str(value)
-                    row_values.append(" ".join(text.split('\n')).strip())
+                    row_values.append(" ".join(line.strip() for line in text.split('\n')).strip())
 
         # Pad the row if it's shorter than headers
         while len(row_values) < len(headers):

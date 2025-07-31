@@ -185,16 +185,16 @@ class TestUtilFunctions(unittest.TestCase):
                 "test_string",
                 "String",
                 "Yes",
-                """\
+                """
 This is a test description.
 It has multiple lines.
-For testing purposes.\
+For testing purposes.
 """
             ),
             (
                 "test_bool",
-                "Boolean", 
-                "Yes",
+                "\nBoolean", 
+                "\nYes",
                 "This is a test description.\nIt has multiple lines.\nFor testing purposes.",
                 True,
             ),
@@ -202,7 +202,10 @@ For testing purposes.\
                 "test_none",
                 " None",
                 "   No",
-                "Single line description.",
+                """
+                    Multi line description.
+                    Hello
+                """,
                 None,
             ),
             (
@@ -222,7 +225,7 @@ For testing purposes.\
 |-|-|-|-|-|
 |test_string|String|Yes|This is a test description. It has multiple lines. For testing purposes.||
 |test_bool|Boolean|Yes|This is a test description. It has multiple lines. For testing purposes.|true|
-|test_none|None|No|Single line description.||
+|test_none|None|No|Multi line description. Hello||
 |test_number|Number|No|Single line description.|42|"""
 
         # Compare the generated table with the expected table
@@ -245,7 +248,7 @@ For testing purposes.\
         # Check data rows exist with correct content
         self.assertEqual(lines[2], "|test_string|String|Yes|This is a test description. It has multiple lines. For testing purposes.||")
         self.assertEqual(lines[3], "|test_bool|Boolean|Yes|This is a test description. It has multiple lines. For testing purposes.|true|")
-        self.assertEqual(lines[4], "|test_none|None|No|Single line description.||")
+        self.assertEqual(lines[4], "|test_none|None|No|Multi line description. Hello||")
         self.assertEqual(lines[5], "|test_number|Number|No|Single line description.|42|")
 
         # Check for multi-line handling - descriptions should be combined with spaces
