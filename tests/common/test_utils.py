@@ -9,7 +9,7 @@ from falcon_mcp.common.utils import (
     extract_first_resource,
     extract_resources,
     filter_none_values,
-    generate_table,
+    generate_md_table,
     prepare_api_parameters,
 )
 
@@ -174,8 +174,8 @@ class TestUtilFunctions(unittest.TestCase):
         )
         self.assertEqual(resource, {"error": "Resource not found"})
 
-    def test_generate_table(self):
-        """Test generate_table function."""
+    def test_generate_md_table(self):
+        """Test generate_md_table function."""
         # Test data with headers as the first row
         data = [
             # Header row
@@ -218,7 +218,7 @@ For testing purposes.
         ]
 
         # Generate table
-        table = generate_table(data)
+        table = generate_md_table(data)
 
         # Expected table format (with exact spacing and formatting)
         expected_table = """|Name|Type|Operators|Description|Extra|
@@ -270,7 +270,7 @@ For testing purposes.
 
         # Verify that TypeError is raised
         with self.assertRaises(TypeError) as context:
-            generate_table(data)
+            generate_md_table(data)
 
         # Check the error message
         self.assertIn("Header values must be strings", str(context.exception))
@@ -289,7 +289,7 @@ For testing purposes.
         ]
 
         # Generate table
-        table = generate_table(data)
+        table = generate_md_table(data)
 
         # Expected table format (with exact spacing and formatting)
         expected_table = """|Name|
@@ -338,7 +338,7 @@ For testing purposes.
 
         # Verify that ValueError is raised
         with self.assertRaises(ValueError) as context:
-            generate_table(data)
+            generate_md_table(data)
         
         # Check the error message
         self.assertIn("Header row cannot be empty", str(context.exception))
@@ -353,14 +353,14 @@ For testing purposes.
 
         # Verify that TypeError is raised
         with self.assertRaises(TypeError) as context:
-            generate_table(data)
+            generate_md_table(data)
         
         # Check the error message
         self.assertIn("Need at least 2 items", str(context.exception))
         
         # Test with empty data
         with self.assertRaises(TypeError) as context:
-            generate_table([])
+            generate_md_table([])
         
         # Check the error message
         self.assertIn("Need at least 2 items", str(context.exception))

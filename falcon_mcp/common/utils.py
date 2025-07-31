@@ -107,10 +107,10 @@ def sanitize_input(input_str: str) -> str:
     return sanitized[:255]
 
 
-def generate_table(data: List[Tuple]) -> str:
+def generate_md_table(data: List[Tuple]) -> str:
     """Generate a Markdown table from a list of tuples.
 
-    This function creates a minimal Markdown table with the provided data.
+    This function creates a compact Markdown table with the provided data.
     It's designed to minimize token usage while maintaining readability.
     The first row of data is used as the header row.
 
