@@ -23,6 +23,8 @@ Never made an open source contribution before? Wondering how contributions work 
 
 1. Make the appropriate changes for the issue you are trying to address or the feature you would like to add.
 
+1. Follow [this guide](https://google.github.io/styleguide/pyguide.html#docstrings) for docstrings.
+
 1. Run [`ruff`](https://docs.astral.sh/ruff/) to format your code and check for linting issues. This helps maintain consistent code style across the project.
 
     ``ruff check . --select I``
