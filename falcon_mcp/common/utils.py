@@ -123,6 +123,9 @@ def generate_table(data: List[Tuple]) -> str:
 
     Raises:
         TypeError: If the first row (headers) contains non-string values
+        TypeError: If there are not at least 2 items (header and a value row)
+        ValueError: If the header row is empty
+        ValueError: If a row has more items than headers
     """
     if not data or len(data) < 2:
         raise TypeError("Need at least 2 items. The header and a value row")
