@@ -154,7 +154,7 @@ def generate_md_table(data: List[Tuple]) -> str:
     header_row = "|" + "|".join(header_parts) + "|"
 
     # Create the separator row with the exact expected format
-    separator = "|" + "|".join(["-" for _ in range(len(headers))]) + "|"
+    separator = "|-" * len(headers) + "|"
 
     # Build the table
     table = [header_row, separator]
