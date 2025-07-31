@@ -2,6 +2,8 @@
 Contains Spotlight Vulnerabilities resources.
 """
 
+from falcon_mcp.common.utils import generate_table
+
 # List of tuples containing filter options data: (name, type, operators, description)
 SEARCH_VULNERABILITIES_FQL_FILTERS = [
     ("Name", "Type", "Operators", "Description"),
@@ -44,8 +46,6 @@ SEARCH_VULNERABILITIES_FQL_FILTERS = [
     ("updated_timestamp", "Timestamp", "Yes", "UTC date and time of the last update made on a vulnerability.\nEx: updated_timestamp:<'2021-10-20T22:36'\nEx: updated_timestamp:>'2021-09-15'"),
     ("vulnerability_id", "String", "Yes", "CVE ID of the vulnerability. If there's no CVE ID, this is the CrowdStrike or third-party ID of the vulnerability.\nFor case-insensitive filtering, add .insensitive to the field name. Supports multiple values and negation.\nEx: vulnerability_id:['CVE-2022-1234']\nEx: vulnerability_id:['CVE-2022-1234','CVE-2023-4321']"),
 ]
-
-from falcon_mcp.common.utils import generate_table
 
 SEARCH_VULNERABILITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Vulnerabilities Guide
 
