@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.2.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.1.0...v0.2.0) (2025-08-01)
+
+
+### Features
+
+* add origins to intel fql guide ([#89](https://github.com/CrowdStrike/falcon-mcp/issues/89)) ([c9a147e](https://github.com/CrowdStrike/falcon-mcp/commit/c9a147eef3f1c991eebc5c2e63781f8ab0eda311))
+* **resources/spotlight:** FQL filter as tuples ([#91](https://github.com/CrowdStrike/falcon-mcp/issues/91)) ([d9664a6](https://github.com/CrowdStrike/falcon-mcp/commit/d9664a6e37bafa102e1fea1ff109843c4ba9437d))
+
+
+### Bug Fixes
+
+* **resources/detections:** added severity_name over severity level and cleaned up example filters ([#93](https://github.com/CrowdStrike/falcon-mcp/issues/93)) ([5f4b775](https://github.com/CrowdStrike/falcon-mcp/commit/5f4b7750ad87475a3ec59f2b493db82193b7358d))
+
+
+### Refactoring
+
+* remove mention to Host from FQL guide ([cf82392](https://github.com/CrowdStrike/falcon-mcp/commit/cf82392cc9f299334ae5cf7a07bd42a81b01f607))
+* **resources/cloud:** remove mention to Host from FQL guide ([#76](https://github.com/CrowdStrike/falcon-mcp/issues/76)) ([81ec4de](https://github.com/CrowdStrike/falcon-mcp/commit/81ec4de3c121d407290dde6965942da26478f652))
+* **resources/cloud:** use new tuple methodology to create filters ([#95](https://github.com/CrowdStrike/falcon-mcp/issues/95)) ([fd5cce7](https://github.com/CrowdStrike/falcon-mcp/commit/fd5cce7ed458b99f6aa89c4f9cfed0823e51290f))
+* **resources/detections:** update guide to be more accurate ([#83](https://github.com/CrowdStrike/falcon-mcp/issues/83)) ([4ff2144](https://github.com/CrowdStrike/falcon-mcp/commit/4ff2144bbf2af3c2db3d2d8e5351c075cee7f610))
+* **resources/detections:** use new tuple method for fql detections table ([#97](https://github.com/CrowdStrike/falcon-mcp/issues/97)) ([f328b79](https://github.com/CrowdStrike/falcon-mcp/commit/f328b79cbdcac9e5a1e29cbf11fc517c19e24606))
+* **resources/hosts:** tested and updated fql filters and operator support for hosts module ([#63](https://github.com/CrowdStrike/falcon-mcp/issues/63)) ([e0b971c](https://github.com/CrowdStrike/falcon-mcp/commit/e0b971c6b4e4dcda693ea7f8407a21a3e847a1dc))
+* **resources/hosts:** use new tuple methodology to create filters ([#96](https://github.com/CrowdStrike/falcon-mcp/issues/96)) ([da38d69](https://github.com/CrowdStrike/falcon-mcp/commit/da38d6904d25ccf8fcdfc8aef62a762acc89507d))
+
 ## 0.1.0 (2025-07-16)
 
 
