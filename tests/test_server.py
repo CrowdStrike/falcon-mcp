@@ -113,8 +113,8 @@ class TestFalconMCPServer(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     @patch("falcon_mcp.server.FalconClient")
-    def test_get_available_modules(self, mock_client):
-        """Test getting available modules."""
+    def test_get_active_modules(self, mock_client):
+        """Test getting active modules."""
         # Setup mock
         mock_client_instance = MagicMock()
         mock_client_instance.authenticate.return_value = True
@@ -123,14 +123,85 @@ class TestFalconMCPServer(unittest.TestCase):
         # Create server
         server = FalconMCPServer()
 
-        # Call get_available_modules
-        result = server.get_available_modules()
+        # Call get_active_modules
+        result = server.get_active_modules()
 
         # Get the actual module names from the registry
         expected_modules = registry.get_module_names()
 
-        # Verify result matches registry
+        # Verify result matches registry (since all modules are enabled by default)
         self.assertEqual(set(result["modules"]), set(expected_modules))
+
+    @patch("falcon_mcp.server.FalconClient")
+    def test_get_active_modules_with_limited_modules(self, mock_client):
+        """Test getting active modules with limited module set."""
+        # Setup mock
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        # Create server with only specific modules
+        server = FalconMCPServer(enabled_modules={"detections", "cloud"})
+
+        # Call get_active_modules
+        result = server.get_active_modules()
+
+        # Should only return enabled modules
+        self.assertEqual(set(result["modules"]), {"detections", "cloud"})
+
+        # Verify return type is correct
+        self.assertIsInstance(result["modules"], list)
+
+        # Verify each module name is a string
+        for module_name in result["modules"]:
+            self.assertIsInstance(module_name, str)
+
+    @patch("falcon_mcp.server.FalconClient")
+    def test_get_available_modules(self, mock_client):
+        """Test getting all available modules."""
+        # Setup mock
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        # Create server with limited modules
+        server = FalconMCPServer(enabled_modules={"detections", "cloud"})
+
+        # Call get_available_modules
+        result = server.get_available_modules()
+
+        # Should return ALL modules from registry regardless of what's enabled
+        expected_modules = registry.get_module_names()
+        self.assertEqual(set(result["modules"]), set(expected_modules))
+
+        # Verify return type is correct
+        self.assertIsInstance(result["modules"], list)
+
+        # Verify each module name is a string
+        for module_name in result["modules"]:
+            self.assertIsInstance(module_name, str)
+
+    @patch("falcon_mcp.server.FalconClient")
+    def test_get_available_modules_consistency(self, mock_client):
+        """Test that get_available_modules always returns the same result."""
+        # Setup mock
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        # Create two servers with different enabled modules
+        server1 = FalconMCPServer(enabled_modules={"detections"})
+        server2 = FalconMCPServer(enabled_modules={"cloud", "intel"})
+
+        # Both should return the same available modules
+        result1 = server1.get_available_modules()
+        result2 = server2.get_available_modules()
+
+        self.assertEqual(set(result1["modules"]), set(result2["modules"]))
+
+        # And both should match the registry
+        expected_modules = registry.get_module_names()
+        self.assertEqual(set(result1["modules"]), set(expected_modules))
 
 
 if __name__ == "__main__":
