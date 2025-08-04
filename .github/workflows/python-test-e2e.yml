@@ -34,6 +34,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           MODELS_TO_TEST: ${{ inputs.models }}
+          MCP_USE_ANONYMIZED_TELEMETRY: false
         run: |
           pytest --run-e2e
 
