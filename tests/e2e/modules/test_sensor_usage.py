@@ -2,12 +2,11 @@
 E2E tests for the Sensor Usage module.
 """
 
-import json
 import unittest
 
 import pytest
 
-from tests.e2e.utils.base_e2e_test import BaseE2ETest
+from tests.e2e.utils.base_e2e_test import BaseE2ETest, ensure_dict
 
 
 @pytest.mark.e2e
@@ -16,15 +15,14 @@ class TestSensorUsageModuleE2E(BaseE2ETest):
     End-to-end test suite for the Falcon MCP Server Sensor Usage Module.
     """
 
-    def test_get_weekly_sensor_usage(self):
-        """Verify the agent can retrieve weekly sensor usage data."""
+    def test_search_sensor_usage_past_week(self):
+        """Verify the agent can show sensor usage for the past week."""
 
         async def test_logic():
             fixtures = [
                 {
                     "operation": "GetSensorUsageWeekly",
-                    "validator": lambda kwargs: "event_date"
-                    in kwargs.get("parameters", {}).get("filter", ""),
+                    "validator": lambda kwargs: "period:'7'" in kwargs.get("parameters", {}).get("filter", ""),
                     "response": {
                         "status_code": 200,
                         "body": {
@@ -114,8 +112,8 @@ class TestSensorUsageModuleE2E(BaseE2ETest):
                                     "date": "2025-07-27"
                                 }
                             ]
-                        }
-                    }
+                        },
+                    },
                 }
             ]
 
@@ -123,7 +121,7 @@ class TestSensorUsageModuleE2E(BaseE2ETest):
                 self._create_mock_api_side_effect(fixtures)
             )
 
-            prompt = "Show me the weekly sensor usage data for the past week"
+            prompt = "Show me sensor usage in the past week"
             return await self._run_agent_stream(prompt)
 
         def assertions(tools, result):
@@ -131,33 +129,31 @@ class TestSensorUsageModuleE2E(BaseE2ETest):
             used_tool = tools[len(tools) - 1]
             self.assertEqual(used_tool["input"]["tool_name"], "falcon_search_sensor_usage")
 
-            # Check for event_date in filter
-            tool_input = used_tool["input"]["tool_input"]
-            filter_str = tool_input.get("filter", "")
-            self.assertIn("event_date", filter_str)
+            # Verify the tool input contains the filter for past week
+            tool_input = ensure_dict(used_tool["input"]["tool_input"])
+            self.assertIn("period", tool_input.get("filter", ""))
 
-            # Verify sensor usage data is in the output
-            self.assertIn("2025-08-02", used_tool["output"])
-            self.assertIn("containers", used_tool["output"].lower())
-            self.assertIn("workstations", used_tool["output"].lower())
-
-            # Verify API call was made correctly
+            # Verify API call parameters
             self.assertGreaterEqual(
-                self._mock_api_instance.command.call_count, 1, "Expected 1 API call"
+                self._mock_api_instance.command.call_count,
+                1,
+                "Expected at least 1 API call",
             )
-
-            # Check API call (GetSensorUsageWeekly)
             api_call_params = self._mock_api_instance.command.call_args_list[0][1].get(
                 "parameters", {}
             )
-            self.assertIn("event_date", api_call_params.get("filter", ""))
+            self.assertIn("period:'7'", api_call_params.get("filter", ""))
 
-            # Verify result contains expected information
+            # Verify result contains sensor usage information
             self.assertIn("2025-08-02", result)
-            self.assertIn("containers", result.lower())
-            self.assertIn("workstations", result.lower())
+            self.assertIn("containers", result)
+            self.assertIn("workstations", result)
+            self.assertIn("42.75", result)
+            self.assertIn("2025-07-27", result)
 
-        self.run_test_with_retries("test_get_weekly_sensor_usage", test_logic, assertions)
+        self.run_test_with_retries(
+            "test_search_sensor_usage_past_week", test_logic, assertions
+        )
 
 
 if __name__ == "__main__":
