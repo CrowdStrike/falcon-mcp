@@ -175,9 +175,14 @@ def generate_md_table(data: List[Tuple]) -> str:
                 elif isinstance(value, (int, float)):
                     row_values.append(str(value))
                 else:
-                    # Join multi-line text with spaces and strip leading/trailing spaces from each line
+                    # Process multi-line text to create a clean, single-line representation
+
                     text = str(value)
-                    row_values.append(" ".join(line.strip() for line in text.split('\n')).strip())
+                    # Split text into lines, strip whitespace, and filter out empty lines
+                    non_empty_lines = [line.strip() for line in text.split('\n') if line.strip()]
+                    # Join the non-empty lines with a single space
+                    formatted_text = " ".join(non_empty_lines).strip()
+                    row_values.append(formatted_text)
 
         # Pad the row if it's shorter than headers
         while len(row_values) < len(headers):

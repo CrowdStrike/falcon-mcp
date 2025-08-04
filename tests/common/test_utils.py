@@ -187,6 +187,7 @@ class TestUtilFunctions(unittest.TestCase):
                 "Yes",
                 """
 This is a test description.
+    
 It has multiple lines.
 For testing purposes.
 """
