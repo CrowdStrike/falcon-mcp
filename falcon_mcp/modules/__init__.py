@@ -8,4 +8,5 @@ from .detections import DetectionsModule
 from .hosts import HostsModule
 from .incidents import IncidentsModule
 from .intel import IntelModule
+from .sensor_usage import SensorUsageModule
 from .spotlight import SpotlightModule

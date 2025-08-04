@@ -43,6 +43,8 @@ API_SCOPE_REQUIREMENTS = {
         "Identity Protection Detections:read",
         "Identity Protection Assessment:read",
     ],
+    # Sensor Usage operations
+    "GetSensorUsageWeekly": ["Sensor Usage:read"],
     # Add more mappings as needed
 }
 

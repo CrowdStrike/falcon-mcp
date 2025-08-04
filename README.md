@@ -24,6 +24,7 @@
   - [Hosts Module](#hosts-module)
   - [Spotlight Module](#spotlight-module)
   - [Cloud Security Module](#cloud-security-module)
+  - [Sensor Usage Module](#sensor-usage-module)
   - [Identity Protection Module](#identity-protection-module)
 - [Installation \& Setup](#installation--setup)
   - [Prerequisites](#prerequisites)
@@ -78,6 +79,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
 | **Hosts** | `Hosts:read` | Manage and query host/device information |
 | **Cloud Security** | `Falcon Container Image:read` | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
+| **Sensor Usage** | `Sensor Usage:read` | Access and analyze sensor usage data |
 | **Spotlight** | `Vulnerabilities:read` | Manage and analyze vulnerability data and security assessments |
 | **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read` <br> `Identity Protection Assessment:read` | Comprehensive entity investigation and identity protection analysis |
 
@@ -203,6 +205,20 @@ Provides tools for accessing and analyzing CrowdStrike Cloud Security resources:
 - `falcon://cloud/images-vulnerabilities/fql-guide`: Comprehensive FQL documentation and examples for images vulnerabilities searches
 
 **Use Cases**: Manage kubernetes containers inventory, container images vulnerabilities analysis
+
+### Sensor Usage Module
+
+**API Scopes Required**: `Sensor Usage:read`
+
+Provides tools for accessing and analyzing CrowdStrike Falcon sensor usage data:
+
+- `falcon_search_sensor_usage_weekly`: Search for weekly sensor usage data in your CrowdStrike environment
+
+**Resources**:
+
+- `falcon://sensor-usage/weekly/fql-guide`: Comprehensive FQL documentation and examples for sensor usage searches
+
+**Use Cases**: Sensor deployment monitoring, license utilization analysis, sensor health tracking
 
 ### Identity Protection Module
 
