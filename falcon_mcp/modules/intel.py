@@ -252,7 +252,8 @@ class IntelModule(BaseModule):
         ),
         sort: str | None = Field(
             default=None,
-            description="The property to sort by. (Ex: created_date|desc)",
+            description="The field and direction to sort results on in the format of: {field}.{asc}or {field}.{desc}. Valid values include: name, target_countries, target_industries, type, created_date, last_modified_date. Ex: created_date|desc",
+            examples={"created_date|desc"},
         ),
         q: str | None = Field(
             default=None,
