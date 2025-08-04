@@ -91,11 +91,11 @@ property_name:[operator]'value'
 
 **Basic Equality:**
 • event_date:'2024-06-11'
-• period:'30'
+• period:30
 • selected_cids:'cid_1,cid_2,cid_3'
 
 **Combined Conditions:**
-• event_date:'2024-06-11'+period:'30'
+• event_date:'2024-06-11'+period:30
 • event_date:'2024-06-11'+selected_cids:'cid_1,cid_2'
 
 **Date Comparisons:**
@@ -103,8 +103,8 @@ property_name:[operator]'value'
 • event_date:<='2024-06-11'
 
 **Period Comparisons:**
-• period:>='14'
-• period:<='60'
+• period:>=14
+• period:<=60
 
 === 💡 SYNTAX RULES ===
 • Use single quotes around values: 'value'
