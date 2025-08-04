@@ -320,60 +320,220 @@ property_name:[operator]'value'
 QUERY_INDICATOR_ENTITIES_FQL_FILTERS = [
     (
         "Name",
-    ),
-    (
-        "created_date",
-    ),
-    (
-        "deleted",
-    ),
-    (
-        "domain_types",
+        "Type",
+        "Description"
     ),
     (
         "id",
+        "String",
+        """
+        The indicator ID. It follows the format: {type}_{indicator}
+        """
+    ),
+    (
+        "created_date",
+        "Timestamp",
+        """
+        Timestamp in standard Unix time, UTC when the indicator was created.
+
+        Ex: 1753022288
+        """
+    ),
+    (
+        "deleted",
+        "Boolean",
+        """
+        If true, include only published indicators.
+        If false, include only deleted indicators.
+
+        Ex: false
+        """
+    ),
+    (
+        "domain_types",
+        "String",
+        """
+        The domain type of domain indicators.
+
+        Possible values include:
+        - ActorControlled
+        - DGA
+        - DynamicDNS
+        - KnownGood
+        - LegitimateCompromised
+        - PhishingDomain
+        - Sinkholed
+        - StrategicWebCompromise
+        - Unregistered
+        """
     ),
     (
         "indicator",
+        "String",
+        """
+        The indicator that was queried.
+
+        Ex: "all-deutsch.gl.at.ply.gg"
+        """
     ),
     (
         "ip_address_types",
+        "String",
+        """
+        The address type of ip_address indicators.
+
+        Possible values include:
+        - HtranDestinationNode
+        - HtranProxy
+        - LegitimateCompromised
+        - Parking
+        - PopularSite
+        - SharedWebHost
+        - Sinkhole
+        - TorProxy
+        """
     ),
     (
         "kill_chains",
-    ),
-    (
-        "labels",
+        "String",
+        """
+        The point in the kill chain at which an indicator is associated.
+
+        Possible values include:
+        - reconnaissance
+        - weaponization
+        - delivery
+        - exploitation
+        - installation
+        - c2 (Command and Control)
+        - actionOnObjectives
+
+        Ex: "delivery"
+        """
     ),
     (
         "last_updated",
+        "Timestamp",
+        """
+        Timestamp in standard Unix time, UTC when the indicator was last updated in the internal database.
+
+        Ex: 1753027269
+        """
     ),
     (
         "malicious_confidence",
+        "String",
+        """
+        Indicates a confidence level by which an indicator is considered to be malicious.
+
+        Possible values:
+        - high: If indicator is an IP or domain, it has been associated with malicious activity within the last 60 days.
+        - medium: If indicator is an IP or domain, it has been associated with malicious activity within the last 60-120 days.
+        - low: If indicator is an IP or domain, it has been associated with malicious activity exceeding 120 days.
+        - unverified: This indicator has not been verified by a CrowdStrike Intelligence analyst or an automated system.
+
+        Ex: "high"
+        """
     ),
     (
         "malware_families",
+        "String",
+        """
+        Indicates the malware family an indicator has been associated with. An indicator might be associated with more than one malware family.
+
+        Ex: "Xworm", "njRATLime"
+        """
     ),
     (
         "published_date",
+        "Timestamp",
+        """
+        Timestamp in standard Unix time, UTC when the indicator was first published to the API.
+
+        Ex: 1753022288
+        """
     ),
     (
         "reports",
-    ),
-    (
-        "source",
+        "String",
+        """
+        The report ID that the indicator is associated with (such as CSIT-XXXX or CSIR-XXXX).
+        The report list is also represented under the labels list in the JSON data structure.
+        """
     ),
     (
         "targets",
+        "String",
+        """
+        The indicators targeted industries.
+
+        Possible values include sectors like:
+        - Aerospace
+        - Agricultural
+        - Chemical
+        - Defense
+        - Dissident
+        - Energy
+        - Financial
+        - Government
+        - Healthcare
+        - Technology
+        """
     ),
     (
         "threat_types",
+        "String",
+        """
+        Types of threats.
+
+        Ex: "ddos", "mineware", "banking"
+        """
     ),
     (
         "type",
+        "String",
+        """
+        Possible indicator types include:
+        - binary_string
+        - compile_time
+        - device_name
+        - domain
+        - email_address
+        - email_subject
+        - event_name
+        - file_mapping
+        - file_name
+        - file_path
+        - hash_ion
+        - hash_md5
+        - hash_sha256
+        - ip_address
+        - ip_address_block
+        - mutex_name
+        - password
+        - persona_name
+        - phone_number
+        - port
+        - registry
+        - semaphore_name
+        - service_name
+        - url
+        - user_agent
+        - username
+        - x509_seria
+        - x509_subject
+
+        Ex: "domain"
+        """
     ),
     (
         "vulnerabilities",
+        "String",
+        """
+        Associated vulnerabilities (CVEs).
+
+        Ex: "CVE-2023-1234"
+        """
     ),
 ]
 
