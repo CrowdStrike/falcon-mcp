@@ -2,6 +2,242 @@
 Contains Intel resources.
 """
 
+from falcon_mcp.common.utils import generate_md_table
+
+# List of tuples containing filter options data: (name)
+QUERY_ACTOR_ENTITIES_FQL_FILTERS = [
+    (
+        "Name",
+    ),
+    (
+        "actors",
+    ),
+    (
+        "actors.id",
+    ),
+    (
+        "actors.name",
+    ),
+    (
+        "actors.slug",
+    ),
+    (
+        "actors.url",
+    ),
+    (
+        "animal_classifier",
+    ),
+    (
+        "created_date",
+    ),
+    (
+        "description",
+    ),
+    (
+        "id",
+    ),
+    (
+        "last_modified_date",
+    ),
+    (
+        "motivations",
+    ),
+    (
+        "motivations.id",
+    ),
+    (
+        "motivations.slug",
+    ),
+    (
+        "motivations.value",
+    ),
+    (
+        "name",
+    ),
+    (
+        "name.raw",
+    ),
+    (
+        "origins",
+    ),
+    (
+        "short_description",
+    ),
+    (
+        "slug",
+    ),
+    (
+        "sub_type",
+    ),
+    (
+        "sub_type.id",
+    ),
+    (
+        "sub_type.name",
+    ),
+    (
+        "sub_type.slug",
+    ),
+    (
+        "tags",
+    ),
+    (
+        "tags.id",
+    ),
+    (
+        "tags.slug",
+    ),
+    (
+        "tags.value",
+    ),
+    (
+        "target_countries",
+    ),
+    (
+        "target_countries.id",
+    ),
+    (
+        "target_countries.slug",
+    ),
+    (
+        "target_countries.value",
+    ),
+    (
+        "target_industries",
+    ),
+    (
+        "target_industries.id",
+    ),
+    (
+        "target_industries.slug",
+    ),
+    (
+        "target_industries.value",
+    ),
+    (
+        "type",
+    ),
+    (
+        "type.id",
+    ),
+    (
+        "type.name",
+    ),
+    (
+        "type.slug",
+    ),
+    (
+        "url",
+    ),
+]
+
+# List of tuples containing filter options data: (name)
+QUERY_INDICATOR_ENTITIES_FQL_FILTERS = [
+    (
+        "Name",
+    ),
+    (
+        "created_date",
+    ),
+    (
+        "deleted",
+    ),
+    (
+        "domain_types",
+    ),
+    (
+        "id",
+    ),
+    (
+        "indicator",
+    ),
+    (
+        "ip_address_types",
+    ),
+    (
+        "kill_chains",
+    ),
+    (
+        "labels",
+    ),
+    (
+        "last_updated",
+    ),
+    (
+        "malicious_confidence",
+    ),
+    (
+        "malware_families",
+    ),
+    (
+        "published_date",
+    ),
+    (
+        "reports",
+    ),
+    (
+        "source",
+    ),
+    (
+        "targets",
+    ),
+    (
+        "threat_types",
+    ),
+    (
+        "type",
+    ),
+    (
+        "vulnerabilities",
+    ),
+]
+
+# List of tuples containing filter options data: (name)
+QUERY_REPORT_ENTITIES_FQL_FILTERS = [
+    (
+        "Name",
+    ),
+    (
+        "actors",
+    ),
+    (
+        "created_date",
+    ),
+    (
+        "description",
+    ),
+    (
+        "id",
+    ),
+    (
+        "last_modified_date",
+    ),
+    (
+        "name",
+    ),
+    (
+        "report_type",
+    ),
+    (
+        "short_description",
+    ),
+    (
+        "slug",
+    ),
+    (
+        "tags",
+    ),
+    (
+        "target_countries",
+    ),
+    (
+        "target_industries",
+    ),
+    (
+        "url",
+    ),
+]
+
 QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Actor Entities Guide
 
 === BASIC SYNTAX ===
@@ -31,46 +267,8 @@ property_name:[operator]'value'
 • ( ) = Group expressions
 
 === falcon_search_actors FQL filter options ===
-• actors
-• actors.id
-• actors.name
-• actors.slug
-• actors.url
-• animal_classifier
-• created_date
-• description
-• id
-• last_modified_date
-• motivations
-• motivations.id
-• motivations.slug
-• motivations.value
-• name
-• name.raw
-• origins
-• short_description
-• slug
-• sub_type
-• sub_type.id
-• sub_type.name
-• sub_type.slug
-• tags
-• tags.id
-• tags.slug
-• tags.value
-• target_countries
-• target_countries.id
-• target_countries.slug
-• target_countries.value
-• target_industries
-• target_industries.id
-• target_industries.slug
-• target_industries.value
-• type
-• type.id
-• type.name
-• type.slug
-• url
+
+""" + generate_md_table(QUERY_ACTOR_ENTITIES_FQL_FILTERS) + """
 
 === EXAMPLE USAGE ===
 
@@ -113,24 +311,8 @@ property_name:[operator]'value'
 • ( ) = Group expressions
 
 === falcon_search_indicators FQL filter options ===
-• created_date
-• deleted
-• domain_types
-• id
-• indicator
-• ip_address_types
-• kill_chains
-• labels
-• last_updated
-• malicious_confidence
-• malware_families
-• published_date
-• reports
-• source
-• targets
-• threat_types
-• type
-• vulnerabilities
+
+""" + generate_md_table(QUERY_INDICATOR_ENTITIES_FQL_FILTERS) + """
 
 === EXAMPLE USAGE ===
 
@@ -174,19 +356,8 @@ property_name:[operator]'value'
 • ( ) = Group expressions
 
 === falcon_search_reports FQL filter options ===
-• actors
-• created_date
-• description
-• id
-• last_modified_date
-• name
-• report_type
-• short_description
-• slug
-• tags
-• target_countries
-• target_industries
-• url
+
+""" + generate_md_table(QUERY_REPORT_ENTITIES_FQL_FILTERS) + """
 
 === EXAMPLE USAGE ===
 
