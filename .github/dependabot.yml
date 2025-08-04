@@ -1,0 +1,45 @@
+version: 2
+updates:
+  # Python dependencies configuration (uv ecosystem)
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    commit-message:
+      prefix: "deps(python):"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # Backup configuration (pip ecosystem)
+  # - package-ecosystem: "pip"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "daily"
+  #   commit-message:
+  #     prefix: "deps(python):"
+  #   labels:
+  #     - "dependencies"
+  #     - "python"
+
+  # GitHub Actions configuration
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(actions):"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Docker configuration
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(docker):"
+    labels:
+      - "dependencies"
+      - "docker"
