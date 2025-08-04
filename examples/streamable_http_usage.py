@@ -22,7 +22,7 @@ def main():
     server = FalconMCPServer(
         # You can override the base URL if needed
         # base_url="https://api.us-2.crowdstrike.com",
-        debug=os.environ.get("DEBUG", "").lower() == "true"
+        debug=os.environ.get("DEBUG", "").lower() == "true",
     )
 
     # Example 1: Run with default settings (port 8000, localhost)

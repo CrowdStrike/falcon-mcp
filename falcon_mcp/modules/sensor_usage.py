@@ -61,7 +61,7 @@ class SensorUsageModule(BaseModule):
             examples={"event_date:'2024-06-11'", "period:'30'"},
         ),
     ) -> List[Dict[str, Any]]:
-        """Search for weekly sensor usage data in your CrowdStrike environment.
+        """Search for sensor usage data in your CrowdStrike environment.
 
         IMPORTANT: You must use the `falcon://sensor-usage/weekly/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_sensor_usage` tool.
 

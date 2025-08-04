@@ -21,7 +21,7 @@ def main():
     server = FalconMCPServer(
         # You can override the base URL if needed
         # base_url="https://api.us-2.crowdstrike.com",
-        debug=os.environ.get("DEBUG", "").lower() == "true"
+        debug=os.environ.get("DEBUG", "").lower() == "true",
     )
 
     # Run the server with SSE transport

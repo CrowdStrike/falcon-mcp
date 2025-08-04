@@ -58,7 +58,7 @@ SEARCH_SENSOR_USAGE_FQL_FILTERS = [
     ),
 ]
 
-SEARCH_SENSOR_USAGE_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Sensor Usage Weekly Guide
+SEARCH_SENSOR_USAGE_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Sensor Usage Guide
 
 === BASIC SYNTAX ===
 property_name:[operator]'value'

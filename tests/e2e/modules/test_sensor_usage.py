@@ -16,7 +16,7 @@ class TestSensorUsageModuleE2E(BaseE2ETest):
     """
 
     def test_search_sensor_usage(self):
-        """Verify the agent can show sensor usage for the past week."""
+        """Verify the agent can show sensor usage for a specific event_date"""
 
         async def test_logic():
             fixtures = [
