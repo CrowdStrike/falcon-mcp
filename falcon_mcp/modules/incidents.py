@@ -119,7 +119,7 @@ class IncidentsModule(BaseModule):
         ),
         sort: Optional[str] = Field(
             default=None,
-            description="TThe property to sort by. (Ex: modified_timestamp.desc)",
+            description="The property to sort by. (Ex: modified_timestamp.desc)",
             examples={"modified_timestamp.desc"},
         ),
     ) -> Dict[str, Any]:
