@@ -4,7 +4,6 @@ Contains Intel resources.
 
 from falcon_mcp.common.utils import generate_md_table
 
-# List of tuples containing filter options data: (name)
 QUERY_ACTOR_ENTITIES_FQL_FILTERS = [
     (
         "Name",
@@ -131,7 +130,50 @@ QUERY_ACTOR_ENTITIES_FQL_FILTERS = [
     ),
 ]
 
-# List of tuples containing filter options data: (name)
+QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Actor Entities Guide
+
+=== BASIC SYNTAX ===
+property_name:[operator]'value'
+
+=== AVAILABLE OPERATORS ===
+• No operator = equals (default)
+• ! = not equal to
+• > = greater than
+• >= = greater than or equal
+• < = less than
+• <= = less than or equal
+• ~ = text match (ignores case, spaces, punctuation)
+• !~ = does not text match
+• * = wildcard matching (one or more characters)
+
+=== DATA TYPES & SYNTAX ===
+• Strings: 'value' or ['exact_value'] for exact match
+• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
+• Booleans: true or false (no quotes)
+• Numbers: 123 (no quotes)
+• Wildcards: 'partial*' or '*partial' or '_partial_'
+
+=== COMBINING CONDITIONS ===
+• + = AND condition
+• , = OR condition
+• ( ) = Group expressions
+
+=== falcon_search_actors FQL filter options ===
+
+""" + generate_md_table(QUERY_ACTOR_ENTITIES_FQL_FILTERS) + """
+
+=== EXAMPLE USAGE ===
+
+• animal_classifier:'BEAR'
+• name:'FANCY BEAR'
+• animal_classifier:'BEAR',animal_classifier:'SPIDER'
+
+=== IMPORTANT NOTES ===
+• Use single quotes around string values: 'value'
+• Use square brackets for exact matches: ['exact_value']
+• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
+"""
+
 QUERY_INDICATOR_ENTITIES_FQL_FILTERS = [
     (
         "Name",
@@ -192,96 +234,6 @@ QUERY_INDICATOR_ENTITIES_FQL_FILTERS = [
     ),
 ]
 
-# List of tuples containing filter options data: (name)
-QUERY_REPORT_ENTITIES_FQL_FILTERS = [
-    (
-        "Name",
-    ),
-    (
-        "actors",
-    ),
-    (
-        "created_date",
-    ),
-    (
-        "description",
-    ),
-    (
-        "id",
-    ),
-    (
-        "last_modified_date",
-    ),
-    (
-        "name",
-    ),
-    (
-        "report_type",
-    ),
-    (
-        "short_description",
-    ),
-    (
-        "slug",
-    ),
-    (
-        "tags",
-    ),
-    (
-        "target_countries",
-    ),
-    (
-        "target_industries",
-    ),
-    (
-        "url",
-    ),
-]
-
-QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Actor Entities Guide
-
-=== BASIC SYNTAX ===
-property_name:[operator]'value'
-
-=== AVAILABLE OPERATORS ===
-• No operator = equals (default)
-• ! = not equal to
-• > = greater than
-• >= = greater than or equal
-• < = less than
-• <= = less than or equal
-• ~ = text match (ignores case, spaces, punctuation)
-• !~ = does not text match
-• * = wildcard matching (one or more characters)
-
-=== DATA TYPES & SYNTAX ===
-• Strings: 'value' or ['exact_value'] for exact match
-• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
-• Booleans: true or false (no quotes)
-• Numbers: 123 (no quotes)
-• Wildcards: 'partial*' or '*partial' or '_partial_'
-
-=== COMBINING CONDITIONS ===
-• + = AND condition
-• , = OR condition
-• ( ) = Group expressions
-
-=== falcon_search_actors FQL filter options ===
-
-""" + generate_md_table(QUERY_ACTOR_ENTITIES_FQL_FILTERS) + """
-
-=== EXAMPLE USAGE ===
-
-• animal_classifier:'BEAR'
-• name:'FANCY BEAR'
-• animal_classifier:'BEAR',animal_classifier:'SPIDER'
-
-=== IMPORTANT NOTES ===
-• Use single quotes around string values: 'value'
-• Use square brackets for exact matches: ['exact_value']
-• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
-"""
-
 QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Indicator Entities Guide
 
 === BASIC SYNTAX ===
@@ -326,6 +278,52 @@ property_name:[operator]'value'
 • Use square brackets for exact matches: ['exact_value']
 • Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
 """
+
+
+QUERY_REPORT_ENTITIES_FQL_FILTERS = [
+    (
+        "Name",
+    ),
+    (
+        "actors",
+    ),
+    (
+        "created_date",
+    ),
+    (
+        "description",
+    ),
+    (
+        "id",
+    ),
+    (
+        "last_modified_date",
+    ),
+    (
+        "name",
+    ),
+    (
+        "report_type",
+    ),
+    (
+        "short_description",
+    ),
+    (
+        "slug",
+    ),
+    (
+        "tags",
+    ),
+    (
+        "target_countries",
+    ),
+    (
+        "target_industries",
+    ),
+    (
+        "url",
+    ),
+]
 
 QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Report Entities Guide
 
