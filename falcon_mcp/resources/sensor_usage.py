@@ -83,7 +83,7 @@ property_name:[operator]'value'
 • , = OR condition
 • ( ) = Group expressions
 
-=== falcon_search_sensor_usage_weekly FQL filter options ===
+=== falcon_search_sensor_usage FQL filter options ===
 
 """ + generate_md_table(SEARCH_SENSOR_USAGE_FQL_FILTERS) + """
 

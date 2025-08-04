@@ -32,8 +32,8 @@ class SensorUsageModule(BaseModule):
         # Register tools
         self._add_tool(
             server=server,
-            method=self.search_sensor_usage_weekly,
-            name="search_sensor_usage_weekly",
+            method=self.search_sensor_usage,
+            name="search_sensor_usage",
         )
 
     def register_resources(self, server: FastMCP) -> None:
@@ -44,8 +44,8 @@ class SensorUsageModule(BaseModule):
         """
         search_sensor_usage_fql_resource = TextResource(
             uri=AnyUrl("falcon://sensor-usage/weekly/fql-guide"),
-            name="falcon_search_sensor_usage_weekly_fql_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_sensor_usage_weekly` tool.",
+            name="falcon_search_sensor_usage_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_sensor_usage` tool.",
             text=SEARCH_SENSOR_USAGE_FQL_DOCUMENTATION,
         )
 
@@ -54,7 +54,7 @@ class SensorUsageModule(BaseModule):
             search_sensor_usage_fql_resource,
         )
 
-    def search_sensor_usage_weekly(
+    def search_sensor_usage(
         self,
         filter: Optional[str] = Field(
             default=None,
@@ -64,7 +64,7 @@ class SensorUsageModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for weekly sensor usage data in your CrowdStrike environment.
 
-        IMPORTANT: You must use the `falcon://sensor-usage/weekly/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_sensor_usage_weekly` tool.
+        IMPORTANT: You must use the `falcon://sensor-usage/weekly/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_sensor_usage` tool.
 
         Returns:
             List of sensor usage details

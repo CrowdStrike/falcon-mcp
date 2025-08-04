@@ -18,14 +18,14 @@ class TestSensorUsageModule(TestModules):
     def test_register_tools(self):
         """Test registering tools with the server."""
         expected_tools = [
-            "falcon_search_sensor_usage_weekly",
+            "falcon_search_sensor_usage",
         ]
         self.assert_tools_registered(expected_tools)
 
     def test_register_resources(self):
         """Test registering resources with the server."""
         expected_resources = [
-            "falcon_search_sensor_usage_weekly_fql_guide",
+            "falcon_search_sensor_usage_fql_guide",
         ]
         self.assert_resources_registered(expected_resources)
 

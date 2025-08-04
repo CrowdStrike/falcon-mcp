@@ -129,7 +129,7 @@ class TestSensorUsageModuleE2E(BaseE2ETest):
         def assertions(tools, result):
             self.assertGreaterEqual(len(tools), 1, "Expected at least 1 tool call")
             used_tool = tools[len(tools) - 1]
-            self.assertEqual(used_tool["input"]["tool_name"], "falcon_search_sensor_usage_weekly")
+            self.assertEqual(used_tool["input"]["tool_name"], "falcon_search_sensor_usage")
 
             # Check for event_date in filter
             tool_input = used_tool["input"]["tool_input"]
@@ -236,7 +236,7 @@ class TestSensorUsageModuleE2E(BaseE2ETest):
         def assertions(tools, result):
             self.assertGreaterEqual(len(tools), 1, "Expected at least 1 tool call")
             used_tool = tools[len(tools) - 1]
-            self.assertEqual(used_tool["input"]["tool_name"], "falcon_search_sensor_usage_weekly")
+            self.assertEqual(used_tool["input"]["tool_name"], "falcon_search_sensor_usage")
 
             # Check for period in filter
             tool_input = used_tool["input"]["tool_input"]
@@ -357,7 +357,7 @@ class TestSensorUsageModuleE2E(BaseE2ETest):
         def assertions(tools, result):
             self.assertGreaterEqual(len(tools), 1, "Expected at least 1 tool call")
             used_tool = tools[len(tools) - 1]
-            self.assertEqual(used_tool["input"]["tool_name"], "falcon_search_sensor_usage_weekly")
+            self.assertEqual(used_tool["input"]["tool_name"], "falcon_search_sensor_usage")
 
             # Check for selected_cids in filter
             tool_input = used_tool["input"]["tool_input"]
