@@ -7,126 +7,269 @@ from falcon_mcp.common.utils import generate_md_table
 QUERY_ACTOR_ENTITIES_FQL_FILTERS = [
     (
         "Name",
-    ),
-    (
-        "actors",
-    ),
-    (
-        "actors.id",
-    ),
-    (
-        "actors.name",
-    ),
-    (
-        "actors.slug",
-    ),
-    (
-        "actors.url",
-    ),
-    (
-        "animal_classifier",
-    ),
-    (
-        "created_date",
-    ),
-    (
-        "description",
+        "Type",
+        "Description",
     ),
     (
         "id",
+        "Number",
+        """
+        The adversary's ID.
+
+        Ex: 2583
+        """
+    ),
+    (
+        "actor_type",
+        "String",
+        """
+        The type of adversary.
+
+        Ex: "targeted"
+        """
+    ),
+    (
+        "actors.id",
+        "Number",
+        """
+        The ID of an associated actor.
+
+        Ex: 1823
+        """
+    ),
+    (
+        "actors.name",
+        "String",
+        """
+        The name of an associated actor.
+
+        Ex: "VENOMOUS BEAR"
+        """
+    ),
+    (
+        "actors.slug",
+        "String",
+        """
+        The URL-friendly identifier of an associated actor.
+
+        Ex: "venomous-bear"
+        """
+    ),
+    (
+        "actors.url",
+        "String",
+        """
+        The URL to the actor's profile page.
+
+        Ex: "https://falcon.crowdstrike.com/intelligence/actors/venomous-bear/"
+        """
+    ),
+    (
+        "animal_classifier",
+        "String",
+        """
+        The animal classification assigned to the adversary.
+
+        Ex: "BEAR"
+        """
+    ),
+    (
+        "capability.value",
+        "String",
+        """
+        The adversary's capability.
+
+        Ex: "average"
+        """
+    ),
+    (
+        "created_date",
+        "Timestamp",
+        """
+        Timestamp when the actor entity was created.
+
+        Ex: 1441729727
+        """
+    ),
+    (
+        "description",
+        "String",
+        """
+        A detailed description of the adversary.
+
+        Ex: "VENOMOUS BEAR is a sophisticated Russia-based adversary..."
+        """
+    ),
+    (
+        "first_activity_date",
+        "Timestamp",
+        """
+        First activity date.
+
+        Ex: 1094660880
+        """
+    ),
+    (
+        "known_as",
+        "String",
+        """
+        The adversary's alias.
+
+        Ex: "dridex"
+        """
+    ),
+    (
+        "last_activity_date",
+        "Timestamp",
+        """
+        Last activity date.
+
+        Ex: 1749427200
+        """
     ),
     (
         "last_modified_date",
-    ),
-    (
-        "motivations",
+        "Timestamp",
+        """
+        Timestamp when the actor entity was last modified.
+
+        Ex: 1754320661
+        """
     ),
     (
         "motivations.id",
+        "Number",
+        """
+        The ID of a motivation associated with the adversary.
+
+        Ex: 1001485
+        """
     ),
     (
         "motivations.slug",
+        "String",
+        """
+        The URL-friendly identifier of a motivation.
+
+        Ex: "state-sponsored"
+        """
     ),
     (
         "motivations.value",
+        "String",
+        """
+        The display name of a motivation.
+
+        Ex: "State-Sponsored"
+        """
     ),
     (
         "name",
+        "String",
+        """
+        The adversary's name.
+
+        Ex: "FANCY BEAR"
+        """
     ),
     (
-        "name.raw",
+        "origins.slug",
+        "String",
+        """
+        The adversary's country of origin slug.
+
+        Ex: "ru"
+        """
     ),
     (
-        "origins",
+        "origins.value",
+        "String",
+        """
+        The adversary's country of origin.
+
+        Ex: "Afghanistan"
+        """
     ),
     (
         "short_description",
+        "String",
+        """
+        A truncated version of the adversary's description.
+
+        Ex: "VENOMOUS BEAR is a sophisticated Russia-based adversary..."
+        """
     ),
     (
         "slug",
-    ),
-    (
-        "sub_type",
-    ),
-    (
-        "sub_type.id",
-    ),
-    (
-        "sub_type.name",
-    ),
-    (
-        "sub_type.slug",
-    ),
-    (
-        "tags",
-    ),
-    (
-        "tags.id",
-    ),
-    (
-        "tags.slug",
-    ),
-    (
-        "tags.value",
-    ),
-    (
-        "target_countries",
+        "String",
+        """
+        The URL-friendly identifier of the adversary.
+
+        Ex: "fancy-bear"
+        """
     ),
     (
         "target_countries.id",
+        "Number",
+        """
+        The ID of a target country.
+
+        Ex: 1
+        """
     ),
     (
         "target_countries.slug",
+        "String",
+        """
+        The URL-friendly identifier of a target country.
+
+        Ex: "us"
+        """
     ),
     (
         "target_countries.value",
-    ),
-    (
-        "target_industries",
+        "String",
+        """
+        The display name of a target country.
+
+        Ex: "United States"
+        """
     ),
     (
         "target_industries.id",
+        "Number",
+        """
+        The ID of a target industry.
+
+        Ex: 344
+        """
     ),
     (
         "target_industries.slug",
+        "String",
+        """
+        The URL-friendly identifier of a target industry.
+
+        Ex: "government"
+        """
     ),
     (
         "target_industries.value",
-    ),
-    (
-        "type",
-    ),
-    (
-        "type.id",
-    ),
-    (
-        "type.name",
-    ),
-    (
-        "type.slug",
+        "String",
+        """
+        The display name of a target industry.
+
+        Ex: "Government"
+        """
     ),
     (
         "url",
+        "String",
+        """
+        The URL to the adversary's profile page.
+
+        Ex: "https://falcon.crowdstrike.com/intelligence/actors/fancy-bear/"
+        """
     ),
 ]
 
