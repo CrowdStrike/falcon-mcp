@@ -113,8 +113,8 @@ class TestFalconMCPServer(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     @patch("falcon_mcp.server.FalconClient")
-    def test_get_active_modules(self, mock_client):
-        """Test getting active modules."""
+    def test_list_enabled_modules(self, mock_client):
+        """Test listing enabled modules."""
         # Setup mock
         mock_client_instance = MagicMock()
         mock_client_instance.authenticate.return_value = True
@@ -123,8 +123,8 @@ class TestFalconMCPServer(unittest.TestCase):
         # Create server
         server = FalconMCPServer()
 
-        # Call get_active_modules
-        result = server.get_active_modules()
+        # Call list_enabled_modules
+        result = server.list_enabled_modules()
 
         # Get the actual module names from the registry
         expected_modules = registry.get_module_names()
@@ -133,8 +133,8 @@ class TestFalconMCPServer(unittest.TestCase):
         self.assertEqual(set(result["modules"]), set(expected_modules))
 
     @patch("falcon_mcp.server.FalconClient")
-    def test_get_active_modules_with_limited_modules(self, mock_client):
-        """Test getting active modules with limited module set."""
+    def test_list_enabled_modules_with_limited_modules(self, mock_client):
+        """Test listing enabled modules with limited module set."""
         # Setup mock
         mock_client_instance = MagicMock()
         mock_client_instance.authenticate.return_value = True
@@ -143,8 +143,8 @@ class TestFalconMCPServer(unittest.TestCase):
         # Create server with only specific modules
         server = FalconMCPServer(enabled_modules={"detections", "cloud"})
 
-        # Call get_active_modules
-        result = server.get_active_modules()
+        # Call list_enabled_modules
+        result = server.list_enabled_modules()
 
         # Should only return enabled modules
         self.assertEqual(set(result["modules"]), {"detections", "cloud"})
@@ -157,8 +157,8 @@ class TestFalconMCPServer(unittest.TestCase):
             self.assertIsInstance(module_name, str)
 
     @patch("falcon_mcp.server.FalconClient")
-    def test_get_available_modules(self, mock_client):
-        """Test getting all available modules."""
+    def test_list_modules(self, mock_client):
+        """Test listing all available modules."""
         # Setup mock
         mock_client_instance = MagicMock()
         mock_client_instance.authenticate.return_value = True
@@ -167,8 +167,8 @@ class TestFalconMCPServer(unittest.TestCase):
         # Create server with limited modules
         server = FalconMCPServer(enabled_modules={"detections", "cloud"})
 
-        # Call get_available_modules
-        result = server.get_available_modules()
+        # Call list_modules
+        result = server.list_modules()
 
         # Should return ALL modules from registry regardless of what's enabled
         expected_modules = registry.get_module_names()
@@ -182,8 +182,8 @@ class TestFalconMCPServer(unittest.TestCase):
             self.assertIsInstance(module_name, str)
 
     @patch("falcon_mcp.server.FalconClient")
-    def test_get_available_modules_consistency(self, mock_client):
-        """Test that get_available_modules always returns the same result."""
+    def test_list_modules_consistency(self, mock_client):
+        """Test that list_modules always returns the same result."""
         # Setup mock
         mock_client_instance = MagicMock()
         mock_client_instance.authenticate.return_value = True
@@ -194,8 +194,8 @@ class TestFalconMCPServer(unittest.TestCase):
         server2 = FalconMCPServer(enabled_modules={"cloud", "intel"})
 
         # Both should return the same available modules
-        result1 = server1.get_available_modules()
-        result2 = server2.get_available_modules()
+        result1 = server1.list_modules()
+        result2 = server2.list_modules()
 
         self.assertEqual(set(result1["modules"]), set(result2["modules"]))
 

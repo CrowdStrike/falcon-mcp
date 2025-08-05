@@ -114,15 +114,15 @@ class FalconMCPServer:
         )
 
         self.server.add_tool(
-            self.get_active_modules,
-            name="falcon_get_active_modules",
-            description="Show active modules.",
+            self.list_enabled_modules,
+            name="falcon_list_enabled_modules",
+            description="Lists modules that are currently enabled and available for use.",
         )
 
         self.server.add_tool(
-            self.get_available_modules,
-            name="falcon_get_available_modules",
-            description="Show available modules.",
+            self.list_modules,
+            name="falcon_list_modules",
+            description="Lists all available modules.",
         )
 
         tool_count = 3  # the tools added above
@@ -159,16 +159,19 @@ class FalconMCPServer:
         """
         return {"connected": self.falcon_client.is_authenticated()}
 
-    def get_active_modules(self) -> Dict[str, List[str]]:
-        """Show active modules.
+    def list_enabled_modules(self) -> Dict[str, List[str]]:
+        """Lists modules that are currently enabled and available for use.
+
+        These modules are controlled by the --modules flag when starting the server.
+        If no modules are specified, all available modules are enabled.
 
         Returns:
-            Dict[str, List[str]]: Active modules
+            Dict[str, List[str]]: Enabled modules
         """
         return {"modules": list(self.modules.keys())}
 
-    def get_available_modules(self) -> Dict[str, List[str]]:
-        """Show available modules.
+    def list_modules(self) -> Dict[str, List[str]]:
+        """Lists all available modules.
 
         Returns:
             Dict[str, List[str]]: Available modules
