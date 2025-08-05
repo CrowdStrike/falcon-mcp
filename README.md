@@ -95,8 +95,11 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 The server provides core tools for interacting with the Falcon API:
 
 - `falcon_check_connectivity`: Check connectivity to the Falcon API
-- `falcon_list_enabled_modules`: Lists modules that are currently enabled and available for use
-- `falcon_list_modules`: Lists all available modules
+- `falcon_list_enabled_modules`: Lists enabled modules in the falcon-mcp server
+
+    > These modules are controlled by the --modules flag when starting the server. If no modules are specified, all available modules are enabled.
+
+- `falcon_list_modules`: Lists all available modules in the falcon-mcp server
 
 ### Detections Module
 
