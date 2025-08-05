@@ -250,6 +250,10 @@ Then edit `.env` with your CrowdStrike API credentials:
 
 ### Installation
 
+> 🪧 **NOTE:**  
+> The MCP server can also be run with a prebuilt agent out of the box. Please refer to the [Prebuilt Agent Usage Documentation](adk_agent_falcon_mcp/README.md). Otherwise continue to the installations steps below.
+
+
 #### Install using uv
 
 ```bash
