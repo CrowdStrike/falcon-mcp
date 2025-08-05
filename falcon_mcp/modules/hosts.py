@@ -5,7 +5,7 @@ This module provides tools for accessing and managing CrowdStrike Falcon hosts/d
 """
 
 from textwrap import dedent
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -62,21 +62,22 @@ class HostsModule(BaseModule):
 
     def search_hosts(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://hosts/search/fql-guide` resource when building this filter parameter.",
             examples={"platform_name:'Windows'", "hostname:'PC*'"},
         ),
-        limit: Optional[int] = Field(
-            default=100,
+        limit: int = Field(
+            default=10,
             ge=1,
             le=5000,
             description="The maximum records to return. [1-5000]",
         ),
-        offset: Optional[int] = Field(
-            default=0, ge=0, description="The offset to start retrieving records from."
+        offset: int | None = Field(
+            default=None,
+            description="The offset to start retrieving records from.",
         ),
-        sort: Optional[str] = Field(
+        sort: str | None = Field(
             default=None,
             description=dedent("""
                 Sort hosts using these options:
@@ -178,5 +179,7 @@ class HostsModule(BaseModule):
 
         # Use the base method to get device details
         return self._base_get_by_ids(
-            operation="PostDeviceDetailsV2", ids=ids, id_key="ids"
+            operation="PostDeviceDetailsV2",
+            ids=ids,
+            id_key="ids",
         )

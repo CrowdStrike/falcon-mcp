@@ -8,7 +8,7 @@ Core use cases:
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mcp.server import FastMCP
 from pydantic import Field
@@ -44,63 +44,69 @@ class IdpModule(BaseModule):
     def investigate_entity(
         self,
         # Entity Identification (Required - at least one)
-        entity_ids: Optional[List[str]] = Field(
+        entity_ids: list[str] | None = Field(
             default=None,
             description="List of specific entity IDs to investigate (e.g., ['entity-001'])",
         ),
-        entity_names: Optional[List[str]] = Field(
+        entity_names: list[str] | None = Field(
             default=None,
             description="List of entity names to search for (e.g., ['Administrator', 'John Doe']). When combined with other parameters, uses AND logic.",
         ),
-        email_addresses: Optional[List[str]] = Field(
+        email_addresses: list[str] | None = Field(
             default=None,
             description="List of email addresses to investigate (e.g., ['user@example.com']). When combined with other parameters, uses AND logic.",
         ),
-        ip_addresses: Optional[List[str]] = Field(
+        ip_addresses: list[str] | None = Field(
             default=None,
             description="List of IP addresses/endpoints to investigate (e.g., ['1.1.1.1']). When combined with other parameters, uses AND logic.",
         ),
-        domain_names: Optional[List[str]] = Field(
+        domain_names: list[str] | None = Field(
             default=None,
             description="List of domain names to search for (e.g., ['XDRHOLDINGS.COM', 'CORP.LOCAL']). When combined with other parameters, uses AND logic. Example: entity_names=['Administrator'] + domain_names=['DOMAIN.COM'] finds Administrator user in that specific domain.",
         ),
         # Investigation Scope Control
-        investigation_types: Optional[List[str]] = Field(
+        investigation_types: list[str] = Field(
             default=["entity_details"],
             description="Types of investigation to perform: 'entity_details', 'timeline_analysis', 'relationship_analysis', 'risk_assessment'. Use multiple for comprehensive analysis.",
         ),
         # Timeline Parameters (when timeline_analysis is included)
-        timeline_start_time: Optional[str] = Field(
+        timeline_start_time: str | None = Field(
             default=None,
             description="Start time for timeline analysis in ISO format (e.g., '2024-01-01T00:00:00Z')",
         ),
-        timeline_end_time: Optional[str] = Field(
-            default=None, description="End time for timeline analysis in ISO format"
+        timeline_end_time: str | None = Field(
+            default=None,
+            description="End time for timeline analysis in ISO format",
         ),
-        timeline_event_types: Optional[List[str]] = Field(
+        timeline_event_types: list[str] | None = Field(
             default=None,
             description="Filter timeline by event types: 'ACTIVITY', 'NOTIFICATION', 'THREAT', 'ENTITY', 'AUDIT', 'POLICY', 'SYSTEM'",
         ),
         # Relationship Parameters (when relationship_analysis is included)
-        relationship_depth: Optional[int] = Field(
+        relationship_depth: int = Field(
             default=2,
             ge=1,
             le=3,
             description="Depth of relationship analysis (1-3 levels)",
         ),
         # General Parameters
-        limit: Optional[int] = Field(
-            default=50, ge=1, le=200, description="Maximum number of results to return"
+        limit: int = Field(
+            default=10,
+            ge=1,
+            le=200,
+            description="Maximum number of results to return",
         ),
-        include_associations: Optional[bool] = Field(
+        include_associations: bool = Field(
             default=True,
             description="Include entity associations and relationships in results",
         ),
-        include_accounts: Optional[bool] = Field(
-            default=True, description="Include account information in results"
+        include_accounts: bool = Field(
+            default=True,
+            description="Include account information in results",
         ),
-        include_incidents: Optional[bool] = Field(
-            default=True, description="Include open security incidents in results"
+        include_incidents: bool = Field(
+            default=True,
+            description="Include open security incidents in results",
         ),
     ) -> Dict[str, Any]:
         """Comprehensive entity investigation tool.
@@ -139,9 +145,7 @@ class IdpModule(BaseModule):
             {
                 "entity_ids": entity_ids if entity_ids is not None else None,
                 "entity_names": entity_names if entity_names is not None else None,
-                "email_addresses": email_addresses
-                if email_addresses is not None
-                else None,
+                "email_addresses": email_addresses if email_addresses is not None else None,
                 "ip_addresses": ip_addresses if ip_addresses is not None else None,
                 "domain_names": domain_names if domain_names is not None else None,
                 "limit": limit,
@@ -151,7 +155,10 @@ class IdpModule(BaseModule):
         # Check if entity resolution failed
         if isinstance(resolved_entity_ids, dict) and "error" in resolved_entity_ids:
             return self._create_error_response(
-                resolved_entity_ids["error"], 0, investigation_types, search_criteria
+                resolved_entity_ids["error"],
+                0,
+                investigation_types,
+                search_criteria,
             )
 
         if not resolved_entity_ids:
@@ -214,7 +221,13 @@ class IdpModule(BaseModule):
     ):
         """Validate that at least one entity identifier is provided."""
         if not any(
-            [entity_ids, entity_names, email_addresses, ip_addresses, domain_names]
+            [
+                entity_ids,
+                entity_names,
+                email_addresses,
+                ip_addresses,
+                domain_names,
+            ]
         ):
             return {
                 "error": "At least one entity identifier must be provided (entity_ids, entity_names, email_addresses, ip_addresses, or domain_names)",
@@ -228,7 +241,11 @@ class IdpModule(BaseModule):
         return None
 
     def _create_error_response(
-        self, error_message, entity_count, investigation_types, search_criteria=None
+        self,
+        error_message,
+        entity_count,
+        investigation_types,
+        search_criteria=None,
     ):
         """Create a standardized error response."""
         response = {
@@ -245,7 +262,10 @@ class IdpModule(BaseModule):
         return response
 
     def _execute_single_investigation(
-        self, investigation_type, resolved_entity_ids, params
+        self,
+        investigation_type,
+        resolved_entity_ids,
+        params,
     ):
         """Execute a single investigation type and return results or error."""
         logger.debug(f"Executing {investigation_type} investigation")
@@ -280,7 +300,8 @@ class IdpModule(BaseModule):
             )
         if investigation_type == "risk_assessment":
             return self._assess_risks_batch(
-                resolved_entity_ids, {"include_risk_factors": True}
+                resolved_entity_ids,
+                {"include_risk_factors": True},
             )
 
         logger.warning(f"Unknown investigation type: {investigation_type}")
@@ -410,9 +431,9 @@ class IdpModule(BaseModule):
     def _build_timeline_query(
         self,
         entity_id: str,
-        start_time: Optional[str],
-        end_time: Optional[str],
-        event_types: Optional[List[str]],
+        start_time: str | None,
+        end_time: str | None,
+        event_types: list[str] | None,
         limit: int,
     ) -> str:
         """Build GraphQL query for entity timeline."""
@@ -616,9 +637,7 @@ class IdpModule(BaseModule):
         }}
         """
 
-    def _resolve_entities(
-        self, identifiers: Dict[str, Any]
-    ) -> List[str] | Dict[str, Any]:
+    def _resolve_entities(self, identifiers: Dict[str, Any]) -> List[str] | Dict[str, Any]:
         """Resolve entity IDs from various identifier types using unified AND-based query.
 
         All provided identifiers are combined using AND logic in a single GraphQL query.
@@ -660,9 +679,7 @@ class IdpModule(BaseModule):
         # Add email addresses filter (USER entities)
         self._add_email_filter(email_addresses, query_fields, query_filters)
         # Add IP addresses filter (ENDPOINT entities) - only if no USER criteria
-        self._add_ip_filter(
-            has_user_criteria, ip_addresses, query_fields, query_filters
-        )
+        self._add_ip_filter(has_user_criteria, ip_addresses, query_fields, query_filters)
         # Add domain names filter
         domain_names = self._add_domain_filter(identifiers, query_fields, query_filters)
 
@@ -696,9 +713,7 @@ class IdpModule(BaseModule):
             }}
             """
 
-            response = self.client.command(
-                "api_preempt_proxy_post_graphql", body={"query": query}
-            )
+            response = self.client.command("api_preempt_proxy_post_graphql", body={"query": query})
             result = handle_api_response(
                 response,
                 operation="api_preempt_proxy_post_graphql",
@@ -716,7 +731,12 @@ class IdpModule(BaseModule):
         # Remove duplicates and return
         return list(set(resolved_ids))
 
-    def _add_domain_filter(self, identifiers, query_fields, query_filters):
+    def _add_domain_filter(
+        self,
+        identifiers,
+        query_fields,
+        query_filters,
+    ):
         domain_names = identifiers.get("domain_names")
         if domain_names and isinstance(domain_names, list):
             sanitized_domains = [sanitize_input(domain) for domain in domain_names]
@@ -726,7 +746,11 @@ class IdpModule(BaseModule):
         return domain_names
 
     def _add_ip_filter(
-        self, has_user_criteria, ip_addresses, query_fields, query_filters
+        self,
+        has_user_criteria,
+        ip_addresses,
+        query_fields,
+        query_filters,
     ):
         if ip_addresses and isinstance(ip_addresses, list) and not has_user_criteria:
             sanitized_ips = [sanitize_input(ip) for ip in ip_addresses]
@@ -735,7 +759,12 @@ class IdpModule(BaseModule):
             query_filters.append("types: [ENDPOINT]")
             query_fields.append("primaryDisplayName")
 
-    def _add_email_filter(self, email_addresses, query_fields, query_filters):
+    def _add_email_filter(
+        self,
+        email_addresses,
+        query_fields,
+        query_filters,
+    ):
         if email_addresses and isinstance(email_addresses, list):
             sanitized_emails = [sanitize_input(email) for email in email_addresses]
             emails_json = json.dumps(sanitized_emails)
@@ -743,7 +772,12 @@ class IdpModule(BaseModule):
             query_filters.append("types: [USER]")
             query_fields.extend(["primaryDisplayName", "secondaryDisplayName"])
 
-    def _add_entity_filters(self, identifiers, query_fields, query_filters):
+    def _add_entity_filters(
+        self,
+        identifiers,
+        query_fields,
+        query_filters,
+    ):
         entity_names = identifiers.get("entity_names")
         if entity_names and isinstance(entity_names, list):
             sanitized_names = [sanitize_input(name) for name in entity_names]
@@ -752,7 +786,9 @@ class IdpModule(BaseModule):
             query_fields.append("primaryDisplayName")
 
     def _get_entity_details_batch(
-        self, entity_ids: List[str], options: Dict[str, Any]
+        self,
+        entity_ids: List[str],
+        options: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Get detailed entity information for multiple entities."""
         graphql_query = self._build_entity_details_query(
@@ -764,7 +800,8 @@ class IdpModule(BaseModule):
         )
 
         response = self.client.command(
-            "api_preempt_proxy_post_graphql", body={"query": graphql_query}
+            "api_preempt_proxy_post_graphql",
+            body={"query": graphql_query},
         )
         result = handle_api_response(
             response,
@@ -796,7 +833,8 @@ class IdpModule(BaseModule):
             )
 
             response = self.client.command(
-                "api_preempt_proxy_post_graphql", body={"query": graphql_query}
+                "api_preempt_proxy_post_graphql",
+                body={"query": graphql_query},
             )
             result = handle_api_response(
                 response,
@@ -821,7 +859,9 @@ class IdpModule(BaseModule):
         return {"timelines": timeline_results, "entity_count": len(entity_ids)}
 
     def _analyze_relationships_batch(
-        self, entity_ids: List[str], options: Dict[str, Any]
+        self,
+        entity_ids: List[str],
+        options: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Analyze relationships for multiple entities."""
         relationship_results = []
@@ -840,7 +880,8 @@ class IdpModule(BaseModule):
             )
 
             response = self.client.command(
-                "api_preempt_proxy_post_graphql", body={"query": graphql_query}
+                "api_preempt_proxy_post_graphql",
+                body={"query": graphql_query},
             )
             result = handle_api_response(
                 response,
@@ -875,7 +916,9 @@ class IdpModule(BaseModule):
         return {"relationships": relationship_results, "entity_count": len(entity_ids)}
 
     def _assess_risks_batch(
-        self, entity_ids: List[str], options: Dict[str, Any]
+        self,
+        entity_ids: List[str],
+        options: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Perform risk assessment for multiple entities."""
         graphql_query = self._build_risk_assessment_query(
@@ -884,7 +927,8 @@ class IdpModule(BaseModule):
         )
 
         response = self.client.command(
-            "api_preempt_proxy_post_graphql", body={"query": graphql_query}
+            "api_preempt_proxy_post_graphql",
+            body={"query": graphql_query},
         )
         result = handle_api_response(
             response,
@@ -949,16 +993,16 @@ class IdpModule(BaseModule):
             response[investigation_type] = results
 
         # Generate cross-investigation insights
-        insights = self._generate_investigation_insights(
-            investigation_results, entity_ids
-        )
+        insights = self._generate_investigation_insights(investigation_results, entity_ids)
         if insights:
             response["cross_investigation_insights"] = insights
 
         return response
 
     def _generate_investigation_insights(
-        self, investigation_results: Dict[str, Any], entity_ids: List[str]
+        self,
+        investigation_results: Dict[str, Any],
+        entity_ids: List[str],
     ) -> Dict[str, Any]:
         """Generate insights by analyzing results across different investigation types."""
         insights = {}
@@ -968,11 +1012,9 @@ class IdpModule(BaseModule):
             "timeline_analysis" in investigation_results
             and "relationship_analysis" in investigation_results
         ):
-            insights["activity_relationship_correlation"] = (
-                self._analyze_activity_relationships(
-                    investigation_results["timeline_analysis"],
-                    investigation_results["relationship_analysis"],
-                )
+            insights["activity_relationship_correlation"] = self._analyze_activity_relationships(
+                investigation_results["timeline_analysis"],
+                investigation_results["relationship_analysis"],
             )
 
         # Multi-entity patterns (if investigating multiple entities)
@@ -984,7 +1026,9 @@ class IdpModule(BaseModule):
         return insights
 
     def _analyze_activity_relationships(
-        self, timeline_analysis: Dict[str, Any], relationship_analysis: Dict[str, Any]
+        self,
+        timeline_analysis: Dict[str, Any],
+        relationship_analysis: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Analyze correlation between timeline activities and entity relationships."""
         correlation = {"related_entity_activities": [], "suspicious_patterns": []}
@@ -1000,7 +1044,9 @@ class IdpModule(BaseModule):
         return correlation
 
     def _analyze_multi_entity_patterns(
-        self, investigation_results: Dict[str, Any], entity_ids: List[str]
+        self,
+        investigation_results: Dict[str, Any],
+        entity_ids: List[str],
     ) -> Dict[str, Any]:
         """Analyze patterns across multiple entities being investigated."""
         patterns = {
@@ -1011,9 +1057,7 @@ class IdpModule(BaseModule):
 
         # Analyze common risk factors across entities
         if "risk_assessment" in investigation_results:
-            risk_assessments = investigation_results["risk_assessment"].get(
-                "risk_assessments", []
-            )
+            risk_assessments = investigation_results["risk_assessment"].get("risk_assessments", [])
             risk_factor_counts = {}
 
             for assessment in risk_assessments:

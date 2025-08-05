@@ -5,7 +5,7 @@ This module provides tools for accessing and analyzing CrowdStrike Falcon detect
 """
 
 from textwrap import dedent
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -62,27 +62,26 @@ class DetectionsModule(BaseModule):
 
     def search_detections(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://detections/search/fql-guide` resource when building this filter parameter.",
             examples={"agent_id:'77d11725xxxxxxxxxxxxxxxxxxxxc48ca19'", "status:'new'"},
         ),
-        limit: Optional[int] = Field(
-            default=100,
+        limit: int = Field(
+            default=10,
             ge=1,
             le=9999,
-            description="The maximum number of detections to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results.",
+            description="The maximum number of detections to return in this response (default: 10; max: 9999). Use with the offset parameter to manage pagination of results.",
         ),
-        offset: Optional[int] = Field(
-            default=0,
-            ge=0,
-            description="The first detection to return, where 0 is the latest detection. Use with the limit parameter to manage pagination of results.",
+        offset: int | None = Field(
+            default=None,
+            description="The first detection to return, where 0 is the latest detection. Use with the offset parameter to manage pagination of results.",
         ),
-        q: Optional[str] = Field(
+        q: str | None = Field(
             default=None,
             description="Search all detection metadata for the provided string",
         ),
-        sort: Optional[str] = Field(
+        sort: str | None = Field(
             default=None,
             description=dedent("""
                 Sort detections using these options:
@@ -104,7 +103,7 @@ class DetectionsModule(BaseModule):
             """).strip(),
             examples={"severity.desc", "timestamp.desc"},
         ),
-        include_hidden: Optional[bool] = Field(default=True),
+        include_hidden: bool = Field(default=True),
     ) -> List[Dict[str, Any]]:
         """Find and analyze detections to understand malicious activity in your environment.
 
@@ -167,25 +166,22 @@ class DetectionsModule(BaseModule):
     def get_detection_details(
         self,
         ids: List[str] = Field(
-            default=None,
-            description="Detection ID(s) to retrieve details for. Specify one or more detection IDs (max 1000 per request).",
+            description="Composite ID(s) to retrieve detection details for.",
         ),
-        include_hidden: Optional[bool] = Field(
+        include_hidden: bool = Field(
             default=True,
             description="Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility.",
         ),
     ) -> List[Dict[str, Any]] | Dict[str, Any]:
-        """Get comprehensive detection details for specific detection IDs to understand security threats.
+        """Get detection details for specific detection IDs to understand security threats.
 
-        This tool returns comprehensive detection details for one or more detection IDs.
         Use this when you already have specific detection IDs and need their full details.
         For searching/discovering detections, use the `falcon_search_detections` tool instead.
 
         Returns:
-            List of detection details with comprehensive information including host data,
-            disposition, objective/tactic/technique, adversary information, and more
+            List of detection(s) with details
         """
-        logger.debug("Getting detection details for ID: %s", ids)
+        logger.debug("Getting detection details for ID(s): %s", ids)
 
         # Use the enhanced base method - composite_ids parameter matches ids for backward compatibility
         return self._base_get_by_ids(

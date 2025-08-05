@@ -4,7 +4,7 @@ Incidents module for Falcon MCP Server
 This module provides tools for accessing and analyzing CrowdStrike Falcon incidents.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -102,22 +102,21 @@ class IncidentsModule(BaseModule):
 
     def show_crowd_score(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/crowd-score/fql-guide` resource when building this filter parameter.",
         ),
-        limit: Optional[int] = Field(
-            default=100,
+        limit: int = Field(
+            default=10,
             ge=1,
             le=2500,
             description="Maximum number of records to return. (Max: 2500)",
         ),
-        offset: Optional[int] = Field(
-            default=0,
-            ge=0,
+        offset: int | None = Field(
+            default=None,
             description="Starting index of overall result set from which to return ids.",
         ),
-        sort: Optional[str] = Field(
+        sort: str | None = Field(
             default=None,
             description="The property to sort by. (Ex: modified_timestamp.desc)",
             examples={"modified_timestamp.desc"},
@@ -184,22 +183,21 @@ class IncidentsModule(BaseModule):
 
     def search_incidents(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/search/fql-guide` resource when building this filter parameter.",
         ),
         limit: int = Field(
-            default=100,
+            default=10,
             ge=1,
             le=500,
             description="Maximum number of records to return. (Max: 500)",
         ),
-        offset: int = Field(
-            default=0,
-            ge=0,
+        offset: int | None = Field(
+            default=None,
             description="Starting index of overall result set from which to return ids.",
         ),
-        sort: Optional[str] = Field(
+        sort: str | None = Field(
             default=None,
             description="The property to sort by. FQL syntax. Ex: state.asc, name.desc",
         ),
@@ -254,22 +252,21 @@ class IncidentsModule(BaseModule):
 
     def search_behaviors(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/behaviors/fql-guide` resource when building this filter parameter.",
         ),
         limit: int = Field(
-            default=100,
+            default=10,
             ge=1,
             le=500,
             description="Maximum number of records to return. (Max: 500)",
         ),
-        offset: int = Field(
-            default=0,
-            ge=0,
+        offset: int | None = Field(
+            default=None,
             description="Starting index of overall result set from which to return ids.",
         ),
-        sort: Optional[str] = Field(
+        sort: str | None = Field(
             default=None,
             description="The property to sort by. (Ex: modified_timestamp.desc)",
         ),
@@ -327,10 +324,10 @@ class IncidentsModule(BaseModule):
     def _base_query(
         self,
         operation: str,
-        filter: Optional[str] = None,
+        filter: str | None = None,
         limit: int = 100,
-        offset: int = 0,
-        sort: Optional[str] = None,
+        offset: int | None = None,
+        sort: str | None = None,
     ) -> List[str] | Dict[str, Any]:
         # Prepare parameters
         params = prepare_api_parameters(

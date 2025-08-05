@@ -5,7 +5,7 @@ This module provides tools for accessing and managing CrowdStrike Falcon Spotlig
 """
 
 from textwrap import dedent
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -56,22 +56,22 @@ class SpotlightModule(BaseModule):
 
     def search_vulnerabilities(
         self,
-        filter: str = Field(
+        filter: str | None = Field(
+            default=None,
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://spotlight/vulnerabilities/fql-guide` resource when building this filter parameter.",
             examples={"status:'open'", "cve.severity:'HIGH'"},
         ),
-        limit: Optional[int] = Field(
-            default=100,
+        limit: int = Field(
+            default=10,
             ge=1,
             le=5000,
-            description="Maximum number of results to return. (Max: 5000, Default: 100)",
+            description="Maximum number of results to return. (Max: 5000, Default: 10)",
         ),
-        offset: Optional[int] = Field(
-            default=0,
-            ge=0,
+        offset: int | None = Field(
+            default=None,
             description="Starting index of overall result set from which to return results.",
         ),
-        sort: Optional[str] = Field(
+        sort: str | None = Field(
             default=None,
             description=dedent("""
                 Sort vulnerabilities using FQL syntax.
@@ -92,11 +92,11 @@ class SpotlightModule(BaseModule):
                 "closed_timestamp|asc",
             },
         ),
-        after: Optional[str] = Field(
+        after: str | None = Field(
             default=None,
             description="A pagination token used with the limit parameter to manage pagination of results. On your first request, don't provide an after token. On subsequent requests, provide the after token from the previous response to continue from that place in the results.",
         ),
-        facet: Optional[str] = Field(
+        facet: str | None = Field(
             default=None,
             description=dedent("""
                 Important: Use only one value!

@@ -6,7 +6,7 @@ Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets.
 """
 
 from textwrap import dedent
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -83,23 +83,22 @@ class CloudModule(BaseModule):
 
     def search_kubernetes_containers(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/kubernetes-containers/fql-guide` resource when building this filter parameter.",
             examples={"cloud:'AWS'", "cluster_name:'prod'"},
         ),
-        limit: Optional[int] = Field(
+        limit: int = Field(
             default=10,
             ge=1,
             le=9999,
-            description="The maximum number of containers to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results.",
+            description="The maximum number of containers to return in this response (default: 10; max: 9999). Use with the offset parameter to manage pagination of results.",
         ),
-        offset: Optional[int] = Field(
-            default=0,
-            ge=0,
+        offset: int | None = Field(
+            default=None,
             description="Starting index of overall result set from which to return containers.",
         ),
-        sort: Optional[str] = Field(
+        sort: str | None = Field(
             default=None,
             description=dedent(
                 """
@@ -160,7 +159,7 @@ class CloudModule(BaseModule):
 
     def count_kubernetes_containers(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/kubernetes-containers/fql-guide` resource when building this filter parameter.",
             examples={"cloud:'Azure'", "container_name:'service'"},
@@ -198,23 +197,22 @@ class CloudModule(BaseModule):
 
     def search_images_vulnerabilities(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/images-vulnerabilities/fql-guide` resource when building this filter parameter.",
             examples={"cve_id:*'*2025*'", "cvss_score:>5"},
         ),
-        limit: Optional[int] = Field(
+        limit: int = Field(
             default=10,
             ge=1,
             le=9999,
-            description="The maximum number of containers to return in this response (default: 100; max: 9999). Use with the offset parameter to manage pagination of results.",
+            description="The maximum number of containers to return in this response (default: 10; max: 9999). Use with the offset parameter to manage pagination of results.",
         ),
-        offset: Optional[int] = Field(
-            default=0,
-            ge=0,
+        offset: int | None = Field(
+            default=None,
             description="Starting index of overall result set from which to return containers.",
         ),
-        sort: Optional[str] = Field(
+        sort: str | None = Field(
             default=None,
             description=dedent(
                 """

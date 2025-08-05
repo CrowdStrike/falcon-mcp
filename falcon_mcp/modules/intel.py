@@ -4,7 +4,7 @@ Intel module for Falcon MCP Server
 This module provides tools for accessing and analyzing CrowdStrike Falcon intelligence data.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -93,29 +93,28 @@ class IntelModule(BaseModule):
 
     def query_actor_entities(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/actors/fql-guide` resource when building this filter parameter.",
         ),
-        limit: Optional[int] = Field(
-            default=100,
+        limit: int = Field(
+            default=10,
             ge=1,
             le=5000,
             description="Maximum number of records to return. Max 5000",
             examples={10, 20, 100},
         ),
-        offset: Optional[int] = Field(
-            default=0,
-            ge=0,
+        offset: int | None = Field(
+            default=None,
             description="Starting index of overall result set from which to return ids.",
-            examples={0, 10},
+            examples=[0, 10],
         ),
-        sort: Optional[str] = Field(
+        sort: str | None = Field(
             default=None,
             description="The property to sort by. Example: 'created_date|desc'",
             examples={"created_date|desc"},
         ),
-        q: Optional[str] = Field(
+        q: str | None = Field(
             default=None,
             description="Free text search across all indexed fields.",
             examples={"BEAR"},
@@ -162,32 +161,33 @@ class IntelModule(BaseModule):
 
     def query_indicator_entities(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/indicators/fql-guide` resource when building this filter parameter.",
         ),
-        limit: Optional[int] = Field(
-            default=100,
+        limit: int = Field(
+            default=10,
             ge=1,
             le=5000,
             description="Maximum number of records to return. (Max: 5000)",
         ),
-        offset: Optional[int] = Field(
-            default=0,
-            ge=0,
+        offset: int | None = Field(
+            default=None,
             description="Starting index of overall result set from which to return ids.",
         ),
-        sort: Optional[str] = Field(
-            default=None, description="The property to sort by. (Ex: created_date|desc)"
+        sort: str | None = Field(
+            default=None,
+            description="The property to sort by. (Ex: created_date|desc)",
         ),
-        q: Optional[str] = Field(
-            default=None, description="Free text search across all indexed fields."
+        q: str | None = Field(
+            default=None,
+            description="Free text search across all indexed fields.",
         ),
-        include_deleted: Optional[bool] = Field(
+        include_deleted: bool = Field(
             default=False,
             description="Flag indicating if both published and deleted indicators should be returned.",
         ),
-        include_relations: Optional[bool] = Field(
+        include_relations: bool = Field(
             default=False,
             description="Flag indicating if related indicators should be returned.",
         ),
@@ -235,26 +235,27 @@ class IntelModule(BaseModule):
 
     def query_report_entities(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/reports/fql-guide` resource when building this filter parameter.",
         ),
         limit: int = Field(
-            default=100,
+            default=10,
             ge=1,
             le=5000,
             description="Maximum number of records to return. (Max: 5000)",
         ),
-        offset: int = Field(
-            default=0,
-            ge=0,
+        offset: int | None = Field(
+            default=None,
             description="Starting index of overall result set from which to return ids.",
         ),
-        sort: Optional[str] = Field(
-            default=None, description="The property to sort by. (Ex: created_date|desc)"
+        sort: str | None = Field(
+            default=None,
+            description="The property to sort by. (Ex: created_date|desc)",
         ),
-        q: Optional[str] = Field(
-            default=None, description="Free text search across all indexed fields."
+        q: str | None = Field(
+            default=None,
+            description="Free text search across all indexed fields.",
         ),
     ) -> List[Dict[str, Any]]:
         """Access CrowdStrike intelligence publications and threat reports.
