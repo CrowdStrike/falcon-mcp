@@ -162,7 +162,7 @@ class FalconMCPServer:
     def list_enabled_modules(self) -> Dict[str, List[str]]:
         """Lists enabled modules in the falcon-mcp server.
 
-        These modules are controlled by the --modules flag when starting the server.
+        These modules are determined by the --modules flag when starting the server.
         If no modules are specified, all available modules are enabled.
 
         Returns:
