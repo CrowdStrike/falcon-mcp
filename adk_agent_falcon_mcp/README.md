@@ -129,6 +129,10 @@ You have two dinstinct paths to deployment
 1. Deploy on Cloud Run
 2. Deploy on Vertex AI Agent Engine (and access through Agentspace after registration)
 
+<br>
+
+> 🪧 **NOTE:**  
+> For all the following sections - If you are not running in Google Cloud Shell, make sure you have `gcloud` CLI [installed](https://cloud.google.com/sdk/docs/install) and you have authenticated with your username (preferably as owner of the project) on your local computer.
 
 ### Deploying the agent to Cloud Run
 
@@ -141,7 +145,7 @@ cd adk_agent_falcon_mcp/
 
 In the sample output below, note the lines market with ⬅️
 
-1. You will have to provide input for `Allow unauthenticated invocations?`
+1. You will have to provide input for `Allow unauthenticated invocations?` (say N)
 2. Once deployment is completed you get a URL to access your agent.
 
 
@@ -174,7 +178,7 @@ Copying agent source code complete.
 Creating Dockerfile...
 Creating Dockerfile complete: /tmp/cloud_run_deploy_src/20250801_071151/Dockerfile
 Deploying to Cloud Run...
-Allow unauthenticated invocations to [falcon-agent-service] (y/N)?  y ⬅️
+Allow unauthenticated invocations to [falcon-agent-service] (y/N)?  N ⬅️
 
 Building using Dockerfile and deploying container to Cloud Run service [falcon-agent-service] in project [crowdstrikexxxxxxx] region [us-central1]
 ⠛ Building and deploying new service... Uploading sources.                                                                                                                                                                        
@@ -201,6 +205,44 @@ INFO: Restoring .env file from backup: './falcon_agent/.env.bak'.
 
 > ⚠️ **CAUTION:**  
 > By default the cloud run service (which is your agent with the mcp server) is available without any authentication. Please check the [Securing access, Validating, Optimizing performance and costs](#securing-access-validating-optimizing-performance-and-costs) section to control the access to this service.
+
+> ⚠️ **CAUTION:**  
+> By default the service has IAM authentication enabled for it. Please follow steps below to enable access to yourself and your team.
+
+
+
+1. Cloud Run - Services - select `falcon-agent-service`, by clicking the checkbox next to it.
+2. At the top click `permissions`, a pane `Permissions for falcon-agent-service` should open on the right hand side.
+3. Click `Add principal`
+4. Add the users you want to provide access to and provide them `Cloud Run Invoker` role.
+5. Wait for some time.
+
+**Accessing the service**
+
+1. Ask your users to run the following command (replace project id and region with the project id & region in which you have deployed the service)
+
+```bash
+gcloud run services proxy falcon-agent-service --project PROJECT-ID --region YOUR-REGION
+```
+
+<details>
+
+<summary><b>Sample Output Accessing Cloud Run service through local proxy</b></summary>
+
+
+```bash
+# You might be asked to install a component, for the proxy to work locally
+This command requires the `cloud-run-proxy` component to be installed. Would
+ you like to install the `cloud-run-proxy` component to continue command 
+execution? (Y/n)?  Y
+
+Proxying to Cloud Run service [falcon-agent-service] in project [crowdstrike-xxx-yyy] region [us-central1]
+http://127.0.0.1:8080 proxies to https://falcon-agent-service-abc1234-uc.a.run.app
+
+```
+</details>
+
+2. Now they can access the Cloud Run Service locally on `http://localhost:8080`
 
 ### Deploying to Vertex AI Agent Engine and registering on Agentspace
 
@@ -407,7 +449,7 @@ https://discoveryengine.googleapis.com/v1alpha/projects/$PROJECT_ID/locations/gl
 
 #### Securing access
   1. For local runs make sure that you are not using a shared machine
-  2. For Cloud Run deployment you can use - [Control access on an individual service or job](https://cloud.google.com/run/docs/securing/managing-access#control-service-or-job-access)
+  2. For Cloud Run deployment you can use - [Control access on an individual service or job](https://cloud.google.com/run/docs/securing/managing-access#control-service-or-job-access) - that is the default behavior for this deployment.
   3. For agent running in Agentspace - you can provide access (Predefined role - `Discovery Engine User`) selectively by navigating to Agentspace-Apps-Your App -Integration-Grant Permissions.
 
 #### Evaluating
