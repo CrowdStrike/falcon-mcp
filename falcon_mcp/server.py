@@ -110,19 +110,16 @@ class FalconMCPServer:
         self.server.add_tool(
             self.falcon_check_connectivity,
             name="falcon_check_connectivity",
-            description="Check connectivity to the Falcon API.",
         )
 
         self.server.add_tool(
             self.list_enabled_modules,
             name="falcon_list_enabled_modules",
-            description="Lists enabled modules in the falcon-mcp server.",
         )
 
         self.server.add_tool(
             self.list_modules,
             name="falcon_list_modules",
-            description="Lists all available modules in the falcon-mcp server.",
         )
 
         tool_count = 3  # the tools added above
@@ -144,9 +141,7 @@ class FalconMCPServer:
         # Register resources from modules
         for module in self.modules.values():
             # Check if the module has a register_resources method
-            if hasattr(module, "register_resources") and callable(
-                module.register_resources
-            ):
+            if hasattr(module, "register_resources") and callable(module.register_resources):
                 module.register_resources(self.server)
 
         return sum(len(getattr(m, "resources", [])) for m in self.modules.values())
