@@ -203,12 +203,8 @@ INFO: Restoring .env file from backup: './falcon_agent/.env.bak'.
 
 <br>
 
-> ⚠️ **CAUTION:**  
-> By default the cloud run service (which is your agent with the mcp server) is available without any authentication. Please check the [Securing access, Validating, Optimizing performance and costs](#securing-access-validating-optimizing-performance-and-costs) section to control the access to this service.
-
-> ⚠️ **CAUTION:**  
+> 🪧 **NOTE:**  
 > By default the service has IAM authentication enabled for it. Please follow steps below to enable access to yourself and your team.
-
 
 
 1. Cloud Run - Services - select `falcon-agent-service`, by clicking the checkbox next to it.
