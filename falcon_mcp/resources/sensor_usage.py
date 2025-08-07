@@ -30,10 +30,10 @@ SEARCH_SENSOR_USAGE_FQL_FILTERS = [
     ),
     (
         "period",
-        "Integer",
+        "String",
         "Yes",
         """
-        The number of days of data to return.
+        The number of days of data to return. Even though this looks like a number, make sure to always use quotes for period for example '3' instead of 3.
 
         Minimum: 1
         Maximum: 395
@@ -75,7 +75,7 @@ property_name:[operator]'value'
 
 === DATA TYPES & SYNTAX ===
 • Dates: 'YYYY-MM-DD' (ISO 8601 format)
-• Integers: '30' (with quotes)
+• Integers: 30 (without quotes)
 • Strings: 'value' or ['exact_value'] for exact match
 
 === COMBINING CONDITIONS ===
@@ -91,11 +91,11 @@ property_name:[operator]'value'
 
 **Basic Equality:**
 • event_date:'2024-06-11'
-• period:30
+• period:'30'
 • selected_cids:'cid_1,cid_2,cid_3'
 
 **Combined Conditions:**
-• event_date:'2024-06-11'+period:30
+• event_date:'2024-06-11'+period:'30'
 • event_date:'2024-06-11'+selected_cids:'cid_1,cid_2'
 
 **Date Comparisons:**
@@ -103,8 +103,8 @@ property_name:[operator]'value'
 • event_date:<='2024-06-11'
 
 **Period Comparisons:**
-• period:>=14
-• period:<=60
+• period:>='14'
+• period:<='60'
 
 === 💡 SYNTAX RULES ===
 • Use single quotes around values: 'value'
