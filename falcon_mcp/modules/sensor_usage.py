@@ -4,7 +4,7 @@ Sensor Usage module for Falcon MCP Server
 This module provides tools for accessing CrowdStrike Falcon sensor usage data.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
