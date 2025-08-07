@@ -63,10 +63,8 @@ class SensorUsageModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for sensor usage data in your CrowdStrike environment.
 
-        IMPORTANT: You must use the `falcon://sensor-usage/weekly/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_sensor_usage` tool.
-
-        Returns:
-            List of sensor usage details
+        IMPORTANT: You must use the `falcon://sensor-usage/weekly/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_sensor_usage` tool.
         """
         # Prepare parameters for GetSensorUsageWeekly
         params = prepare_api_parameters(
