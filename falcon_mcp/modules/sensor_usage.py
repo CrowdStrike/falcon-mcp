@@ -55,7 +55,7 @@ class SensorUsageModule(BaseModule):
 
     def search_sensor_usage(
         self,
-        filter: Optional[str] = Field(
+        filter: str | None = Field(
             default=None,
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://sensor-usage/weekly/fql-guide` resource when building this filter parameter.",
             examples={"event_date:'2024-06-11'", "period:'30'"},
