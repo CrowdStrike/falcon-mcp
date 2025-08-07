@@ -147,11 +147,7 @@ class FalconMCPServer:
         return sum(len(getattr(m, "resources", [])) for m in self.modules.values())
 
     def falcon_check_connectivity(self) -> Dict[str, bool]:
-        """Check connectivity to the Falcon API.
-
-        Returns:
-            Dict[str, bool]: Connectivity status
-        """
+        """Check connectivity to the Falcon API."""
         return {"connected": self.falcon_client.is_authenticated()}
 
     def list_enabled_modules(self) -> Dict[str, List[str]]:
@@ -159,18 +155,11 @@ class FalconMCPServer:
 
         These modules are determined by the --modules flag when starting the server.
         If no modules are specified, all available modules are enabled.
-
-        Returns:
-            Dict[str, List[str]]: Enabled modules
         """
         return {"modules": list(self.modules.keys())}
 
     def list_modules(self) -> Dict[str, List[str]]:
-        """Lists all available modules in the falcon-mcp server.
-
-        Returns:
-            Dict[str, List[str]]: Available modules
-        """
+        """Lists all available modules in the falcon-mcp server."""
         return {"modules": registry.get_module_names()}
 
     def run(self, transport: str = "stdio", host: str = "127.0.0.1", port: int = 8000):

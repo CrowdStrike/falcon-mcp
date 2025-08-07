@@ -122,10 +122,8 @@ class IntelModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Research threat actors and adversary groups tracked by CrowdStrike intelligence.
 
-        IMPORTANT: You must use the `falcon://intel/actors/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_actors` tool.
-
-        Returns:
-            Information about actors that match the provided filters.
+        IMPORTANT: You must use the `falcon://intel/actors/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_actors` tool.
         """
         # Prepare parameters
         params = prepare_api_parameters(
@@ -195,10 +193,8 @@ class IntelModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for threat indicators and indicators of compromise (IOCs) from CrowdStrike intelligence.
 
-        IMPORTANT: You must use the `falcon://intel/indicators/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_indicators` tool.
-
-        Returns:
-            List of indicators that match the provided filters.
+        IMPORTANT: You must use the `falcon://intel/indicators/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_indicators` tool.
         """
         # Prepare parameters
         params = prepare_api_parameters(
@@ -266,11 +262,8 @@ class IntelModule(BaseModule):
         Use this when you need to find CrowdStrike intelligence publications matching specific conditions.
         For guidance on building FQL filters, use the `falcon://intel/reports/fql-guide` resource.
 
-        IMPORTANT: You must use the `falcon://intel/reports/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_reports` tool.
-
-        Returns:
-            List of intelligence reports with comprehensive information including content,
-            metadata, threat classifications, and associated indicators
+        IMPORTANT: You must use the `falcon://intel/reports/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_reports` tool.
         """
         # Prepare parameters
         params = prepare_api_parameters(

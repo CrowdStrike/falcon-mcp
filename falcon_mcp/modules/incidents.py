@@ -124,10 +124,8 @@ class IncidentsModule(BaseModule):
     ) -> Dict[str, Any]:
         """View calculated CrowdScores and security posture metrics for your environment.
 
-        IMPORTANT: You must use the `falcon://incidents/crowd-score/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_show_crowd_score` tool.
-
-        Returns:
-            Tool returns the CrowdScore entity data.
+        IMPORTANT: You must use the `falcon://incidents/crowd-score/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_show_crowd_score` tool.
         """
         # Prepare parameters
         params = prepare_api_parameters(
@@ -204,10 +202,8 @@ class IncidentsModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Find and analyze security incidents to understand coordinated activity in your environment.
 
-        IMPORTANT: You must use the `falcon://incidents/search/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_incidents` tool.
-
-        Returns:
-            Tool returns CrowdStrike incidents.
+        IMPORTANT: You must use the `falcon://incidents/search/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_incidents` tool.
         """
         incident_ids = self._base_query(
             operation="QueryIncidents",
@@ -235,10 +231,6 @@ class IncidentsModule(BaseModule):
         This tool returns comprehensive incident details for one or more incident IDs.
         Use this when you already have specific incident IDs and need their full details.
         For searching/discovering incidents, use the `falcon_search_incidents` tool instead.
-
-        Returns:
-            List of incident details with comprehensive information including hosts,
-            scores, behaviors, timeline, and associated metadata
         """
         incidents = self._base_get_by_ids(
             operation="GetIncidents",
@@ -276,10 +268,8 @@ class IncidentsModule(BaseModule):
         Use this when you need to find behaviors matching certain criteria rather than retrieving specific behaviors by ID.
         For retrieving details of known behavior IDs, use falcon_get_behavior_details instead.
 
-        IMPORTANT: You must use the `falcon://incidents/behaviors/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_behaviors` tool.
-
-        Returns:
-            Tool returns CrowdStrike behaviors.
+        IMPORTANT: You must use the `falcon://incidents/behaviors/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_behaviors` tool.
         """
         behavior_ids = self._base_query(
             operation="QueryBehaviors",
@@ -306,10 +296,6 @@ class IncidentsModule(BaseModule):
 
         Use this when you already know the specific behavior ID(s) and need to retrieve their details.
         For searching behaviors based on criteria, use the `falcon_search_behaviors` tool instead.
-
-        Returns:
-            List of behavior details with comprehensive information including techniques,
-            tactics, severity, confidence levels, and associated metadata
         """
         behaviors = self._base_get_by_ids(
             operation="GetBehaviors",

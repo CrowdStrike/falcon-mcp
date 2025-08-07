@@ -128,9 +128,6 @@ class CloudModule(BaseModule):
 
         IMPORTANT: You must use the `falcon://cloud/kubernetes-containers/fql-guide` resource when you need to use the `filter` parameter.
         This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_kubernetes_containers` tool.
-
-        Returns:
-            List of kubernetes containers
         """
 
         # Prepare parameters
@@ -169,9 +166,6 @@ class CloudModule(BaseModule):
 
         IMPORTANT: You must use the `falcon://cloud/kubernetes-containers/fql-guide` resource when you need to use the `filter` parameter.
         This resource contains the guide on how to build the FQL `filter` parameter for `falcon_count_kubernetes_containers` tool.
-
-        Returns:
-            List with a single count result
         """
 
         # Prepare parameters
@@ -236,9 +230,6 @@ class CloudModule(BaseModule):
 
         IMPORTANT: You must use the `falcon://cloud/images-vulnerabilities/fql-guide` resource when you need to use the `filter` parameter.
         This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_images_vulnerabilities` tool.
-
-        Returns:
-            List of images vulnerabilities
         """
 
         # Prepare parameters

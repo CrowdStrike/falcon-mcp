@@ -107,10 +107,8 @@ class DetectionsModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Find and analyze detections to understand malicious activity in your environment.
 
-        IMPORTANT: You must use the `falcon://detections/search/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_detections` tool.
-
-        Returns:
-            List of detections with details
+        IMPORTANT: You must use the `falcon://detections/search/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_detections` tool.
         """
         # Prepare parameters
         params = prepare_api_parameters(
@@ -177,9 +175,6 @@ class DetectionsModule(BaseModule):
 
         Use this when you already have specific detection IDs and need their full details.
         For searching/discovering detections, use the `falcon_search_detections` tool instead.
-
-        Returns:
-            List of detection(s) with details
         """
         logger.debug("Getting detection details for ID(s): %s", ids)
 

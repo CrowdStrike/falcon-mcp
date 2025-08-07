@@ -101,10 +101,8 @@ class HostsModule(BaseModule):
     ) -> List[Dict[str, Any]]:
         """Search for hosts in your CrowdStrike environment.
 
-        IMPORTANT: You must use the `falcon://hosts/search/fql-guide` resource when you need to use the `filter` parameter. This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_hosts` tool.
-
-        Returns:
-            List of host details
+        IMPORTANT: You must use the `falcon://hosts/search/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_hosts` tool.
         """
         # Prepare parameters for QueryDevicesByFilter
         params = prepare_api_parameters(
@@ -166,10 +164,6 @@ class HostsModule(BaseModule):
         This tool returns comprehensive host details for one or more device IDs.
         Use this when you already have specific device IDs and need their full details.
         For searching/discovering hosts, use the `falcon_search_hosts` tool instead.
-
-        Returns:
-            List of host details with comprehensive information including system specs,
-            agent information, network details, and security status
         """
         logger.debug("Getting host details for IDs: %s", ids)
 
