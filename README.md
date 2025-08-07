@@ -70,8 +70,8 @@ Before using the Falcon MCP Server, you need to create API credentials in your C
 
 The Falcon MCP Server supports different modules, each requiring specific API scopes:
 
-| Module                  | Required API Scopes                                                                                                                                            | Purpose                                                                              |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Module | Required API Scopes | Purpose |
+|--------|-------------------|---------|
 | **Core**                | _No additional scopes_                                                                                                                                         | Basic connectivity and system information                                            |
 | **Detections**          | `Alerts:read`                                                                                                                                                  | Find and analyze detections to understand malicious activity                         |
 | **Incidents**           | `Incidents:read`                                                                                                                                               | Analyze security incidents and coordinated activities                                |
@@ -85,7 +85,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 ## Available Modules, Tools & Resources
 
 > [!IMPORTANT]
-> ⚠️ **Important Note on FQL Guide Resources**: Several modules include FQL (Falcon Query Language) guide resources that provide comprehensive query documentation and examples. While these resources are designed to assist AI assistants and users with query construction, **FQL has nuanced syntax requirements and field-specific behaviors** that may not be immediately apparent. AI-generated FQL filters should be **tested and validated** before use in production environments. We recommend starting with simple queries and gradually building complexity while verifying results in a test environment first.
+> **🚧 Public Preview**: This project is currently in public preview and under active development. Features and functionality may change before the stable 1.0 release. While we encourage exploration and testing, please avoid production deployments. We welcome your feedback through [GitHub Issues](https://github.com/crowdstrike/falcon-mcp/issues) to help shape the final release.
 
 **About Tools & Resources**: This server provides both tools (actions you can perform) and resources (documentation and context). Tools execute operations like searching for detections or analyzing threats, while resources provide comprehensive documentation like FQL query guides that AI assistants can reference for context without requiring tool calls.
 
