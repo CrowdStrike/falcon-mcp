@@ -26,6 +26,8 @@ class FalconClient:
         base_url: Optional[str] = None,
         debug: bool = False,
         user_agent_comment: Optional[str] = None,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
     ):
         """Initialize the Falcon client.
 
@@ -35,8 +37,8 @@ class FalconClient:
             user_agent_comment: Additional information to include in the User-Agent comment section
         """
         # Get credentials from environment variables
-        self.client_id = os.environ.get("FALCON_CLIENT_ID")
-        self.client_secret = os.environ.get("FALCON_CLIENT_SECRET")
+        self.client_id = client_id or os.environ.get("FALCON_CLIENT_ID")
+        self.client_secret = client_secret or os.environ.get("FALCON_CLIENT_SECRET")
         self.base_url = base_url or os.environ.get(
             "FALCON_BASE_URL", "https://api.crowdstrike.com"
         )
