@@ -35,6 +35,8 @@ class FalconClient:
             base_url: Falcon API base URL (defaults to FALCON_BASE_URL env var)
             debug: Enable debug logging
             user_agent_comment: Additional information to include in the User-Agent comment section
+            client_id: Falcon API Client ID
+            client_secret: Falcon API Client Secret
         """
         # Get credentials from environment variables
         self.client_id = client_id or os.environ.get("FALCON_CLIENT_ID")
