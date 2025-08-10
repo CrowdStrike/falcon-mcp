@@ -189,6 +189,7 @@ class IdpModule(BaseModule):
                 investigation_type, resolved_entity_ids, investigation_params
             )
             if "error" in result:
+                logger.error(f"Error in {investigation_type} investigation: {result['error']}")
                 return self._create_error_response(
                     f"Investigation failed during {investigation_type}: {result['error']}",
                     len(resolved_entity_ids),
@@ -363,6 +364,16 @@ class IdpModule(BaseModule):
                             secondaryDisplayName
                         }
                     }
+                    ... on GeoLocationAssociation {
+                        geoLocation {
+                            country
+                            countryCode
+                            city
+                            cityCode
+                            latitude
+                            longitude
+                        }
+                    }
                 }
             """)
 
@@ -467,6 +478,18 @@ class IdpModule(BaseModule):
                             entityId
                             primaryDisplayName
                         }}
+                        geoLocation {{
+                            country
+                            countryCode
+                            city
+                            cityCode
+                            latitude
+                            longitude
+                        }}
+                        locationAssociatedWithUser
+                        userDisplayName
+                        endpointDisplayName
+                        ipAddress
                     }}
                     ... on TimelineAuthenticationEvent {{
                         sourceEntity {{
@@ -477,6 +500,18 @@ class IdpModule(BaseModule):
                             entityId
                             primaryDisplayName
                         }}
+                        geoLocation {{
+                            country
+                            countryCode
+                            city
+                            cityCode
+                            latitude
+                            longitude
+                        }}
+                        locationAssociatedWithUser
+                        userDisplayName
+                        endpointDisplayName
+                        ipAddress
                     }}
                     ... on TimelineAlertEvent {{
                         sourceEntity {{
@@ -493,6 +528,18 @@ class IdpModule(BaseModule):
                             entityId
                             primaryDisplayName
                         }}
+                        geoLocation {{
+                            country
+                            countryCode
+                            city
+                            cityCode
+                            latitude
+                            longitude
+                        }}
+                        locationAssociatedWithUser
+                        userDisplayName
+                        endpointDisplayName
+                        ipAddress
                     }}
                     ... on TimelineFailedAuthenticationEvent {{
                         sourceEntity {{
@@ -503,12 +550,124 @@ class IdpModule(BaseModule):
                             entityId
                             primaryDisplayName
                         }}
+                        geoLocation {{
+                            country
+                            countryCode
+                            city
+                            cityCode
+                            latitude
+                            longitude
+                        }}
+                        locationAssociatedWithUser
+                        userDisplayName
+                        endpointDisplayName
+                        ipAddress
+                    }}
+                    ... on TimelineSuccessfulAuthenticationEvent {{
+                        sourceEntity {{
+                            entityId
+                            primaryDisplayName
+                        }}
+                        targetEntity {{
+                            entityId
+                            primaryDisplayName
+                        }}
+                        geoLocation {{
+                            country
+                            countryCode
+                            city
+                            cityCode
+                            latitude
+                            longitude
+                        }}
+                        locationAssociatedWithUser
+                        userDisplayName
+                        endpointDisplayName
+                        ipAddress
+                    }}
+                    ... on TimelineServiceAccessEvent {{
+                        sourceEntity {{
+                            entityId
+                            primaryDisplayName
+                        }}
+                        targetEntity {{
+                            entityId
+                            primaryDisplayName
+                        }}
+                        geoLocation {{
+                            country
+                            countryCode
+                            city
+                            cityCode
+                            latitude
+                            longitude
+                        }}
+                        locationAssociatedWithUser
+                        userDisplayName
+                        endpointDisplayName
+                        ipAddress
                     }}
                     ... on TimelineFileOperationEvent {{
                         targetEntity {{
                             entityId
                             primaryDisplayName
                         }}
+                        geoLocation {{
+                            country
+                            countryCode
+                            city
+                            cityCode
+                            latitude
+                            longitude
+                        }}
+                        locationAssociatedWithUser
+                        userDisplayName
+                        endpointDisplayName
+                        ipAddress
+                    }}
+                    ... on TimelineLdapSearchEvent {{
+                        sourceEntity {{
+                            entityId
+                            primaryDisplayName
+                        }}
+                        targetEntity {{
+                            entityId
+                            primaryDisplayName
+                        }}
+                        geoLocation {{
+                            country
+                            countryCode
+                            city
+                            cityCode
+                            latitude
+                            longitude
+                        }}
+                        locationAssociatedWithUser
+                        userDisplayName
+                        endpointDisplayName
+                        ipAddress
+                    }}
+                    ... on TimelineRemoteCodeExecutionEvent {{
+                        sourceEntity {{
+                            entityId
+                            primaryDisplayName
+                        }}
+                        targetEntity {{
+                            entityId
+                            primaryDisplayName
+                        }}
+                        geoLocation {{
+                            country
+                            countryCode
+                            city
+                            cityCode
+                            latitude
+                            longitude
+                        }}
+                        locationAssociatedWithUser
+                        userDisplayName
+                        endpointDisplayName
+                        ipAddress
                     }}
                     ... on TimelineConnectorConfigurationEvent {{
                         category
@@ -584,6 +743,16 @@ class IdpModule(BaseModule):
                             type
                             {risk_fields}
                             {nested_associations}
+                        }}
+                    }}
+                    ... on GeoLocationAssociation {{
+                        geoLocation {{
+                            country
+                            countryCode
+                            city
+                            cityCode
+                            latitude
+                            longitude
                         }}
                     }}
                 }}
