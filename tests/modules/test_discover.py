@@ -89,7 +89,6 @@ class TestDiscoverModule(unittest.TestCase):
             "filter": "name:'Chrome'",
             "facet": "host_info",
             "limit": 50,
-            "after": "token123",
             "sort": "name.asc",
         }
         mock_response = MagicMock()
@@ -101,7 +100,6 @@ class TestDiscoverModule(unittest.TestCase):
             filter="name:'Chrome'",
             facet="host_info",
             limit=50,
-            after="token123",
             sort="name.asc",
         )
 
@@ -114,7 +112,6 @@ class TestDiscoverModule(unittest.TestCase):
                 "filter": "name:'Chrome'",
                 "facet": "host_info",
                 "limit": 50,
-                "after": "token123",
                 "sort": "name.asc",
             },
         )
