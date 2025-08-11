@@ -25,6 +25,7 @@
   - [Spotlight Module](#spotlight-module)
   - [Cloud Security Module](#cloud-security-module)
   - [Sensor Usage Module](#sensor-usage-module)
+  - [Serverless Module](#serverless-module)
   - [Identity Protection Module](#identity-protection-module)
 - [Installation \& Setup](#installation--setup)
   - [Prerequisites](#prerequisites)
@@ -80,6 +81,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Hosts**               | `Hosts:read`                                                                                                                                                   | Manage and query host/device information                                             |
 | **Cloud Security**      | `Falcon Container Image:read`                                                                                                                                  | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
 | **Sensor Usage**        | `Sensor Usage:read`                                                                                                                                            | Access and analyze sensor usage data                                                 |
+| **Serverless**          | `Falcon Container Image:read`                                                                                                                                  | Search for vulnerabilities in serverless functions across cloud service providers    |
 | **Spotlight**           | `Vulnerabilities:read`                                                                                                                                         | Manage and analyze vulnerability data and security assessments                       |
 | **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read` <br> `Identity Protection Assessment:read` | Comprehensive entity investigation and identity protection analysis                  |
 
@@ -219,6 +221,20 @@ Provides tools for accessing and analyzing CrowdStrike Falcon sensor usage data:
 - `falcon://sensor-usage/weekly/fql-guide`: Comprehensive FQL documentation and examples for sensor usage searches
 
 **Use Cases**: Sensor deployment monitoring, license utilization analysis, sensor health tracking
+
+### Serverless Module
+
+**API Scopes Required**: `Falcon Container Image:read`
+
+Provides tools for accessing and managing CrowdStrike Falcon Serverless Vulnerabilities:
+
+- `falcon_search_serverless_vulnerabilities`: Search for vulnerabilities in your serverless functions across all cloud service providers
+
+**Resources**:
+
+- `falcon://serverless/vulnerabilities/fql-guide`: Comprehensive FQL documentation and examples for serverless vulnerabilities searches
+
+**Use Cases**: Serverless security assessment, vulnerability management, cloud security monitoring
 
 ### Identity Protection Module
 

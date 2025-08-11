@@ -45,6 +45,8 @@ API_SCOPE_REQUIREMENTS = {
     ],
     # Sensor Usage operations
     "GetSensorUsageWeekly": ["Sensor Usage:read"],
+    # Serverless operations
+    "GetCombinedVulnerabilitiesSARIF": ["Falcon Container Image:read"],
     # Add more mappings as needed
 }
 
