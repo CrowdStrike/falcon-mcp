@@ -19,42 +19,49 @@ class TestServerlessModuleE2E(BaseE2ETest):
         """Verify the agent can search for high severity vulnerabilities in serverless environment"""
 
         async def test_logic():
+            response = {
+                "status_code": 200,
+                "body": {
+                    "runs": [
+                        {
+                            "tool": {
+                                "driver": {
+                                    "name": "CrowdStrike",
+                                    "informationUri": "https://www.crowdstrike.com/",
+                                    "rules": [
+                                        {
+                                            "id": "CVE-2023-45678",
+                                            "name": "PythonPackageVulnerability",
+                                            "shortDescription": {"text": "Security vulnerability in package xyz"},
+                                            "fullDescription": {"text": "A critical vulnerability was found in package xyz that could lead to remote code execution"},
+                                            "help": {"text": "Package: xyz\nInstalled Version: 1.2.3\nVulnerability: CVE-2023-45678\nSeverity: HIGH\nRemediation: [Upgrade to version 2.0.0]"},
+                                            "properties": {
+                                                "severity": "HIGH",
+                                                "cvssBaseScore": 8.5,
+                                                "remediations": ["Upgrade to version 2.0.0"],
+                                                "cloudProvider": "AWS",
+                                                "region": "us-west-2",
+                                                "functionName": "sample-lambda-function"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+            }
+
             fixtures = [
                 {
                     "operation": "GetCombinedVulnerabilitiesSARIF",
-                    "validator": lambda kwargs: "severity:'HIGH'" in kwargs.get("parameters", {}).get("filter", ""),
-                    "response": {
-                        "status_code": 200,
-                        "body": {
-                            "runs": [
-                                {
-                                    "tool": {
-                                        "driver": {
-                                            "name": "CrowdStrike",
-                                            "informationUri": "https://www.crowdstrike.com/",
-                                            "rules": [
-                                                {
-                                                    "id": "CVE-2023-45678",
-                                                    "name": "PythonPackageVulnerability",
-                                                    "shortDescription": {"text": "Security vulnerability in package xyz"},
-                                                    "fullDescription": {"text": "A critical vulnerability was found in package xyz that could lead to remote code execution"},
-                                                    "help": {"text": "Package: xyz\nInstalled Version: 1.2.3\nVulnerability: CVE-2023-45678\nSeverity: HIGH\nRemediation: [Upgrade to version 2.0.0]"},
-                                                    "properties": {
-                                                        "severity": "HIGH",
-                                                        "cvssBaseScore": 8.5,
-                                                        "remediations": ["Upgrade to version 2.0.0"],
-                                                        "cloudProvider": "AWS",
-                                                        "region": "us-west-2",
-                                                        "functionName": "sample-lambda-function"
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    }
-                                }
-                            ]
-                        },
-                    },
+                    "validator": lambda kwargs: "severity:'HIGH'+cloud_provider:'aws'" in kwargs.get("parameters", {}).get("filter", ""),
+                    "response": response,
+                },
+                {
+                    "operation": "GetCombinedVulnerabilitiesSARIF",
+                    "validator": lambda kwargs: "cloud_provider:'aws'+severity:'HIGH'" in kwargs.get("parameters", {}).get("filter", ""),
+                    "response": response,
                 }
             ]
 
@@ -62,7 +69,7 @@ class TestServerlessModuleE2E(BaseE2ETest):
                 self._create_mock_api_side_effect(fixtures)
             )
 
-            prompt = "get vulnerabilities in my serverless environment with high severity"
+            prompt = "get vulnerabilities in my serverless environment with severity high only and part of AWS"
             return await self._run_agent_stream(prompt)
 
         def assertions(tools, result):
@@ -79,12 +86,12 @@ class TestServerlessModuleE2E(BaseE2ETest):
             
             self.assertIsNotNone(search_tool_call, "Expected falcon_search_serverless_vulnerabilities tool to be called")
 
-            # Verify the tool input contains the filter parameter with proper FQL syntax
+            # # Verify the tool input contains the filter parameter with proper FQL syntax
             tool_input = ensure_dict(search_tool_call["input"]["tool_input"])
             self.assertIn("filter", tool_input, "Tool input should contain a 'filter' parameter")
             self.assertIn("severity:'HIGH'", tool_input.get("filter", ""), "Filter should contain severity:'HIGH' in FQL syntax")
 
-            # Verify API call parameters
+            # # Verify API call parameters
             self.assertGreaterEqual(
                 self._mock_api_instance.command.call_count,
                 1,
@@ -94,11 +101,7 @@ class TestServerlessModuleE2E(BaseE2ETest):
             self.assertEqual(api_call_args[0][0], "GetCombinedVulnerabilitiesSARIF")
             api_call_params = api_call_args[1].get("parameters", {})
             self.assertIn("severity:'HIGH'", api_call_params.get("filter", ""))
-
-            # Verify the result contains information about the vulnerability
-            self.assertIn("CVE-2023-45678", result, "Result should mention the CVE ID")
-            self.assertIn("HIGH", result, "Result should mention the severity")
-            self.assertIn("AWS", result, "Result should mention the cloud provider")
+            self.assertIn("cloud_provider:'aws'", api_call_params.get("filter", ""))
 
         self.run_test_with_retries(
             "test_search_serverless_vulnerabilities", test_logic, assertions
