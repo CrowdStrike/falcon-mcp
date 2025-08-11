@@ -78,11 +78,7 @@ class DiscoverModule(BaseModule):
             default=100,
             ge=1,
             le=1000,
-            description="Maximum number of items to return: 1-1000. Default is 100. Use with the after parameter to manage pagination of results.",
-        ),
-        after: str | None = Field(
-            default=None,
-            description="Token used with the limit parameter to manage pagination of results. On your first request, don't provide an after token. On subsequent requests, provide the after token from the previous response to continue from that place in the results. Tokens expire 120 seconds after a call is made.",
+            description="Maximum number of items to return: 1-1000. Default is 100.",
         ),
         sort: str | None = Field(
             default=None,
@@ -101,7 +97,6 @@ class DiscoverModule(BaseModule):
                 "filter": filter,
                 "facet": facet,
                 "limit": limit,
-                "after": after,
                 "sort": sort,
             }
         )
