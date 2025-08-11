@@ -83,6 +83,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Sensor Usage**        | `Sensor Usage:read`                                                                                                                                            | Access and analyze sensor usage data                                                 |
 | **Serverless**          | `Falcon Container Image:read`                                                                                                                                  | Search for vulnerabilities in serverless functions across cloud service providers    |
 | **Spotlight**           | `Vulnerabilities:read`                                                                                                                                         | Manage and analyze vulnerability data and security assessments                       |
+| **Discover**            | `Assets:read`                                                                                                                                                  | Search and analyze application inventory across your environment                     |
 | **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read` <br> `Identity Protection Assessment:read` | Comprehensive entity investigation and identity protection analysis                  |
 
 ## Available Modules, Tools & Resources
@@ -188,6 +189,20 @@ Provides tools for accessing and managing CrowdStrike Spotlight vulnerabilities:
 - `falcon://spotlight/vulnerabilities/fql-guide`: Comprehensive FQL documentation and examples for vulnerability searches
 
 **Use Cases**: Vulnerability management, security assessments, compliance reporting, risk analysis, patch prioritization
+
+### Discover Module
+
+**API Scopes Required**: `Assets:read`
+
+Provides tools for accessing and managing CrowdStrike Falcon Discover applications:
+
+- `falcon_search_applications`: Search for applications in your CrowdStrike environment
+
+**Resources**:
+
+- `falcon://discover/applications/fql-guide`: Comprehensive FQL documentation and examples for application searches
+
+**Use Cases**: Application inventory management, software asset management, license compliance, vulnerability assessment
 
 ### Cloud Security Module
 

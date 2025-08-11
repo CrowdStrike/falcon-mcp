@@ -32,6 +32,8 @@ API_SCOPE_REQUIREMENTS = {
     "QueryIntelReportEntities": ["Reports (Falcon Intelligence):read"],
     # Spotlight operations
     "combinedQueryVulnerabilities": ["Vulnerabilities:read"],
+    # Discover operations
+    "combined_applications": ["Assets:read"],
     # Cloud operations
     "ReadContainerCombined": ["Falcon Container Image:read"],
     "ReadContainerCount": ["Falcon Container Image:read"],
