@@ -9,4 +9,5 @@ from .hosts import HostsModule
 from .incidents import IncidentsModule
 from .intel import IntelModule
 from .sensor_usage import SensorUsageModule
+from .serverless import ServerlessModule
 from .spotlight import SpotlightModule
