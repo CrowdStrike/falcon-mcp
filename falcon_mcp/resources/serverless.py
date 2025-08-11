@@ -68,9 +68,9 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Name of the cloud service provider hosting the serverless function.
-        Values: AWS, Azure, GCP
+        Values: aws, azure, gcp
 
-        Ex: cloud_provider:'AWS'
+        Ex: cloud_provider:'aws'
         """
     ),
     (
@@ -270,7 +270,7 @@ property_name:[operator]'value'
 • Some fields require specific capitalization (check individual field descriptions)
 
 === COMMON FILTER EXAMPLES ===
-• Filter by cloud provider: cloud_provider:'AWS'
+• Filter by cloud provider: cloud_provider:'aws'
 • High severity vulnerabilities: severity:'HIGH'
 • Recent vulnerabilities: first_seen_timestamp:>'2023-01-01'
 • Filter by specific runtime: runtime:'nodejs'

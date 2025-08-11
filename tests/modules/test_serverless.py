@@ -69,7 +69,7 @@ class TestServerlessModule(TestModules):
 
         # Call search_serverless_vulnerabilities with test parameters
         result = self.module.search_serverless_vulnerabilities(
-            filter="cloud_provider:'AWS'"
+            filter="cloud_provider:'aws'"
         )
 
         # Verify result contains expected values
@@ -107,7 +107,7 @@ class TestServerlessModule(TestModules):
 
         # Call search_serverless_vulnerabilities
         result = self.module.search_serverless_vulnerabilities(
-            filter="cloud_provider:'AWS'"
+            filter="cloud_provider:'aws'"
         )
 
         # Verify result is an empty list
@@ -162,7 +162,7 @@ class TestServerlessModule(TestModules):
 
         # Call search_serverless_vulnerabilities with all parameters
         result = self.module.search_serverless_vulnerabilities(
-            filter="cloud_provider:'AWS'",
+            filter="cloud_provider:'aws'",
             limit=5,
             offset=10,
             sort="severity",
@@ -185,7 +185,7 @@ class TestServerlessModule(TestModules):
 
         # Call search_serverless_vulnerabilities
         result = self.module.search_serverless_vulnerabilities(
-            filter="cloud_provider:'AWS'"
+            filter="cloud_provider:'aws'"
         )
 
         # Verify result is a list with one item containing error info
@@ -212,7 +212,7 @@ class TestServerlessModule(TestModules):
         with patch('falcon_mcp.modules.serverless.handle_api_response', return_value=mock_processed_response):
             # Call search_serverless_vulnerabilities
             result = self.module.search_serverless_vulnerabilities(
-                filter="cloud_provider:'AWS'"
+                filter="cloud_provider:'aws'"
             )
 
             # Verify result is an empty list
@@ -221,7 +221,7 @@ class TestServerlessModule(TestModules):
             # Verify the API was called with the correct parameters
             self.mock_client.command.assert_called_once()
             call_args = self.mock_client.command.call_args[1]
-            self.assertEqual(call_args["parameters"]["filter"], "cloud_provider:'AWS'")
+            self.assertEqual(call_args["parameters"]["filter"], "cloud_provider:'aws'")
 
 
 if __name__ == "__main__":

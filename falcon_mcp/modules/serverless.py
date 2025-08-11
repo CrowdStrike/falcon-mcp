@@ -58,7 +58,7 @@ class ServerlessModule(BaseModule):
         self,
         filter: str = Field(
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://serverless/vulnerabilities/fql-guide` resource when building this filter parameter.",
-            examples={"cloud_provider:'AWS'", "severity:'HIGH'"},
+            examples={"cloud_provider:'aws'", "severity:'HIGH'"},
         ),
         limit: int | None = Field(
             default=10,
