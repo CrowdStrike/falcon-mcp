@@ -102,9 +102,6 @@ class TestServerlessModule(TestModules):
 
     def test_search_serverless_vulnerabilities_empty_response(self):
         """Test searching serverless vulnerabilities with empty response."""
-        # Setup mock response with empty runs
-        mock_response = {"status_code": 200, "body": {"runs": []}}
-
         # Mock the method to return empty runs
         self.module.search_serverless_vulnerabilities = MagicMock(return_value=[])
 

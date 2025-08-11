@@ -4,7 +4,6 @@ Serverless Vulnerabilities module for Falcon MCP Server
 This module provides tools for accessing and managing CrowdStrike Falcon Serverless Vulnerabilities.
 """
 
-import json
 from textwrap import dedent
 from typing import Any, Dict, List
 
