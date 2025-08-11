@@ -18,7 +18,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Name of the application associated with the serverless function.
-        
+
         Ex: application_name:'my-lambda-app'
         """
     ),
@@ -28,7 +28,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Version of the application associated with the serverless function.
-        
+
         Ex: application_name_version:'1.0.0'
         """
     ),
@@ -38,7 +38,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "No",
         """
         Unique system-generated customer identifier (CID) of the account.
-        
+
         Ex: cid:'0123456789ABCDEFGHIJKLMNOPQRSTUV'
         """
     ),
@@ -48,7 +48,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Unique identifier of the cloud account where the serverless function is deployed.
-        
+
         Ex: cloud_account_id:'123456789012'
         """
     ),
@@ -58,7 +58,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Name of the cloud account where the serverless function is deployed.
-        
+
         Ex: cloud_account_name:'production-account'
         """
     ),
@@ -69,7 +69,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         """
         Name of the cloud service provider hosting the serverless function.
         Values: AWS, Azure, GCP
-        
+
         Ex: cloud_provider:'AWS'
         """
     ),
@@ -80,7 +80,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         """
         Unique identifier for a vulnerability as cataloged in the National Vulnerability Database (NVD).
         Supports multiple values and negation.
-        
+
         Ex: cve_id:['CVE-2022-1234']
         Ex: cve_id:['CVE-2022-1234','CVE-2023-5678']
         """
@@ -91,7 +91,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Common Vulnerability Scoring System (CVSS) base score of the vulnerability.
-        
+
         Ex: cvss_base_score:>7.0
         Ex: cvss_base_score:<5.0
         """
@@ -103,7 +103,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         """
         ExPRT rating assigned by CrowdStrike's predictive AI rating system.
         Values: UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL
-        
+
         Ex: exprt_rating:'HIGH'
         Ex: exprt_rating:['HIGH','CRITICAL']
         """
@@ -114,7 +114,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Date and time when this vulnerability was first detected in the serverless function.
-        
+
         Ex: first_seen_timestamp:>'2023-01-01'
         Ex: first_seen_timestamp:<'2023-12-31'
         """
@@ -125,7 +125,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Name of the serverless function where the vulnerability was detected.
-        
+
         Ex: function_name:'process-payment'
         """
     ),
@@ -135,7 +135,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Unique resource identifier of the serverless function.
-        
+
         Ex: function_resource_id:'arn:aws:lambda:us-east-1:123456789012:function:my-function'
         """
     ),
@@ -145,7 +145,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "No",
         """
         Indicates if the serverless function is supported for vulnerability scanning.
-        
+
         Ex: is_supported:true
         """
     ),
@@ -155,7 +155,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "No",
         """
         Indicates if the asset ID associated with the serverless function is valid.
-        
+
         Ex: is_valid_asset_id:true
         """
     ),
@@ -165,7 +165,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Layer in the serverless function where the vulnerability was detected.
-        
+
         Ex: layer:'runtime'
         Ex: layer:'dependency'
         """
@@ -176,7 +176,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Cloud region where the serverless function is deployed.
-        
+
         Ex: region:'us-east-1'
         Ex: region:['us-east-1','us-west-2']
         """
@@ -188,7 +188,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         """
         Runtime environment of the serverless function.
         Values: nodejs, python, java, ruby, go, dotnet
-        
+
         Ex: runtime:'nodejs'
         Ex: runtime:['python','nodejs']
         """
@@ -200,7 +200,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         """
         Severity level of the vulnerability.
         Values: UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL
-        
+
         Ex: severity:'HIGH'
         Ex: severity:['HIGH','CRITICAL']
         """
@@ -211,7 +211,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         "Yes",
         """
         Date and time when the vulnerability was last updated.
-        
+
         Ex: timestamp:>'2023-06-01'
         Ex: timestamp:<'2023-12-31'
         """
@@ -223,7 +223,7 @@ SERVERLESS_VULNERABILITIES_FQL_FILTERS = [
         """
         Type of the vulnerability.
         Values: Vulnerability, Misconfiguration, Unsupported software
-        
+
         Ex: type:'Vulnerability'
         Ex: type:!'Misconfiguration'
         """

@@ -96,7 +96,7 @@ class ServerlessModule(BaseModule):
                 • type: Type of vulnerability
 
                 Format: 'field'
-                
+
                 Examples: 'severity', 'cloud_provider', 'first_seen_timestamp'
             """).strip(),
             examples={

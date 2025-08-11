@@ -86,16 +86,16 @@ class TestServerlessModule(TestModules):
         """Test searching serverless vulnerabilities with no filter parameter."""
         # In the serverless module, filter is a required parameter with no default
         # So we should test that it's properly required
-        
+
         # Create a mock implementation that raises TypeError when filter is not provided
         def mock_search(*args, **kwargs):
             if "filter" not in kwargs:
                 raise TypeError("filter is a required parameter")
             return []
-            
+
         # Replace the method with our mock
         self.module.search_serverless_vulnerabilities = mock_search
-        
+
         # This should raise a TypeError since filter is a required parameter
         with self.assertRaises(TypeError):
             self.module.search_serverless_vulnerabilities()
@@ -104,15 +104,15 @@ class TestServerlessModule(TestModules):
         """Test searching serverless vulnerabilities with empty response."""
         # Setup mock response with empty runs
         mock_response = {"status_code": 200, "body": {"runs": []}}
-        
+
         # Mock the method to return empty runs
         self.module.search_serverless_vulnerabilities = MagicMock(return_value=[])
-        
+
         # Call search_serverless_vulnerabilities
         result = self.module.search_serverless_vulnerabilities(
             filter="cloud_provider:'AWS'"
         )
-        
+
         # Verify result is an empty list
         self.assertEqual(result, [])
 
@@ -123,16 +123,16 @@ class TestServerlessModule(TestModules):
             "error": "Failed to search serverless vulnerabilities: Request failed with status code 400",
             "details": {"errors": [{"message": "Invalid query"}]},
         }
-        
+
         # Mock the method to return the error
         self.module.search_serverless_vulnerabilities = MagicMock(return_value=[error_response])
-        
+
         # Call search_serverless_vulnerabilities
         results = self.module.search_serverless_vulnerabilities(
             filter="invalid query"
         )
         result = results[0]
-        
+
         # Verify result contains error
         self.assertIn("error", result)
         self.assertIn("details", result)
@@ -159,10 +159,10 @@ class TestServerlessModule(TestModules):
                 }
             }
         ]
-        
+
         # Mock the method to return the mock response
         self.module.search_serverless_vulnerabilities = MagicMock(return_value=mock_response)
-        
+
         # Call search_serverless_vulnerabilities with all parameters
         result = self.module.search_serverless_vulnerabilities(
             filter="cloud_provider:'AWS'",
@@ -170,7 +170,7 @@ class TestServerlessModule(TestModules):
             offset=10,
             sort="severity",
         )
-        
+
         # Verify result contains expected values
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["tool"]["driver"]["name"], "CrowdStrike")
@@ -182,15 +182,15 @@ class TestServerlessModule(TestModules):
             "error": "Failed to search serverless vulnerabilities: Missing 'runs' in response",
             "details": {"body": {}}
         }
-        
+
         # Mock the method to return the error
         self.module.search_serverless_vulnerabilities = MagicMock(return_value=[error_response])
-        
+
         # Call search_serverless_vulnerabilities
         result = self.module.search_serverless_vulnerabilities(
             filter="cloud_provider:'AWS'"
         )
-        
+
         # Verify result is a list with one item containing error info
         self.assertEqual(len(result), 1)
         self.assertIn("error", result[0])
