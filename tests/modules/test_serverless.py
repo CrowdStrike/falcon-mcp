@@ -3,7 +3,7 @@ Tests for the Serverless module.
 """
 
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from falcon_mcp.modules.serverless import ServerlessModule
 from tests.modules.utils.test_modules import TestModules
@@ -191,6 +191,37 @@ class TestServerlessModule(TestModules):
         # Verify result is a list with one item containing error info
         self.assertEqual(len(result), 1)
         self.assertIn("error", result[0])
+
+    def test_search_serverless_vulnerabilities_none_runs(self):
+        """Test searching serverless vulnerabilities when 'runs' key exists but is None."""
+        # We need to mock handle_api_response to return a dict with runs=None
+        # This simulates the case where the API returns a response with runs=None
+
+        # Create a mock response that handle_api_response will process
+        mock_api_response = {
+            "status_code": 200,
+            "body": {
+                # The actual structure doesn't matter as we'll mock handle_api_response
+            }
+        }
+        self.mock_client.command.return_value = mock_api_response
+
+        # Mock handle_api_response to return a dict with runs=None
+        mock_processed_response = {"runs": None}  # This is what we want to test
+
+        with patch('falcon_mcp.modules.serverless.handle_api_response', return_value=mock_processed_response):
+            # Call search_serverless_vulnerabilities
+            result = self.module.search_serverless_vulnerabilities(
+                filter="cloud_provider:'AWS'"
+            )
+
+            # Verify result is an empty list
+            self.assertEqual(result, [])
+
+            # Verify the API was called with the correct parameters
+            self.mock_client.command.assert_called_once()
+            call_args = self.mock_client.command.call_args[1]
+            self.assertEqual(call_args["parameters"]["filter"], "cloud_provider:'AWS'")
 
 
 if __name__ == "__main__":

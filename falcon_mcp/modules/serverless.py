@@ -147,4 +147,4 @@ class ServerlessModule(BaseModule):
         if self._is_error(vulnerabilities) or ("runs" not in vulnerabilities):
             return [vulnerabilities]
 
-        return vulnerabilities["runs"]
+        return vulnerabilities["runs"] or []
