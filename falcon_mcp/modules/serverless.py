@@ -11,7 +11,7 @@ from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
 
-from falcon_mcp.common.errors import _format_error_response, handle_api_response
+from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
