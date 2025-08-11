@@ -139,22 +139,11 @@ class ServerlessModule(BaseModule):
             response,
             operation=operation,
             error_message="Failed to search serverless vulnerabilities",
-            # We do not set the default_result on purpose, so we return the actual response
         )
 
         # If handle_api_response returns an error dict instead of a list,
         # it means there was an error, so we return it wrapped in a list
         if self._is_error(vulnerabilities):
             return [vulnerabilities]
-
-        # We expect SARIF format and check for a dict, because, due to handle_api_response,
-        # the vulnerabilities could be an empty list
-        if not isinstance(vulnerabilities, dict):
-            invalid_response_format_err = _format_error_response(
-                message="Failed to search serverless vulnerabilities: Invalid response format",
-                details=response,
-                operation=operation,
-            )
-            return [invalid_response_format_err]
 
         return vulnerabilities.get("runs") or []
