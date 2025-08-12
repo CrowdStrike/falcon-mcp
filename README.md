@@ -74,17 +74,17 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 
 | Module | Required API Scopes | Purpose |
 |--------|-------------------|---------|
+| **Cloud Security**      | `Falcon Container Image:read`                                                                                                                                  | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
 | **Core**                | _No additional scopes_                                                                                                                                         | Basic connectivity and system information                                            |
 | **Detections**          | `Alerts:read`                                                                                                                                                  | Find and analyze detections to understand malicious activity                         |
+| **Discover**            | `Assets:read`                                                                                                                                                  | Search and analyze application inventory across your environment                     |
+| **Hosts**               | `Hosts:read`                                                                                                                                                   | Manage and query host/device information                                             |
+| **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read` <br> `Identity Protection Assessment:read` | Comprehensive entity investigation and identity protection analysis                  |
 | **Incidents**           | `Incidents:read`                                                                                                                                               | Analyze security incidents and coordinated activities                                |
 | **Intel**               | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read`                                         | Research threat actors, IOCs, and intelligence reports                               |
-| **Hosts**               | `Hosts:read`                                                                                                                                                   | Manage and query host/device information                                             |
-| **Cloud Security**      | `Falcon Container Image:read`                                                                                                                                  | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
 | **Sensor Usage**        | `Sensor Usage:read`                                                                                                                                            | Access and analyze sensor usage data                                                 |
 | **Serverless**          | `Falcon Container Image:read`                                                                                                                                  | Search for vulnerabilities in serverless functions across cloud service providers    |
 | **Spotlight**           | `Vulnerabilities:read`                                                                                                                                         | Manage and analyze vulnerability data and security assessments                       |
-| **Discover**            | `Assets:read`                                                                                                                                                  | Search and analyze application inventory across your environment                     |
-| **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read` <br> `Identity Protection Assessment:read` | Comprehensive entity investigation and identity protection analysis                  |
 
 ## Available Modules, Tools & Resources
 
