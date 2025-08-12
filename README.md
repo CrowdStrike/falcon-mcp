@@ -17,17 +17,17 @@
   - [Setting Up CrowdStrike API Credentials](#setting-up-crowdstrike-api-credentials)
   - [Required API Scopes by Module](#required-api-scopes-by-module)
 - [Available Modules, Tools \& Resources](#available-modules-tools--resources)
+  - [Cloud Security Module](#cloud-security-module)
   - [Core Functionality (Built into Server)](#core-functionality-built-into-server)
   - [Detections Module](#detections-module)
   - [Discover Module](#discover-module)
+  - [Hosts Module](#hosts-module)
+  - [Identity Protection Module](#identity-protection-module)
   - [Incidents Module](#incidents-module)
   - [Intel Module](#intel-module)
-  - [Hosts Module](#hosts-module)
-  - [Spotlight Module](#spotlight-module)
-  - [Cloud Security Module](#cloud-security-module)
   - [Sensor Usage Module](#sensor-usage-module)
   - [Serverless Module](#serverless-module)
-  - [Identity Protection Module](#identity-protection-module)
+  - [Spotlight Module](#spotlight-module)
 - [Installation \& Setup](#installation--setup)
   - [Prerequisites](#prerequisites)
   - [Environment Configuration](#environment-configuration)
@@ -94,6 +94,25 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 
 **About Tools & Resources**: This server provides both tools (actions you can perform) and resources (documentation and context). Tools execute operations like searching for detections or analyzing threats, while resources provide comprehensive documentation like FQL query guides that AI assistants can reference for context without requiring tool calls.
 
+### Cloud Security Module
+
+**API Scopes Required**:
+
+- `Falcon Container Image:read`
+
+Provides tools for accessing and analyzing CrowdStrike Cloud Security resources:
+
+- `falcon_search_kubernetes_containers`: Search for containers from CrowdStrike Kubernetes & Containers inventory
+- `falcon_count_kubernetes_containers`: Count for containers by filter criteria from CrowdStrike Kubernetes & Containers inventory
+- `falcon_search_images_vulnerabilities`: Search for images vulnerabilities from CrowdStrike Image Assessments
+
+**Resources**:
+
+- `falcon://cloud/kubernetes-containers/fql-guide`: Comprehensive FQL documentation and examples for kubernetes containers searches
+- `falcon://cloud/images-vulnerabilities/fql-guide`: Comprehensive FQL documentation and examples for images vulnerabilities searches
+
+**Use Cases**: Manage kubernetes containers inventory, container images vulnerabilities analysis
+
 ### Core Functionality (Built into Server)
 
 **API Scopes**: _None required beyond basic API access_
@@ -119,6 +138,45 @@ Provides tools for accessing and analyzing CrowdStrike Falcon detections:
 - `falcon://detections/search/fql-guide`: Comprehensive FQL documentation and examples for detection searches
 
 **Use Cases**: Threat hunting, security analysis, incident response, malware investigation
+
+### Discover Module
+
+**API Scopes Required**: `Assets:read`
+
+Provides tools for accessing and managing CrowdStrike Falcon Discover applications:
+
+- `falcon_search_applications`: Search for applications in your CrowdStrike environment
+
+**Resources**:
+
+- `falcon://discover/applications/fql-guide`: Comprehensive FQL documentation and examples for application searches
+
+**Use Cases**: Application inventory management, software asset management, license compliance, vulnerability assessment
+
+### Hosts Module
+
+**API Scopes Required**: `Hosts:read`
+
+Provides tools for accessing and managing CrowdStrike Falcon hosts/devices:
+
+- `falcon_search_hosts`: Search for hosts in your CrowdStrike environment
+- `falcon_get_host_details`: Retrieve detailed information for specified host device IDs
+
+**Resources**:
+
+- `falcon://hosts/search/fql-guide`: Comprehensive FQL documentation and examples for host searches
+
+**Use Cases**: Asset management, device inventory, host monitoring, compliance reporting
+
+### Identity Protection Module
+
+**API Scopes Required**: `Identity Protection GraphQL:write`
+
+Provides tools for accessing and managing CrowdStrike Falcon Identity Protection capabilities:
+
+- `idp_investigate_entity`: Entity investigation tool for analyzing users, endpoints, and other entities with support for timeline analysis, relationship mapping, and risk assessment
+
+**Use Cases**: Entity investigation, identity protection analysis, user behavior analysis, endpoint security assessment, relationship mapping, risk assessment
 
 ### Incidents Module
 
@@ -162,68 +220,6 @@ Provides tools for accessing and analyzing CrowdStrike Intelligence:
 
 **Use Cases**: Threat intelligence research, adversary tracking, IOC analysis, threat landscape assessment
 
-### Hosts Module
-
-**API Scopes Required**: `Hosts:read`
-
-Provides tools for accessing and managing CrowdStrike Falcon hosts/devices:
-
-- `falcon_search_hosts`: Search for hosts in your CrowdStrike environment
-- `falcon_get_host_details`: Retrieve detailed information for specified host device IDs
-
-**Resources**:
-
-- `falcon://hosts/search/fql-guide`: Comprehensive FQL documentation and examples for host searches
-
-**Use Cases**: Asset management, device inventory, host monitoring, compliance reporting
-
-### Spotlight Module
-
-**API Scopes Required**: `Vulnerabilities:read`
-
-Provides tools for accessing and managing CrowdStrike Spotlight vulnerabilities:
-
-- `falcon_search_vulnerabilities`: Search for vulnerabilities in your CrowdStrike environment
-
-**Resources**:
-
-- `falcon://spotlight/vulnerabilities/fql-guide`: Comprehensive FQL documentation and examples for vulnerability searches
-
-**Use Cases**: Vulnerability management, security assessments, compliance reporting, risk analysis, patch prioritization
-
-### Discover Module
-
-**API Scopes Required**: `Assets:read`
-
-Provides tools for accessing and managing CrowdStrike Falcon Discover applications:
-
-- `falcon_search_applications`: Search for applications in your CrowdStrike environment
-
-**Resources**:
-
-- `falcon://discover/applications/fql-guide`: Comprehensive FQL documentation and examples for application searches
-
-**Use Cases**: Application inventory management, software asset management, license compliance, vulnerability assessment
-
-### Cloud Security Module
-
-**API Scopes Required**:
-
-- `Falcon Container Image:read`
-
-Provides tools for accessing and analyzing CrowdStrike Cloud Security resources:
-
-- `falcon_search_kubernetes_containers`: Search for containers from CrowdStrike Kubernetes & Containers inventory
-- `falcon_count_kubernetes_containers`: Count for containers by filter criteria from CrowdStrike Kubernetes & Containers inventory
-- `falcon_search_images_vulnerabilities`: Search for images vulnerabilities from CrowdStrike Image Assessments
-
-**Resources**:
-
-- `falcon://cloud/kubernetes-containers/fql-guide`: Comprehensive FQL documentation and examples for kubernetes containers searches
-- `falcon://cloud/images-vulnerabilities/fql-guide`: Comprehensive FQL documentation and examples for images vulnerabilities searches
-
-**Use Cases**: Manage kubernetes containers inventory, container images vulnerabilities analysis
-
 ### Sensor Usage Module
 
 **API Scopes Required**: `Sensor Usage:read`
@@ -252,15 +248,19 @@ Provides tools for accessing and managing CrowdStrike Falcon Serverless Vulnerab
 
 **Use Cases**: Serverless security assessment, vulnerability management, cloud security monitoring
 
-### Identity Protection Module
+### Spotlight Module
 
-**API Scopes Required**: `Identity Protection GraphQL:write`
+**API Scopes Required**: `Vulnerabilities:read`
 
-Provides tools for accessing and managing CrowdStrike Falcon Identity Protection capabilities:
+Provides tools for accessing and managing CrowdStrike Spotlight vulnerabilities:
 
-- `idp_investigate_entity`: Entity investigation tool for analyzing users, endpoints, and other entities with support for timeline analysis, relationship mapping, and risk assessment
+- `falcon_search_vulnerabilities`: Search for vulnerabilities in your CrowdStrike environment
 
-**Use Cases**: Entity investigation, identity protection analysis, user behavior analysis, endpoint security assessment, relationship mapping, risk assessment
+**Resources**:
+
+- `falcon://spotlight/vulnerabilities/fql-guide`: Comprehensive FQL documentation and examples for vulnerability searches
+
+**Use Cases**: Vulnerability management, security assessments, compliance reporting, risk analysis, patch prioritization
 
 ## Installation & Setup
 
