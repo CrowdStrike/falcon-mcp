@@ -19,6 +19,7 @@
 - [Available Modules, Tools \& Resources](#available-modules-tools--resources)
   - [Core Functionality (Built into Server)](#core-functionality-built-into-server)
   - [Detections Module](#detections-module)
+  - [Discover Module](#discover-module)
   - [Incidents Module](#incidents-module)
   - [Intel Module](#intel-module)
   - [Hosts Module](#hosts-module)
