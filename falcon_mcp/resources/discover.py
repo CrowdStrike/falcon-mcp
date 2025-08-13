@@ -549,6 +549,20 @@ SEARCH_UNMANAGED_ASSETS_FQL_FILTERS = [
         Ex: discovering_by:['Passive','Active']
         """
     ),
+    (
+        "confidence",
+        "Number",
+        "Yes",
+        """
+        Confidence level of the unmanaged asset discovery (0-100).
+        Higher values indicate higher confidence that the asset is real.
+
+        Ex: confidence:>80
+        Ex: confidence:>=90
+        Ex: confidence:<50
+        Ex: confidence:[80,90,95]
+        """
+    ),
 ]
 
 SEARCH_UNMANAGED_ASSETS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Unmanaged Assets Guide
@@ -595,6 +609,7 @@ You do not need to (and cannot) specify entity_type in your filter - it is alway
 
 === COMMON FILTER EXAMPLES ===
 • Find Windows unmanaged assets: platform_name:'Windows'
+• Find high-confidence unmanaged assets: confidence:>80
 • Find recently discovered assets: first_seen_timestamp:>'now-7d'
 • Find assets by hostname pattern: hostname:*'PC-*'
 • Find critical unmanaged assets: criticality:'Critical'

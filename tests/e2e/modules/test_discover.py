@@ -148,7 +148,10 @@ class TestDiscoverModuleE2E(BaseE2ETest):
                 {
                     "operation": "combined_hosts",
                     "validator": lambda kwargs: "entity_type:'unmanaged'"
-                    in kwargs.get("parameters", {}).get("filter", ""),
+                    in kwargs.get("parameters", {}).get("filter", "")
+                    and (
+                        "platform_name:'Windows'" in kwargs.get("parameters", {}).get("filter", "")
+                    ),
                     "response": {
                         "status_code": 200,
                         "body": {
@@ -240,7 +243,8 @@ class TestDiscoverModuleE2E(BaseE2ETest):
 
         def assertions(tools, result):
             tool_names_called = [tool["input"]["tool_name"] for tool in tools]
-            # Agent may or may not consult the FQL guide - both approaches are valid
+            # Agent must consult the FQL guide to learn proper platform filtering syntax
+            self.assertIn("falcon_search_unmanaged_assets_fql_guide", tool_names_called)
             self.assertIn("falcon_search_unmanaged_assets", tool_names_called)
 
             used_tool = tools[len(tools) - 1]
@@ -296,7 +300,8 @@ class TestDiscoverModuleE2E(BaseE2ETest):
                 {
                     "operation": "combined_hosts",
                     "validator": lambda kwargs: "entity_type:'unmanaged'"
-                    in kwargs.get("parameters", {}).get("filter", ""),
+                    in kwargs.get("parameters", {}).get("filter", "")
+                    and ("confidence:" in kwargs.get("parameters", {}).get("filter", "")),
                     "response": {
                         "status_code": 200,
                         "body": {
