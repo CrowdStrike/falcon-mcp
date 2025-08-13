@@ -143,15 +143,17 @@ Provides tools for accessing and analyzing CrowdStrike Falcon detections:
 
 **API Scopes Required**: `Assets:read`
 
-Provides tools for accessing and managing CrowdStrike Falcon Discover applications:
+Provides tools for accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets:
 
 - `falcon_search_applications`: Search for applications in your CrowdStrike environment
+- `falcon_search_unmanaged_assets`: Search for unmanaged assets (systems without Falcon sensor installed) that have been discovered by managed systems
 
 **Resources**:
 
 - `falcon://discover/applications/fql-guide`: Comprehensive FQL documentation and examples for application searches
+- `falcon://discover/hosts/fql-guide`: Comprehensive FQL documentation and examples for unmanaged assets searches
 
-**Use Cases**: Application inventory management, software asset management, license compliance, vulnerability assessment
+**Use Cases**: Application inventory management, software asset management, license compliance, vulnerability assessment, unmanaged asset discovery, security gap analysis
 
 ### Hosts Module
 
