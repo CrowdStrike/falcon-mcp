@@ -69,6 +69,8 @@ Before using the Falcon MCP Server, you need to create API credentials in your C
    - **Description**: Optional description for your records
    - **API Scopes**: Select the scopes based on which modules you plan to use (see below)
 
+> **Important**: Ensure your API client has the necessary scopes for the modules you plan to use. You can always update scopes later in the CrowdStrike console.
+
 ### Required API Scopes by Module
 
 The Falcon MCP Server supports different modules, each requiring specific API scopes:
@@ -274,31 +276,66 @@ Provides tools for accessing and managing CrowdStrike Spotlight vulnerabilities:
 
 ### Environment Configuration
 
-Copy the example environment file and configure your credentials:
+You can configure your CrowdStrike API credentials in several ways:
+
+#### Use a `.env` File
+
+If you prefer using a `.env` file, you have several options:
+
+##### Option 1: Copy from cloned repository (if you've cloned it)
 
 ```bash
 cp .env.example .env
 ```
 
-Then edit `.env` with your CrowdStrike API credentials:
+##### Option 2: Download the example file from GitHub
 
-**Required Configuration:**
+```bash
+curl -o .env https://raw.githubusercontent.com/CrowdStrike/falcon-mcp/main/.env.example
+```
 
-- `FALCON_CLIENT_ID`: Your CrowdStrike API client ID
-- `FALCON_CLIENT_SECRET`: Your CrowdStrike API client secret
-- `FALCON_BASE_URL`: Your CrowdStrike API region URL (see options in `.env.example`)
+##### Option 3: Create manually with the following content
 
-**Optional Configuration:**
+```bash
+# Required Configuration
+FALCON_CLIENT_ID=your-client-id
+FALCON_CLIENT_SECRET=your-client-secret
+FALCON_BASE_URL=https://api.crowdstrike.com
 
-- `FALCON_MCP_MODULES`: Comma-separated list of modules to enable (default: all modules)
-- `FALCON_MCP_TRANSPORT`: Transport method - `stdio`, `sse`, or `streamable-http` (default: `stdio`)
-- `FALCON_MCP_DEBUG`: Enable debug logging - `true` or `false` (default: `false`)
-- `FALCON_MCP_HOST`: Host for HTTP transports (default: `127.0.0.1`)
-- `FALCON_MCP_PORT`: Port for HTTP transports (default: `8000`)
+# Optional Configuration (uncomment and modify as needed)
+#FALCON_MCP_MODULES=detections,incidents,intel
+#FALCON_MCP_TRANSPORT=stdio
+#FALCON_MCP_DEBUG=false
+#FALCON_MCP_HOST=127.0.0.1
+#FALCON_MCP_PORT=8000
+```
 
-_Alternatively, you can set these as environment variables instead of using a `.env` file._
+#### Environment Variables
 
-> **Important**: Ensure your API client has the necessary scopes for the modules you plan to use. You can always update scopes later in the CrowdStrike console.
+Alternatively, you can use environment variables directly.
+
+Set the following environment variables in your shell:
+
+```bash
+# Required Configuration
+export FALCON_CLIENT_ID="your-client-id"
+export FALCON_CLIENT_SECRET="your-client-secret"
+export FALCON_BASE_URL="https://api.crowdstrike.com"
+
+# Optional Configuration
+export FALCON_MCP_MODULES="detections,incidents,intel"  # Comma-separated list (default: all modules)
+export FALCON_MCP_TRANSPORT="stdio"                     # Transport method: stdio, sse, streamable-http
+export FALCON_MCP_DEBUG="false"                         # Enable debug logging: true, false
+export FALCON_MCP_HOST="127.0.0.1"                      # Host for HTTP transports
+export FALCON_MCP_PORT="8000"                           # Port for HTTP transports
+```
+
+**CrowdStrike API Region URLs:**
+
+- **US-1 (Default)**: `https://api.crowdstrike.com`
+- **US-2**: `https://api.us-2.crowdstrike.com`
+- **EU-1**: `https://api.eu-1.crowdstrike.com`
+- **US-GOV**: `https://api.laggar.gcw.crowdstrike.com`
 
 ### Installation
 
@@ -495,7 +532,11 @@ You can integrate the Falcon MCP server with your editor or AI assistant. Here a
   "mcpServers": {
     "falcon-mcp": {
       "command": "uvx",
-      "args": ["--env-file", "/path/to/.env", "falcon-mcp"]
+      "args": [
+        "--env-file",
+        "/path/to/.env",
+        "falcon-mcp"
+      ]
     }
   }
 }
