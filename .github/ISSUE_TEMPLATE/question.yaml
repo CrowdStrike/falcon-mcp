@@ -7,8 +7,8 @@ body:
     attributes:
       value: |
         Thank you for your interest in falcon-mcp! 🚀
-        
-        We're here to help you succeed with CrowdStrike Falcon integration.
+
+        We're here to help answer your questions.
 
   - type: checkboxes
     id: checks
@@ -45,7 +45,7 @@ body:
       label: Your Question
       description: |
         What would you like to know?
-        
+
         Please be as specific as possible so we can give you the best help. 🙏
     validations:
       required: true
@@ -56,7 +56,7 @@ body:
       label: Context (Optional)
       description: |
         Any additional context that might help us understand your situation?
-        
+
         Your use case, setup, or what you're trying to achieve.
       placeholder: |
         I'm trying to...
@@ -69,7 +69,7 @@ body:
       label: Environment (Optional)
       description: |
         If relevant, please share basic environment information.
-        
+
         **Please don't include API credentials or sensitive information!**
       placeholder: |
         - Installation method: pip/uvx/docker

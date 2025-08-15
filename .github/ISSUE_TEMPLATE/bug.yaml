@@ -6,9 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for contributing to falcon-mcp! 🚀
-        
-        This helps us improve the CrowdStrike Falcon integration for everyone.
+        Thank you for reporting an issue to falcon-mcp! 🚀
 
   - type: checkboxes
     id: checks
@@ -27,7 +25,7 @@ body:
       label: Bug Description
       description: |
         Please explain what you're seeing and what you expected to see.
-        
+
         Include any error messages or unexpected behavior. 🙏
     validations:
       required: true
@@ -65,7 +63,7 @@ body:
       label: Environment Details
       description: |
         Please share relevant environment information.
-        
+
         **Please don't include API credentials or sensitive information!**
       placeholder: |
         - Python version: 3.11
@@ -83,7 +81,7 @@ body:
       label: Error Logs (Optional)
       description: |
         If you have error logs, please include them here.
-        
+
         **Important: Remove any sensitive information like API keys before pasting!**
       render: text
 
@@ -93,5 +91,5 @@ body:
       label: Additional Context (Optional)
       description: |
         Anything else that might help us understand the issue?
-        
+
         Screenshots, configuration files, or related issues are helpful!

@@ -7,8 +7,8 @@ body:
     attributes:
       value: |
         Thank you for contributing to falcon-mcp! 🚀
-        
-        Your ideas help make CrowdStrike Falcon integration better for everyone.
+
+        Your ideas help make this project better for everyone.
 
   - type: textarea
     id: description
@@ -16,7 +16,7 @@ body:
       label: Feature Description
       description: |
         Please describe the feature you'd like to see added.
-        
+
         Be as detailed as possible about what you want and why it would be valuable. 🙏
     validations:
       required: true
@@ -27,7 +27,7 @@ body:
       label: Use Case
       description: |
         What problem would this feature solve? How would you use it?
-        
+
         Real-world examples help us understand the value and priority.
       placeholder: |
         As a security analyst, I want to...
@@ -65,11 +65,11 @@ body:
       label: Proposed Solution (Optional)
       description: |
         Do you have ideas for how this could be implemented?
-        
+
         Code examples, API endpoints, or similar features in other tools are helpful!
       placeholder: |
         Maybe something like:
-        
+
         ```python
         # Example of how it might work
         ```
@@ -80,7 +80,7 @@ body:
       label: Alternatives Considered (Optional)
       description: |
         Are there other ways to solve this problem?
-        
+
         Have you tried any workarounds or alternative approaches?
 
   - type: textarea
@@ -89,5 +89,5 @@ body:
       label: Additional Context (Optional)
       description: |
         Anything else that might help us understand your request?
-        
+
         Links to documentation, similar features, or related issues are helpful!
