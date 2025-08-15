@@ -1,6 +1,6 @@
 name: 🐛 Bug Report
 description: Report a bug or unexpected behavior in falcon-mcp
-labels: ["bug", "need confirmation"]
+labels: ["bug", "triage"]
 
 body:
   - type: markdown
