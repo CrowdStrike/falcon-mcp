@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Security Vulnerability
+    url: https://github.com/carlosmmatos/falcon-mcp/security/advisories/new
+    about: Report security vulnerabilities privately
+  - name: 📚 Documentation & Examples
+    url: https://github.com/carlosmmatos/falcon-mcp/tree/main/docs
+    about: Check our documentation and examples first
+  - name: 💬 GitHub Discussions
+    url: https://github.com/carlosmmatos/falcon-mcp/discussions
+    about: Ask questions and discuss ideas with the community

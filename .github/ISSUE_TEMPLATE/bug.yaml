@@ -1,0 +1,97 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior in falcon-mcp
+labels: ["bug", "need confirmation"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for contributing to falcon-mcp! 🚀
+        
+        This helps us improve the CrowdStrike Falcon integration for everyone.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Initial Checks
+      description: Just making sure you're using the latest version and searched existing issues.
+      options:
+        - label: I confirm that I'm using the latest version of falcon-mcp
+          required: true
+        - label: I searched existing issues before opening this report
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: |
+        Please explain what you're seeing and what you expected to see.
+        
+        Include any error messages or unexpected behavior. 🙏
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: |
+        How can we reproduce this issue? Please be as specific as possible.
+      placeholder: |
+        1. Set up falcon-mcp with...
+        2. Run command...
+        3. Observe error...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation Method
+      description: How did you install falcon-mcp?
+      options:
+        - pip install falcon-mcp
+        - uvx run falcon-mcp
+        - Docker container
+        - Development setup (git clone)
+        - Other (please specify in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Details
+      description: |
+        Please share relevant environment information.
+        
+        **Please don't include API credentials or sensitive information!**
+      placeholder: |
+        - Python version: 3.11
+        - Operating System: macOS 14.1
+        - MCP Client: Claude Desktop
+        - Enabled modules: detections,incidents,hosts
+        - Falcon API region: us-1
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs (Optional)
+      description: |
+        If you have error logs, please include them here.
+        
+        **Important: Remove any sensitive information like API keys before pasting!**
+      render: text
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context (Optional)
+      description: |
+        Anything else that might help us understand the issue?
+        
+        Screenshots, configuration files, or related issues are helpful!

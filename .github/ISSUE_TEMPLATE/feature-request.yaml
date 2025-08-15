@@ -1,0 +1,93 @@
+name: 🚀 Feature Request
+description: Suggest a new feature for falcon-mcp
+labels: ["enhancement"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for contributing to falcon-mcp! 🚀
+        
+        Your ideas help make CrowdStrike Falcon integration better for everyone.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: |
+        Please describe the feature you'd like to see added.
+        
+        Be as detailed as possible about what you want and why it would be valuable. 🙏
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: |
+        What problem would this feature solve? How would you use it?
+        
+        Real-world examples help us understand the value and priority.
+      placeholder: |
+        As a security analyst, I want to...
+        This would help me...
+        Currently I have to...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module_area
+    attributes:
+      label: Related Module/Area
+      description: Which part of falcon-mcp would this feature affect?
+      options:
+        - Core functionality
+        - Detections module
+        - Incidents module
+        - Intel module
+        - Hosts module
+        - Identity Protection module
+        - Cloud Security module
+        - Discover module
+        - Spotlight (vulnerabilities) module
+        - Sensor Usage module
+        - Serverless module
+        - New module needed
+        - Documentation/Examples
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution (Optional)
+      description: |
+        Do you have ideas for how this could be implemented?
+        
+        Code examples, API endpoints, or similar features in other tools are helpful!
+      placeholder: |
+        Maybe something like:
+        
+        ```python
+        # Example of how it might work
+        ```
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered (Optional)
+      description: |
+        Are there other ways to solve this problem?
+        
+        Have you tried any workarounds or alternative approaches?
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context (Optional)
+      description: |
+        Anything else that might help us understand your request?
+        
+        Links to documentation, similar features, or related issues are helpful!

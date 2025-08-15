@@ -1,0 +1,79 @@
+name: ❓ Question or Discussion
+description: Ask questions or start discussions about falcon-mcp
+labels: ["question"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your interest in falcon-mcp! 🚀
+        
+        We're here to help you succeed with CrowdStrike Falcon integration.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Initial Checks
+      description: Just making sure you've checked the basics first.
+      options:
+        - label: I searched existing issues and discussions
+          required: true
+        - label: I checked the README and documentation
+          required: true
+
+  - type: dropdown
+    id: question_type
+    attributes:
+      label: Question Type
+      description: What kind of help do you need?
+      options:
+        - Installation and setup
+        - Configuration and authentication
+        - Module usage and capabilities
+        - Integration with MCP clients
+        - Performance and troubleshooting
+        - Development and contributing
+        - API scopes and permissions
+        - Best practices
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: |
+        What would you like to know?
+        
+        Please be as specific as possible so we can give you the best help. 🙏
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context (Optional)
+      description: |
+        Any additional context that might help us understand your situation?
+        
+        Your use case, setup, or what you're trying to achieve.
+      placeholder: |
+        I'm trying to...
+        My setup is...
+        I've already tried...
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (Optional)
+      description: |
+        If relevant, please share basic environment information.
+        
+        **Please don't include API credentials or sensitive information!**
+      placeholder: |
+        - Installation method: pip/uvx/docker
+        - Python version: 3.11
+        - Operating System: macOS/Windows/Linux
+        - MCP Client: Claude Desktop/Cline/etc.
+      render: text
