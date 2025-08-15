@@ -1,5 +1,6 @@
 name: 🐛 Bug Report
 description: Report a bug or unexpected behavior in falcon-mcp
+title: "[Bug]: "
 labels: ["bug", "triage"]
 
 body:

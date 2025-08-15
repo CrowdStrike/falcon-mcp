@@ -1,5 +1,6 @@
 name: ❓ Question or Discussion
 description: Ask questions or start discussions about falcon-mcp
+title: "[Question]: "
 labels: ["question"]
 
 body:
