@@ -24,7 +24,7 @@ jobs:
           #   README.md
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{ steps.release-please.outputs.release_created }}
 
       - name: Set up Python
