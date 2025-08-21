@@ -9,19 +9,23 @@ on:
         default: "gpt-4.1-mini,gpt-4o-mini"
         type: string
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
           cache: "pip"
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@39eb6c9dde236bbc368681611e63120a6eb4afac
         with:
           version: "latest"
           activate-environment: true
@@ -44,7 +48,7 @@ jobs:
           python scripts/generate_e2e_report.py
 
       - name: Upload HTML report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: e2e-test-report

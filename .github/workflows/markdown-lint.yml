@@ -10,13 +10,16 @@ on:
     paths:
       - '**.md'
 
+permissions:
+  contents: read
+
 jobs:
   markdown-lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
     - name: Lint Markdown files
-      uses: DavidAnson/markdownlint-cli2-action@v20
+      uses: DavidAnson/markdownlint-cli2-action@992badcdf24e3b8eb7e87ff9287fe931bcb00c6e
       with:
         config: '.markdownlint.json'
         globs: |
