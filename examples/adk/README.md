@@ -2,7 +2,7 @@
 
 This repository includes a prebuilt [Google ADK](https://google.github.io/adk-docs/) based agent integrated with the `falcon-mcp` server.
 
-The goal is to provide customers opinionated and validated set of instructions for running the Falcon MCP server and deploying it for their teams.
+The goal is to provide customers an opinionated and validated set of instructions for running falcon-mcp and deploying it for their teams.
 
 ## Table of Contents
 
@@ -14,7 +14,7 @@ The goal is to provide customers opinionated and validated set of instructions f
 
 
 ### Setting up and running locally (5 minutes)
-You can run the following commands locally on Linux / Mac or in Google Cloud Shell. 
+You can run the following commands locally on Linux / Mac or in Google Cloud Shell.
 If you plan to deploy the agent, it is recommended to run in Google Cloud Shell.
 
 ```bash
@@ -23,7 +23,7 @@ git clone https://github.com/CrowdStrike/falcon-mcp.git
 
 cd falcon-mcp
 
-cd adk_agent_falcon_mcp
+cd examples/adk
 
 # create and activate python environment
 python3 -m venv .venv
@@ -59,7 +59,7 @@ ACTION REQUIRED: Please update the variables in './falcon_agent/.env' before run
 
 <br>
 
-> 🪧 **NOTE:**  
+> [!NOTE]
 > Make sure you get and update the GOOGLE_API_KEY using these [instructions](https://ai.google.dev/gemini-api/docs/api-key).
 
 Now run the script with `local_run` parameter.
@@ -123,15 +123,15 @@ You may want to deploy the agent (with the `falcon-mcp` server) for following re
 
 1. You do not want to hand out credentials to everyone to run MCP server locally
 2. You want to share the ready to use agent with your team
-3. Use it for demos w/o any setup
+3. Use it for demos without any setup
 
-You have two dinstinct paths to deployment
+You have two distinct paths to deployment:
 1. Deploy on Cloud Run
 2. Deploy on Vertex AI Agent Engine (and access through Agentspace after registration)
 
 <br>
 
-> 🪧 **NOTE:**  
+> [!NOTE]
 > For all the following sections - If you are not running in Google Cloud Shell, make sure you have `gcloud` CLI [installed](https://cloud.google.com/sdk/docs/install) and you have authenticated with your username (preferably as owner of the project) on your local computer.
 
 ### Deploying the agent to Cloud Run
@@ -139,11 +139,11 @@ You have two dinstinct paths to deployment
 This section covers deployment to cloud run. Make sure you have all the required [APIs enabled](https://cloud.google.com/run/docs/quickstarts/build-and-deploy/deploy-python-service#before-you-begin) on the GCP project.
 
 ```bash
-cd adk_agent_falcon_mcp/
+cd examples/adk/
 ./adk_agent_operations.sh cloudrun_deploy
 ```
 
-In the sample output below, note the lines market with ⬅️
+In the sample output below, note the lines marked with ➡️
 
 1. You will have to provide input for `Allow unauthenticated invocations?` (say N)
 2. Once deployment is completed you get a URL to access your agent.
@@ -178,32 +178,32 @@ Copying agent source code complete.
 Creating Dockerfile...
 Creating Dockerfile complete: /tmp/cloud_run_deploy_src/20250801_071151/Dockerfile
 Deploying to Cloud Run...
-Allow unauthenticated invocations to [falcon-agent-service] (y/N)?  N ⬅️
+➡️ Allow unauthenticated invocations to [falcon-agent-service] (y/N)?  N
 
 Building using Dockerfile and deploying container to Cloud Run service [falcon-agent-service] in project [crowdstrikexxxxxxx] region [us-central1]
-⠛ Building and deploying new service... Uploading sources.                                                                                                                                                                        
-  ⠛ Uploading sources...                                                                                                                                                                                                          
-✓ Building and deploying new service... Done.                                                                                                                                                                                     
-  ✓ Uploading sources...                                                                                                                                                                                                          
-  ✓ Building Container... Logs are available at [https://console.cloud.google.com/cloud-build/builds;region=us-central1/b1dbfe60-46fe-4cc1-ba6a-xxxx?project=xxxxx].                                               
-  ✓ Creating Revision...                                                                                                                                                                                                          
-  ✓ Routing traffic...                                                                                                                                                                                                            
-  ✓ Setting IAM Policy...                                                                                                                                                                                                         
-Done.                                                                                                                                                                                                                             
+⠛ Building and deploying new service... Uploading sources.
+  ⠛ Uploading sources...
+✓ Building and deploying new service... Done.
+  ✓ Uploading sources...
+  ✓ Building Container... Logs are available at [https://console.cloud.google.com/cloud-build/builds;region=us-central1/b1dbfe60-46fe-4cc1-ba6a-xxxx?project=xxxxx].
+  ✓ Creating Revision...
+  ✓ Routing traffic...
+  ✓ Setting IAM Policy...
+Done.
 Service [falcon-agent-service] revision [falcon-agent-service-00001-abc] has been deployed and is serving 100 percent of traffic.
-Service URL: https://falcon-agent-service-xxxxx.us-central1.run.app ⬅️
+➡️ Service URL: https://falcon-agent-service-xxxxx.us-central1.run.app
 INFO: Display format: "none"
 Cleaning up the temp folder: /tmp/cloud_run_deploy_src/20250801_071151
 SUCCESS: Cloud Run deployment completed successfully.
 --- Operation 'cloudrun_deploy' complete. ---
 INFO: Restoring .env file from backup: './falcon_agent/.env.bak'.
-```  
+```
 
 </details>
 
 <br>
 
-> 🪧 **NOTE:**  
+> [!NOTE]
 > By default the service has IAM authentication enabled for it. Please follow steps below to enable access to yourself and your team.
 
 
@@ -229,7 +229,7 @@ gcloud run services proxy falcon-agent-service --project PROJECT-ID --region YOU
 ```bash
 # You might be asked to install a component, for the proxy to work locally
 This command requires the `cloud-run-proxy` component to be installed. Would
- you like to install the `cloud-run-proxy` component to continue command 
+ you like to install the `cloud-run-proxy` component to continue command
 execution? (Y/n)?  Y
 
 Proxying to Cloud Run service [falcon-agent-service] in project [crowdstrike-xxx-yyy] region [us-central1]
@@ -247,13 +247,13 @@ This section covers deployment to Vetex AI Agent Engine. To acces the agent and 
 1. Make sure that you create a bucket for staging theAgent Engine artifacts in the same project as the deployment (env variable - `AGENT_ENGINE_STAGING_BUCKET`).
 
 ```bash
-cd adk_agent_falcon_mcp/
+cd examples/adk/
 ./adk_agent_operations.sh agent_engine_deploy
 ```
 
 And here is the sample output.
 
-Make sure you copy the Agent Engine Number from the output (marked by ⬅️ for illustration)
+Make sure you copy the Agent Engine Number from the output (marked by ➡️ for illustration)
 
 <details>
 
@@ -305,7 +305,7 @@ Create AgentEngine backing LRO: projects/123456789101/locations/us-central1/reas
 INFO:vertexai.agent_engines:Create AgentEngine backing LRO: projects/123456789101/locations/us-central1/reasoningEngines/3670952665795123456/operations/5379102769057612345
 View progress and logs at https://console.cloud.google.com/logs/query?project=crowdstrike-xxxx-yyyy
 INFO:vertexai.agent_engines:View progress and logs at https://console.cloud.google.com/logs/query?project=crowdstrike-xxxx-yyyy
-AgentEngine created. Resource name: projects/123456789101/locations/us-central1/reasoningEngines/3670952665795123456 ⬅️
+➡️ AgentEngine created. Resource name: projects/123456789101/locations/us-central1/reasoningEngines/3670952665795123456
 INFO:vertexai.agent_engines:AgentEngine created. Resource name: projects/123456789101/locations/us-central1/reasoningEngines/3670952665795123456
 To use this AgentEngine in another session:
 INFO:vertexai.agent_engines:To use this AgentEngine in another session:
@@ -329,21 +329,21 @@ Make sure you have the Agent Engine Number from the previous step
 
 
 1. Go to the Agentspace [page](https://console.cloud.google.com/gen-app-builder/engines) in Google Cloud Console.
-2. Create an App (Type - AgentSpace)
+2. Create an App (Type - Agentspace)
 3. Note down the app details including the app name (e.g. google-security-agent-app_1750057151234)
 4. Make sure that you have the Agent Space Admin role while performing the following actions
 5. Enable Discovery Engine API for your project
-6. Provide the following roles to the Discovery Engine Service Account  
-  Vertex AI viewer  
-  Vertex AI user  
+6. Provide the following roles to the Discovery Engine Service Account
+   - Vertex AI viewer
+   - Vertex AI user
 7. Please note that these roles need to be provided into the project housing your Agent Engine Agent. Also you need to enable the show Google provided role grants to access the Discovery Engine Service Account.
 
-Update the environment variables PROJECT_NUMBER, AGENT_LOCATION, REASONING_ENGINE_NUMBER and AGENT_SPACE_APP_NAME in the `# Agentspace Specific` section.
+Update the environment variables `PROJECT_NUMBER`, `AGENT_LOCATION`, `REASONING_ENGINE_NUMBER` and `AGENT_SPACE_APP_NAME` in the `# Agentspace Specific` section.
 
 Now to register the agent and make it available to your application use the following command.
 
 ```bash
-cd adk_agent_falcon_mcp/
+cd examples/adk/
 ./adk_agent_operations.sh agentspace_register
 ```
 
@@ -411,7 +411,7 @@ SUCCESS: cURL command completed successfully for AgentSpace registration.
 
 <br>
 
-> You can find more about AgentSpace registration [here](https://cloud.google.com/agentspace/agentspace-enterprise/docs/assistant#create-assistant-existing-app).
+> You can find more about Agentspace registration [here](https://cloud.google.com/agentspace/agentspace-enterprise/docs/assistant#create-assistant-existing-app).
 
 Now you can access the agent in the Agentspace application you created earlier.
 
@@ -428,7 +428,7 @@ In case you want to delete the agent from the Agentspace application, use the fo
 curl -X GET -H "Authorization: Bearer $(gcloud auth print-access-token)" \
 -H "Content-Type: application/json" \
 -H "X-Goog-User-Project: $PROJECT_ID" \
-"https://discoveryengine.googleapis.com/v1alpha/projects/$PROJECT_ID/locations/global/collections/default_collection/engines/$AGENT_ENGINE_APP_NAME/assistants/default_assistant/agents" 
+"https://discoveryengine.googleapis.com/v1alpha/projects/$PROJECT_ID/locations/global/collections/default_collection/engines/$AGENT_ENGINE_APP_NAME/assistants/default_assistant/agents"
 
 # note down the agent number (export as REASONING_ENGINE_NUMBER) and use that in the next command.
 
@@ -449,7 +449,7 @@ https://discoveryengine.googleapis.com/v1alpha/projects/$PROJECT_ID/locations/gl
   3. For agent running in Agentspace - you can provide access (Predefined role - `Discovery Engine User`) selectively by navigating to Agentspace-Apps-Your App -Integration-Grant Permissions.
 
 #### Evaluating
-It is adviced to evaluate the agent for the trajectory it takes and the output it produces - you can use [ADK documentation](https://google.github.io/adk-docs/evaluate/) to evaluate this agent. You can also test with different models.
+It is advised to evaluate the agent for the trajectory it takes and the output it produces - you can use [ADK documentation](https://google.github.io/adk-docs/evaluate/) to evaluate this agent. You can also test with different models.
 
 #### Optimizing performance and costs
-Various native performance improvements are already part of the codebase. You can further optimize the performance and reduce the LLM costs by controlling the value of the envrionment variable `MAX_PREV_USER_INTERACTIONS`. You can test how many previous conversations (instead of ALL conversations by default) work for your use case (recommended 5). You can also use the appropriate [Gemini Model](https://ai.google.dev/gemini-api/docs/models#model-variations) for both cost and performance optimizations.
+Various native performance improvements are already part of the codebase. You can further optimize the performance and reduce the LLM costs by controlling the value of the environment variable `MAX_PREV_USER_INTERACTIONS`. You can test how many previous conversations (instead of ALL conversations by default) work for your use case (recommended 5). You can also use the appropriate [Gemini Model](https://ai.google.dev/gemini-api/docs/models#model-variations) for both cost and performance optimizations.
