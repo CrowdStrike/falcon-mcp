@@ -244,7 +244,7 @@ http://127.0.0.1:8080 proxies to https://falcon-agent-service-abc1234-uc.a.run.a
 
 This section covers deployment to Vetex AI Agent Engine. To acces the agent and to consolidate all your agents under one umbrella you can also register the deployed agent to Agentspace.
 
-1. Make sure that you create a bucket for staging theAgent Engine artifacts in the same project as the deployment (env variable - `AGENT_ENGINE_STAGING_BUCKET`).
+1. Make sure that you create a bucket for staging the Agent Engine artifacts in the same project as the deployment (env variable - `AGENT_ENGINE_STAGING_BUCKET`).
 
 ```bash
 cd examples/adk/

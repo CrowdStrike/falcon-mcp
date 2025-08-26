@@ -48,6 +48,7 @@
   - [Docker Version](#docker-version)
 - [Additional Deployment Options](#additional-deployment-options)
   - [Amazon Bedrock AgentCore](#amazon-bedrock-agentcore)
+  - [Google Cloud (Cloud Run and Vertex AI)](#google-cloud-cloud-run-and-vertex-ai)
 - [Contributing](#contributing)
   - [Getting Started for Contributors](#getting-started-for-contributors)
   - [Running Tests](#running-tests)
