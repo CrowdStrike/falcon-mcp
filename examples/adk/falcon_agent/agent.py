@@ -1,32 +1,32 @@
-from google.adk.agents import LlmAgent
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters, StdioConnectionParams
-import os
 import logging
-import sys 
+import os
+import sys
+from typing import List, Optional, TextIO, Union
 
-from mcp import StdioServerParameters
-from mcp.types import ListToolsResult
-from typing_extensions import override
-from typing import List
-from typing import Optional
-from typing import TextIO
-from typing import Union
+from google.adk.agents import LlmAgent
+from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.auth.auth_credential import AuthCredential
 from google.adk.auth.auth_schemes import AuthScheme
+from google.adk.models import LlmRequest, LlmResponse
 from google.adk.tools.base_tool import BaseTool
 from google.adk.tools.base_toolset import ToolPredicate
-from google.adk.tools.mcp_tool.mcp_session_manager import MCPSessionManager
-from google.adk.tools.mcp_tool.mcp_session_manager import retry_on_closed_resource
-from google.adk.tools.mcp_tool.mcp_session_manager import SseConnectionParams
-from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
-from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
 from google.adk.tools.mcp_tool import MCPTool
-
-
-from typing import Optional
-from google.adk.models import LlmResponse, LlmRequest
-from google.adk.agents.callback_context import CallbackContext
+from google.adk.tools.mcp_tool.mcp_session_manager import (
+  MCPSessionManager,
+  SseConnectionParams,
+  StdioConnectionParams,
+  StreamableHTTPConnectionParams,
+  retry_on_closed_resource,
+)
+from google.adk.tools.mcp_tool.mcp_toolset import (
+  MCPToolset,
+  StdioConnectionParams,
+  StdioServerParameters,
+)
+from mcp import StdioServerParameters
+from mcp.types import ListToolsResult
+from typing_extensions import override
 
 tools_cache={}
 
@@ -83,7 +83,7 @@ class MCPToolSetWithSchemaAccess(MCPToolset):
     session = await self._mcp_session_manager.create_session()
 
     if self.tool_set_name in tools_cache.keys():
-      logging.info(f"Tools found in cache for toolset {self.tool_set_name}, returning them")  
+      logging.info(f"Tools found in cache for toolset {self.tool_set_name}, returning them")
       return tools_cache[self.tool_set_name]
     else:
       logging.info(f"No tools found in cache for toolset {self.tool_set_name}, loading")
@@ -105,14 +105,14 @@ class MCPToolSetWithSchemaAccess(MCPToolset):
         tools.append(mcp_tool)
 
     model_version = os.environ.get("GOOGLE_MODEL").split("-")[1]
-    if float(model_version) < 2.5 or os.environ.get("GOOGLE_GENAI_USE_VERTEXAI").upper() == "TRUE": 
+    if float(model_version) < 2.5 or os.environ.get("GOOGLE_GENAI_USE_VERTEXAI").upper() == "TRUE":
       logging.error(f"Model - {os.environ.get('GOOGLE_MODEL')} needs Gemini compatible tools, updating schema ...")
-      tools = make_tools_compatible(tools)     
+      tools = make_tools_compatible(tools)
     else:
-      logging.info(f"Model - {os.environ.get('GOOGLE_MODEL')} does not need updating schema") 
-    
+      logging.info(f"Model - {os.environ.get('GOOGLE_MODEL')} does not need updating schema")
+
     # add tools to the cache
-    tools_cache[self.tool_set_name] = tools              
+    tools_cache[self.tool_set_name] = tools
     return tools
 
 
@@ -141,7 +141,7 @@ class MCPToolSetWithSchemaAccess(MCPToolset):
         errlog=errlog
     )
     self.tool_set_name = tool_set_name
-    logging.info(f"MCPToolSetWithSchemaAccess initialized with tool_set_name: '{self.tool_set_name}'")  
+    logging.info(f"MCPToolSetWithSchemaAccess initialized with tool_set_name: '{self.tool_set_name}'")
     self._session = None
 
   @retry_on_closed_resource
@@ -162,7 +162,7 @@ class MCPToolSetWithSchemaAccess(MCPToolset):
     session = await self._mcp_session_manager.create_session()
 
     if self.tool_set_name in tools_cache.keys():
-      logging.info(f"Tools found in cache for toolset {self.tool_set_name}, returning them")  
+      logging.info(f"Tools found in cache for toolset {self.tool_set_name}, returning them")
       return tools_cache[self.tool_set_name]
     else:
       logging.info(f"No tools found in cache for toolset {self.tool_set_name}, loading")
@@ -184,13 +184,13 @@ class MCPToolSetWithSchemaAccess(MCPToolset):
         tools.append(mcp_tool)
 
     model_version = os.environ.get("GOOGLE_MODEL").split("-")[1]
-    if float(model_version) < 2.5 or os.environ.get("GOOGLE_GENAI_USE_VERTEXAI").upper() == "TRUE": 
+    if float(model_version) < 2.5 or os.environ.get("GOOGLE_GENAI_USE_VERTEXAI").upper() == "TRUE":
       logging.error(f"Model - {os.environ.get('GOOGLE_MODEL')} needs Gemini compatible tools, updating schema ...")
-      tools = make_tools_compatible(tools)     
+      tools = make_tools_compatible(tools)
     else:
-      logging.info(f"Model - {os.environ.get('GOOGLE_MODEL')} does not need updating schema")        
+      logging.info(f"Model - {os.environ.get('GOOGLE_MODEL')} does not need updating schema")
 
-    tools_cache[self.tool_set_name] = tools        
+    tools_cache[self.tool_set_name] = tools
 
     return tools
 
@@ -208,7 +208,7 @@ def make_tools_compatible(tools):
               if (tool._mcp_tool.inputSchema["properties"][prop_name]["anyOf"][0]["type"] == "array"):
                 tool._mcp_tool.inputSchema["properties"][prop_name]["type"] = tool._mcp_tool.inputSchema["properties"][prop_name]["anyOf"][0]["items"]["type"]
               else:
-                 tool._mcp_tool.inputSchema["properties"][prop_name]["type"] = tool._mcp_tool.inputSchema["properties"][prop_name]["anyOf"][0]["type"] 
+                 tool._mcp_tool.inputSchema["properties"][prop_name]["type"] = tool._mcp_tool.inputSchema["properties"][prop_name]["anyOf"][0]["type"]
               tool._mcp_tool.inputSchema["properties"][prop_name].pop("anyOf")
 
   return tools
@@ -225,14 +225,14 @@ def bmc_trim_llm_request(
     logging.info(f"Number of contents going to LLM - {len(llm_request.contents)}, MAX_PREV_USER_INTERACTIONS = {max_prev_user_interactions}")
 
     temp_processed_list = []
-    
+
     if max_prev_user_interactions == -1:
-        return None 
+        return None
     else:
         user_message_count = 0
         for i in range(len(llm_request.contents) - 1, -1, -1):
             item = llm_request.contents[i]
-            
+
             if item.role == "user" and item.parts[0] and item.parts[0].text and item.parts[0].text != "For context:":
                 logging.info(f"Encountered a user message => {item.parts[0].text}")
                 user_message_count += 1
@@ -241,7 +241,7 @@ def bmc_trim_llm_request(
                 logging.info(f"Breaking at user_message_count => {user_message_count}")
                 temp_processed_list.append(item)
                 break
-            
+
             temp_processed_list.append(item)
 
         final_list = temp_processed_list[::-1]
@@ -252,7 +252,7 @@ def bmc_trim_llm_request(
             logging.info(f"User message count reached {max_prev_user_interactions}. List truncated.")
             llm_request.contents = final_list
 
-    return None 
+    return None
 
 
 root_agent = LlmAgent(
