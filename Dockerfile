@@ -1,5 +1,6 @@
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.11-alpine AS uv
+# ghcr.io/astral-sh/uv:python3.13-alpine (multi-arch: amd64, arm64)
+FROM ghcr.io/astral-sh/uv@sha256:3ce89663b5309e77087de25ca805c49988f2716cdb2c6469b1dec2764f58b141 AS uv
 
 # Install the project into `/app`
 WORKDIR /app
@@ -12,7 +13,6 @@ ENV UV_LINK_MODE=copy
 
 # Generate proper TOML lockfile first
 RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=README.md,target=README.md \
     uv lock
 
 # Install the project's dependencies using the lockfile
@@ -34,7 +34,8 @@ RUN find /app/.venv -name '__pycache__' -type d -exec rm -rf {} + && \
     echo "Cleaned up .venv"
 
 # Final stage
-FROM python:3.11-alpine
+# python:3.13-alpine (multi-arch: amd64, arm64)
+FROM python@sha256:9ba6d8cbebf0fb6546ae71f2a1c14f6ffd2fdab83af7fa5669734ef30ad48844
 
 # Create a non-root user 'app'
 RUN adduser -D -h /home/app -s /bin/sh app
