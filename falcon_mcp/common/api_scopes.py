@@ -45,6 +45,7 @@ API_SCOPE_REQUIREMENTS = {
         "Identity Protection Timeline:read",
         "Identity Protection Detections:read",
         "Identity Protection Assessment:read",
+        "Identity Protection GraphQL:write",
     ],
     # Sensor Usage operations
     "GetSensorUsageWeekly": ["Sensor Usage:read"],
