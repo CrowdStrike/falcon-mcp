@@ -87,7 +87,7 @@ if [ "$#" -eq 0 ]; then
     if [ ! -f "$ENV_FILE" ]; then
         echo "INFO: No operation mode provided and '$ENV_FILE' is not found."
         echo "INFO: Attempting to copy template '$ENV_PROPERTIES_TEMPLATE' to '$ENV_FILE'."
-        
+
         # Ensure the directory exists
         mkdir -p "$ENV_DIR" || { echo "ERROR: Failed to create directory '$ENV_DIR'."; exit 1; }
 
@@ -221,8 +221,8 @@ case "$OPERATION_MODE" in
     validate_required_vars "$vars_for_agentspace_register" || exit 1 # Exit if validation fails
     echo "INFO: Registering ADK Agent with AgentSpace..."
 
-    TARGET_URL="https://discoveryengine.googleapis.com/v1alpha/projects/$PROJECT_ID/locations/global/collections/default_collection/engines/$AGENT_SPACE_APP_NAME/assistants/default_assistant/agents"
-    
+    TARGET_URL="https://discoveryengine.googleapis.com/v1alpha/projects/$PROJECT_ID/locations/$AGENT_LOCATION/collections/default_collection/engines/$AGENT_SPACE_APP_NAME/assistants/default_assistant/agents"
+
     # Construct JSON data using a here-document
     JSON_DATA=$(cat <<EOF
 {
@@ -243,7 +243,7 @@ EOF
 
     echo "INFO: Sending POST request to: $TARGET_URL"
     echo "DEBUG: Request Body :"
-    echo "$JSON_DATA" 
+    echo "$JSON_DATA"
     echo "..."
 
     # Perform the POST request using curl
