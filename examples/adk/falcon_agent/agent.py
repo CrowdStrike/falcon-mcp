@@ -1,119 +1,47 @@
-import logging
-import os
-import sys
-from typing import List, Optional, TextIO, Union
-
 from google.adk.agents import LlmAgent
-from google.adk.agents.callback_context import CallbackContext
-from google.adk.agents.readonly_context import ReadonlyContext
-from google.adk.auth.auth_credential import AuthCredential
-from google.adk.auth.auth_schemes import AuthScheme
-from google.adk.models import LlmRequest, LlmResponse
-from google.adk.tools.base_tool import BaseTool
-from google.adk.tools.base_toolset import ToolPredicate
-from google.adk.tools.mcp_tool import MCPTool
-from google.adk.tools.mcp_tool.mcp_session_manager import (
-  MCPSessionManager,
-  SseConnectionParams,
-  StdioConnectionParams,
-  StreamableHTTPConnectionParams,
-  retry_on_closed_resource,
-)
-from google.adk.tools.mcp_tool.mcp_toolset import (
-  MCPToolset,
-  StdioConnectionParams,
-  StdioServerParameters,
-)
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
+import os
+import logging
+import sys
+
 from mcp import StdioServerParameters
 from mcp.types import ListToolsResult
-from typing_extensions import override
+from typing import List
+from typing import Optional
+from typing import TextIO
+from typing import Union
+from google.adk.agents.readonly_context import ReadonlyContext
+from google.adk.tools.base_tool import BaseTool
+from google.adk.tools.base_toolset import ToolPredicate
+from google.adk.tools.mcp_tool.mcp_session_manager import retry_on_closed_resource
+from google.adk.tools.mcp_tool.mcp_session_manager import SseConnectionParams
+from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
+from google.adk.tools.mcp_tool import MCPTool
+
+from google.adk.models import LlmResponse, LlmRequest
+from google.adk.agents.callback_context import CallbackContext
 
 tools_cache={}
 
-class MCPToolSetWithSchemaAccess(MCPToolset):
+def make_tools_compatible(tools):
+  """
+  This function makes the schema compatible with Gemini/Vertex AI API
+  It is only needed when API used is Gemini and model is other than 2.5 models
+  It is however needed for ALL models when API used is VertexAI
+  """
+  for tool in tools:
+    for key in tool._mcp_tool.inputSchema.keys():
+      if key == "properties":
+          for prop_name in tool._mcp_tool.inputSchema["properties"].keys():
+            if "anyOf" in tool._mcp_tool.inputSchema["properties"][prop_name].keys():
+              if (tool._mcp_tool.inputSchema["properties"][prop_name]["anyOf"][0]["type"] == "array"):
+                tool._mcp_tool.inputSchema["properties"][prop_name]["type"] = tool._mcp_tool.inputSchema["properties"][prop_name]["anyOf"][0]["items"]["type"]
+              else:
+                 tool._mcp_tool.inputSchema["properties"][prop_name]["type"] = tool._mcp_tool.inputSchema["properties"][prop_name]["anyOf"][0]["type"]
+              tool._mcp_tool.inputSchema["properties"][prop_name].pop("anyOf")
 
-  def __init__(
-      self,
-      *,
-      tool_set_name: str,
-      connection_params: Union[
-          StdioServerParameters,
-          StdioConnectionParams,
-          SseConnectionParams,
-          StreamableHTTPConnectionParams,
-      ],
-      tool_filter: Optional[Union[ToolPredicate, List[str]]] = None,
-      errlog: TextIO = sys.stderr,
-      auth_scheme: Optional[AuthScheme] = None,
-      auth_credential: Optional[AuthCredential] = None,
-  ):
-    self.tool_set_name = tool_set_name
-    super().__init__(tool_filter=tool_filter)
-
-    if not connection_params:
-      raise ValueError("Missing connection params in MCPToolset.")
-
-    self._connection_params = connection_params
-    self._errlog = errlog
-
-    # Create the session manager that will handle the MCP connection
-    self._mcp_session_manager = MCPSessionManager(
-        connection_params=self._connection_params,
-        errlog=self._errlog,
-    )
-    self._auth_scheme = auth_scheme
-    self._auth_credential = auth_credential
-
-  @retry_on_closed_resource
-  @override
-  async def get_tools(
-      self,
-      readonly_context: Optional[ReadonlyContext] = None,
-  ) -> List[BaseTool]:
-    """Return all tools in the toolset based on the provided context.
-
-    Args:
-        readonly_context: Context used to filter tools available to the agent.
-            If None, all tools in the toolset are returned.
-
-    Returns:
-        List[BaseTool]: A list of tools available under the specified context.
-    """
-    # Get session from session manager
-    session = await self._mcp_session_manager.create_session()
-
-    if self.tool_set_name in tools_cache.keys():
-      logging.info(f"Tools found in cache for toolset {self.tool_set_name}, returning them")
-      return tools_cache[self.tool_set_name]
-    else:
-      logging.info(f"No tools found in cache for toolset {self.tool_set_name}, loading")
-
-    # Fetch available tools from the MCP server
-    tools_response: ListToolsResult = await session.list_tools()
-
-    # Apply filtering based on context and tool_filter
-    tools = []
-    for tool in tools_response.tools:
-      mcp_tool = MCPTool(
-          mcp_tool=tool,
-          mcp_session_manager=self._mcp_session_manager,
-          auth_scheme=self._auth_scheme,
-          auth_credential=self._auth_credential,
-      )
-
-      if self._is_tool_selected(mcp_tool, readonly_context):
-        tools.append(mcp_tool)
-
-    model_version = os.environ.get("GOOGLE_MODEL").split("-")[1]
-    if float(model_version) < 2.5 or os.environ.get("GOOGLE_GENAI_USE_VERTEXAI").upper() == "TRUE":
-      logging.error(f"Model - {os.environ.get('GOOGLE_MODEL')} needs Gemini compatible tools, updating schema ...")
-      tools = make_tools_compatible(tools)
-    else:
-      logging.info(f"Model - {os.environ.get('GOOGLE_MODEL')} does not need updating schema")
-
-    # add tools to the cache
-    tools_cache[self.tool_set_name] = tools
-    return tools
+  return tools
 
 
 class MCPToolSetWithSchemaAccess(MCPToolset):
@@ -193,26 +121,6 @@ class MCPToolSetWithSchemaAccess(MCPToolset):
     tools_cache[self.tool_set_name] = tools
 
     return tools
-
-def make_tools_compatible(tools):
-  """
-  This function makes the schema compatible with Gemini/Vertex AI API
-  It is only needed when API used is Gemini and model is other than 2.5 models
-  It is however needed for ALL models when API used is VertexAI
-  """
-  for tool in tools:
-    for key in tool._mcp_tool.inputSchema.keys():
-      if key == "properties":
-          for prop_name in tool._mcp_tool.inputSchema["properties"].keys():
-            if "anyOf" in tool._mcp_tool.inputSchema["properties"][prop_name].keys():
-              if (tool._mcp_tool.inputSchema["properties"][prop_name]["anyOf"][0]["type"] == "array"):
-                tool._mcp_tool.inputSchema["properties"][prop_name]["type"] = tool._mcp_tool.inputSchema["properties"][prop_name]["anyOf"][0]["items"]["type"]
-              else:
-                 tool._mcp_tool.inputSchema["properties"][prop_name]["type"] = tool._mcp_tool.inputSchema["properties"][prop_name]["anyOf"][0]["type"]
-              tool._mcp_tool.inputSchema["properties"][prop_name].pop("anyOf")
-
-  return tools
-
 
 # Controlling context size to improve Model response time and for cost optimization
 # https://github.com/google/adk-python/issues/752#issuecomment-2948152979
