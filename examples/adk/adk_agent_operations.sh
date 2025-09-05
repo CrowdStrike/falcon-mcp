@@ -226,12 +226,12 @@ case "$OPERATION_MODE" in
     # Construct JSON data using a here-document
     JSON_DATA=$(cat <<EOF
 {
-    "displayName": "Crowdstrike Falcon Agent",
-    "description": "Allows users interact with Crowdstrike Falcon backend",
+    "displayName": "CrowdStrike Falcon Agent",
+    "description": "Allows users interact with CrowdStrike Falcon backend",
     "adk_agent_definition":
     {
         "tool_settings": {
-            "tool_description": "Crowdstrike Falcon tools"
+            "tool_description": "CrowdStrike Falcon tools"
         },
         "provisioned_reasoning_engine": {
             "reasoning_engine":"projects/$PROJECT_NUMBER/locations/$REGION/reasoningEngines/$REASONING_ENGINE_NUMBER"
