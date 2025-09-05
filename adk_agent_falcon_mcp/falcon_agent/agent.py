@@ -1,22 +1,18 @@
 from google.adk.agents import LlmAgent
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters, StdioConnectionParams
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
 import os
 import logging
 import sys 
 
 from mcp import StdioServerParameters
 from mcp.types import ListToolsResult
-from typing_extensions import override
 from typing import List
 from typing import Optional
 from typing import TextIO
 from typing import Union
 from google.adk.agents.readonly_context import ReadonlyContext
-from google.adk.auth.auth_credential import AuthCredential
-from google.adk.auth.auth_schemes import AuthScheme
 from google.adk.tools.base_tool import BaseTool
 from google.adk.tools.base_toolset import ToolPredicate
-from google.adk.tools.mcp_tool.mcp_session_manager import MCPSessionManager
 from google.adk.tools.mcp_tool.mcp_session_manager import retry_on_closed_resource
 from google.adk.tools.mcp_tool.mcp_session_manager import SseConnectionParams
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
