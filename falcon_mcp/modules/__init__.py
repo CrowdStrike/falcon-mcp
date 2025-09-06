@@ -1,14 +1,8 @@
 # ruff: noqa: F401
 """
 Modules package for Falcon MCP Server
-"""
 
-# Import all module classes so they're available for auto-discovery
-from .detections import DetectionsModule
-from .discover import DiscoverModule
-from .hosts import HostsModule
-from .incidents import IncidentsModule
-from .intel import IntelModule
-from .sensor_usage import SensorUsageModule
-from .serverless import ServerlessModule
-from .spotlight import SpotlightModule
+Modules are automatically discovered by the registry system via dynamic import scanning.
+No manual imports are required - the registry uses pkgutil.iter_modules() and 
+importlib.import_module() to find and load all *Module classes at runtime.
+"""

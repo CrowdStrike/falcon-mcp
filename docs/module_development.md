@@ -96,29 +96,24 @@ API_SCOPE_REQUIREMENTS = {
 
 ### 3. Module Auto-Discovery
 
-Modules are automatically registered by the server once they're discovered. You don't need to call any registration functions, but you do need to:
+Modules are automatically discovered by the registry system. You don't need to call any registration functions or add imports:
 
 1. Create your module class in the `falcon_mcp/modules` directory (e.g., `your_module.py`)
 2. Make sure it inherits from `BaseModule`
-3. Import it in `falcon_mcp/modules/__init__.py` to make it available for discovery:
-
-```python
-# In falcon_mcp/modules/__init__.py
-from .your_module import YourModule
-```
+3. **Modules are automatically discovered** - no manual imports or registration needed
 
 The server will automatically discover and register your module during initialization. The module name will be derived
 from the class name (e.g., `YourModule` becomes `your`).
 
 During server initialization, the registry system will:
 
-1. Scan the modules directory
-2. Import the modules listed in `__init__.py`
-3. Find classes that end with "Module" (excluding BaseModule)
+1. Scan the modules directory using `pkgutil.iter_modules()`
+2. Dynamically import each module file using `importlib.import_module()`  
+3. Find classes that end with "Module" (excluding BaseModule) via introspection
 4. Register them in the `AVAILABLE_MODULES` dictionary
 5. Make them available to the server
 
-This approach simplifies module registration while maintaining a clean architecture that avoids cyclic imports.
+This approach eliminates manual registration while maintaining a clean architecture that avoids cyclic imports.
 
 ### 4. Add Tests
 
@@ -498,9 +493,4 @@ API_SCOPE_REQUIREMENTS = {
 }
 ```
 
-And import the module in the `falcon_mcp/modules/__init__.py` file:
-
-```python
-# In falcon_mcp/modules/__init__.py
-from .hosts import HostsModule
-```
+The module will be automatically discovered by the registry system - no manual imports or registration needed.

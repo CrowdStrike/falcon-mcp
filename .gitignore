@@ -192,6 +192,7 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 .claude/
+CLAUDE.md
 .anthropic/
 .openai/
 .codeium/
