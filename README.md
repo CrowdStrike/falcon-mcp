@@ -480,7 +480,7 @@ The Falcon MCP Server is available as a pre-built container image for easy deplo
 docker pull quay.io/crowdstrike/falcon-mcp:latest
 
 # Run with .env file (recommended)
-docker run --rm --env-file /path/to/.env quay.io/crowdstrike/falcon-mcp:latest
+docker run -i --rm --env-file /path/to/.env quay.io/crowdstrike/falcon-mcp:latest
 
 # Run with .env file and SSE transport
 docker run --rm -p 8000:8000 --env-file /path/to/.env \
@@ -494,16 +494,16 @@ docker run --rm -p 8000:8000 --env-file /path/to/.env \
 docker run --rm -p 8080:8080 --env-file /path/to/.env \
   quay.io/crowdstrike/falcon-mcp:latest --transport streamable-http --host 0.0.0.0 --port 8080
 
-# Run with .env file and specific modules
-docker run --rm --env-file /path/to/.env \
+# Run with .env file and specific modules (stdio transport - requires -i flag)
+docker run -i --rm --env-file /path/to/.env \
   quay.io/crowdstrike/falcon-mcp:latest --modules detections,incidents,spotlight,idp
 
-# Use a specific version instead of latest
-docker run --rm --env-file /path/to/.env \
+# Use a specific version instead of latest (stdio transport - requires -i flag)
+docker run -i --rm --env-file /path/to/.env \
   quay.io/crowdstrike/falcon-mcp:1.2.3
 
-# Alternative: Individual environment variables
-docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
+# Alternative: Individual environment variables (stdio transport - requires -i flag)
+docker run -i --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret \
   quay.io/crowdstrike/falcon-mcp:latest
 ```
 
@@ -598,6 +598,8 @@ You can integrate the Falcon MCP server with your editor or AI assistant. Here a
   }
 }
 ```
+
+> **Note**: The `-i` flag is required when using the default stdio transport.
 
 ## Additional Deployment Options
 
