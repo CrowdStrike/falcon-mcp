@@ -519,7 +519,8 @@ docker build -t falcon-mcp .
 docker run --rm -e FALCON_CLIENT_ID=your_client_id -e FALCON_CLIENT_SECRET=your_secret falcon-mcp
 ```
 
-**Note**: When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
+> [!NOTE]
+> When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
 
 ## Editor/Assistant Integration
 
@@ -599,7 +600,8 @@ You can integrate the Falcon MCP server with your editor or AI assistant. Here a
 }
 ```
 
-> **Note**: The `-i` flag is required when using the default stdio transport.
+> [!NOTE]
+> The `-i` flag is required when using the default stdio transport.
 
 ## Additional Deployment Options
 
