@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.2.0...v0.3.0) (2025-09-08)
+
+
+### Features
+
+* **module/discover:** Add unmanaged assets search tool to Discover module ([#132](https://github.com/CrowdStrike/falcon-mcp/issues/132)) ([1c7a798](https://github.com/CrowdStrike/falcon-mcp/commit/1c7a7985637fe81c789ac7b0912f748d135238a3))
+* **modules/discover:** add new discover module ([#131](https://github.com/CrowdStrike/falcon-mcp/issues/131)) ([2862361](https://github.com/CrowdStrike/falcon-mcp/commit/2862361b8d0402ab7db4458794eb2b9bf62ef829))
+* **modules/idp:** Add geolocation info to entities and timeline in i… ([#124](https://github.com/CrowdStrike/falcon-mcp/issues/124)) ([31bb268](https://github.com/CrowdStrike/falcon-mcp/commit/31bb268070a55cd9a0dc52cc3eab566a65dd5ac3))
+* **modules/idp:** Add geolocation info to entities and timeline in idp module ([#121](https://github.com/CrowdStrike/falcon-mcp/issues/121)) ([31bb268](https://github.com/CrowdStrike/falcon-mcp/commit/31bb268070a55cd9a0dc52cc3eab566a65dd5ac3))
+* **modules/serverless:** add serverless module ([#127](https://github.com/CrowdStrike/falcon-mcp/issues/127)) ([0d7b7b3](https://github.com/CrowdStrike/falcon-mcp/commit/0d7b7b3e33b05541a9507278861d37621d32dfaa))
+
+
+### Bug Fixes
+
+* fix incorrect module registration assumptions ([#153](https://github.com/CrowdStrike/falcon-mcp/issues/153)) ([bd3aa95](https://github.com/CrowdStrike/falcon-mcp/commit/bd3aa95706a2a35004d6c3c95dbbddd9e8fcffcf))
+* **modules/identity:** add missing scope for Identity Protection module ([#148](https://github.com/CrowdStrike/falcon-mcp/issues/148)) ([791a262](https://github.com/CrowdStrike/falcon-mcp/commit/791a2621ed97d20553c0b0d98c6e0690a165208a))
+
 ## [0.2.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.1.0...v0.2.0) (2025-08-07)
 
 
