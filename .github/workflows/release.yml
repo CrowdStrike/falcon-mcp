@@ -36,7 +36,7 @@ jobs:
       - name: Build and publish to PyPI
         run: |
           pip install uv
-          uv pip install build twine
+          uv pip install --system build twine
           python -m build
           python -m twine upload dist/* --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
         if: ${{ steps.release-please.outputs.release_created }}
