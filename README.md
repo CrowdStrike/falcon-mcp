@@ -48,6 +48,7 @@
   - [Docker Version](#docker-version)
 - [Additional Deployment Options](#additional-deployment-options)
   - [Amazon Bedrock AgentCore](#amazon-bedrock-agentcore)
+  - [Google Cloud (Cloud Run and Vertex AI)](#google-cloud-cloud-run-and-vertex-ai)
 - [Contributing](#contributing)
   - [Getting Started for Contributors](#getting-started-for-contributors)
   - [Running Tests](#running-tests)
@@ -339,6 +340,9 @@ export FALCON_MCP_PORT="8000"                           # Port for HTTP transpor
 
 ### Installation
 
+> [!NOTE]
+> If you just want to interact with falcon-mcp via an agent chat interface rather than running the server itself, take a look at [Additional Deployment Options](#additional-deployment-options). Otherwise continue to the installations steps below.
+
 #### Install using uv
 
 ```bash
@@ -608,6 +612,10 @@ You can integrate the Falcon MCP server with your editor or AI assistant. Here a
 ### Amazon Bedrock AgentCore
 
 To deploy the MCP Server as a tool in Amazon Bedrock AgentCore, please refer to the [following document](./docs/deployment/amazon_bedrock_agentcore.md).
+
+### Google Cloud (Cloud Run and Vertex AI)
+
+To deploy the MCP server as an agent within Cloud Run or Vertex AI Agent Engine (including for registration within Agentspace), refer to the [Google ADK example](./examples/adk/README.md).
 
 ## Contributing
 
