@@ -25,7 +25,7 @@ def configure_logging(debug: bool = False, name: str = "falcon_mcp") -> logging.
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.StreamHandler(sys.stdout)],
+        handlers=[logging.StreamHandler(sys.stderr)],
     )
 
     # Set third-party loggers to a higher level to reduce noise
