@@ -27,9 +27,7 @@ DEFAULT_RUNS_PER_TEST = 2
 DEFAULT_SUCCESS_TRESHOLD = 0.7
 
 # Models to test against
-MODELS_TO_TEST = os.getenv("MODELS_TO_TEST", ",".join(DEFAULT_MODLES_TO_TEST)).split(
-    ","
-)
+MODELS_TO_TEST = os.getenv("MODELS_TO_TEST", ",".join(DEFAULT_MODLES_TO_TEST)).split(",")
 # Number of times to run each test
 RUNS_PER_TEST = int(os.getenv("RUNS_PER_TEST", str(DEFAULT_RUNS_PER_TEST)))
 # Success threshold for passing a test
@@ -100,13 +98,11 @@ class SharedTestServer:
 
         self.patchers["mock_api_instance"] = MagicMock()
         self.patchers["mock_api_instance"].login.return_value = True
-        self.patchers["mock_api_instance"].token_valid.return_value = True
+        self.patchers["mock_api_instance"].token_valid = True  # Fixed: property not method
         mock_apiharness_class.return_value = self.patchers["mock_api_instance"]
 
         server = FalconMCPServer(debug=False)
-        self.server_config["thread"] = threading.Thread(
-            target=server.run, args=("sse",)
-        )
+        self.server_config["thread"] = threading.Thread(target=server.run, args=("sse",))
         self.server_config["thread"].daemon = True
         self.server_config["thread"].start()
         time.sleep(2)  # Wait for the server to initialize
@@ -147,10 +143,7 @@ class SharedTestServer:
                 except (RuntimeError, AttributeError) as e:
                     print(f"Warning: Environment patcher cleanup error: {e}")
 
-            if (
-                self.server_config["loop"]
-                and not self.server_config["loop"].is_closed()
-            ):
+            if self.server_config["loop"] and not self.server_config["loop"].is_closed():
                 try:
                     self.server_config["loop"].close()
                     asyncio.set_event_loop(None)
@@ -222,9 +215,7 @@ class BaseE2ETest(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures before each test method."""
-        self.assertTrue(
-            self._server_thread.is_alive(), "Server thread did not start correctly."
-        )
+        self.assertTrue(self._server_thread.is_alive(), "Server thread did not start correctly.")
         self._mock_api_instance.reset_mock()
 
     async def _run_agent_stream(self, prompt: str) -> tuple[list, str]:
@@ -310,9 +301,7 @@ class BaseE2ETest(unittest.TestCase):
         model_success_count = 0
 
         for i in range(RUNS_PER_TEST):
-            print(
-                f"Running test {test_name} with model {model_name}, try {i + 1}/{RUNS_PER_TEST}"
-            )
+            print(f"Running test {test_name} with model {model_name}, try {i + 1}/{RUNS_PER_TEST}")
             run_result = {
                 "test_name": test_name,
                 "module_name": module_name,
@@ -369,9 +358,7 @@ class BaseE2ETest(unittest.TestCase):
         class_name = self.__class__.__name__
         # Remove 'Test' prefix and 'ModuleE2E' suffix
         if class_name.startswith("Test") and class_name.endswith("ModuleE2E"):
-            module_name = class_name[
-                4:-9
-            ]  # Remove 'Test' (4 chars) and 'ModuleE2E' (9 chars)
+            module_name = class_name[4:-9]  # Remove 'Test' (4 chars) and 'ModuleE2E' (9 chars)
             return module_name
 
         # Fallback: use the class name as-is if it doesn't match the expected pattern

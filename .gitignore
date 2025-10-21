@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# Falcon MCP exports directory
+falcon_exports/
+
 # Distribution / packaging
 .Python
 build/
@@ -203,6 +206,7 @@ CLAUDE.md
 .aider*
 .clinerules/
 memory-bank/
+.mcp.json
 
 # E2E artifacts
 static_test_report.html

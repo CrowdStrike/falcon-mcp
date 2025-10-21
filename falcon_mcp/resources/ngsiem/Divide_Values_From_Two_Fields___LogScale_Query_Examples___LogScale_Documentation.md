@@ -1,0 +1,75 @@
+# Divide Values From Two Fields | LogScale Query Examples | LogScale Documentation
+
+**URL:** https://library.humio.com/examples/examples-divide-field-values.html
+**Subdomain:** library
+**Description:** 
+
+---
+
+[Falcon LogScale Documentation](https://library.humio.com)
+
+/ [LogScale Query Examples](examples.html)
+
+## Divide Values From Two Fields
+
+Calculate the quotient of values from two fields using the division operator (`/`) 
+
+### Query
+
+flowchart LR; %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%% repo{{Events}} 1[[Expression]] result{{Result Set}} repo --> 1 1 --> result
+
+logscale
+    
+    
+    result:=a/b
+
+### Introduction
+
+Mathematical operations can be performed on field values to calculate new results. Multiplication, addition, subtraction and division do not require usage of a function. 
+
+In this example, division is used to calculate the quotient of values from fields a and b, storing the result in a new field. 
+
+Example incoming data might look like this: 
+
+@timestamp| a| b  
+---|---|---  
+2025-09-15T10:00:00Z| 20| 4  
+2025-09-15T10:00:01Z| 15| 3  
+2025-09-15T10:00:02Z| 24| 8  
+2025-09-15T10:00:03Z| 18| 6  
+2025-09-15T10:00:04Z| 35| 5  
+  
+### Step-by-Step
+
+  1. Starting with the source repository events.
+
+  2. flowchart LR; %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%% repo{{Events}} 1[[Expression]] result{{Result Set}} repo --> 1 1 --> result style 1 fill:#ff0000,stroke-width:4px,stroke:#000;
+
+logscale
+         
+         result:=a/b
+
+Divides the value in field a by the value in field b and assigns the result to a new field named result. The division operator (`/`) performs the calculation on the numerical values from both fields. 
+
+  3. Event Result set.
+
+
+
+
+### Summary and Results
+
+The query is used to divide values from two different fields and store the result in a new field. 
+
+This query is useful, for example, to calculate ratios (total_sales / number_of_days), averages (total_score / number_of_tests), or any other division-based calculations from field values. 
+
+Sample output from the incoming example data: 
+
+a| b| result  
+---|---|---  
+20| 4| 5  
+15| 3| 5  
+24| 8| 3  
+18| 6| 3  
+35| 5| 7  
+  
+The results of this division query can be effectively visualized using various widgets. A Time Chart widget could show how the quotient values change over time. For comparing the original values with their quotients, a Table widget would be most appropriate, allowing side-by-side comparison of the input fields and their calculated results.

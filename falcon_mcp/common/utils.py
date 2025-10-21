@@ -132,11 +132,11 @@ def generate_md_table(data: List[Tuple]) -> str:
 
     # Extract headers from the first row
     headers = data[0]
-    
+
     # Check that the header row is not empty
     if len(headers) == 0:
         raise ValueError("Header row cannot be empty")
-    
+
     # Check that all headers are strings
     for header in headers:
         if not isinstance(header, str):
@@ -162,7 +162,9 @@ def generate_md_table(data: List[Tuple]) -> str:
     for idx, row in enumerate(rows):
         # Check if row has more items than headers
         if len(row) > len(headers):
-            raise ValueError(f"Row {idx+1} has {len(row)} items, which is more than the {len(headers)} headers")
+            raise ValueError(
+                f"Row {idx + 1} has {len(row)} items, which is more than the {len(headers)} headers"
+            )
 
         # Convert row values to strings and handle special cases
         row_values = []
@@ -179,7 +181,7 @@ def generate_md_table(data: List[Tuple]) -> str:
 
                     text = str(value)
                     # Split text into lines, strip whitespace, and filter out empty lines
-                    non_empty_lines = [line.strip() for line in text.split('\n') if line.strip()]
+                    non_empty_lines = [line.strip() for line in text.split("\n") if line.strip()]
                     # Join the non-empty lines with a single space
                     formatted_text = " ".join(non_empty_lines).strip()
                     row_values.append(formatted_text)

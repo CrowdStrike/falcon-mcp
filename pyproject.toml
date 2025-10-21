@@ -56,6 +56,9 @@ disallow_incomplete_defs = true
 target-version = "py311"
 line-length = 100
 
+[tool.setuptools]
+packages = ["falcon_mcp", "falcon_mcp.common", "falcon_mcp.modules", "falcon_mcp.resources"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

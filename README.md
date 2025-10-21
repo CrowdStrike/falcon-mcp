@@ -25,6 +25,7 @@
   - [Identity Protection Module](#identity-protection-module)
   - [Incidents Module](#incidents-module)
   - [Intel Module](#intel-module)
+  - [NG-SIEM Module](#ng-siem-module)
   - [Sensor Usage Module](#sensor-usage-module)
   - [Serverless Module](#serverless-module)
   - [Spotlight Module](#spotlight-module)
@@ -86,6 +87,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read`<br>`Identity Protection Assessment:read`<br>`Identity Protection GraphQL:write` | Comprehensive entity investigation and identity protection analysis |
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
+| **NG-SIEM** | `NG-SIEM:read`<br>`NG-SIEM:write` | Execute LogScale/CQL queries against CrowdStrike security data and analyze results |
 | **Sensor Usage** | `Sensor Usage:read` | Access and analyze sensor usage data |
 | **Serverless** | `Falcon Container Image:read` | Search for vulnerabilities in serverless functions across cloud service providers |
 | **Spotlight** | `Vulnerabilities:read` | Manage and analyze vulnerability data and security assessments |
@@ -224,6 +226,176 @@ Provides tools for accessing and analyzing CrowdStrike Intelligence:
 - `falcon://intel/reports/fql-guide`: Comprehensive FQL documentation and examples for intelligence report searches
 
 **Use Cases**: Threat intelligence research, adversary tracking, IOC analysis, threat landscape assessment
+
+### NG-SIEM Module
+
+**API Scopes Required**: `NG-SIEM:read`, `NG-SIEM:write`
+
+The NG-SIEM (Next-Generation Security Information and Event Management) module provides comprehensive LogScale/CQL query capabilities against CrowdStrike's security data with intelligent query assistance, auto-correction, and advanced analytics.
+
+#### Tools Available
+
+**Core Query Tools**:
+- `falcon_execute_ngsiem_query`: Main query execution tool with intelligent auto-correction, template matching, and size management
+- `falcon_build_cql_query`: Interactive CQL query builder with guided parameters for learning and complex queries
+- `falcon_ngsiem_query_templates`: Pre-built security query templates for common use cases
+- `falcon_validate_cql_syntax`: CQL syntax validation and Splunk-to-CQL conversion
+- `falcon_analyze_ngsiem_results`: Statistical analysis, pivot tables, and data insights
+- `falcon_search_ngsiem_fields`: Field discovery and search across CrowdStrike data sources
+
+#### falcon_execute_ngsiem_query Parameters
+
+**Required Parameters**:
+- `query` (string): LogScale/CQL query to execute
+  - Example: `"#event_simpleName=ProcessRollup2 | head(100)"`
+  - Supports auto-correction and intelligent error handling
+
+**Optional Parameters**:
+- `time_range` (string, default: "15m"): Time range for the query
+  - **Relative formats**: `"15m"`, `"1h"`, `"24h"`, `"7d"`, `"30d"`
+  - **Absolute formats**: `"2024-01-01T00:00:00Z,2024-01-02T00:00:00Z"`
+  - **Single timestamp**: `"2024-01-01T00:00:00Z"` (searches from timestamp to now)
+
+- `repository` (string, default: "search-all"): Repository to search in
+  - `"search-all"`: All available NG-SIEM data repositories (recommended)
+  - `"base_sensor"`: Core CrowdStrike Falcon sensor data
+  - **Note**: Other repository names may be available depending on your environment and data sources
+
+- `output_format` (string, default: "json"): Output format
+  - `"json"`: Structured JSON response (default)
+  - `"csv"`: Comma-separated values format
+
+- `export_behavior` (string, default: "smart"): Controls automatic data export
+  - `"smart"`: Automatically exports large datasets (>100 events) to files
+  - `"always"`: Always exports results to files regardless of size
+  - `"never"`: Never exports to files, returns all data inline
+
+- `sample_events` (integer, default: 3): Number of sample events to display when data is exported
+  - Used when `export_behavior` triggers file export
+  - Shows representative events while full dataset is saved to file
+  - Range: 1-10 events
+
+**Parameter Examples**:
+```bash
+# Basic query with default parameters
+falcon_execute_ngsiem_query(query="* | groupBy([#event_simpleName]) | head(20)")
+
+# Query with custom time range and CSV output
+falcon_execute_ngsiem_query(
+    query="#event_simpleName=ProcessRollup2 | head(1000)",
+    time_range="24h",
+    output_format="csv"
+)
+
+# Query with specific repository and export behavior
+falcon_execute_ngsiem_query(
+    query="* | groupBy([#Vendor]) | sort(_count)",
+    repository="search-all",
+    export_behavior="always",
+    sample_events=5
+)
+
+# Query with absolute time range
+falcon_execute_ngsiem_query(
+    query="#event_simpleName=NetworkConnectIP4",
+    time_range="2024-01-01T00:00:00Z,2024-01-02T00:00:00Z"
+)
+```
+
+#### Workflow Options
+
+**Option 1: Direct Execution (Most Common)**
+```
+User Query → falcon_execute_ngsiem_query → Auto-validation & Correction → Results
+```
+- Users provide queries directly with built-in validation and auto-correction
+- Automatic template suggestions for failed queries
+- Intelligent error handling and recovery
+- **Best for**: Users comfortable with CQL or wanting to learn through trial
+
+**Option 2: Query Builder Assisted (Learning/Complex Queries)**
+```
+falcon_build_cql_query → Copy built query → falcon_execute_ngsiem_query → Results
+```
+- Guided, step-by-step query construction with parameter selection
+- Built-in validation and ready-to-execute query generation
+- **Best for**: Learning CQL syntax or building complex multi-part queries
+
+**Option 3: Template-Based (Common Use Cases)**
+```
+falcon_ngsiem_query_templates → Get template → falcon_execute_ngsiem_query → Results
+```
+- Pre-built, tested queries for common security scenarios
+- Customizable with additional filters
+- **Best for**: Common security use cases, threat hunting, compliance
+
+#### Built-in Intelligence Features
+
+- **Auto-Validation**: Comprehensive CQL syntax checking
+- **Auto-Correction**: Fixes case sensitivity, missing pipes, incorrect function syntax
+- **Template Matching**: Suggests relevant templates for failed queries
+- **Component Detection**: Analyzes query intent and rebuilds queries intelligently
+- **Performance Optimization**: Suggests query improvements for better performance
+- **Splunk-to-CQL Conversion**: Automatically converts Splunk patterns to proper CQL
+
+#### Response Handling
+
+- **Smart Size Management**: Automatically handles large result sets
+- **Export Options**: JSON and CSV output with intelligent format switching
+- **Sample Events**: Shows representative data when results are exported
+- **Progress Monitoring**: Real-time feedback for long-running queries
+
+#### Example Usage
+
+**Basic Event Analysis**:
+```bash
+# Direct execution with auto-correction
+falcon_execute_ngsiem_query(query="* groupby event_simpleName")
+# Auto-corrects to: * | groupBy([#event_simpleName]) | sort(_count) | head(20)
+```
+
+**Guided Query Building**:
+```bash
+# Build a query step-by-step
+falcon_build_cql_query(
+    event_type="ProcessRollup2",
+    filters={"UserName": "admin"},
+    group_by=["ComputerName"],
+    limit=100
+)
+# Returns: #event_simpleName=ProcessRollup2 UserName=admin | groupBy([ComputerName]) | head(100)
+```
+
+**Template Usage**:
+```bash
+# Get a proven security query
+falcon_ngsiem_query_templates(template_name="suspicious_powershell")
+# Returns ready-to-execute PowerShell threat hunting query
+```
+
+#### Multi-Source Data Support
+
+The module supports querying across multiple data sources in your environment:
+- **CrowdStrike Falcon Endpoint** (`#type=falcon-raw-data`): Process, network, authentication events
+- **Palo Alto Networks** (`#type=paloalto-ngfw`): Firewall and network security events
+- **AWS CloudTrail** (`#type=aws-cloudtrail`): Cloud infrastructure and API events
+- **Microsoft Windows** (`#type=microsoft-windows`): Windows event logs
+
+**Resources**:
+
+- `falcon://ngsiem/field-mappings`: Comprehensive field mappings across all supported data sources
+- `falcon://ngsiem/query-patterns`: CQL syntax and patterns optimized for CrowdStrike data
+- `falcon://ngsiem/use-cases`: Natural language to CQL examples for security scenarios
+- `falcon://ngsiem/functions-reference`: Complete LogScale function documentation
+- `falcon://ngsiem/query-examples`: Official LogScale query examples and patterns
+- `falcon://ngsiem/syntax-guide`: LogScale syntax principles and concepts
+
+**Use Cases**:
+- **Security Operations**: Threat hunting, incident response, detection engineering
+- **Compliance & Reporting**: Audit trails, compliance monitoring, executive reporting
+- **Forensic Investigation**: Timeline analysis, attack path reconstruction, evidence collection
+- **Operational Intelligence**: System monitoring, performance analysis, capacity planning
+- **Multi-Source Correlation**: Cross-platform security analysis, comprehensive threat detection
 
 ### Sensor Usage Module
 
