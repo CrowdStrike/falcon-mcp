@@ -8,7 +8,7 @@ import os
 import platform
 import sys
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 # Import the APIHarnessV2 from FalconPy
 from falconpy import APIHarnessV2
@@ -68,7 +68,7 @@ class FalconClient:
         Returns:
             bool: True if authentication was successful
         """
-        return self.client.login()
+        return cast(bool, self.client.login())
 
     def is_authenticated(self) -> bool:
         """Check if the client is authenticated.
@@ -76,9 +76,9 @@ class FalconClient:
         Returns:
             bool: True if the client is authenticated
         """
-        return self.client.token_valid
+        return cast(bool, self.client.token_valid)
 
-    def command(self, operation: str, **kwargs) -> Dict[str, Any]:
+    def command(self, operation: str, **kwargs: Any) -> Dict[str, Any]:
         """Execute a Falcon API command.
 
         Args:
@@ -88,7 +88,61 @@ class FalconClient:
         Returns:
             Dict[str, Any]: The API response
         """
-        return self.client.command(operation, **kwargs)
+        return cast(Dict[str, Any], self.client.command(operation, **kwargs))
+
+    def start_search(self, repository: str, body: Dict[str, Any]) -> Dict[str, Any]:
+        """Start an NG-SIEM LogScale search.
+
+        Args:
+            repository: The repository to search in
+            body: The search request body
+
+        Returns:
+            Dict[str, Any]: The API response
+        """
+        # Use APIHarnessV2 command method with StartSearchV1 operation
+        logger.debug(f"Starting search with repository={repository}, body={body}")
+        response = self.client.command("StartSearchV1", repository=repository, body=body)
+        logger.debug(f"StartSearchV1 complete response: {response}")
+        return cast(Dict[str, Any], response)
+
+    def get_search_status(self, repository: str, id: str) -> Dict[str, Any]:
+        """Get the status of an NG-SIEM search job.
+
+        Args:
+            repository: The repository name
+            id: The search job ID (accepts both 'id' and 'search_id' like original NGSIEM class)
+
+        Returns:
+            Dict[str, Any]: The API response with search status
+        """
+        # Use APIHarnessV2 with comprehensive debugging
+        logger.debug(f"Getting search status with repository={repository}, id={id}")
+        logger.debug(
+            f"About to call command('GetSearchStatusV1', repository='{repository}', id='{id}')"
+        )
+
+        try:
+            response = self.client.command("GetSearchStatusV1", repository=repository, id=id)
+            logger.debug(f"GetSearchStatusV1 complete response: {response}")
+            return cast(Dict[str, Any], response)
+        except Exception as e:
+            logger.error(f"GetSearchStatusV1 failed with exception: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            raise e
+
+    def stop_search(self, repository: str, search_id: str) -> Dict[str, Any]:
+        """Stop an NG-SIEM search job.
+
+        Args:
+            repository: The repository name
+            search_id: The search job ID
+
+        Returns:
+            Dict[str, Any]: The API response
+        """
+        # Use 'id' parameter as per APIHarnessV2 documentation for StopSearchV1
+        return cast(Dict[str, Any], self.client.command("StopSearchV1", repository=repository, id=search_id))
 
     def get_user_agent(self) -> str:
         """Get RFC-compliant user agent string for API requests.
@@ -131,7 +185,7 @@ class FalconClient:
         Returns:
             Dict[str, str]: Authentication headers including the bearer token
         """
-        return self.client.auth_headers
+        return cast(Dict[str, str], self.client.auth_headers)
 
 
 def get_version() -> str:
@@ -171,7 +225,7 @@ def get_version() -> str:
                         version_str,
                         pyproject_path,
                     )
-                    return version_str
+                    return cast(str, version_str)
             current_path = current_path.parent
 
         logger.debug("pyproject.toml not found in current or parent directories")
