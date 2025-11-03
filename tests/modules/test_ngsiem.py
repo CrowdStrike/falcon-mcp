@@ -205,7 +205,7 @@ class TestNGSIEMModule(TestModules):
         self.mock_client.is_authenticated.return_value = True
 
         # Mock start_search to raise an exception so we can capture the warning
-        self.mock_client.start_search.side_effect = Exception("Test exception")
+        self.mock_client.command.side_effect = Exception("Test exception")
 
         with self.assertLogs('falcon_mcp.modules.ngsiem', level='WARNING') as log:
             result = self.module.execute_ngsiem_query(
@@ -221,7 +221,7 @@ class TestNGSIEMModule(TestModules):
     def test_execute_query_start_search_failure(self):
         """Test handling start_search API failure."""
         self.mock_client.is_authenticated.return_value = True
-        self.mock_client.start_search.return_value = {
+        self.mock_client.command.return_value = {
             "status_code": 500,
             "body": {"errors": [{"message": "Internal server error"}]}
         }
@@ -236,7 +236,7 @@ class TestNGSIEMModule(TestModules):
     def test_execute_query_missing_search_id(self):
         """Test handling when search ID cannot be extracted."""
         self.mock_client.is_authenticated.return_value = True
-        self.mock_client.start_search.return_value = {
+        self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {}  # No search ID
         }
@@ -268,20 +268,24 @@ class TestNGSIEMModule(TestModules):
         # Mock successful authentication
         self.mock_client.is_authenticated.return_value = True
 
-        # Mock successful search start
-        self.mock_client.start_search.return_value = {
-            "status_code": 200,
-            "body": {"id": "search-123"}
-        }
+        # Mock successful search start (StartSearchV1) and status check (GetSearchStatusV1)
+        def mock_command(operation, **kwargs):
+            if operation == "StartSearchV1":
+                return {
+                    "status_code": 200,
+                    "body": {"id": "search-123"}
+                }
+            elif operation == "GetSearchStatusV1":
+                return {
+                    "status_code": 200,
+                    "body": {
+                        "done": True,
+                        "events": [{"event": "test_event", "timestamp": "2024-01-01T00:00:00Z"}]
+                    }
+                }
+            return {}
 
-        # Mock successful polling (query complete)
-        self.mock_client.get_search_status.return_value = {
-            "status_code": 200,
-            "body": {
-                "done": True,
-                "events": [{"event": "test_event", "timestamp": "2024-01-01T00:00:00Z"}]
-            }
-        }
+        self.mock_client.command.side_effect = mock_command
 
         result = self.module.execute_ngsiem_query(
             query="#event_simpleName=ProcessRollup2 | tail(3)",
@@ -299,29 +303,30 @@ class TestNGSIEMModule(TestModules):
 
         # Verify client methods were called
         self.mock_client.is_authenticated.assert_called()
-        self.mock_client.start_search.assert_called_once()
-        self.mock_client.get_search_status.assert_called_once()
+        self.mock_client.command.assert_called()
 
 
     @patch('falcon_mcp.modules.ngsiem.time.sleep')
     def test_query_polling_status_feedback(self, mock_sleep):
         """Test query execution provides status feedback for long-running queries."""
-        # Mock successful authentication and search start
+        # Mock successful authentication
         self.mock_client.is_authenticated.return_value = True
-        self.mock_client.start_search.return_value = {
-            "status_code": 200,
-            "body": {"id": "search-long-running"}
-        }
 
         # Mock polling that returns done=False multiple times before completing
-        poll_responses = [
-            {"status_code": 200, "body": {"done": False}},  # 1st call
-            {"status_code": 200, "body": {"done": False}},  # 2nd call
-            {"status_code": 200, "body": {"done": False}},  # 3rd call
-            {"status_code": 200, "body": {"done": False}},  # 4th call
-            {"status_code": 200, "body": {"done": False}},  # 5th call (should trigger status feedback)
-        ]
-        self.mock_client.get_search_status.side_effect = poll_responses
+        poll_call_count = 0
+        def mock_command_polling(operation, **kwargs):
+            nonlocal poll_call_count
+            if operation == "StartSearchV1":
+                return {
+                    "status_code": 200,
+                    "body": {"id": "search-long-running"}
+                }
+            elif operation == "GetSearchStatusV1":
+                poll_call_count += 1
+                return {"status_code": 200, "body": {"done": False}}
+            return {}
+
+        self.mock_client.command.side_effect = mock_command_polling
 
         result = self.module.execute_ngsiem_query(
             query="#event_simpleName=ProcessRollup2",
@@ -338,18 +343,24 @@ class TestNGSIEMModule(TestModules):
     @patch('falcon_mcp.modules.ngsiem.time.sleep')
     def test_query_polling_error(self, mock_sleep):
         """Test handling polling errors."""
-        # Mock successful authentication and search start
+        # Mock successful authentication
         self.mock_client.is_authenticated.return_value = True
-        self.mock_client.start_search.return_value = {
-            "status_code": 200,
-            "body": {"id": "search-poll-error"}
-        }
 
-        # Mock polling that returns an error
-        self.mock_client.get_search_status.return_value = {
-            "status_code": 500,
-            "body": {"errors": [{"message": "Polling failed"}]}
-        }
+        # Mock successful start, then polling error
+        def mock_command_error(operation, **kwargs):
+            if operation == "StartSearchV1":
+                return {
+                    "status_code": 200,
+                    "body": {"id": "search-poll-error"}
+                }
+            elif operation == "GetSearchStatusV1":
+                return {
+                    "status_code": 500,
+                    "body": {"errors": [{"message": "Polling failed"}]}
+                }
+            return {}
+
+        self.mock_client.command.side_effect = mock_command_error
 
         result = self.module.execute_ngsiem_query(
             query="#event_simpleName=ProcessRollup2",

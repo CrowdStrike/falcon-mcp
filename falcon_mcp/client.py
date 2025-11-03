@@ -90,60 +90,6 @@ class FalconClient:
         """
         return cast(Dict[str, Any], self.client.command(operation, **kwargs))
 
-    def start_search(self, repository: str, body: Dict[str, Any]) -> Dict[str, Any]:
-        """Start an NG-SIEM LogScale search.
-
-        Args:
-            repository: The repository to search in
-            body: The search request body
-
-        Returns:
-            Dict[str, Any]: The API response
-        """
-        # Use APIHarnessV2 command method with StartSearchV1 operation
-        logger.debug(f"Starting search with repository={repository}, body={body}")
-        response = self.client.command("StartSearchV1", repository=repository, body=body)
-        logger.debug(f"StartSearchV1 complete response: {response}")
-        return cast(Dict[str, Any], response)
-
-    def get_search_status(self, repository: str, id: str) -> Dict[str, Any]:
-        """Get the status of an NG-SIEM search job.
-
-        Args:
-            repository: The repository name
-            id: The search job ID (accepts both 'id' and 'search_id' like original NGSIEM class)
-
-        Returns:
-            Dict[str, Any]: The API response with search status
-        """
-        # Use APIHarnessV2 with comprehensive debugging
-        logger.debug(f"Getting search status with repository={repository}, id={id}")
-        logger.debug(
-            f"About to call command('GetSearchStatusV1', repository='{repository}', id='{id}')"
-        )
-
-        try:
-            response = self.client.command("GetSearchStatusV1", repository=repository, id=id)
-            logger.debug(f"GetSearchStatusV1 complete response: {response}")
-            return cast(Dict[str, Any], response)
-        except Exception as e:
-            logger.error(f"GetSearchStatusV1 failed with exception: {e}")
-            logger.error(f"Exception type: {type(e).__name__}")
-            raise e
-
-    def stop_search(self, repository: str, search_id: str) -> Dict[str, Any]:
-        """Stop an NG-SIEM search job.
-
-        Args:
-            repository: The repository name
-            search_id: The search job ID
-
-        Returns:
-            Dict[str, Any]: The API response
-        """
-        # Use 'id' parameter as per APIHarnessV2 documentation for StopSearchV1
-        return cast(Dict[str, Any], self.client.command("StopSearchV1", repository=repository, id=search_id))
-
     def get_user_agent(self) -> str:
         """Get RFC-compliant user agent string for API requests.
 

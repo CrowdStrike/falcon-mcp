@@ -311,7 +311,7 @@ class NGSIEMQueryEngine:
             self._execute_hooks('search_cleanup', cleanup_info)
 
             # Stop the search
-            self.client.stop_search(repository, search_id)
+            self.client.command("StopSearchV1", repository=repository, id=search_id)
             logger.info(f"Successfully stopped search {search_id} (reason: {reason})")
         except Exception as e:
             logger.warning(f"Failed to stop search {search_id}: {e}")
@@ -387,7 +387,7 @@ class NGSIEMQueryEngine:
             logger.info(f"Time range: {time_range} ({time_params})")
 
             # Start the search
-            response = self.client.start_search(repository=repository, body=search_body)
+            response = self.client.command("StartSearchV1", repository=repository, body=search_body)
 
             # Handle start_search response
             if response.get("status_code") != 200:
@@ -523,7 +523,7 @@ class NGSIEMQueryEngine:
                         self.active_searches[search_id]['elapsed_seconds'] = elapsed_seconds
 
                     # Use get_search_status method with proper error handling
-                    response = self.client.get_search_status(repository=repository, id=search_id)
+                    response = self.client.command("GetSearchStatusV1", repository=repository, id=search_id)
 
                     if response.get("status_code") != 200:
                         return handle_api_response(
