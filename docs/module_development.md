@@ -84,7 +84,7 @@ class YourModule(BaseModule):
 
 ### 2. Update API Scope Requirements
 
-Add your API operations to the `API_SCOPE_REQUIREMENTS` dictionary in `falcon_mcp/common/errors.py`:
+Add your API operations to the `API_SCOPE_REQUIREMENTS` dictionary in `falcon_mcp/common/api_scopes.py`:
 
 ```python
 API_SCOPE_REQUIREMENTS = {
@@ -316,9 +316,12 @@ if isinstance(result, dict) and "error" in result:
 ### Error Handling (`falcon_mcp/common/errors.py`)
 
 - `is_success_response`: Check if an API response indicates success
-- `get_required_scopes`: Get the required API scopes for a specific operation
 - `_format_error_response`: Format an error as a standardized response
 - `handle_api_response`: Handle an API response, returning either the result or an error
+
+### API Scopes (`falcon_mcp/common/api_scopes.py`)
+
+- `get_required_scopes`: Get the required API scopes for a specific operation
 
 ### Utilities (`falcon_mcp/common/utils.py`)
 
@@ -480,17 +483,6 @@ class HostsModule(BaseModule):
             return {"count": 0, **host_ids}
 
         return {"count": len(host_ids)}
-```
-
-Don't forget to update the `API_SCOPE_REQUIREMENTS` dictionary in `falcon_mcp/common/errors.py`:
-
-```python
-API_SCOPE_REQUIREMENTS = {
-    # Existing operations...
-    "QueryDevices": ["hosts:read"],
-    "GetDeviceDetails": ["hosts:read"],
-    # Add more operations as needed
-}
 ```
 
 The module will be automatically discovered by the registry system - no manual imports or registration needed.
