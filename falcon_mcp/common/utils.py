@@ -112,7 +112,7 @@ def generate_md_table(data: List[Tuple]) -> str:
 
     This function creates a compact Markdown table with the provided data.
     It's designed to minimize token usage while maintaining readability.
-    The first row of data is used as the header row.
+    The first tuple contains headers, remaining tuples contain data rows.
 
     Args:
         data: List of tuples where the first tuple contains the headers
@@ -125,70 +125,50 @@ def generate_md_table(data: List[Tuple]) -> str:
         TypeError: If the first row (headers) contains non-string values
         TypeError: If there are not at least 2 items (header and a value row)
         ValueError: If the header row is empty
-        ValueError: If a row has more items than headers
     """
+    # Basic validation
     if not data or len(data) < 2:
         raise TypeError("Need at least 2 items. The header and a value row")
 
-    # Extract headers from the first row
+    # Extract and validate headers
     headers = data[0]
-    
-    # Check that the header row is not empty
     if len(headers) == 0:
         raise ValueError("Header row cannot be empty")
-    
-    # Check that all headers are strings
+
+    # Validate header types and clean them
+    clean_headers = []
     for header in headers:
         if not isinstance(header, str):
             raise TypeError(f"Header values must be strings, got {type(header).__name__}")
+        clean_headers.append(header.strip())
 
-    # Use the remaining rows as data
-    rows = data[1:]
+    # Build table structure
+    lines = [
+        "|" + "|".join(clean_headers) + "|",
+        "|" + "|".join(["-"] * len(clean_headers)) + "|"
+    ]
 
-    # Create the table header, stripping spaces from header values
-    header_parts = []
-    for h in headers:
-        # Strip spaces from header values
-        header_parts.append(str(h).strip())
-
-    header_row = "|" + "|".join(header_parts) + "|"
-
-    # Create the separator row with the exact expected format
-    separator = "|-" * len(headers) + "|"
-
-    # Build the table
-    table = [header_row, separator]
-
-    for idx, row in enumerate(rows):
-        # Check if row has more items than headers
-        if len(row) > len(headers):
-            raise ValueError(f"Row {idx+1} has {len(row)} items, which is more than the {len(headers)} headers")
-
-        # Convert row values to strings and handle special cases
+    # Process data rows
+    for row in data[1:]:
+        # Convert values to strings with consistent formatting
         row_values = []
-        for i, value in enumerate(row):
-            if i < len(headers):
-                if value is None:
-                    row_values.append("")
-                elif isinstance(value, bool):
-                    row_values.append(str(value).lower())
-                elif isinstance(value, (int, float)):
-                    row_values.append(str(value))
-                else:
-                    # Process multi-line text to create a clean, single-line representation
+        for value in row[:len(clean_headers)]:  # Truncate to header count
+            if value is None:
+                row_values.append("")
+            elif isinstance(value, bool):
+                row_values.append(str(value).lower())
+            elif isinstance(value, (int, float)):
+                row_values.append(str(value))
+            else:
+                # Handle multi-line strings by collapsing to single line
+                text = str(value)
+                clean_text = " ".join(line.strip() for line in text.split('\n') if line.strip())
+                row_values.append(clean_text)
 
-                    text = str(value)
-                    # Split text into lines, strip whitespace, and filter out empty lines
-                    non_empty_lines = [line.strip() for line in text.split('\n') if line.strip()]
-                    # Join the non-empty lines with a single space
-                    formatted_text = " ".join(non_empty_lines).strip()
-                    row_values.append(formatted_text)
-
-        # Pad the row if it's shorter than headers
-        while len(row_values) < len(headers):
+        # Pad row to match header count
+        while len(row_values) < len(clean_headers):
             row_values.append("")
 
-        # Add the row to the table
-        table.append("|" + "|".join(row_values) + "|")
+        lines.append("|" + "|".join(row_values) + "|")
 
-    return "\n".join(table)
+    return "\n".join(lines)
