@@ -130,28 +130,15 @@ class CloudModule(BaseModule):
         This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_kubernetes_containers` tool.
         """
 
-        # Prepare parameters
-        params = prepare_api_parameters(
-            {
+        return self._base_search_api_call(
+            operation="ReadContainerCombined",
+            search_params={
                 "filter": filter,
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
-            }
-        )
-
-        # Define the operation name
-        operation = "ReadContainerCombined"
-
-        # Make the API request
-        response = self.client.command(operation, parameters=params)
-
-        # Handle the response
-        return handle_api_response(
-            response,
-            operation=operation,
-            error_message="Failed to perform operation",
-            default_result=[],
+            },
+            error_message="Failed to search Kubernetes containers",
         )
 
     def count_kubernetes_containers(

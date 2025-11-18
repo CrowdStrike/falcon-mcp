@@ -110,7 +110,7 @@ class TestIncidentsModule(TestModules):
         self.assertIn("error", result)
         self.assertIn("details", result)
         # Check that the error message starts with the expected prefix
-        self.assertTrue(result["error"].startswith("Failed to perform operation"))
+        self.assertTrue(result["error"].startswith("Failed to get crowd score"))
 
     def test_crowd_score_with_default_parameters_and_rounding(self):
         """Test querying CrowdScore with default parameters and rounding"""

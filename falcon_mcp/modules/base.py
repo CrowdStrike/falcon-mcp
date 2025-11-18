@@ -107,5 +107,101 @@ class BaseModule(ABC):
             default_result=[],
         )
 
+    def _base_search_api_call(
+        self,
+        operation: str,
+        search_params: Dict[str, Any],
+        error_message: str = "Search operation failed",
+        default_result: Any = None,
+    ) -> List[Dict[str, Any]] | Dict[str, Any]:
+        """Standardized API call for search operations with parameters.
+
+        This method consolidates the common pattern of:
+        1. Preparing parameters
+        2. Making API request with parameters
+        3. Handling the response
+        4. Error checking
+
+        Args:
+            operation: The API operation name (e.g., "QueryDevicesByFilter")
+            search_params: Dictionary of search parameters (filter, limit, offset, sort, etc.)
+            error_message: Custom error message for failed operations
+            default_result: Default value to return if no results found
+
+        Returns:
+            API response data or error dict
+        """
+        # Prepare parameters for the API request
+        prepared_params = prepare_api_parameters(search_params)
+
+        logger.debug("Executing %s with params: %s", operation, prepared_params)
+
+        # Make the API request
+        response = self.client.command(operation, parameters=prepared_params)
+
+        # Handle the response
+        return handle_api_response(
+            response,
+            operation=operation,
+            error_message=error_message,
+            default_result=default_result if default_result is not None else [],
+        )
+
+    def _base_query_api_call(
+        self,
+        operation: str,
+        query_params: Dict[str, Any] = None,
+        body_params: Dict[str, Any] = None,
+        error_message: str = "Query operation failed",
+        default_result: Any = None,
+    ) -> List[Dict[str, Any]] | Dict[str, Any]:
+        """Standardized API call for operations that can use both parameters and body.
+
+        Args:
+            operation: The API operation name
+            query_params: Dictionary of query parameters (for parameters= argument)
+            body_params: Dictionary of body parameters (for body= argument)
+            error_message: Custom error message for failed operations
+            default_result: Default value to return if no results found
+
+        Returns:
+            API response data or error dict
+        """
+        # Prepare the API call arguments
+        call_args = {}
+
+        if query_params:
+            call_args["parameters"] = prepare_api_parameters(query_params)
+
+        if body_params:
+            call_args["body"] = prepare_api_parameters(body_params)
+
+        logger.debug("Executing %s with args: %s", operation, call_args)
+
+        # Make the API request
+        response = self.client.command(operation, **call_args)
+
+        # Handle GraphQL operations differently - they don't use "resources" structure
+        if operation == "api_preempt_proxy_post_graphql":
+            # For GraphQL, check status and return the full body on success
+            if response.get("status_code") == 200:
+                return response.get("body", {})
+            else:
+                # Use standard error handling for failed GraphQL requests
+                return handle_api_response(
+                    response,
+                    operation=operation,
+                    error_message=error_message,
+                    default_result=default_result if default_result is not None else {},
+                )
+
+        # Handle the response using standard resource extraction
+        return handle_api_response(
+            response,
+            operation=operation,
+            error_message=error_message,
+            default_result=default_result if default_result is not None else [],
+        )
+
     def _is_error(self, response: Any) -> bool:
         return isinstance(response, dict) and "error" in response

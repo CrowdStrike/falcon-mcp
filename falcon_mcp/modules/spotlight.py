@@ -11,9 +11,7 @@ from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
 
-from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
-from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.spotlight import SEARCH_VULNERABILITIES_FQL_DOCUMENTATION
 
@@ -122,32 +120,17 @@ class SpotlightModule(BaseModule):
         IMPORTANT: You must use the `falcon://spotlight/vulnerabilities/fql-guide` resource when you need to use the `filter` parameter.
         This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_vulnerabilities` tool.
         """
-        # Prepare parameters for combinedQueryVulnerabilities
-        params = prepare_api_parameters(
-            {
+        vulnerabilities = self._base_search_api_call(
+            operation="combinedQueryVulnerabilities",
+            search_params={
                 "filter": filter,
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
                 "after": after,
                 "facet": facet,
-            }
-        )
-
-        # Define the operation name
-        operation = "combinedQueryVulnerabilities"
-
-        logger.debug("Searching vulnerabilities with params: %s", params)
-
-        # Make the API request
-        response = self.client.command(operation, parameters=params)
-
-        # Use handle_api_response to get vulnerability data
-        vulnerabilities = handle_api_response(
-            response,
-            operation=operation,
+            },
             error_message="Failed to search vulnerabilities",
-            default_result=[],
         )
 
         # If handle_api_response returns an error dict instead of a list,

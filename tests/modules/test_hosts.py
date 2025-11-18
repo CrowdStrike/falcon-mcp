@@ -39,31 +39,32 @@ class TestHostsModule(TestModules):
         }
         details_response = {
             "status_code": 200,
-            "body": {"resources": []},  # Empty resources for PostDeviceDetailsV2
+            "body": {"resources": [
+                {"device_id": "device1", "hostname": "host1", "platform_name": "Windows"},
+                {"device_id": "device2", "hostname": "host2", "platform_name": "Windows"},
+            ]},
         }
         self.mock_client.command.side_effect = [query_response, details_response]
 
         # Call search_hosts
         result = self.module.search_hosts(filter="platform_name:'Windows'", limit=50)
 
-        # Verify client commands were called correctly
-        self.assertEqual(self.mock_client.command.call_count, 2)
-
-        # Check that the first call was to QueryDevicesByFilter with the right filter and limit
+        # Verify first call uses the new base method with correct parameters
         first_call = self.mock_client.command.call_args_list[0]
-        self.assertEqual(first_call[0][0], "QueryDevicesByFilter")
-        self.assertEqual(
-            first_call[1]["parameters"]["filter"], "platform_name:'Windows'"
-        )
+        self.assertEqual(first_call[0][0], "QueryDevicesByFilter")  # operation name
+        self.assertEqual(first_call[1]["parameters"]["filter"], "platform_name:'Windows'")
         self.assertEqual(first_call[1]["parameters"]["limit"], 50)
-        self.mock_client.command.assert_any_call(
-            "PostDeviceDetailsV2", body={"ids": ["device1", "device2"]}
-        )
 
-        # Verify result
-        self.assertEqual(
-            result, []
-        )  # Empty list because PostDeviceDetailsV2 returned empty resources
+        # Verify second call for device details
+        second_call = self.mock_client.command.call_args_list[1]
+        self.assertEqual(second_call[0][0], "PostDeviceDetailsV2")
+        self.assertEqual(second_call[1]["body"]["ids"], ["device1", "device2"])
+
+        # Verify result structure
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["device_id"], "device1")
+        self.assertEqual(result[1]["device_id"], "device2")
 
     def test_search_hosts_with_details(self):
         """Test searching for hosts with details."""

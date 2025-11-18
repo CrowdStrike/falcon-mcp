@@ -11,9 +11,7 @@ from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
 
-from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
-from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.detections import SEARCH_DETECTIONS_FQL_DOCUMENTATION
 
@@ -110,31 +108,16 @@ class DetectionsModule(BaseModule):
         IMPORTANT: You must use the `falcon://detections/search/fql-guide` resource when you need to use the `filter` parameter.
         This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_detections` tool.
         """
-        # Prepare parameters
-        params = prepare_api_parameters(
-            {
+        detection_ids = self._base_search_api_call(
+            operation="GetQueriesAlertsV2",
+            search_params={
                 "filter": filter,
                 "limit": limit,
                 "offset": offset,
                 "q": q,
                 "sort": sort,
-            }
-        )
-
-        # Define the operation name
-        operation = "GetQueriesAlertsV2"
-
-        logger.debug("Searching detections with params: %s", params)
-
-        # Make the API request
-        response = self.client.command(operation, parameters=params)
-
-        # Use handle_api_response to get detection IDs (now composite_ids)
-        detection_ids = handle_api_response(
-            response,
-            operation=operation,
+            },
             error_message="Failed to search detections",
-            default_result=[],
         )
 
         # If handle_api_response returns an error dict instead of a list,
@@ -144,7 +127,6 @@ class DetectionsModule(BaseModule):
 
         # If we have detection IDs, get the details for each one
         if detection_ids:
-            # Use the enhanced base method with composite_ids and include_hidden
             details = self._base_get_by_ids(
                 operation="PostEntitiesAlertsV2",
                 ids=detection_ids,
@@ -178,7 +160,6 @@ class DetectionsModule(BaseModule):
         """
         logger.debug("Getting detection details for ID(s): %s", ids)
 
-        # Use the enhanced base method - composite_ids parameter matches ids for backward compatibility
         return self._base_get_by_ids(
             operation="PostEntitiesAlertsV2",
             ids=ids,

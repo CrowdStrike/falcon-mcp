@@ -180,6 +180,280 @@ class TestBaseModule(TestModules):
         # Verify result is empty list
         self.assertEqual(result, [])
 
+    def test_base_search_api_call_success(self):
+        """Test _base_search_api_call with successful response."""
+        # Setup mock response
+        mock_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"device_id": "dev1", "hostname": "host1"},
+                    {"device_id": "dev2", "hostname": "host2"},
+                ]
+            },
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_search_api_call
+        result = self.module._base_search_api_call(
+            operation="QueryDevicesByFilter",
+            search_params={
+                "filter": "platform_name:'Windows'",
+                "limit": 50,
+                "offset": 0,
+                "sort": "hostname.asc",
+            },
+            error_message="Failed to search devices",
+        )
+
+        # Verify client command was called correctly
+        self.mock_client.command.assert_called_once_with(
+            "QueryDevicesByFilter",
+            parameters={
+                "filter": "platform_name:'Windows'",
+                "limit": 50,
+                "offset": 0,
+                "sort": "hostname.asc",
+            }
+        )
+
+        # Verify result
+        expected_result = [
+            {"device_id": "dev1", "hostname": "host1"},
+            {"device_id": "dev2", "hostname": "host2"},
+        ]
+        self.assertEqual(result, expected_result)
+
+    def test_base_search_api_call_with_none_values(self):
+        """Test _base_search_api_call filters None values from parameters."""
+        # Setup mock response
+        mock_response = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_search_api_call with None values
+        result = self.module._base_search_api_call(
+            operation="QueryDevicesByFilter",
+            search_params={
+                "filter": None,  # Should be filtered out
+                "limit": 10,
+                "offset": None,  # Should be filtered out
+                "sort": "hostname.asc",
+            },
+        )
+
+        # Verify None values were filtered out
+        self.mock_client.command.assert_called_once_with(
+            "QueryDevicesByFilter",
+            parameters={
+                "limit": 10,
+                "sort": "hostname.asc",
+            }
+        )
+        self.assertEqual(result, [])
+
+    def test_base_search_api_call_error_handling(self):
+        """Test _base_search_api_call error handling."""
+        # Setup mock error response
+        mock_response = {
+            "status_code": 403,
+            "body": {"errors": [{"message": "Access denied"}]},
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_search_api_call
+        result = self.module._base_search_api_call(
+            operation="QueryDevicesByFilter",
+            search_params={"limit": 10},
+            error_message="Custom error message",
+        )
+
+        # Verify error handling
+        self.assertIn("error", result)
+        self.assertIn("Custom error message", result["error"])
+
+    def test_base_search_api_call_custom_default_result(self):
+        """Test _base_search_api_call with custom default result."""
+        # Setup mock empty response
+        mock_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.return_value = mock_response
+
+        # Call with custom default result
+        result = self.module._base_search_api_call(
+            operation="QueryDevicesByFilter",
+            search_params={"limit": 10},
+            default_result={"message": "No results found"},
+        )
+
+        # Verify custom default is returned for empty results
+        self.assertEqual(result, {"message": "No results found"})
+
+    def test_base_query_api_call_parameters_only(self):
+        """Test _base_query_api_call with parameters only."""
+        # Setup mock response
+        mock_response = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "test1", "name": "Test"}]},
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_query_api_call with parameters only
+        result = self.module._base_query_api_call(
+            operation="GetTestData",
+            query_params={"limit": 10, "filter": "active:true"},
+            error_message="Failed to get test data",
+        )
+
+        # Verify client command was called correctly
+        self.mock_client.command.assert_called_once_with(
+            "GetTestData", parameters={"limit": 10, "filter": "active:true"}
+        )
+
+        # Verify result
+        expected_result = [{"id": "test1", "name": "Test"}]
+        self.assertEqual(result, expected_result)
+
+    def test_base_query_api_call_body_only(self):
+        """Test _base_query_api_call with body only."""
+        # Setup mock response
+        mock_response = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "test2", "name": "Test2"}]},
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_query_api_call with body only
+        result = self.module._base_query_api_call(
+            operation="PostTestData",
+            body_params={"ids": ["test1", "test2"], "include_metadata": True},
+            error_message="Failed to post test data",
+        )
+
+        # Verify client command was called correctly
+        self.mock_client.command.assert_called_once_with(
+            "PostTestData", body={"ids": ["test1", "test2"], "include_metadata": True}
+        )
+
+        # Verify result
+        expected_result = [{"id": "test2", "name": "Test2"}]
+        self.assertEqual(result, expected_result)
+
+    def test_base_query_api_call_both_parameters_and_body(self):
+        """Test _base_query_api_call with both parameters and body."""
+        # Setup mock response
+        mock_response = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "test3", "name": "Test3"}]},
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_query_api_call with both
+        result = self.module._base_query_api_call(
+            operation="ComplexOperation",
+            query_params={"limit": 5},
+            body_params={"filter_config": {"active": True}},
+        )
+
+        # Verify client command was called correctly
+        self.mock_client.command.assert_called_once_with(
+            "ComplexOperation",
+            parameters={"limit": 5},
+            body={"filter_config": {"active": True}},
+        )
+
+        # Verify result
+        expected_result = [{"id": "test3", "name": "Test3"}]
+        self.assertEqual(result, expected_result)
+
+    def test_base_query_api_call_no_parameters(self):
+        """Test _base_query_api_call with no parameters."""
+        # Setup mock response
+        mock_response = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "default", "name": "Default"}]},
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_query_api_call with no parameters
+        result = self.module._base_query_api_call(operation="GetDefaults")
+
+        # Verify client command was called with no additional arguments
+        self.mock_client.command.assert_called_once_with("GetDefaults")
+
+        # Verify result
+        expected_result = [{"id": "default", "name": "Default"}]
+        self.assertEqual(result, expected_result)
+
+    def test_base_query_api_call_error_handling(self):
+        """Test _base_query_api_call error handling."""
+        # Setup mock error response
+        mock_response = {
+            "status_code": 500,
+            "body": {"errors": [{"message": "Internal server error"}]},
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_query_api_call
+        result = self.module._base_query_api_call(
+            operation="FailingOperation",
+            query_params={"test": "value"},
+            error_message="Operation failed unexpectedly",
+        )
+
+        # Verify error handling
+        self.assertIn("error", result)
+        self.assertIn("Operation failed unexpectedly", result["error"])
+
+    def test_base_query_api_call_graphql_operation(self):
+        """Test _base_query_api_call with GraphQL operation (like IDP module uses)."""
+        # Setup mock response
+        mock_response = {
+            "status_code": 200,
+            "body": {
+                "data": {
+                    "entities": {
+                        "nodes": [
+                            {"entityId": "entity1", "primaryDisplayName": "Entity 1"},
+                            {"entityId": "entity2", "primaryDisplayName": "Entity 2"},
+                        ]
+                    }
+                }
+            },
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # GraphQL query similar to what IDP module uses
+        graphql_query = """
+        query GetEntities {
+            entities(filter: {entityType: "USER"}) {
+                nodes {
+                    entityId
+                    primaryDisplayName
+                }
+            }
+        }
+        """
+
+        # Call _base_query_api_call with GraphQL body
+        result = self.module._base_query_api_call(
+            operation="api_preempt_proxy_post_graphql",
+            body_params={"query": graphql_query},
+            error_message="Failed to execute GraphQL query",
+        )
+
+        # Verify client command was called correctly
+        self.mock_client.command.assert_called_once_with(
+            "api_preempt_proxy_post_graphql",
+            body={"query": graphql_query}
+        )
+
+        # Verify result structure
+        self.assertIn("data", result)
+        self.assertIn("entities", result["data"])
+        self.assertEqual(len(result["data"]["entities"]["nodes"]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

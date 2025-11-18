@@ -11,9 +11,7 @@ from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
 
-from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
-from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.hosts import SEARCH_HOSTS_FQL_DOCUMENTATION
 
@@ -104,30 +102,15 @@ class HostsModule(BaseModule):
         IMPORTANT: You must use the `falcon://hosts/search/fql-guide` resource when you need to use the `filter` parameter.
         This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_hosts` tool.
         """
-        # Prepare parameters for QueryDevicesByFilter
-        params = prepare_api_parameters(
-            {
+        device_ids = self._base_search_api_call(
+            operation="QueryDevicesByFilter",
+            search_params={
                 "filter": filter,
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
-            }
-        )
-
-        # Define the operation name
-        operation = "QueryDevicesByFilter"
-
-        logger.debug("Searching hosts with params: %s", params)
-
-        # Make the API request to get device IDs
-        response = self.client.command(operation, parameters=params)
-
-        # Use handle_api_response to get device IDs
-        device_ids = handle_api_response(
-            response,
-            operation=operation,
+            },
             error_message="Failed to search hosts",
-            default_result=[],
         )
 
         # If handle_api_response returns an error dict instead of a list,
@@ -137,7 +120,6 @@ class HostsModule(BaseModule):
 
         # If we have device IDs, get the details for each one
         if device_ids:
-            # Use the base method to get device details
             details = self._base_get_by_ids(
                 operation="PostDeviceDetailsV2",
                 ids=device_ids,
@@ -171,7 +153,6 @@ class HostsModule(BaseModule):
         if not ids:
             return []
 
-        # Use the base method to get device details
         return self._base_get_by_ids(
             operation="PostDeviceDetailsV2",
             ids=ids,

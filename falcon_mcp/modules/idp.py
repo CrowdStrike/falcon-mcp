@@ -13,7 +13,6 @@ from typing import Any, Dict, List
 from mcp.server import FastMCP
 from pydantic import Field
 
-from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import sanitize_input
 from falcon_mcp.modules.base import BaseModule
@@ -882,10 +881,9 @@ class IdpModule(BaseModule):
             }}
             """
 
-            response = self.client.command("api_preempt_proxy_post_graphql", body={"query": query})
-            result = handle_api_response(
-                response,
+            result = self._base_query_api_call(
                 operation="api_preempt_proxy_post_graphql",
+                body_params={"query": query},
                 error_message="Failed to resolve entities with combined filters",
                 default_result=None,
             )
@@ -893,7 +891,7 @@ class IdpModule(BaseModule):
                 return result
 
             # Extract entities from GraphQL response structure
-            data = response.get("body", {}).get("data", {})
+            data = result.get("data", {})
             entities = data.get("entities", {}).get("nodes", [])
             resolved_ids.extend([entity["entityId"] for entity in entities])
 
@@ -968,13 +966,9 @@ class IdpModule(BaseModule):
             include_accounts=options.get("include_accounts", True),
         )
 
-        response = self.client.command(
-            "api_preempt_proxy_post_graphql",
-            body={"query": graphql_query},
-        )
-        result = handle_api_response(
-            response,
+        result = self._base_query_api_call(
             operation="api_preempt_proxy_post_graphql",
+            body_params={"query": graphql_query},
             error_message="Failed to get entity details",
             default_result=None,
         )
@@ -982,7 +976,7 @@ class IdpModule(BaseModule):
             return result
 
         # Extract entities from GraphQL response structure
-        data = response.get("body", {}).get("data", {})
+        data = result.get("data", {})
         entities = data.get("entities", {}).get("nodes", [])
         return {"entities": entities, "entity_count": len(entities)}
 
@@ -1001,13 +995,9 @@ class IdpModule(BaseModule):
                 limit=options.get("limit", 50),
             )
 
-            response = self.client.command(
-                "api_preempt_proxy_post_graphql",
-                body={"query": graphql_query},
-            )
-            result = handle_api_response(
-                response,
+            result = self._base_query_api_call(
                 operation="api_preempt_proxy_post_graphql",
+                body_params={"query": graphql_query},
                 error_message=f"Failed to get timeline for entity '{entity_id}'",
                 default_result=None,
             )
@@ -1015,7 +1005,7 @@ class IdpModule(BaseModule):
                 return result
 
             # Extract timeline from GraphQL response structure
-            data = response.get("body", {}).get("data", {})
+            data = result.get("data", {})
             timeline_data = data.get("timeline", {})
             timeline_results.append(
                 {
@@ -1048,13 +1038,9 @@ class IdpModule(BaseModule):
                 limit=options.get("limit", 50),
             )
 
-            response = self.client.command(
-                "api_preempt_proxy_post_graphql",
-                body={"query": graphql_query},
-            )
-            result = handle_api_response(
-                response,
+            result = self._base_query_api_call(
                 operation="api_preempt_proxy_post_graphql",
+                body_params={"query": graphql_query},
                 error_message=f"Failed to analyze relationships for entity '{entity_id}'",
                 default_result=None,
             )
@@ -1062,7 +1048,7 @@ class IdpModule(BaseModule):
                 return result
 
             # Extract entities from GraphQL response structure
-            data = response.get("body", {}).get("data", {})
+            data = result.get("data", {})
             entities = data.get("entities", {}).get("nodes", [])
             if entities:
                 entity_data = entities[0]
@@ -1095,13 +1081,9 @@ class IdpModule(BaseModule):
             include_risk_factors=options.get("include_risk_factors", True),
         )
 
-        response = self.client.command(
-            "api_preempt_proxy_post_graphql",
-            body={"query": graphql_query},
-        )
-        result = handle_api_response(
-            response,
+        result = self._base_query_api_call(
             operation="api_preempt_proxy_post_graphql",
+            body_params={"query": graphql_query},
             error_message="Failed to assess risks",
             default_result=None,
         )
@@ -1109,7 +1091,7 @@ class IdpModule(BaseModule):
             return result
 
         # Extract entities from GraphQL response structure
-        data = response.get("body", {}).get("data", {})
+        data = result.get("data", {})
         entities = data.get("entities", {}).get("nodes", [])
         risk_assessments = []
 

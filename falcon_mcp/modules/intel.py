@@ -10,9 +10,7 @@ from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
 
-from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
-from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.intel import (
     QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION,
@@ -125,31 +123,16 @@ class IntelModule(BaseModule):
         IMPORTANT: You must use the `falcon://intel/actors/fql-guide` resource when you need to use the `filter` parameter.
         This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_actors` tool.
         """
-        # Prepare parameters
-        params = prepare_api_parameters(
-            {
+        api_response = self._base_search_api_call(
+            operation="QueryIntelActorEntities",
+            search_params={
                 "filter": filter,
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
                 "q": q,
-            }
-        )
-
-        # Define the operation name
-        operation = "QueryIntelActorEntities"
-
-        logger.debug("Searching actors with params: %s", params)
-
-        # Make the API request
-        command_response = self.client.command(operation, parameters=params)
-
-        # Handle the response
-        api_response = handle_api_response(
-            command_response,
-            operation=operation,
+            },
             error_message="Failed to search actors",
-            default_result=[],
         )
 
         if self._is_error(api_response):
@@ -196,9 +179,9 @@ class IntelModule(BaseModule):
         IMPORTANT: You must use the `falcon://intel/indicators/fql-guide` resource when you need to use the `filter` parameter.
         This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_indicators` tool.
         """
-        # Prepare parameters
-        params = prepare_api_parameters(
-            {
+        api_response = self._base_search_api_call(
+            operation="QueryIntelIndicatorEntities",
+            search_params={
                 "filter": filter,
                 "limit": limit,
                 "offset": offset,
@@ -206,23 +189,8 @@ class IntelModule(BaseModule):
                 "q": q,
                 "include_deleted": include_deleted,
                 "include_relations": include_relations,
-            }
-        )
-
-        # Define the operation name
-        operation = "QueryIntelIndicatorEntities"
-
-        logger.debug("Searching indicators with params: %s", params)
-
-        # Make the API request
-        command_response = self.client.command(operation, parameters=params)
-
-        # Handle the response
-        api_response = handle_api_response(
-            command_response,
-            operation=operation,
+            },
             error_message="Failed to search indicators",
-            default_result=[],
         )
 
         if self._is_error(api_response):
@@ -265,31 +233,16 @@ class IntelModule(BaseModule):
         IMPORTANT: You must use the `falcon://intel/reports/fql-guide` resource when you need to use the `filter` parameter.
         This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_reports` tool.
         """
-        # Prepare parameters
-        params = prepare_api_parameters(
-            {
+        api_response = self._base_search_api_call(
+            operation="QueryIntelReportEntities",
+            search_params={
                 "filter": filter,
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
                 "q": q,
-            }
-        )
-
-        # Define the operation name
-        operation = "QueryIntelReportEntities"
-
-        logger.debug("Searching reports with params: %s", params)
-
-        # Make the API request
-        command_response = self.client.command(operation, parameters=params)
-
-        # Handle the response
-        api_response = handle_api_response(
-            command_response,
-            operation=operation,
+            },
             error_message="Failed to search reports",
-            default_result=[],
         )
 
         # If handle_api_response returns an error dict instead of a list,

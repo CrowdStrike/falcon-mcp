@@ -10,8 +10,6 @@ from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
 
-from falcon_mcp.common.errors import handle_api_response
-from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.incidents import (
     CROWD_SCORE_FQL_DOCUMENTATION,
@@ -127,28 +125,15 @@ class IncidentsModule(BaseModule):
         IMPORTANT: You must use the `falcon://incidents/crowd-score/fql-guide` resource when you need to use the `filter` parameter.
         This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_show_crowd_score` tool.
         """
-        # Prepare parameters
-        params = prepare_api_parameters(
-            {
+        api_response = self._base_search_api_call(
+            operation="CrowdScore",
+            search_params={
                 "filter": filter,
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
-            }
-        )
-
-        # Define the operation name (used for error handling)
-        operation = "CrowdScore"
-
-        # Make the API request
-        response = self.client.command(operation, parameters=params)
-
-        # Handle the response
-        api_response = handle_api_response(
-            response,
-            operation=operation,
-            error_message="Failed to perform operation",
-            default_result=[],
+            },
+            error_message="Failed to get crowd score",
         )
 
         # Check if we received an error response
@@ -315,23 +300,13 @@ class IncidentsModule(BaseModule):
         offset: int | None = None,
         sort: str | None = None,
     ) -> List[str] | Dict[str, Any]:
-        # Prepare parameters
-        params = prepare_api_parameters(
-            {
+        return self._base_search_api_call(
+            operation=operation,
+            search_params={
                 "filter": filter,
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
-            }
-        )
-
-        # Make the API request
-        response = self.client.command(operation, parameters=params)
-
-        # Handle the response
-        return handle_api_response(
-            response,
-            operation=operation,
+            },
             error_message="Failed to perform operation",
-            default_result=[],
         )
