@@ -7,19 +7,10 @@ This module provides error handling utilities for the Falcon MCP server.
 from typing import Any, Dict, Optional
 
 from .api_scopes import get_required_scopes
+from .constants import ERROR_CODE_DESCRIPTIONS
 from .logging import get_logger
 
 logger = get_logger(__name__)
-
-# Common error codes and their meanings
-ERROR_CODE_DESCRIPTIONS = {
-    403: "Permission denied. The API credentials don't have the required access.",
-    401: "Authentication failed. The API credentials are invalid or expired.",
-    404: "Resource not found. The requested resource does not exist.",
-    429: "Rate limit exceeded. Too many requests in a short period.",
-    500: "Server error. An unexpected error occurred on the server.",
-    503: "Service unavailable. The service is temporarily unavailable.",
-}
 
 
 class FalconError(Exception):

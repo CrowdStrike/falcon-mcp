@@ -13,6 +13,7 @@ from pydantic import AnyUrl, Field
 
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.modules.base import BaseModule
+from falcon_mcp.common.constants import SearchLimits
 from falcon_mcp.resources.spotlight import SEARCH_VULNERABILITIES_FQL_DOCUMENTATION
 
 logger = get_logger(__name__)
@@ -60,9 +61,9 @@ class SpotlightModule(BaseModule):
             examples={"status:'open'", "cve.severity:'HIGH'"},
         ),
         limit: int = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
-            le=5000,
+            le=SearchLimits.MAX_SPOTLIGHT,
             description="Maximum number of results to return. (Max: 5000, Default: 10)",
         ),
         offset: int | None = Field(

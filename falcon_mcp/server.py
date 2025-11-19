@@ -16,6 +16,10 @@ from mcp.server.fastmcp import FastMCP
 
 from falcon_mcp import registry
 from falcon_mcp.client import FalconClient
+from falcon_mcp.common.constants import (
+    ServerDefaults,
+    TransportTypes,
+)
 from falcon_mcp.common.logging import configure_logging, get_logger
 
 logger = get_logger(__name__)
@@ -122,7 +126,7 @@ class FalconMCPServer:
             name="falcon_list_modules",
         )
 
-        tool_count = 3  # the tools added above
+        tool_count = ServerDefaults.CORE_TOOLS_COUNT  # the tools added above
 
         # Register tools from modules
         for module in self.modules.values():
@@ -162,7 +166,7 @@ class FalconMCPServer:
         """Lists all available modules in the falcon-mcp server."""
         return {"modules": registry.get_module_names()}
 
-    def run(self, transport: str = "stdio", host: str = "127.0.0.1", port: int = 8000):
+    def run(self, transport: str = TransportTypes.STDIO, host: str = ServerDefaults.DEFAULT_HOST, port: int = ServerDefaults.DEFAULT_PORT):
         """Run the MCP server.
 
         Args:
@@ -170,7 +174,7 @@ class FalconMCPServer:
             host: Host to bind to for HTTP transports (default: 127.0.0.1)
             port: Port to listen on for HTTP transports (default: 8000)
         """
-        if transport == "streamable-http":
+        if transport == TransportTypes.STREAMABLE_HTTP:
             # For streamable-http, use uvicorn directly for custom host/port
             logger.info("Starting streamable-http server on %s:%d", host, port)
 
@@ -184,7 +188,7 @@ class FalconMCPServer:
                 port=port,
                 log_level="info" if not self.debug else "debug",
             )
-        elif transport == "sse":
+        elif transport == TransportTypes.SSE:
             # For sse, use uvicorn directly for custom host/port (same pattern as streamable-http)
             logger.info("Starting sse server on %s:%d", host, port)
 
@@ -244,8 +248,8 @@ def parse_args():
     parser.add_argument(
         "--transport",
         "-t",
-        choices=["stdio", "sse", "streamable-http"],
-        default=os.environ.get("FALCON_MCP_TRANSPORT", "stdio"),
+        choices=[TransportTypes.STDIO, TransportTypes.SSE, TransportTypes.STREAMABLE_HTTP],
+        default=os.environ.get("FALCON_MCP_TRANSPORT", TransportTypes.STDIO),
         help="Transport protocol to use (default: stdio, env: FALCON_MCP_TRANSPORT)",
     )
 
@@ -281,7 +285,7 @@ def parse_args():
     # HTTP transport configuration
     parser.add_argument(
         "--host",
-        default=os.environ.get("FALCON_MCP_HOST", "127.0.0.1"),
+        default=os.environ.get("FALCON_MCP_HOST", ServerDefaults.DEFAULT_HOST),
         help="Host to bind to for HTTP transports (default: 127.0.0.1, env: FALCON_MCP_HOST)",
     )
 
@@ -289,7 +293,7 @@ def parse_args():
         "--port",
         "-p",
         type=int,
-        default=int(os.environ.get("FALCON_MCP_PORT", "8000")),
+        default=int(os.environ.get("FALCON_MCP_PORT", str(ServerDefaults.DEFAULT_PORT))),
         help="Port to listen on for HTTP transports (default: 8000, env: FALCON_MCP_PORT)",
     )
 

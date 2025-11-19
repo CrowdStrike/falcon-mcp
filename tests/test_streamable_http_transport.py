@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from falcon_mcp.server import FalconMCPServer
+from falcon_mcp.common.constants import ServerDefaults, TransportTypes
 
 
 class TestStreamableHttpTransport(unittest.TestCase):
@@ -21,6 +22,8 @@ class TestStreamableHttpTransport(unittest.TestCase):
         mock_client,
     ):
         """Test streamable-http transport initialization."""
+        test_host = "0.0.0.0" # nosec
+        test_port = "8080" # nosec
         # Setup mocks
         mock_client_instance = MagicMock()
         mock_client_instance.authenticate.return_value = True
@@ -35,11 +38,11 @@ class TestStreamableHttpTransport(unittest.TestCase):
         server = FalconMCPServer(debug=True)
 
         # Test streamable-http transport
-        server.run("streamable-http", host="0.0.0.0", port=8080)
+        server.run(TransportTypes.STREAMABLE_HTTP, host=test_host, port=test_port)
 
         # Verify uvicorn was called with correct parameters
         mock_uvicorn.run.assert_called_once_with(
-            mock_app, host="0.0.0.0", port=8080, log_level="debug"
+            mock_app, host=test_host, port=test_port, log_level="debug"
         )
 
         # Verify streamable_http_app was called
@@ -69,13 +72,13 @@ class TestStreamableHttpTransport(unittest.TestCase):
         server = FalconMCPServer(debug=False)
 
         # Test streamable-http transport with defaults
-        server.run("streamable-http")
+        server.run(TransportTypes.STREAMABLE_HTTP)
 
         # Verify uvicorn was called with default parameters
         mock_uvicorn.run.assert_called_once_with(
             mock_app,
-            host="127.0.0.1",
-            port=8000,
+            host=ServerDefaults.DEFAULT_HOST,
+            port=ServerDefaults.DEFAULT_PORT,
             log_level="info",
         )
 
@@ -99,10 +102,10 @@ class TestStreamableHttpTransport(unittest.TestCase):
         server = FalconMCPServer()
 
         # Test stdio transport (should use original method)
-        server.run("stdio")
+        server.run(TransportTypes.STDIO)
 
         # Verify the original run method was called
-        mock_server_instance.run.assert_called_once_with("stdio")
+        mock_server_instance.run.assert_called_once_with(TransportTypes.STDIO)
 
         # Verify streamable_http_app was NOT called
         mock_server_instance.streamable_http_app.assert_not_called()
@@ -117,6 +120,8 @@ class TestStreamableHttpTransport(unittest.TestCase):
         mock_client,
     ):
         """Test streamable-http transport with custom parameters."""
+        test_host = "192.168.1.100"
+        test_port = "9000"
         # Setup mocks
         mock_client_instance = MagicMock()
         mock_client_instance.authenticate.return_value = True
@@ -131,13 +136,13 @@ class TestStreamableHttpTransport(unittest.TestCase):
         server = FalconMCPServer(debug=True)
 
         # Test streamable-http transport with custom parameters
-        server.run("streamable-http", host="192.168.1.100", port=9000)
+        server.run(TransportTypes.STREAMABLE_HTTP, host=test_host, port=test_port)
 
         # Verify uvicorn was called with custom parameters
         mock_uvicorn.run.assert_called_once_with(
             mock_app,
-            host="192.168.1.100",
-            port=9000,
+            host=test_host,
+            port=test_port,
             log_level="debug",
         )
 
@@ -163,13 +168,13 @@ class TestStreamableHttpTransport(unittest.TestCase):
 
         # Test with debug=True
         server_debug = FalconMCPServer(debug=True)
-        server_debug.run("streamable-http")
+        server_debug.run(TransportTypes.STREAMABLE_HTTP)
 
         # Verify debug log level
         mock_uvicorn.run.assert_called_with(
             mock_app,
-            host="127.0.0.1",
-            port=8000,
+            host=ServerDefaults.DEFAULT_HOST,
+            port=ServerDefaults.DEFAULT_PORT,
             log_level="debug",
         )
 
@@ -178,13 +183,13 @@ class TestStreamableHttpTransport(unittest.TestCase):
 
         # Test with debug=False
         server_info = FalconMCPServer(debug=False)
-        server_info.run("streamable-http")
+        server_info.run(TransportTypes.STREAMABLE_HTTP)
 
         # Verify info log level
         mock_uvicorn.run.assert_called_with(
             mock_app,
-            host="127.0.0.1",
-            port=8000,
+            host=ServerDefaults.DEFAULT_HOST,
+            port=ServerDefaults.DEFAULT_PORT,
             log_level="info",
         )
 

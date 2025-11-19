@@ -13,6 +13,7 @@ from pydantic import AnyUrl, Field
 
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.modules.base import BaseModule
+from falcon_mcp.common.constants import SearchLimits
 from falcon_mcp.resources.detections import SEARCH_DETECTIONS_FQL_DOCUMENTATION
 
 logger = get_logger(__name__)
@@ -66,9 +67,9 @@ class DetectionsModule(BaseModule):
             examples={"agent_id:'77d11725xxxxxxxxxxxxxxxxxxxxc48ca19'", "status:'new'"},
         ),
         limit: int = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
-            le=9999,
+            le=SearchLimits.MAX_DETECTIONS,
             description="The maximum number of detections to return in this response (default: 10; max: 9999). Use with the offset parameter to manage pagination of results.",
         ),
         offset: int | None = Field(

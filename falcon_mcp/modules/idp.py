@@ -16,6 +16,7 @@ from pydantic import Field
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import sanitize_input
 from falcon_mcp.modules.base import BaseModule
+from falcon_mcp.common.constants import GraphQLDefaults, SearchLimits
 
 logger = get_logger(__name__)
 
@@ -83,16 +84,16 @@ class IdpModule(BaseModule):
         ),
         # Relationship Parameters (when relationship_analysis is included)
         relationship_depth: int = Field(
-            default=2,
+            default=SearchLimits.DEFAULT_IDP_RELATIONSHIPS,
             ge=1,
-            le=3,
+            le=SearchLimits.MAX_IDP_RELATIONSHIPS,
             description="Depth of relationship analysis (1-3 levels)",
         ),
         # General Parameters
         limit: int = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
-            le=200,
+            le=SearchLimits.MAX_IDP_RESULTS,
             description="Maximum number of results to return",
         ),
         include_associations: bool = Field(
@@ -378,7 +379,7 @@ class IdpModule(BaseModule):
 
         if include_incidents:
             fields.append("""
-                openIncidents(first: 10) {
+                openIncidents(first: {GraphQLDefaults.FIRST_INCIDENTS}) {{
                     nodes {
                         type
                         startTime
@@ -430,7 +431,7 @@ class IdpModule(BaseModule):
 
         return f"""
         query {{
-            entities(entityIds: {entity_ids_json}, first: 50) {{
+            entities(entityIds: {entity_ids_json}, first: {GraphQLDefaults.FIRST_ENTITIES_BATCH}) {{
                 nodes {{
                     {fields_string}
                 }}
@@ -795,7 +796,7 @@ class IdpModule(BaseModule):
 
         return f"""
         query {{
-            entities(entityIds: {entity_ids_json}, first: 50) {{
+            entities(entityIds: {entity_ids_json}, first: {GraphQLDefaults.FIRST_ENTITIES_BATCH}) {{
                 nodes {{
                     entityId
                     primaryDisplayName

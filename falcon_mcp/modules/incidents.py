@@ -11,6 +11,7 @@ from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
 
 from falcon_mcp.modules.base import BaseModule
+from falcon_mcp.common.constants import SearchLimits
 from falcon_mcp.resources.incidents import (
     CROWD_SCORE_FQL_DOCUMENTATION,
     SEARCH_BEHAVIORS_FQL_DOCUMENTATION,
@@ -105,9 +106,9 @@ class IncidentsModule(BaseModule):
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/crowd-score/fql-guide` resource when building this filter parameter.",
         ),
         limit: int = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
-            le=2500,
+            le=SearchLimits.MAX_CLOUD_SCORE,
             description="Maximum number of records to return. (Max: 2500)",
         ),
         offset: int | None = Field(
@@ -171,9 +172,9 @@ class IncidentsModule(BaseModule):
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/search/fql-guide` resource when building this filter parameter.",
         ),
         limit: int = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
-            le=500,
+            le=SearchLimits.MAX_INCIDENTS,
             description="Maximum number of records to return. (Max: 500)",
         ),
         offset: int | None = Field(
@@ -234,9 +235,9 @@ class IncidentsModule(BaseModule):
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://incidents/behaviors/fql-guide` resource when building this filter parameter.",
         ),
         limit: int = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
-            le=500,
+            le=SearchLimits.MAX_INCIDENTS,
             description="Maximum number of records to return. (Max: 500)",
         ),
         offset: int | None = Field(

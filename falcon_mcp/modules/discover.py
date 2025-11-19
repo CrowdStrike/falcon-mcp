@@ -15,6 +15,7 @@ from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
+from falcon_mcp.common.constants import SearchLimits
 from falcon_mcp.resources.discover import (
     SEARCH_APPLICATIONS_FQL_DOCUMENTATION,
     SEARCH_UNMANAGED_ASSETS_FQL_DOCUMENTATION,
@@ -96,9 +97,9 @@ class DiscoverModule(BaseModule):
             examples={"browser_extension", "host_info", "install_usage"},
         ),
         limit: int = Field(
-            default=100,
+            default=SearchLimits.DEFAULT_DISCOVER,
             ge=1,
-            le=1000,
+            le=SearchLimits.MAX_DISCOVER_APPS,
             description="Maximum number of items to return: 1-1000. Default is 100.",
         ),
         sort: str | None = Field(
@@ -153,9 +154,9 @@ class DiscoverModule(BaseModule):
             examples={"platform_name:'Windows'", "criticality:'Critical'"},
         ),
         limit: int = Field(
-            default=100,
+            default=SearchLimits.DEFAULT_DISCOVER,
             ge=1,
-            le=5000,
+            le=SearchLimits.MAX_HOSTS,
             description="Maximum number of items to return: 1-5000. Default is 100.",
         ),
         offset: int | None = Field(
