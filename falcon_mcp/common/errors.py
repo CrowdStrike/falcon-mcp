@@ -73,7 +73,7 @@ def _format_error_response(
     Returns:
         Dict[str, Any]: Formatted error response
     """
-    response = {"error": message}
+    response: Dict[str, Any] = {"error": message}
 
     # Add details if provided
     if details:
@@ -116,6 +116,16 @@ def handle_api_response(
     """
     status_code = response.get("status_code")
 
+    # If no status_code is present, assume success (200) for responses with data
+    # This handles cases like NGSIEM query results that don't include status_code
+    if status_code is None:
+        # Check if response contains actual data (successful response)
+        if any(key in response for key in ["results", "search_id", "body", "resources"]):
+            status_code = 200
+        else:
+            # Empty response without status_code - treat as error
+            status_code = 500
+
     if status_code != 200:
         # Get a more descriptive error message based on status code
         status_message = ERROR_CODE_DESCRIPTIONS.get(
@@ -135,10 +145,15 @@ def handle_api_response(
             f"{error_message}: {status_message}", details=response, operation=operation
         )
 
-    # Extract resources from the response body
+    # Handle NGSIEM query responses - they have different structure than standard API responses
+    if ("search_id" in response and "results" in response) or (operation and "NG-SIEM Query" in operation):
+        return response
+
+    # Extract resources from the response body for standard API responses
     resources = response.get("body", {}).get("resources", [])
 
     if not resources and default_result is not None:
         return default_result
 
+    # For standard API responses, return resources list/dict as expected
     return resources

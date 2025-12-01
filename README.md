@@ -25,6 +25,7 @@
   - [Identity Protection Module](#identity-protection-module)
   - [Incidents Module](#incidents-module)
   - [Intel Module](#intel-module)
+  - [NG-SIEM Module](#ng-siem-module)
   - [Sensor Usage Module](#sensor-usage-module)
   - [Serverless Module](#serverless-module)
   - [Spotlight Module](#spotlight-module)
@@ -86,6 +87,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read`<br>`Identity Protection Assessment:read`<br>`Identity Protection GraphQL:write` | Comprehensive entity investigation and identity protection analysis |
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
+| **NG-SIEM** | `NGSIEM:read`<br>`NGSIEM:write` | Execute LogScale/CQL queries against CrowdStrike NG-SIEM for advanced threat hunting and security analysis |
 | **Sensor Usage** | `Sensor Usage:read` | Access and analyze sensor usage data |
 | **Serverless** | `Falcon Container Image:read` | Search for vulnerabilities in serverless functions across cloud service providers |
 | **Spotlight** | `Vulnerabilities:read` | Manage and analyze vulnerability data and security assessments |
@@ -224,6 +226,23 @@ Provides tools for accessing and analyzing CrowdStrike Intelligence:
 - `falcon://intel/reports/fql-guide`: Comprehensive FQL documentation and examples for intelligence report searches
 
 **Use Cases**: Threat intelligence research, adversary tracking, IOC analysis, threat landscape assessment
+
+### NG-SIEM Module
+
+**API Scopes Required**: `NGSIEM:read`, `NGSIEM:write`
+
+Provides tools for executing LogScale/CQL queries against CrowdStrike NG-SIEM:
+
+- `falcon_execute_ngsiem_query`: Execute LogScale/CQL queries against CrowdStrike NG-SIEM
+
+**Key Features**:
+- **LogScale Query Execution**: Execute LogScale/CQL queries with JSON output
+- **Time Range Support**: Relative formats ("15m", "24h", "7d", "2w") and absolute timestamp ranges
+- **Fixed Timeout**: 3-minute timeout with automatic polling for query completion
+
+**Important**: Always start queries with an event type filter like `#event_simpleName=ProcessRollup2 | tail(3)` for better performance and relevant results.
+
+**Use Cases**: Threat hunting, log analysis, security investigations
 
 ### Sensor Usage Module
 

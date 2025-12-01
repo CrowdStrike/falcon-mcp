@@ -51,6 +51,10 @@ API_SCOPE_REQUIREMENTS = {
     "GetSensorUsageWeekly": ["Sensor Usage:read"],
     # Serverless operations
     "GetCombinedVulnerabilitiesSARIF": ["Falcon Container Image:read"],
+    # NGSIEM operations
+    "StartSearchV1": ["ngsiem:write"],
+    "GetSearchStatusV1": ["ngsiem:read"],
+    "StopSearchV1": ["ngsiem:write"],
     # Add more mappings as needed
 }
 
