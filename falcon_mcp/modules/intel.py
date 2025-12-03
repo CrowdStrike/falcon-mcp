@@ -12,6 +12,7 @@ from pydantic import AnyUrl, Field
 
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.modules.base import BaseModule
+from falcon_mcp.common.constants import SearchLimits
 from falcon_mcp.resources.intel import (
     QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION,
     QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION,
@@ -96,9 +97,9 @@ class IntelModule(BaseModule):
             description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/actors/fql-guide` resource when building this filter parameter.",
         ),
         limit: int = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
-            le=5000,
+            le=SearchLimits.MAX_INTEL,
             description="Maximum number of records to return. Max 5000",
             examples={10, 20, 100},
         ),
@@ -147,9 +148,9 @@ class IntelModule(BaseModule):
             description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/indicators/fql-guide` resource when building this filter parameter.",
         ),
         limit: int = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
-            le=5000,
+            le=SearchLimits.MAX_INTEL,
             description="Maximum number of records to return. (Max: 5000)",
         ),
         offset: int | None = Field(
@@ -205,9 +206,9 @@ class IntelModule(BaseModule):
             description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/reports/fql-guide` resource when building this filter parameter.",
         ),
         limit: int = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
-            le=5000,
+            le=SearchLimits.MAX_INTEL,
             description="Maximum number of records to return. (Max: 5000)",
         ),
         offset: int | None = Field(
