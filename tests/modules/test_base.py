@@ -454,6 +454,219 @@ class TestBaseModule(TestModules):
         self.assertIn("entities", result["data"])
         self.assertEqual(len(result["data"]["entities"]["nodes"]), 2)
 
+    def test_base_get_api_call_binary_to_string_success(self):
+        """Test _base_get_api_call successfully converts binary response to string."""
+        # Setup mock response with binary content
+        binary_content = b'{"test": "binary_conversion", "status": "success"}'
+        mock_response = {
+            "status_code": 200,
+            "body": binary_content
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_get_api_call with decode_binary=True (default)
+        result = self.module._base_get_api_call(
+            operation="GetBinaryData",
+            api_params={"param1": "value1"},
+            error_message="Failed to get binary data"
+        )
+
+        # Verify result is decoded as string
+        self.assertIsInstance(result, str, "Result should be decoded as string")
+        self.assertNotIsInstance(result, bytes, "Result should not be binary")
+        self.assertEqual(result, '{"test": "binary_conversion", "status": "success"}')
+
+        # Verify API was called correctly
+        self.mock_client.command.assert_called_once_with(
+            "GetBinaryData",
+            parameters={"param1": "value1"}
+        )
+
+    def test_base_get_api_call_binary_to_string_disabled(self):
+        """Test _base_get_api_call with decode_binary=False uses standard response handling."""
+        # Setup mock response with binary content
+        binary_content = b'{"test": "no_conversion"}'
+        mock_response = {
+            "status_code": 200,
+            "body": {"resources": [{"decoded": "standard_handling"}]}  # Standard JSON response
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_get_api_call with decode_binary=False
+        result = self.module._base_get_api_call(
+            operation="GetStandardData",
+            api_params={"param1": "value1"},
+            decode_binary=False
+        )
+
+        # Verify result uses standard response handling (returns resources list)
+        self.assertIsInstance(result, list, "Result should be list from standard handling")
+        self.assertEqual(result, [{"decoded": "standard_handling"}])
+
+    def test_base_get_api_call_empty_binary_response(self):
+        """Test _base_get_api_call handles empty binary response correctly."""
+        # Setup mock response with empty binary
+        mock_response = {
+            "status_code": 200,
+            "body": b""  # Empty binary
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_get_api_call
+        result = self.module._base_get_api_call(
+            operation="GetEmptyData",
+            api_params={}
+        )
+
+        # Verify empty binary becomes empty string
+        self.assertIsInstance(result, str, "Empty binary should become empty string")
+        self.assertEqual(result, "", "Empty binary should decode to empty string")
+
+    def test_base_get_api_call_large_binary_response(self):
+        """Test _base_get_api_call handles large binary responses."""
+        # Create a large binary content (simulating large MITRE report)
+        large_json = '{"data": "' + "x" * 10000 + '", "size": "large"}'
+        large_binary = large_json.encode('utf-8')
+
+        mock_response = {
+            "status_code": 200,
+            "body": large_binary
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_get_api_call
+        result = self.module._base_get_api_call(
+            operation="GetLargeReport",
+            api_params={"format": "json"}
+        )
+
+        # Verify large binary is properly decoded
+        self.assertIsInstance(result, str, "Large binary should be decoded as string")
+        self.assertEqual(len(result), len(large_json), "Decoded string should match original length")
+        self.assertIn('"size": "large"', result, "Content should be preserved")
+
+    def test_base_get_api_call_csv_binary_response(self):
+        """Test _base_get_api_call handles CSV binary responses."""
+        # Setup mock CSV response as binary
+        csv_content = "id,name,status\n1,Test Item,active\n2,Another Item,inactive"
+        csv_binary = csv_content.encode('utf-8')
+
+        mock_response = {
+            "status_code": 200,
+            "body": csv_binary
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_get_api_call
+        result = self.module._base_get_api_call(
+            operation="ExportDataAsCsv",
+            api_params={"format": "csv"}
+        )
+
+        # Verify CSV binary is properly decoded
+        self.assertIsInstance(result, str, "CSV binary should be decoded as string")
+        self.assertIn("id,name,status", result, "CSV headers should be preserved")
+        self.assertIn("Test Item,active", result, "CSV data should be preserved")
+
+    def test_base_get_api_call_utf8_special_characters(self):
+        """Test _base_get_api_call handles UTF-8 special characters in binary responses."""
+        # Setup mock response with UTF-8 special characters
+        special_content = '{"message": "Special chars: áéíóú ñ 中文 🚀"}'
+        special_binary = special_content.encode('utf-8')
+
+        mock_response = {
+            "status_code": 200,
+            "body": special_binary
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_get_api_call
+        result = self.module._base_get_api_call(
+            operation="GetInternationalData",
+            api_params={}
+        )
+
+        # Verify UTF-8 characters are properly decoded
+        self.assertIsInstance(result, str, "UTF-8 binary should be decoded as string")
+        self.assertIn("áéíóú", result, "Accented characters should be preserved")
+        self.assertIn("中文", result, "Chinese characters should be preserved")
+        self.assertIn("🚀", result, "Emoji should be preserved")
+
+    def test_base_get_api_call_non_binary_response_with_decode_true(self):
+        """Test _base_get_api_call with non-binary response body when decode_binary=True."""
+        # Setup mock response with non-binary body (dict)
+        mock_response = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "test", "type": "non_binary"}]}  # Dict, not binary
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_get_api_call with decode_binary=True
+        result = self.module._base_get_api_call(
+            operation="GetJsonData",
+            api_params={},
+            decode_binary=True  # Should fall back to standard handling for non-binary
+        )
+
+        # Verify falls back to standard response handling
+        self.assertIsInstance(result, list, "Non-binary response should use standard handling")
+        self.assertEqual(result, [{"id": "test", "type": "non_binary"}])
+
+    def test_base_get_api_call_error_response(self):
+        """Test _base_get_api_call handles error responses correctly."""
+        # Setup mock error response
+        mock_response = {
+            "status_code": 404,
+            "body": {"errors": [{"message": "Resource not found"}]}
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call _base_get_api_call
+        result = self.module._base_get_api_call(
+            operation="GetMissingData",
+            api_params={"id": "nonexistent"},
+            error_message="Custom error message"
+        )
+
+        # Verify error handling (returns error dict, not decoded string)
+        self.assertIsInstance(result, dict, "Error response should be dict")
+        self.assertIn("error", result, "Error dict should contain error key")
+        self.assertIn("Custom error message", result["error"])
+
+    def test_base_get_api_call_parameter_preparation(self):
+        """Test _base_get_api_call properly prepares API parameters."""
+        # Setup mock response
+        mock_response = {
+            "status_code": 200,
+            "body": b'{"prepared": true}'
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call with parameters that need preparation (None values should be filtered)
+        result = self.module._base_get_api_call(
+            operation="TestParameterPrep",
+            api_params={
+                "valid_param": "keep_this",
+                "none_param": None,  # Should be filtered out
+                "empty_param": "",   # Should be kept
+                "zero_param": 0,     # Should be kept
+            }
+        )
+
+        # Verify parameters were prepared (None filtered out)
+        self.mock_client.command.assert_called_once_with(
+            "TestParameterPrep",
+            parameters={
+                "valid_param": "keep_this",
+                "empty_param": "",
+                "zero_param": 0,
+                # none_param should be filtered out
+            }
+        )
+
+        # Verify result
+        self.assertEqual(result, '{"prepared": true}')
+
 
 if __name__ == "__main__":
     unittest.main()

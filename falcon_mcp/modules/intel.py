@@ -49,6 +49,12 @@ class IntelModule(BaseModule):
             name="search_reports",
         )
 
+        self._add_tool(
+            server=server,
+            method=self.get_mitre_report,
+            name="get_mitre_report",
+        )
+
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.
 
@@ -251,3 +257,87 @@ class IntelModule(BaseModule):
             return [api_response]
 
         return api_response
+
+    def get_mitre_report(
+        self,
+        actor: str = Field(
+            ...,
+            description="Threat actor name or ID",
+            examples={"WARP PANDA", "234987", "revenant spider"},
+        ),
+        format: str = Field(
+            default="json",
+            description="Report format. Accepted options: 'csv' or 'json'.",
+            examples={"json", "csv"},
+        ),
+    ) -> List[Dict[str, Any]] | str:
+        """Generate MITRE ATT&CK report for a given threat actor.
+
+        Provides detailed MITRE ATT&CK tactics, techniques, and procedures (TTPs)
+        report associated with a specific threat actor tracked.
+
+        Args:
+            actor: Pass the actor name (string) or numeric actor ID (string).
+            format: Report format. Accepted options: 'csv' or 'json'. Defaults to 'json'.
+        """
+
+        # Check if the actor parameter looks like an ID (numeric) or a name
+        actor_id = actor.strip()
+
+        # If it's not a numeric ID, search for the actor first
+        if not actor_id.isdigit():
+            logger.debug("Searching for actor: %s", actor)
+
+            # Search for actors using the provided name with FQL filter
+            search_results = self._base_search_api_call(
+                operation="QueryIntelActorEntities",
+                search_params={
+                    "filter": f"name:'{actor}'",
+                    "limit": 1,
+                },
+                error_message="Failed to search for actor by name",
+            )
+
+            # Check if search returned an error
+            if self._is_error(search_results):
+                return [search_results]
+
+            # Check if we got any results
+            if not search_results:
+                return [{
+                    "error": "Actor not found",
+                    "message": f"No actor found with name: {actor}",
+                }]
+
+            # Get the first (and should be only) result
+            selected_actor = search_results[0]
+
+            # Extract the numeric ID
+            actor_id = str(selected_actor.get('id', ''))
+            if not actor_id or actor_id == 'None':
+                return [{
+                    "error": "Invalid actor data",
+                    "message": f"Found actor '{selected_actor.get('name', 'Unknown')}' but missing ID field",
+                    "actor_data": selected_actor
+                }]
+
+            logger.debug("Resolved actor '%s' to ID: %s", actor, actor_id)
+
+        # Use the base GET API call method with binary decoding
+        api_response = self._base_get_api_call(
+            operation="GetMitreReport",
+            api_params={
+                "actor_id": actor_id,
+                "format": format,
+            },
+            error_message="Failed to get MITRE report",
+            decode_binary=True,
+        )
+
+        # If it's an error, wrap in list for consistency
+        if self._is_error(api_response):
+            logger.debug("API response is an error, wrapping in list")
+            return [api_response]
+
+        return api_response
+

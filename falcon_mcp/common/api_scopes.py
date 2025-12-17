@@ -30,6 +30,7 @@ API_SCOPE_REQUIREMENTS = {
     "QueryIntelActorEntities": ["Actors (Falcon Intelligence):read"],
     "QueryIntelIndicatorEntities": ["Indicators (Falcon Intelligence):read"],
     "QueryIntelReportEntities": ["Reports (Falcon Intelligence):read"],
+    "GetMitreReport": ["Actors (Falcon Intelligence):read"],
     # Spotlight operations
     "combinedQueryVulnerabilities": ["Vulnerabilities:read"],
     # Discover operations

@@ -203,5 +203,66 @@ class BaseModule(ABC):
             default_result=default_result if default_result is not None else [],
         )
 
+    def _base_get_api_call(
+        self,
+        operation: str,
+        api_params: Dict[str, Any],
+        error_message: str = "GET operation failed",
+        decode_binary: bool = True,
+    ) -> List[Dict[str, Any]] | Dict[str, Any] | str:
+        """Standardized API call for GET operations with optional binary response handling.
+
+        This method handles various GET operations that may return:
+        - Standard JSON responses (handled by handle_api_response)
+        - Binary responses that need UTF-8 decoding (like MITRE reports)
+
+        Args:
+            operation: The API operation name (e.g., "GetMitreReport", "GetReportPdf")
+            api_params: Dictionary of API parameters
+            error_message: Custom error message for failed operations
+            decode_binary: Whether to decode binary responses as UTF-8 (default: True)
+
+        Returns:
+            - For successful operations with binary responses: decoded string content
+            - For successful operations with JSON responses: standard API response
+            - For failed operations: error dict
+        """
+        # Prepare parameters for the API request
+        prepared_params = prepare_api_parameters(api_params)
+
+        logger.debug("Executing %s with params: %s", operation, prepared_params)
+
+        # Make the API request
+        command_response = self.client.command(operation, parameters=prepared_params)
+
+        # Handle the response - check status code first
+        status_code = command_response.get("status_code")
+
+        if status_code != 200:
+            # Use standard error handling for non-200 responses
+            api_response = handle_api_response(
+                command_response,
+                operation=operation,
+                error_message=error_message,
+                default_result=[],
+            )
+            return api_response
+
+        # For successful operations, check if we need to decode binary response
+        response_body = command_response.get("body", b"")
+
+        # If decode_binary is True and we have binary data, decode it
+        if decode_binary and isinstance(response_body, bytes):
+            content = response_body.decode('utf-8')
+            return content
+
+        # Otherwise, use standard response handling
+        return handle_api_response(
+            command_response,
+            operation=operation,
+            error_message=error_message,
+            default_result=[],
+        )
+
     def _is_error(self, response: Any) -> bool:
         return isinstance(response, dict) and "error" in response

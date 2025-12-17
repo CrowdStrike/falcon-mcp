@@ -217,6 +217,7 @@ Provides tools for accessing and analyzing CrowdStrike Intelligence:
 - `falcon_search_actors`: Research threat actors and adversary groups tracked by CrowdStrike intelligence
 - `falcon_search_indicators`: Search for threat indicators and indicators of compromise (IOCs) from CrowdStrike intelligence
 - `falcon_search_reports`: Access CrowdStrike intelligence publications and threat reports
+- `falcon_get_mitre_report`: Generate MITRE ATT&CK reports for threat actors, providing detailed tactics, techniques, and procedures (TTPs) in JSON or CSV format
 
 **Resources**:
 
@@ -224,7 +225,7 @@ Provides tools for accessing and analyzing CrowdStrike Intelligence:
 - `falcon://intel/indicators/fql-guide`: Comprehensive FQL documentation and examples for indicator searches
 - `falcon://intel/reports/fql-guide`: Comprehensive FQL documentation and examples for intelligence report searches
 
-**Use Cases**: Threat intelligence research, adversary tracking, IOC analysis, threat landscape assessment
+**Use Cases**: Threat intelligence research, adversary tracking, IOC analysis, threat landscape assessment, MITRE ATT&CK framework analysis
 
 ### Sensor Usage Module
 
