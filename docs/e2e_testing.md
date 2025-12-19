@@ -105,7 +105,7 @@ DEFAULT_MODLES_TO_TEST = ["gpt-4.1-mini", "gpt-4o-mini"]
 # Default number of times to run each test
 DEFAULT_RUNS_PER_TEST = 2
 # Default success threshold for passing a test
-DEFAULT_SUCCESS_TRESHOLD = 0.7
+DEFAULT_SUCCESS_THRESHOLD = 0.7
 ```
 
 This means each test will run 2 times for each model and the test will pass if at least 70% of the runs succeed.

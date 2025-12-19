@@ -24,14 +24,14 @@ DEFAULT_MODLES_TO_TEST = ["gpt-4.1-mini", "gpt-4o-mini"]
 # Default number of times to run each test
 DEFAULT_RUNS_PER_TEST = 2
 # Default success threshold for passing a test
-DEFAULT_SUCCESS_TRESHOLD = 0.7
+DEFAULT_SUCCESS_THRESHOLD = 0.7
 
 # Models to test against
 MODELS_TO_TEST = os.getenv("MODELS_TO_TEST", ",".join(DEFAULT_MODLES_TO_TEST)).split(",")
 # Number of times to run each test
 RUNS_PER_TEST = int(os.getenv("RUNS_PER_TEST", str(DEFAULT_RUNS_PER_TEST)))
 # Success threshold for passing a test
-SUCCESS_THRESHOLD = float(os.getenv("SUCCESS_TRESHOLD", str(DEFAULT_SUCCESS_TRESHOLD)))
+SUCCESS_THRESHOLD = float(os.getenv("SUCCESS_THRESHOLD", str(DEFAULT_SUCCESS_THRESHOLD)))
 
 
 # Module-level singleton for shared server resources
