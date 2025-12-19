@@ -8,7 +8,7 @@ import os
 import platform
 import sys
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 # Import the APIHarnessV2 from FalconPy
 from falconpy import APIHarnessV2
@@ -68,7 +68,7 @@ class FalconClient:
         Returns:
             bool: True if authentication was successful
         """
-        return self.client.login()
+        return cast(bool, self.client.login())
 
     def is_authenticated(self) -> bool:
         """Check if the client is authenticated.
@@ -76,9 +76,9 @@ class FalconClient:
         Returns:
             bool: True if the client is authenticated
         """
-        return self.client.token_valid
+        return cast(bool, self.client.token_valid)
 
-    def command(self, operation: str, **kwargs) -> Dict[str, Any]:
+    def command(self, operation: str, **kwargs: Any) -> Dict[str, Any]:
         """Execute a Falcon API command.
 
         Args:
@@ -88,7 +88,7 @@ class FalconClient:
         Returns:
             Dict[str, Any]: The API response
         """
-        return self.client.command(operation, **kwargs)
+        return cast(Dict[str, Any], self.client.command(operation, **kwargs))
 
     def get_user_agent(self) -> str:
         """Get RFC-compliant user agent string for API requests.
@@ -131,7 +131,7 @@ class FalconClient:
         Returns:
             Dict[str, str]: Authentication headers including the bearer token
         """
-        return self.client.auth_headers
+        return cast(Dict[str, str], self.client.auth_headers)
 
 
 def get_version() -> str:
@@ -171,7 +171,7 @@ def get_version() -> str:
                         version_str,
                         pyproject_path,
                     )
-                    return version_str
+                    return cast(str, version_str)
             current_path = current_path.parent
 
         logger.debug("pyproject.toml not found in current or parent directories")
