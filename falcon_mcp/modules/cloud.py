@@ -16,6 +16,7 @@ from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
+from falcon_mcp.common.constants import SearchLimits
 from falcon_mcp.resources.cloud import (
     IMAGES_VULNERABILITIES_FQL_DOCUMENTATION,
     KUBERNETES_CONTAINERS_FQL_DOCUMENTATION,
@@ -89,9 +90,9 @@ class CloudModule(BaseModule):
             examples={"cloud:'AWS'", "cluster_name:'prod'"},
         ),
         limit: int = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
-            le=9999,
+            le=SearchLimits.MAX_DETECTIONS,
             description="The maximum number of containers to return in this response (default: 10; max: 9999). Use with the offset parameter to manage pagination of results.",
         ),
         offset: int | None = Field(
@@ -184,9 +185,9 @@ class CloudModule(BaseModule):
             examples={"cve_id:*'*2025*'", "cvss_score:>5"},
         ),
         limit: int = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
-            le=9999,
+            le=SearchLimits.MAX_DETECTIONS,
             description="The maximum number of containers to return in this response (default: 10; max: 9999). Use with the offset parameter to manage pagination of results.",
         ),
         offset: int | None = Field(

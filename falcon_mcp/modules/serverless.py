@@ -15,6 +15,7 @@ from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
+from falcon_mcp.common.constants import SearchLimits
 from falcon_mcp.resources.serverless import SERVERLESS_VULNERABILITIES_FQL_DOCUMENTATION
 
 logger = get_logger(__name__)
@@ -61,7 +62,7 @@ class ServerlessModule(BaseModule):
             examples={"cloud_provider:'aws'", "severity:'HIGH'"},
         ),
         limit: int | None = Field(
-            default=10,
+            default=SearchLimits.DEFAULT,
             ge=1,
             description="The upper-bound on the number of records to retrieve. (Default: 10)",
         ),
