@@ -13,8 +13,6 @@ from typing import Dict, List, Optional, Set
 import uvicorn
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
 
 from falcon_mcp import registry
 from falcon_mcp.client import FalconClient
@@ -23,19 +21,27 @@ from falcon_mcp.common.logging import configure_logging, get_logger
 logger = get_logger(__name__)
 
 
-class TrailingSlashMiddleware(BaseHTTPMiddleware):
-    """Middleware to handle trailing slashes in URLs.
+def remove_trailing_slash_middleware(app):
+    """ASGI middleware to remove trailing slashes from request paths.
 
-    Removes trailing slashes from request paths before processing to prevent
-    redirects that can cause POST requests to fail from AgentCore (dropping request body).
+    This modifies the ASGI scope directly before routing to prevent
+    redirects that can cause POST requests to fail (dropping request body).
     """
 
-    async def dispatch(self, request: Request, call_next):
-        # Remove trailing slash before processing (except for root path)
-        if request.url.path.endswith("/") and request.url.path != "/":
-            # Modify the path in the ASGI scope
-            request.scope["path"] = request.url.path.rstrip("/")
-        return await call_next(request)
+    async def asgi_wrapper(scope, receive, send):
+        # Only process HTTP requests
+        if scope["type"] == "http":
+            path = scope.get("path", "")
+            # Remove trailing slash (except for root path)
+            if path.endswith("/") and path != "/":
+                new_path = path.rstrip("/")
+                scope["path"] = new_path
+                # Also update raw_path (bytes) if it exists
+                if "raw_path" in scope:
+                    scope["raw_path"] = new_path.encode("latin-1")
+        return await app(scope, receive, send)
+
+    return asgi_wrapper
 
 
 class FalconMCPServer:
@@ -195,7 +201,7 @@ class FalconMCPServer:
             app = self.server.streamable_http_app()
 
             # Wrap with trailing slash middleware to handle /mcp/ -> /mcp redirects
-            app = TrailingSlashMiddleware(app)
+            app = remove_trailing_slash_middleware(app)
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
@@ -212,7 +218,7 @@ class FalconMCPServer:
             app = self.server.sse_app()
 
             # Wrap with trailing slash middleware to handle trailing slash redirects
-            app = TrailingSlashMiddleware(app)
+            app = remove_trailing_slash_middleware(app)
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
