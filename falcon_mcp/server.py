@@ -13,12 +13,29 @@ from typing import Dict, List, Optional, Set
 import uvicorn
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
 from falcon_mcp import registry
 from falcon_mcp.client import FalconClient
 from falcon_mcp.common.logging import configure_logging, get_logger
 
 logger = get_logger(__name__)
+
+
+class TrailingSlashMiddleware(BaseHTTPMiddleware):
+    """Middleware to handle trailing slashes in URLs.
+
+    Removes trailing slashes from request paths before processing to prevent
+    redirects that can cause POST requests to fail from AgentCore (dropping request body).
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        # Remove trailing slash before processing (except for root path)
+        if request.url.path.endswith("/") and request.url.path != "/":
+            # Modify the path in the ASGI scope
+            request.scope["path"] = request.url.path.rstrip("/")
+        return await call_next(request)
 
 
 class FalconMCPServer:
@@ -177,6 +194,9 @@ class FalconMCPServer:
             # Get the ASGI app from FastMCP (handles /mcp path automatically)
             app = self.server.streamable_http_app()
 
+            # Wrap with trailing slash middleware to handle /mcp/ -> /mcp redirects
+            app = TrailingSlashMiddleware(app)
+
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
                 app,
@@ -190,6 +210,9 @@ class FalconMCPServer:
 
             # Get the ASGI app from FastMCP
             app = self.server.sse_app()
+
+            # Wrap with trailing slash middleware to handle trailing slash redirects
+            app = TrailingSlashMiddleware(app)
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
@@ -229,8 +252,7 @@ def parse_modules_list(modules_string):
     invalid_modules = [m for m in modules if m not in available_modules]
     if invalid_modules:
         raise argparse.ArgumentTypeError(
-            f"Invalid modules: {', '.join(invalid_modules)}. "
-            f"Available modules: {', '.join(available_modules)}"
+            f"Invalid modules: {', '.join(invalid_modules)}. " f"Available modules: {', '.join(available_modules)}"
         )
 
     return modules
