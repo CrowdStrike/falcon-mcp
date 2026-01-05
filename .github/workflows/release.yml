@@ -4,13 +4,17 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+  contents: read  # Default to read-only at workflow level
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write       # Required for creating releases
+      pull-requests: write  # Required for release PRs
+      issues: write         # Required by release-please
+      id-token: write       # Required for OIDC PyPI publishing
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
@@ -38,10 +42,13 @@ jobs:
           python-version: '3.11'
         if: ${{ steps.release-please.outputs.release_created }}
 
-      - name: Build and publish to PyPI
+      - name: Build package
         run: |
-          pip install uv
-          uv pip install --system build twine
+          pip install uv==0.9.21
+          uv pip install --system build==1.3.0
           python -m build
-          python -m twine upload dist/* --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
+        if: ${{ steps.release-please.outputs.release_created }}
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
         if: ${{ steps.release-please.outputs.release_created }}
