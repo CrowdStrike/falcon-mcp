@@ -35,9 +35,18 @@ def create_no_redirect_app(mcp_app, mount_path: str = "/mcp"):
     Returns:
         A Starlette Router configured to accept both paths without redirects
     """
+    logger.info(
+        "Wrapping MCP app with no-redirect router at path: %s (redirect_slashes=False)",
+        mount_path,
+    )
     router = Router(
         routes=[Mount(mount_path, app=mcp_app)],
         redirect_slashes=False,
+    )
+    logger.info(
+        "Both %s and %s/ will be served without redirects",
+        mount_path,
+        mount_path,
     )
     return router
 
@@ -196,12 +205,15 @@ class FalconMCPServer:
             logger.info("Starting streamable-http server on %s:%d", host, port)
 
             # Get the ASGI app from FastMCP (handles /mcp path automatically)
+            logger.info("Creating streamable-http ASGI application")
             mcp_app = self.server.streamable_http_app()
 
             # Wrap with Starlette Router to disable redirect_slashes
             # This ensures both /mcp and /mcp/ are served without 307 redirects
             # Required for AgentCore compatibility
             app = create_no_redirect_app(mcp_app)
+
+            logger.info("Server ready: accepting requests at http://%s:%d/mcp (and /mcp/)", host, port)
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
@@ -215,11 +227,14 @@ class FalconMCPServer:
             logger.info("Starting sse server on %s:%d", host, port)
 
             # Get the ASGI app from FastMCP
+            logger.info("Creating SSE ASGI application")
             mcp_app = self.server.sse_app()
 
             # Wrap with Starlette Router to disable redirect_slashes
             # This ensures both /sse and /sse/ are served without 307 redirects
             app = create_no_redirect_app(mcp_app, mount_path="/sse")
+
+            logger.info("Server ready: accepting requests at http://%s:%d/sse (and /sse/)", host, port)
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
