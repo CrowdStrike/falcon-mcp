@@ -49,9 +49,7 @@ class TestStreamableHttpTransport(unittest.TestCase):
         mock_create_no_redirect_app.assert_called_once_with(mock_mcp_app)
 
         # Verify uvicorn was called with the wrapped app
-        mock_uvicorn.run.assert_called_once_with(
-            mock_wrapped_app, host="0.0.0.0", port=8080, log_level="debug"
-        )
+        mock_uvicorn.run.assert_called_once_with(mock_wrapped_app, host="0.0.0.0", port=8080, log_level="debug")
 
     @patch("falcon_mcp.server.create_no_redirect_app")
     @patch("falcon_mcp.server.FalconClient")
@@ -249,9 +247,7 @@ class TestStreamableHttpTransport(unittest.TestCase):
         mock_create_no_redirect_app.assert_called_once_with(mock_mcp_app, mount_path="/sse")
 
         # Verify uvicorn was called with the wrapped app
-        mock_uvicorn.run.assert_called_once_with(
-            mock_wrapped_app, host="0.0.0.0", port=8080, log_level="info"
-        )
+        mock_uvicorn.run.assert_called_once_with(mock_wrapped_app, host="0.0.0.0", port=8080, log_level="info")
 
 
 class TestCreateNoRedirectApp(unittest.TestCase):
