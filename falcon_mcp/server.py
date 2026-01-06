@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Set
 import uvicorn
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from starlette.routing import Mount, Router
 
 from falcon_mcp import registry
 from falcon_mcp.client import FalconClient
@@ -21,27 +22,24 @@ from falcon_mcp.common.logging import configure_logging, get_logger
 logger = get_logger(__name__)
 
 
-def remove_trailing_slash_middleware(app):
-    """ASGI middleware to remove trailing slashes from request paths.
+def create_no_redirect_app(mcp_app, mount_path: str = "/mcp"):
+    """Wrap an MCP app in a Starlette Router with redirect_slashes=False.
 
-    This modifies the ASGI scope directly before routing to prevent
-    redirects that can cause POST requests to fail (dropping request body).
+    This ensures both /mcp and /mcp/ are served directly without 307 redirects,
+    which is required for AgentCore compatibility.
+
+    Args:
+        mcp_app: The MCP ASGI application to wrap
+        mount_path: The path to mount the MCP app (default: /mcp)
+
+    Returns:
+        A Starlette Router configured to accept both paths without redirects
     """
-
-    async def asgi_wrapper(scope, receive, send):
-        # Only process HTTP requests
-        if scope["type"] == "http":
-            path = scope.get("path", "")
-            # Remove trailing slash (except for root path)
-            if path.endswith("/") and path != "/":
-                new_path = path.rstrip("/")
-                scope["path"] = new_path
-                # Also update raw_path (bytes) if it exists
-                if "raw_path" in scope:
-                    scope["raw_path"] = new_path.encode("latin-1")
-        return await app(scope, receive, send)
-
-    return asgi_wrapper
+    router = Router(
+        routes=[Mount(mount_path, app=mcp_app)],
+        redirect_slashes=False,
+    )
+    return router
 
 
 class FalconMCPServer:
@@ -198,10 +196,12 @@ class FalconMCPServer:
             logger.info("Starting streamable-http server on %s:%d", host, port)
 
             # Get the ASGI app from FastMCP (handles /mcp path automatically)
-            app = self.server.streamable_http_app()
+            mcp_app = self.server.streamable_http_app()
 
-            # Wrap with trailing slash middleware to handle /mcp/ -> /mcp redirects
-            app = remove_trailing_slash_middleware(app)
+            # Wrap with Starlette Router to disable redirect_slashes
+            # This ensures both /mcp and /mcp/ are served without 307 redirects
+            # Required for AgentCore compatibility
+            app = create_no_redirect_app(mcp_app)
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
@@ -215,10 +215,11 @@ class FalconMCPServer:
             logger.info("Starting sse server on %s:%d", host, port)
 
             # Get the ASGI app from FastMCP
-            app = self.server.sse_app()
+            mcp_app = self.server.sse_app()
 
-            # Wrap with trailing slash middleware to handle trailing slash redirects
-            app = remove_trailing_slash_middleware(app)
+            # Wrap with Starlette Router to disable redirect_slashes
+            # This ensures both /sse and /sse/ are served without 307 redirects
+            app = create_no_redirect_app(mcp_app, mount_path="/sse")
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
