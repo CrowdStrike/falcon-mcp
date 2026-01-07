@@ -381,8 +381,8 @@ class TestIntelModule(TestModules):
         # Verify result contains error
         self.assertEqual(len(result), 1)
         self.assertIn("error", result[0])
-        # The actual error structure includes the error details in actor_data
-        self.assertIn("actor_data", result[0])
+        # The error structure includes details from the failed search
+        self.assertIn("details", result[0])
 
     def test_get_mitre_report_empty_response(self):
         """Test getting MITRE report with empty response."""
@@ -485,10 +485,11 @@ class TestIntelModule(TestModules):
         self.assertEqual(second_call[1]["parameters"]["actor_id"], "789012")
         self.assertEqual(second_call[1]["parameters"]["format"], "json")
 
-        # Verify result contains expected MITRE data
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["id"], "fake_id_1")
-        self.assertEqual(result[0]["tactic_name"], "Fake Tactic")
+        # Verify result is decoded JSON string content
+        self.assertIsInstance(result, str)
+        self.assertIn("fake_id_1", result)
+        self.assertIn("Fake Tactic", result)
+        self.assertIn("fake_technique_001", result)
 
     def test_get_mitre_report_actor_name_not_found(self):
         """Test getting MITRE report when actor name is not found."""
