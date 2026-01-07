@@ -484,8 +484,7 @@ class TestBaseModule(TestModules):
 
     def test_base_get_api_call_binary_to_string_disabled(self):
         """Test _base_get_api_call with decode_binary=False uses standard response handling."""
-        # Setup mock response with binary content
-        binary_content = b'{"test": "no_conversion"}'
+        # Setup mock response with standard JSON body (not binary)
         mock_response = {
             "status_code": 200,
             "body": {"resources": [{"decoded": "standard_handling"}]}  # Standard JSON response
