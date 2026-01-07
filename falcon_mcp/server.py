@@ -179,8 +179,7 @@ class FalconMCPServer:
             logger.info("Starting streamable-http server on %s:%d", host, port)
 
             # Get the ASGI app from FastMCP (handles /mcp path automatically)
-            # stateless_http creates a new transport per request for horizontal scaling
-            app = self.server.streamable_http_app(stateless_http=self.stateless_http)
+            app = self.server.streamable_http_app()
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
@@ -194,8 +193,7 @@ class FalconMCPServer:
             logger.info("Starting sse server on %s:%d", host, port)
 
             # Get the ASGI app from FastMCP
-            # stateless_http creates a new transport per request for horizontal scaling
-            app = self.server.sse_app(stateless_http=self.stateless_http)
+            app = self.server.sse_app()
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(

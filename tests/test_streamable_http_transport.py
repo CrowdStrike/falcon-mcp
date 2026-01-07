@@ -68,11 +68,15 @@ class TestStreamableHttpTransport(unittest.TestCase):
         # Create server with stateless_http enabled
         server = FalconMCPServer(stateless_http=True)
 
+        # Verify FastMCP was initialized with stateless_http=True
+        call_kwargs = mock_fastmcp.call_args[1]
+        self.assertTrue(call_kwargs["stateless_http"])
+
         # Test streamable-http transport
         server.run("streamable-http")
 
-        # Verify streamable_http_app was called with stateless_http=True
-        mock_server_instance.streamable_http_app.assert_called_once_with(stateless_http=True)
+        # Verify streamable_http_app was called (without stateless_http param)
+        mock_server_instance.streamable_http_app.assert_called_once()
 
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
@@ -97,11 +101,15 @@ class TestStreamableHttpTransport(unittest.TestCase):
         # Create server without stateless_http (defaults to False)
         server = FalconMCPServer()
 
+        # Verify FastMCP was initialized with stateless_http=False
+        call_kwargs = mock_fastmcp.call_args[1]
+        self.assertFalse(call_kwargs["stateless_http"])
+
         # Test streamable-http transport
         server.run("streamable-http")
 
-        # Verify streamable_http_app was called with stateless_http=False
-        mock_server_instance.streamable_http_app.assert_called_once_with(stateless_http=False)
+        # Verify streamable_http_app was called (without stateless_http param)
+        mock_server_instance.streamable_http_app.assert_called_once()
 
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
@@ -126,11 +134,15 @@ class TestStreamableHttpTransport(unittest.TestCase):
         # Create server with stateless_http enabled
         server = FalconMCPServer(stateless_http=True)
 
+        # Verify FastMCP was initialized with stateless_http=True
+        call_kwargs = mock_fastmcp.call_args[1]
+        self.assertTrue(call_kwargs["stateless_http"])
+
         # Test sse transport
         server.run("sse")
 
-        # Verify sse_app was called with stateless_http=True
-        mock_server_instance.sse_app.assert_called_once_with(stateless_http=True)
+        # Verify sse_app was called (without stateless_http param)
+        mock_server_instance.sse_app.assert_called_once()
 
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
@@ -155,11 +167,15 @@ class TestStreamableHttpTransport(unittest.TestCase):
         # Create server without stateless_http (defaults to False)
         server = FalconMCPServer()
 
+        # Verify FastMCP was initialized with stateless_http=False
+        call_kwargs = mock_fastmcp.call_args[1]
+        self.assertFalse(call_kwargs["stateless_http"])
+
         # Test sse transport
         server.run("sse")
 
-        # Verify sse_app was called with stateless_http=False
-        mock_server_instance.sse_app.assert_called_once_with(stateless_http=False)
+        # Verify sse_app was called (without stateless_http param)
+        mock_server_instance.sse_app.assert_called_once()
 
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
