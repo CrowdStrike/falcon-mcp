@@ -51,6 +51,7 @@ class TestFalconMCPServer(unittest.TestCase):
             instructions="This server provides access to CrowdStrike Falcon capabilities.",
             debug=True,
             log_level="DEBUG",
+            stateless_http=False,
         )
 
         # Verify modules initialization
@@ -202,6 +203,60 @@ class TestFalconMCPServer(unittest.TestCase):
         # And both should match the registry
         expected_modules = registry.get_module_names()
         self.assertEqual(set(result1["modules"]), set(expected_modules))
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_server_with_stateless_http_enabled(self, mock_fastmcp, mock_client):
+        """Test server initialization with stateless_http enabled."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server with stateless_http enabled
+        server = FalconMCPServer(stateless_http=True)
+
+        # Verify stateless_http is stored
+        self.assertTrue(server.stateless_http)
+
+        # Verify FastMCP was initialized with stateless_http
+        mock_fastmcp.assert_called_once_with(
+            name="Falcon MCP Server",
+            instructions="This server provides access to CrowdStrike Falcon capabilities.",
+            debug=False,
+            log_level="INFO",
+            stateless_http=True,
+        )
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_server_with_stateless_http_disabled_by_default(self, mock_fastmcp, mock_client):
+        """Test server initialization with stateless_http disabled by default."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server without specifying stateless_http
+        server = FalconMCPServer()
+
+        # Verify stateless_http defaults to False
+        self.assertFalse(server.stateless_http)
+
+        # Verify FastMCP was initialized with stateless_http=False
+        mock_fastmcp.assert_called_once_with(
+            name="Falcon MCP Server",
+            instructions="This server provides access to CrowdStrike Falcon capabilities.",
+            debug=False,
+            log_level="INFO",
+            stateless_http=False,
+        )
 
 
 if __name__ == "__main__":

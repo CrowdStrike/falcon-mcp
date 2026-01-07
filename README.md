@@ -311,6 +311,7 @@ FALCON_BASE_URL=https://api.crowdstrike.com
 #FALCON_MCP_DEBUG=false
 #FALCON_MCP_HOST=127.0.0.1
 #FALCON_MCP_PORT=8000
+#FALCON_MCP_STATELESS_HTTP=false
 ```
 
 #### Environment Variables
@@ -331,6 +332,7 @@ export FALCON_MCP_TRANSPORT="stdio"                     # Transport method: stdi
 export FALCON_MCP_DEBUG="false"                         # Enable debug logging: true, false
 export FALCON_MCP_HOST="127.0.0.1"                      # Host for HTTP transports
 export FALCON_MCP_PORT="8000"                           # Port for HTTP transports
+export FALCON_MCP_STATELESS_HTTP="false"                # Stateless mode for scalable deployments
 ```
 
 **CrowdStrike API Region URLs:**
@@ -388,6 +390,12 @@ Run with streamable-http transport on custom port:
 
 ```bash
 falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8080
+```
+
+Run with stateless HTTP mode (for scalable deployments like AWS AgentCore):
+
+```bash
+falcon-mcp --transport streamable-http --stateless-http
 ```
 
 ### Module Configuration

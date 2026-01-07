@@ -30,6 +30,7 @@ class FalconMCPServer:
         debug: bool = False,
         enabled_modules: Optional[Set[str]] = None,
         user_agent_comment: Optional[str] = None,
+        stateless_http: bool = False,
     ):
         """Initialize the Falcon MCP server.
 
@@ -38,11 +39,13 @@ class FalconMCPServer:
             debug: Enable debug logging
             enabled_modules: Set of module names to enable (defaults to all modules)
             user_agent_comment: Additional information to include in the User-Agent comment section
+            stateless_http: Enable stateless HTTP mode (creates new transport per request)
         """
         # Store configuration
         self.base_url = base_url
         self.debug = debug
         self.user_agent_comment = user_agent_comment
+        self.stateless_http = stateless_http
 
         self.enabled_modules = enabled_modules or set(registry.get_module_names())
 
@@ -68,6 +71,7 @@ class FalconMCPServer:
             instructions="This server provides access to CrowdStrike Falcon capabilities.",
             debug=self.debug,
             log_level="DEBUG" if self.debug else "INFO",
+            stateless_http=self.stateless_http,
         )
 
         # Initialize and register modules
@@ -175,7 +179,8 @@ class FalconMCPServer:
             logger.info("Starting streamable-http server on %s:%d", host, port)
 
             # Get the ASGI app from FastMCP (handles /mcp path automatically)
-            app = self.server.streamable_http_app()
+            # stateless_http creates a new transport per request for horizontal scaling
+            app = self.server.streamable_http_app(stateless_http=self.stateless_http)
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
@@ -189,7 +194,8 @@ class FalconMCPServer:
             logger.info("Starting sse server on %s:%d", host, port)
 
             # Get the ASGI app from FastMCP
-            app = self.server.sse_app()
+            # stateless_http creates a new transport per request for horizontal scaling
+            app = self.server.sse_app(stateless_http=self.stateless_http)
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
@@ -299,6 +305,14 @@ def parse_args():
         help="Additional information to include in the User-Agent comment section (env: FALCON_MCP_USER_AGENT_COMMENT)",
     )
 
+    # Stateless HTTP mode (creates new transport per request for horizontal scaling)
+    parser.add_argument(
+        "--stateless-http",
+        action="store_true",
+        default=os.environ.get("FALCON_MCP_STATELESS_HTTP", "").lower() == "true",
+        help="Enable stateless HTTP mode for scalable deployments (env: FALCON_MCP_STATELESS_HTTP)",
+    )
+
     return parser.parse_args()
 
 
@@ -317,6 +331,7 @@ def main():
             debug=args.debug,
             enabled_modules=set(args.modules),
             user_agent_comment=args.user_agent_comment,
+            stateless_http=args.stateless_http,
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport, host=args.host, port=args.port)

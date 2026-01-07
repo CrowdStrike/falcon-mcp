@@ -48,6 +48,122 @@ class TestStreamableHttpTransport(unittest.TestCase):
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
     @patch("falcon_mcp.server.uvicorn")
+    def test_streamable_http_with_stateless_http_enabled(
+        self,
+        mock_uvicorn,
+        mock_fastmcp,
+        mock_client,
+    ):
+        """Test streamable-http transport with stateless_http enabled."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_app = MagicMock()
+        mock_server_instance.streamable_http_app.return_value = mock_app
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server with stateless_http enabled
+        server = FalconMCPServer(stateless_http=True)
+
+        # Test streamable-http transport
+        server.run("streamable-http")
+
+        # Verify streamable_http_app was called with stateless_http=True
+        mock_server_instance.streamable_http_app.assert_called_once_with(stateless_http=True)
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_streamable_http_with_stateless_http_disabled(
+        self,
+        mock_uvicorn,
+        mock_fastmcp,
+        mock_client,
+    ):
+        """Test streamable-http transport with stateless_http disabled (default)."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_app = MagicMock()
+        mock_server_instance.streamable_http_app.return_value = mock_app
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server without stateless_http (defaults to False)
+        server = FalconMCPServer()
+
+        # Test streamable-http transport
+        server.run("streamable-http")
+
+        # Verify streamable_http_app was called with stateless_http=False
+        mock_server_instance.streamable_http_app.assert_called_once_with(stateless_http=False)
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_sse_transport_with_stateless_http_enabled(
+        self,
+        mock_uvicorn,
+        mock_fastmcp,
+        mock_client,
+    ):
+        """Test sse transport with stateless_http enabled."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_app = MagicMock()
+        mock_server_instance.sse_app.return_value = mock_app
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server with stateless_http enabled
+        server = FalconMCPServer(stateless_http=True)
+
+        # Test sse transport
+        server.run("sse")
+
+        # Verify sse_app was called with stateless_http=True
+        mock_server_instance.sse_app.assert_called_once_with(stateless_http=True)
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_sse_transport_with_stateless_http_disabled(
+        self,
+        mock_uvicorn,
+        mock_fastmcp,
+        mock_client,
+    ):
+        """Test sse transport with stateless_http disabled (default)."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_app = MagicMock()
+        mock_server_instance.sse_app.return_value = mock_app
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server without stateless_http (defaults to False)
+        server = FalconMCPServer()
+
+        # Test sse transport
+        server.run("sse")
+
+        # Verify sse_app was called with stateless_http=False
+        mock_server_instance.sse_app.assert_called_once_with(stateless_http=False)
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    @patch("falcon_mcp.server.uvicorn")
     def test_streamable_http_default_parameters(
         self,
         mock_uvicorn,
