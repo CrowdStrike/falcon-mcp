@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/CrowdStrike/falcon-mcp/compare/v0.4.0...v0.4.1) (2026-01-08)
+
+
+### Bug Fixes
+
+* **docs:** updated docs but more for testing release pipeline ([c7106f9](https://github.com/CrowdStrike/falcon-mcp/commit/c7106f9632112eeccb77ac4a18b7620c113fd143))
+
 ## [0.4.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.3.0...v0.4.0) (2026-01-08)
 
 
