@@ -13,9 +13,18 @@ You'll need to create API credentials in the CrowdStrike platform with the appro
 1. **Create API Key**: Generate an API key in the CrowdStrike platform with the necessary scopes as outlined in [Available Modules, Tools & Resources](https://github.com/CrowdStrike/falcon-mcp/tree/main?tab=readme-ov-file#available-modules-tools--resources)
 
 2. **Prepare Environment Variables**: You'll configure these values during agent deployment:
+
+   **CrowdStrike Credentials:**
    - `FALCON_CLIENT_ID` - Your CrowdStrike API client ID
    - `FALCON_CLIENT_SECRET` - Your CrowdStrike API client secret
    - `FALCON_BASE_URL` - Your CrowdStrike API base URL (region-specific)
+
+   **Server Configuration (required for AgentCore):**
+   - `FALCON_MCP_TRANSPORT` - Set to `streamable-http`
+   - `FALCON_MCP_HOST` - Set to `0.0.0.0`
+   - `FALCON_MCP_PORT` - Set to `8000`
+   - `FALCON_MCP_USER_AGENT_COMMENT` - Set to `AWS/Bedrock/AgentCore`
+   - `FALCON_MCP_STATELESS_HTTP` - **Must be set to `true`**
 
 ### AWS VPC Requirements
 
@@ -182,16 +191,29 @@ Attach the trust policy to the IAM execution role you created in Step 1. This co
 
 ## Next Steps
 
-### Important Variables
+### Required Environment Variables
 
-To host this agent in Amazon Bedrock AgentCore, the following variables will need to be known:
+> [!IMPORTANT]
+> `FALCON_MCP_STATELESS_HTTP` **must** be set to `true` for the Falcon MCP Server to work correctly in Amazon Bedrock AgentCore. Without this setting, the server will not handle requests properly in the stateless container environment.
+
+To deploy this agent in Amazon Bedrock AgentCore, configure the following environment variables:
+
+| Variable | Value | Description |
+| :--- | :--- | :--- |
+| `FALCON_CLIENT_ID` | Your client ID | The Client ID for your Falcon API credentials |
+| `FALCON_CLIENT_SECRET` | Your client secret | The Client Secret for your Falcon API credentials |
+| `FALCON_BASE_URL` | `https://api.crowdstrike.com` | The base URL for your Falcon API environment (region-specific) |
+| `FALCON_MCP_TRANSPORT` | `streamable-http` | Transport protocol for HTTP streaming |
+| `FALCON_MCP_HOST` | `0.0.0.0` | Host binding for incoming connections |
+| `FALCON_MCP_PORT` | `8000` | Port the server listens on |
+| `FALCON_MCP_USER_AGENT_COMMENT` | `AWS/Bedrock/AgentCore` | Identifies requests from AgentCore |
+| `FALCON_MCP_STATELESS_HTTP` | `true` | Enables stateless mode per AgentCore requirements |
+
+You'll also need these values for the AWS CLI command:
 
 | Variable | Description |
 | :--- | :--- |
-| `FALCON_CLIENT_ID` | The Client ID for your Falcon API credentials |
-| `FALCON_CLIENT_SECRET` | The Client Secret for your Falcon API credentials |
-| `FALCON_BASE_URL` | The base URL for your Falcon API environment |
-| `AGENT_NAME` | The name of the agent (_ex: falconmcp_) |
+| `AGENT_NAME` | The name of the agent (e.g., `falconmcp`) |
 | `AGENT_DESCRIPTION` | A description of the agent |
 | `AGENT_ROLE_ARN` | The ARN of the IAM execution role created in Step 1 |
 
@@ -217,8 +239,13 @@ aws bedrock-agentcore-control create-agent-runtime \
     "serverProtocol": "MCP"
   }' \
   --environment-variables '{
-    "FALCON_CLIENT_ID": "FALCON_CLIENT_ID_VALUE",
-    "FALCON_CLIENT_SECRET": "FALCON_CLIENT_SECRET_VALUE",
-    "FALCON_BASE_URL": "https://api.crowdstrike.com"
+    "FALCON_CLIENT_ID": "YOUR_CLIENT_ID",
+    "FALCON_CLIENT_SECRET": "YOUR_CLIENT_SECRET",
+    "FALCON_BASE_URL": "https://api.crowdstrike.com",
+    "FALCON_MCP_TRANSPORT": "streamable-http",
+    "FALCON_MCP_HOST": "0.0.0.0",
+    "FALCON_MCP_PORT": "8000",
+    "FALCON_MCP_USER_AGENT_COMMENT": "AWS/Bedrock/AgentCore",
+    "FALCON_MCP_STATELESS_HTTP": "true"
   }'
 ```
