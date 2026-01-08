@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.4.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.3.0...v0.4.0) (2026-01-08)
+
+
+### Features
+
+* **client:** allow credential setting through __init__ parameters ([#245](https://github.com/CrowdStrike/falcon-mcp/issues/245)) ([120e56f](https://github.com/CrowdStrike/falcon-mcp/commit/120e56ffc8640535694dc162f08fa9d9d97efc65))
+* **modules/intel:** provide the ability to get the mitre report in json or csv format ([#227](https://github.com/CrowdStrike/falcon-mcp/issues/227)) ([04e4411](https://github.com/CrowdStrike/falcon-mcp/commit/04e441121e86b5468f7abaa4a7e644d58ddda8ee))
+* **server:** add stateless HTTP mode for scalable deployments ([#242](https://github.com/CrowdStrike/falcon-mcp/issues/242)) ([8c39de1](https://github.com/CrowdStrike/falcon-mcp/commit/8c39de1035e07fd0827d643ca21901b1ad213b6b))
+
+
+### Bug Fixes
+
+* **tests/intel:** correct test expectations for get_mitre_report ([#241](https://github.com/CrowdStrike/falcon-mcp/issues/241)) ([c1e8b6b](https://github.com/CrowdStrike/falcon-mcp/commit/c1e8b6bc18e53f29fdc6b553ada1c7cda9bde0b6))
+
+
+### Refactoring
+
+* reduce repeated API code patterns in modules ([2d5debd](https://github.com/CrowdStrike/falcon-mcp/commit/2d5debd6264dc7db9796085f25b8ec10d616cbbe))
+* **utils:** simplify generate_md_table function ([#214](https://github.com/CrowdStrike/falcon-mcp/issues/214)) ([792e128](https://github.com/CrowdStrike/falcon-mcp/commit/792e128315c65cdc1d82586a168a71082cec869b))
+
 ## [0.3.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.2.0...v0.3.0) (2025-09-08)
 
 
