@@ -26,6 +26,8 @@ class FalconClient:
         base_url: Optional[str] = None,
         debug: bool = False,
         user_agent_comment: Optional[str] = None,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
     ):
         """Initialize the Falcon client.
 
@@ -33,10 +35,12 @@ class FalconClient:
             base_url: Falcon API base URL (defaults to FALCON_BASE_URL env var)
             debug: Enable debug logging
             user_agent_comment: Additional information to include in the User-Agent comment section
+            client_id: Falcon API Client ID (defaults to FALCON_CLIENT_ID env var)
+            client_secret: Falcon API Client Secret (defaults to FALCON_CLIENT_SECRET env var)
         """
-        # Get credentials from environment variables
-        self.client_id = os.environ.get("FALCON_CLIENT_ID")
-        self.client_secret = os.environ.get("FALCON_CLIENT_SECRET")
+        # Get credentials from parameters or environment variables (parameters take precedence)
+        self.client_id = client_id or os.environ.get("FALCON_CLIENT_ID")
+        self.client_secret = client_secret or os.environ.get("FALCON_CLIENT_SECRET")
         self.base_url = base_url or os.environ.get(
             "FALCON_BASE_URL", "https://api.crowdstrike.com"
         )
@@ -47,8 +51,8 @@ class FalconClient:
 
         if not self.client_id or not self.client_secret:
             raise ValueError(
-                "Falcon API credentials not provided. Set FALCON_CLIENT_ID and "
-                "FALCON_CLIENT_SECRET environment variables."
+                "Falcon API credentials not provided. Either pass client_id and client_secret "
+                "parameters or set FALCON_CLIENT_ID and FALCON_CLIENT_SECRET environment variables."
             )
 
         # Initialize the Falcon API client using APIHarnessV2

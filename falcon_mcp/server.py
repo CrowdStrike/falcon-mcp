@@ -31,6 +31,8 @@ class FalconMCPServer:
         enabled_modules: Optional[Set[str]] = None,
         user_agent_comment: Optional[str] = None,
         stateless_http: bool = False,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
     ):
         """Initialize the Falcon MCP server.
 
@@ -40,6 +42,8 @@ class FalconMCPServer:
             enabled_modules: Set of module names to enable (defaults to all modules)
             user_agent_comment: Additional information to include in the User-Agent comment section
             stateless_http: Enable stateless HTTP mode (creates new transport per request)
+            client_id: Falcon API Client ID (defaults to FALCON_CLIENT_ID env var)
+            client_secret: Falcon API Client Secret (defaults to FALCON_CLIENT_SECRET env var)
         """
         # Store configuration
         self.base_url = base_url
@@ -58,6 +62,8 @@ class FalconMCPServer:
             base_url=self.base_url,
             debug=self.debug,
             user_agent_comment=self.user_agent_comment,
+            client_id=client_id,
+            client_secret=client_secret,
         )
 
         # Authenticate with the Falcon API

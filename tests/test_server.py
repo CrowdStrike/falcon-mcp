@@ -258,6 +258,57 @@ class TestFalconMCPServer(unittest.TestCase):
             stateless_http=False,
         )
 
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_server_with_direct_credentials(self, mock_fastmcp, mock_client):
+        """Test server initialization with direct credentials passed to client."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server with direct credentials
+        _server = FalconMCPServer(
+            client_id="direct-client-id",
+            client_secret="direct-client-secret",
+        )
+
+        # Verify FalconClient was initialized with direct credentials
+        mock_client.assert_called_once()
+        call_args = mock_client.call_args[1]
+        self.assertEqual(call_args["client_id"], "direct-client-id")
+        self.assertEqual(call_args["client_secret"], "direct-client-secret")
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_server_with_all_options_and_credentials(self, mock_fastmcp, mock_client):
+        """Test server initialization with all options including credentials."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server with all options
+        _server = FalconMCPServer(
+            base_url="https://api.test.crowdstrike.com",
+            debug=True,
+            client_id="direct-client-id",
+            client_secret="direct-client-secret",
+        )
+
+        # Verify FalconClient was initialized with all options
+        call_args = mock_client.call_args[1]
+        self.assertEqual(call_args["base_url"], "https://api.test.crowdstrike.com")
+        self.assertTrue(call_args["debug"])
+        self.assertEqual(call_args["client_id"], "direct-client-id")
+        self.assertEqual(call_args["client_secret"], "direct-client-secret")
+
 
 if __name__ == "__main__":
     unittest.main()

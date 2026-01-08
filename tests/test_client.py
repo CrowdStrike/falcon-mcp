@@ -70,6 +70,69 @@ class TestFalconClient(unittest.TestCase):
 
     @patch("falcon_mcp.client.os.environ.get")
     @patch("falcon_mcp.client.APIHarnessV2")
+    def test_client_initialization_with_direct_credentials(
+        self, mock_apiharness, mock_environ_get
+    ):
+        """Test client initialization with directly passed credentials."""
+        # No environment variables set
+        mock_environ_get.return_value = None
+        mock_apiharness.return_value = MagicMock()
+
+        # Create client with direct credentials
+        _client = FalconClient(
+            client_id="direct-client-id",
+            client_secret="direct-client-secret",
+        )
+
+        # Verify APIHarnessV2 was initialized with direct credentials
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["client_id"], "direct-client-id")
+        self.assertEqual(call_args["client_secret"], "direct-client-secret")
+
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
+    def test_client_direct_credentials_override_env_vars(
+        self, mock_apiharness, mock_environ_get
+    ):
+        """Test that direct credentials take precedence over environment variables."""
+        # Setup mock environment variables
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "env-client-id",
+            "FALCON_CLIENT_SECRET": "env-client-secret",
+        }.get(key, default)
+        mock_apiharness.return_value = MagicMock()
+
+        # Create client with direct credentials (should override env vars)
+        _client = FalconClient(
+            client_id="direct-client-id",
+            client_secret="direct-client-secret",
+        )
+
+        # Verify APIHarnessV2 was initialized with direct credentials, not env vars
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["client_id"], "direct-client-id")
+        self.assertEqual(call_args["client_secret"], "direct-client-secret")
+
+    @patch("falcon_mcp.client.os.environ.get")
+    def test_client_initialization_error_message(self, mock_environ_get):
+        """Test that error message mentions both credential approaches."""
+        # No environment variables set
+        mock_environ_get.return_value = None
+
+        # Verify error message mentions both approaches
+        with self.assertRaises(ValueError) as context:
+            FalconClient()
+
+        error_message = str(context.exception)
+        self.assertIn("client_id", error_message)
+        self.assertIn("client_secret", error_message)
+        self.assertIn("FALCON_CLIENT_ID", error_message)
+        self.assertIn("FALCON_CLIENT_SECRET", error_message)
+
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
     def test_authenticate(self, mock_apiharness, mock_environ_get):
         """Test authenticate method."""
         # Setup mock environment variables

@@ -470,6 +470,30 @@ server.run("streamable-http")
 server.run("streamable-http", host="0.0.0.0", port=8080)
 ```
 
+#### Direct Credentials (Secret Management Integration)
+
+For enterprise deployments using secret management systems (HashiCorp Vault, AWS Secrets Manager, etc.), you can pass credentials directly instead of using environment variables:
+
+```python
+from falcon_mcp.server import FalconMCPServer
+
+# Example: Retrieve credentials from a secrets manager
+# client_id = vault.read_secret("crowdstrike/client_id")
+# client_secret = vault.read_secret("crowdstrike/client_secret")
+
+# Create server with direct credentials
+server = FalconMCPServer(
+    client_id="your-client-id",           # Or retrieved from vault/secrets manager
+    client_secret="your-client-secret",   # Or retrieved from vault/secrets manager
+    base_url="https://api.us-2.crowdstrike.com",  # Optional
+    enabled_modules=["detections", "incidents"]   # Optional
+)
+
+server.run()
+```
+
+> **Note**: When both direct parameters and environment variables are available, direct parameters take precedence.
+
 ### Running Examples
 
 ```bash
