@@ -4,8 +4,6 @@ The Falcon MCP Server is available on the [AWS Marketplace](https://aws.amazon.c
 
 ## Prerequisites
 
-Before deploying, ensure you have your CrowdStrike API credentials and AWS environment configured.
-
 ### CrowdStrike API Credentials
 
 Create API credentials in your CrowdStrike console:
