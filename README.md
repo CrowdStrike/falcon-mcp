@@ -26,6 +26,7 @@
   - [Identity Protection Module](#identity-protection-module)
   - [Incidents Module](#incidents-module)
   - [Intel Module](#intel-module)
+  - [Scheduled Reports Module](#scheduled-reports-module)
   - [Sensor Usage Module](#sensor-usage-module)
   - [Serverless Module](#serverless-module)
   - [Spotlight Module](#spotlight-module)
@@ -87,6 +88,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read`<br>`Identity Protection Assessment:read`<br>`Identity Protection GraphQL:write` | Comprehensive entity investigation and identity protection analysis |
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
+| **Scheduled Reports** | `Scheduled Reports:read` | Get details about scheduled reports and searches, run reports on demand, and download report files |
 | **Sensor Usage** | `Sensor Usage:read` | Access and analyze sensor usage data |
 | **Serverless** | `Falcon Container Image:read` | Search for vulnerabilities in serverless functions across cloud service providers |
 | **Spotlight** | `Vulnerabilities:read` | Manage and analyze vulnerability data and security assessments |
@@ -240,6 +242,24 @@ Provides tools for accessing and analyzing CrowdStrike Falcon sensor usage data:
 - `falcon://sensor-usage/weekly/fql-guide`: Comprehensive FQL documentation and examples for sensor usage searches
 
 **Use Cases**: Sensor deployment monitoring, license utilization analysis, sensor health tracking
+
+### Scheduled Reports Module
+
+**API Scopes Required**: `Scheduled Reports:read`
+
+Provides tools for accessing and managing CrowdStrike Falcon scheduled reports and scheduled searches:
+
+- `falcon_search_scheduled_reports`: Search for scheduled reports and searches in your CrowdStrike environment
+- `falcon_launch_scheduled_report`: Launch a scheduled report on demand outside of its recurring schedule
+- `falcon_search_report_executions`: Search for report executions to track status and results
+- `falcon_download_report_execution`: Download generated report files
+
+**Resources**:
+
+- `falcon://scheduled-reports/search/fql-guide`: Comprehensive FQL documentation for searching scheduled report entities
+- `falcon://scheduled-reports/executions/search/fql-guide`: Comprehensive FQL documentation for searching report executions
+
+**Use Cases**: Automated report management, report execution monitoring, scheduled search analysis, report download automation
 
 ### Serverless Module
 

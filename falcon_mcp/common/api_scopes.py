@@ -52,6 +52,14 @@ API_SCOPE_REQUIREMENTS = {
     "GetSensorUsageWeekly": ["Sensor Usage:read"],
     # Serverless operations
     "GetCombinedVulnerabilitiesSARIF": ["Falcon Container Image:read"],
+    # Scheduled Reports operations
+    "scheduled_reports_query": ["Scheduled Reports:read"],
+    "scheduled_reports_get": ["Scheduled Reports:read"],
+    "scheduled_reports_launch": ["Scheduled Reports:read"],
+    # Report Executions operations (same scope as Scheduled Reports)
+    "reports_executions_query": ["Scheduled Reports:read"],
+    "report_executions_get": ["Scheduled Reports:read"],
+    "report_executions_download_get": ["Scheduled Reports:read"],
     # Add more mappings as needed
 }
 
