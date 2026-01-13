@@ -127,7 +127,7 @@ class ScheduledReportsModule(BaseModule):
         - filter=created_on:>'2023-01-01' - Created after date
         - filter=id:'45c59557ded4413cafb8ff81e7640456' - Specific report by ID
         """
-        result = self._base_search_api_call(
+        report_ids = self._base_search_api_call(
             operation="scheduled_reports_query",
             search_params={
                 "filter": filter,
@@ -140,10 +140,23 @@ class ScheduledReportsModule(BaseModule):
             default_result=[],
         )
 
-        if self._is_error(result):
-            return [result]
+        if self._is_error(report_ids):
+            return [report_ids]
 
-        return result
+        # If we have report IDs, get the full details for each one
+        if report_ids:
+            details = self._base_get_by_ids(
+                operation="scheduled_reports_get",
+                ids=report_ids,
+                use_params=True,
+            )
+
+            if self._is_error(details):
+                return [details]
+
+            return details
+
+        return []
 
     def launch_scheduled_report(
         self,
@@ -212,8 +225,8 @@ class ScheduledReportsModule(BaseModule):
         - filter=scheduled_report_id:'abc123' - All executions for report abc123
         - filter=id:'f1984ff006a94980b352f18ee79aed77' - Specific execution by ID
         """
-        result = self._base_search_api_call(
-            operation="reports_executions_query",
+        execution_ids = self._base_search_api_call(
+            operation="report_executions_query",
             search_params={
                 "filter": filter,
                 "limit": limit,
@@ -224,10 +237,23 @@ class ScheduledReportsModule(BaseModule):
             default_result=[],
         )
 
-        if self._is_error(result):
-            return [result]
+        if self._is_error(execution_ids):
+            return [execution_ids]
 
-        return result
+        # If we have execution IDs, get the full details for each one
+        if execution_ids:
+            details = self._base_get_by_ids(
+                operation="report_executions_get",
+                ids=execution_ids,
+                use_params=True,
+            )
+
+            if self._is_error(details):
+                return [details]
+
+            return details
+
+        return []
 
     def download_report_execution(
         self,

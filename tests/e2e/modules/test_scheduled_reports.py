@@ -196,7 +196,7 @@ class TestScheduledReportsModuleE2E(BaseE2ETest):
         async def test_logic():
             fixtures = [
                 {
-                    "operation": "reports_executions_query",
+                    "operation": "report_executions_query",
                     "validator": lambda kwargs: True,
                     "response": {
                         "status_code": 200,

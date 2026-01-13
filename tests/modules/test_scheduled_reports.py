@@ -35,8 +35,8 @@ class TestScheduledReportsModule(TestModules):
 
     def test_search_scheduled_reports_success(self):
         """Test searching scheduled reports with successful response."""
-        # Setup mock response with sample IDs
-        mock_response = {
+        # Setup mock responses: first for query (returns IDs), then for get (returns details)
+        query_response = {
             "status_code": 200,
             "body": {
                 "resources": [
@@ -45,7 +45,24 @@ class TestScheduledReportsModule(TestModules):
                 ]
             },
         }
-        self.mock_client.command.return_value = mock_response
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {
+                        "id": "report-id-1",
+                        "name": "Weekly Host Report",
+                        "status": "ACTIVE",
+                    },
+                    {
+                        "id": "report-id-2",
+                        "name": "Daily Vulnerability Scan",
+                        "status": "ACTIVE",
+                    },
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
 
         # Call search_scheduled_reports with test parameters
         result = self.module.search_scheduled_reports(
@@ -56,10 +73,15 @@ class TestScheduledReportsModule(TestModules):
             q="test",
         )
 
-        # Verify client command was called correctly
-        self.mock_client.command.assert_called_once_with(
-            "scheduled_reports_query",
-            parameters={
+        # Verify client command was called twice (query then get)
+        self.assertEqual(self.mock_client.command.call_count, 2)
+
+        # Verify first call was the query
+        first_call = self.mock_client.command.call_args_list[0]
+        self.assertEqual(first_call[0][0], "scheduled_reports_query")
+        self.assertEqual(
+            first_call[1]["parameters"],
+            {
                 "filter": "status:'ACTIVE'",
                 "limit": 100,
                 "offset": 0,
@@ -68,10 +90,19 @@ class TestScheduledReportsModule(TestModules):
             },
         )
 
-        # Verify result contains expected values
+        # Verify second call was the get with IDs (uses parameters for GET request)
+        second_call = self.mock_client.command.call_args_list[1]
+        self.assertEqual(second_call[0][0], "scheduled_reports_get")
+        self.assertEqual(
+            second_call[1]["parameters"]["ids"], ["report-id-1", "report-id-2"]
+        )
+
+        # Verify result contains full details
         self.assertEqual(len(result), 2)
-        self.assertEqual(result[0], "report-id-1")
-        self.assertEqual(result[1], "report-id-2")
+        self.assertEqual(result[0]["id"], "report-id-1")
+        self.assertEqual(result[0]["name"], "Weekly Host Report")
+        self.assertEqual(result[1]["id"], "report-id-2")
+        self.assertEqual(result[1]["name"], "Daily Vulnerability Scan")
 
     def test_search_scheduled_reports_empty(self):
         """Test searching scheduled reports with empty response."""
@@ -135,8 +166,8 @@ class TestScheduledReportsModule(TestModules):
 
     def test_search_report_executions_success(self):
         """Test searching report executions with successful response."""
-        # Setup mock response
-        mock_response = {
+        # Setup mock responses: first for query (returns IDs), then for get (returns details)
+        query_response = {
             "status_code": 200,
             "body": {
                 "resources": [
@@ -145,7 +176,24 @@ class TestScheduledReportsModule(TestModules):
                 ]
             },
         }
-        self.mock_client.command.return_value = mock_response
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {
+                        "id": "execution-id-1",
+                        "scheduled_report_id": "report-id-1",
+                        "status": "DONE",
+                    },
+                    {
+                        "id": "execution-id-2",
+                        "scheduled_report_id": "report-id-2",
+                        "status": "PENDING",
+                    },
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
 
         # Call search_report_executions
         result = self.module.search_report_executions(
@@ -155,10 +203,15 @@ class TestScheduledReportsModule(TestModules):
             sort="created_on.desc",
         )
 
-        # Verify client command was called correctly
-        self.mock_client.command.assert_called_once_with(
-            "reports_executions_query",
-            parameters={
+        # Verify client command was called twice (query then get)
+        self.assertEqual(self.mock_client.command.call_count, 2)
+
+        # Verify first call was the query
+        first_call = self.mock_client.command.call_args_list[0]
+        self.assertEqual(first_call[0][0], "report_executions_query")
+        self.assertEqual(
+            first_call[1]["parameters"],
+            {
                 "filter": "status:'DONE'",
                 "limit": 50,
                 "offset": 10,
@@ -166,9 +219,17 @@ class TestScheduledReportsModule(TestModules):
             },
         )
 
-        # Verify result
+        # Verify second call was the get with IDs (uses parameters for GET request)
+        second_call = self.mock_client.command.call_args_list[1]
+        self.assertEqual(second_call[0][0], "report_executions_get")
+        self.assertEqual(
+            second_call[1]["parameters"]["ids"], ["execution-id-1", "execution-id-2"]
+        )
+
+        # Verify result contains full details
         self.assertEqual(len(result), 2)
-        self.assertEqual(result[0], "execution-id-1")
+        self.assertEqual(result[0]["id"], "execution-id-1")
+        self.assertEqual(result[0]["status"], "DONE")
 
     def test_download_report_execution_success(self):
         """Test downloading report execution with successful response."""

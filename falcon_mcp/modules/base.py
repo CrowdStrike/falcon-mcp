@@ -77,6 +77,7 @@ class BaseModule(ABC):
         operation: str,
         ids: List[str],
         id_key: str = "ids",
+        use_params: bool = False,
         **additional_params,
     ) -> List[Dict[str, Any]] | Dict[str, Any]:
         """Helper method for API operations that retrieve entities by IDs.
@@ -84,20 +85,25 @@ class BaseModule(ABC):
         Args:
             operation: The API operation name
             ids: List of entity IDs
-            id_key: The key name for IDs in the request body (default: "ids")
-            **additional_params: Additional parameters to include in the request body
+            id_key: The key name for IDs in the request (default: "ids")
+            use_params: If True, send IDs as query parameters (GET).
+                       If False, send as request body (POST). Default: False
+            **additional_params: Additional parameters to include in the request
 
         Returns:
             List of entity details or error dict
         """
-        # Build the request body with dynamic ID key and additional parameters
-        body_params = {id_key: ids}
-        body_params.update(additional_params)
+        # Build the request params with dynamic ID key and additional parameters
+        request_params = {id_key: ids}
+        request_params.update(additional_params)
 
-        body = prepare_api_parameters(body_params)
+        prepared = prepare_api_parameters(request_params)
 
-        # Make the API request
-        response = self.client.command(operation, body=body)
+        # Make the API request using either parameters (GET) or body (POST)
+        if use_params:
+            response = self.client.command(operation, parameters=prepared)
+        else:
+            response = self.client.command(operation, body=prepared)
 
         # Handle the response
         return handle_api_response(
