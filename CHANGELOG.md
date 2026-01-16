@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.4.1...v0.5.0) (2026-01-16)
+
+
+### Features
+
+* **modules/detections:** improve FQL filter UX and tool descriptions ([#259](https://github.com/CrowdStrike/falcon-mcp/issues/259)) ([80f0639](https://github.com/CrowdStrike/falcon-mcp/commit/80f0639a30b2c34c41559b4af36884824b5217ba))
+* **modules/scheduled-reports:** add scheduled reports and executions module ([#252](https://github.com/CrowdStrike/falcon-mcp/issues/252)) ([8b54b7f](https://github.com/CrowdStrike/falcon-mcp/commit/8b54b7fa2a5f8ab81566e5b58049c66812bcd895))
+
+
+### Bug Fixes
+
+* **modules/scheduled-reports:** return full details from search tools ([#254](https://github.com/CrowdStrike/falcon-mcp/issues/254)) ([c6c39ba](https://github.com/CrowdStrike/falcon-mcp/commit/c6c39babdb701e267b14d598b4e2ebd575475125))
+
 ## [0.4.1](https://github.com/CrowdStrike/falcon-mcp/compare/v0.4.0...v0.4.1) (2026-01-08)
 
 
