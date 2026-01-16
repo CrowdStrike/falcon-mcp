@@ -4,6 +4,35 @@ Contains Detections resources.
 
 from falcon_mcp.common.utils import generate_md_table
 
+# Concise FQL syntax for embedding in tool parameter descriptions
+EMBEDDED_FQL_SYNTAX = """FQL filter string for querying detections.
+
+SYNTAX:
+- Equals: field:'value'
+- Not equals: field:!'value'
+- Comparison: field:>50, field:>=50, field:<50, field:<=50
+- Contains (case-insensitive): field:~'partial'
+- Wildcard: field:'prefix*', field:'*suffix'
+
+COMBINING:
+- AND (all must match): field1:'value1'+field2:'value2'
+- OR (any can match): field:'value1',field:'value2'
+- Grouping: (status:'new',status:'in_progress')+severity_name:'High'
+
+COMMON FIELDS:
+- status: 'new', 'in_progress', 'closed', 'reopened'
+- severity_name: 'Informational', 'Low', 'Medium', 'High', 'Critical'
+- product: 'epp', 'idp', 'xdr', 'overwatch'
+- device.hostname: Hostname contains string
+- created_timestamp: ISO 8601 format (e.g., '2025-01-14T00:00:00Z')
+
+EXAMPLES:
+- New high/critical alerts: status:'new'+(severity_name:'High',severity_name:'Critical')
+- Last 24h endpoint detections: created_timestamp:>'2025-01-14T00:00:00Z'+product:'epp'
+- Hostname pattern: device.hostname:'DC*'+status:'new'
+- Unassigned critical: assigned_to_name:!'*'+severity_name:'Critical'
+"""
+
 # List of tuples containing filter options data: (name, type, description)
 SEARCH_DETECTIONS_FQL_FILTERS = [
     (

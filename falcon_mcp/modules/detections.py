@@ -13,7 +13,10 @@ from pydantic import AnyUrl, Field
 
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.modules.base import BaseModule
-from falcon_mcp.resources.detections import SEARCH_DETECTIONS_FQL_DOCUMENTATION
+from falcon_mcp.resources.detections import (
+    EMBEDDED_FQL_SYNTAX,
+    SEARCH_DETECTIONS_FQL_DOCUMENTATION,
+)
 
 logger = get_logger(__name__)
 
@@ -27,7 +30,6 @@ class DetectionsModule(BaseModule):
         Args:
             server: MCP server instance
         """
-        # Register tools
         self._add_tool(
             server=server,
             method=self.search_detections,
@@ -62,8 +64,8 @@ class DetectionsModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://detections/search/fql-guide` resource when building this filter parameter.",
-            examples={"agent_id:'77d11725xxxxxxxxxxxxxxxxxxxxc48ca19'", "status:'new'"},
+            description=EMBEDDED_FQL_SYNTAX,
+            examples=["status:'new'+severity_name:'High'", "device.hostname:'DC*'"],
         ),
         limit: int = Field(
             default=10,
@@ -99,14 +101,17 @@ class DetectionsModule(BaseModule):
 
                 Examples: 'severity.desc', 'timestamp.desc'
             """).strip(),
-            examples={"severity.desc", "timestamp.desc"},
+            examples=["severity.desc", "timestamp.desc"],
         ),
         include_hidden: bool = Field(default=True),
-    ) -> List[Dict[str, Any]]:
-        """Find and analyze detections to understand malicious activity in your environment.
+    ) -> List[Dict[str, Any]] | Dict[str, Any]:
+        """Find detections by criteria and return their complete details.
 
-        IMPORTANT: You must use the `falcon://detections/search/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_detections` tool.
+        Use this tool to discover detections - filter by severity, status, hostname,
+        time range, etc. Returns full detection information including behaviors,
+        device context, and threat details.
+
+        Returns FQL syntax guide on error or empty results to help refine queries.
         """
         detection_ids = self._base_search_api_call(
             operation="GetQueriesAlertsV2",
@@ -120,28 +125,28 @@ class DetectionsModule(BaseModule):
             error_message="Failed to search detections",
         )
 
-        # If handle_api_response returns an error dict instead of a list,
-        # it means there was an error, so we return it wrapped in a list
+        # Handle search error - return with FQL guide
         if self._is_error(detection_ids):
-            return [detection_ids]
-
-        # If we have detection IDs, get the details for each one
-        if detection_ids:
-            details = self._base_get_by_ids(
-                operation="PostEntitiesAlertsV2",
-                ids=detection_ids,
-                id_key="composite_ids",
-                include_hidden=include_hidden,
+            return self._format_fql_error_response(
+                [detection_ids], filter, SEARCH_DETECTIONS_FQL_DOCUMENTATION
             )
 
-            # If handle_api_response returns an error dict instead of a list,
-            # it means there was an error, so we return it wrapped in a list
-            if self._is_error(details):
-                return [details]
+        # Handle empty results - return with FQL guide
+        if not detection_ids:
+            return self._format_fql_error_response([], filter, SEARCH_DETECTIONS_FQL_DOCUMENTATION)
 
-            return details
+        # Get detection details - past FQL concerns, normal API flow
+        details = self._base_get_by_ids(
+            operation="PostEntitiesAlertsV2",
+            ids=detection_ids,
+            id_key="composite_ids",
+            include_hidden=include_hidden,
+        )
 
-        return []
+        if self._is_error(details):
+            return [details]
+
+        return details
 
     def get_detection_details(
         self,
@@ -153,10 +158,10 @@ class DetectionsModule(BaseModule):
             description="Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility.",
         ),
     ) -> List[Dict[str, Any]] | Dict[str, Any]:
-        """Get detection details for specific detection IDs to understand security threats.
+        """Retrieve details for detection IDs you already have.
 
-        Use this when you already have specific detection IDs and need their full details.
-        For searching/discovering detections, use the `falcon_search_detections` tool instead.
+        Use ONLY when you have specific composite detection ID(s). To find detections
+        by criteria (severity, status, hostname, etc.), use `falcon_search_detections`.
         """
         logger.debug("Getting detection details for ID(s): %s", ids)
 

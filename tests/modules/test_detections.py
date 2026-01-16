@@ -31,7 +31,7 @@ class TestDetectionsModule(TestModules):
         self.assert_resources_registered(expected_resources)
 
     def test_search_detections(self):
-        """Test searching for detections."""
+        """Test searching for detections - details returns empty (not FQL-related)."""
         # Setup mock responses for both API calls
         query_response = {
             "status_code": 200,
@@ -64,13 +64,11 @@ class TestDetectionsModule(TestModules):
             },
         )
 
-        # Verify result
-        self.assertEqual(
-            result, []
-        )  # Empty list because PostEntitiesAlertsV2 returned empty resources
+        # Verify result is raw empty list (not FQL-wrapped - query succeeded)
+        self.assertEqual(result, [])
 
     def test_search_detections_with_details(self):
-        """Test searching for detections with details."""
+        """Test searching for detections with details - success returns raw list."""
         # Setup mock responses
         query_response = {
             "status_code": 200,
@@ -108,15 +106,14 @@ class TestDetectionsModule(TestModules):
             },
         )
 
-        # Verify result
-        expected_result = [
-            {"id": "detection1", "name": "Test Detection 1"},
-            {"id": "detection2", "name": "Test Detection 2"},
-        ]
-        self.assertEqual(result, expected_result)
+        # Verify result is raw list of detections (no wrapping)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "detection1")
+        self.assertEqual(result[1]["id"], "detection2")
 
     def test_search_detections_error(self):
-        """Test searching for detections with API error."""
+        """Test searching for detections with API error returns FQL guide."""
         # Setup mock response with error
         mock_response = {
             "status_code": 400,
@@ -127,10 +124,11 @@ class TestDetectionsModule(TestModules):
         # Call search_detections
         result = self.module.search_detections(filter="invalid query")
 
-        # Verify result contains error
-        self.assertEqual(len(result), 1)
-        self.assertIn("error", result[0])
-        self.assertIn("details", result[0])
+        # Verify result contains error AND fql_guide
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("fql_guide", result)
+        self.assertIn("hint", result)
 
     def test_get_detection_details(self):
         """Test getting detection details."""
@@ -197,9 +195,10 @@ class TestDetectionsModule(TestModules):
             },
         )
 
-        # Verify result
-        expected_result = [{"id": "detection1", "name": "Test Detection 1"}]
-        self.assertEqual(result, expected_result)
+        # Verify result is raw list (success = no wrapping)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["id"], "detection1")
 
     def test_get_detection_details_include_hidden_false(self):
         """Test getting detection details with include_hidden=False."""
@@ -222,6 +221,40 @@ class TestDetectionsModule(TestModules):
         # Verify result
         expected_result = [{"id": "detection1", "name": "Test Detection 1"}]
         self.assertEqual(result, expected_result)
+
+
+    def test_format_fql_error_response_empty_results(self):
+        """Test that empty results include FQL guide for refinement."""
+        from falcon_mcp.resources.detections import SEARCH_DETECTIONS_FQL_DOCUMENTATION
+
+        result = self.module._format_fql_error_response(
+            error_or_empty=[],
+            filter_used="status:'nonexistent'",
+            fql_documentation=SEARCH_DETECTIONS_FQL_DOCUMENTATION
+        )
+
+        self.assertEqual(result["results"], [])
+        self.assertEqual(result["filter_used"], "status:'nonexistent'")
+        self.assertIn("fql_guide", result)
+        self.assertEqual(result["fql_guide"], SEARCH_DETECTIONS_FQL_DOCUMENTATION)
+        self.assertIn("hint", result)
+        self.assertIn("No results matched", result["hint"])
+
+    def test_format_fql_error_response_error(self):
+        """Test that error responses include FQL guide."""
+        from falcon_mcp.resources.detections import SEARCH_DETECTIONS_FQL_DOCUMENTATION
+
+        error_result = {"error": "Invalid filter syntax", "details": "..."}
+        result = self.module._format_fql_error_response(
+            error_or_empty=[error_result],
+            filter_used="bad filter",
+            fql_documentation=SEARCH_DETECTIONS_FQL_DOCUMENTATION
+        )
+
+        self.assertEqual(result["results"], [error_result])
+        self.assertIn("fql_guide", result)
+        self.assertEqual(result["fql_guide"], SEARCH_DETECTIONS_FQL_DOCUMENTATION)
+        self.assertIn("error", result["hint"].lower())
 
 
 if __name__ == "__main__":
