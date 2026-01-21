@@ -231,13 +231,45 @@ class TestScheduledReportsModule(TestModules):
         self.assertEqual(result[0]["id"], "execution-id-1")
         self.assertEqual(result[0]["status"], "DONE")
 
-    def test_download_report_execution_success(self):
-        """Test downloading report execution with successful response."""
-        # Setup mock response with binary content
-        mock_content = b"Report,Data\nRow1,Value1\nRow2,Value2"
+    def test_download_report_execution_csv_format(self):
+        """Test downloading CSV format report returns decoded string content.
+
+        When the scheduled report is configured with format=csv,
+        FalconPy returns raw bytes containing CSV data.
+        """
+        # Setup mock response - raw CSV bytes
+        mock_response = b"@timestamp,@timestamp.nanos,text\n1.768962407987e+12,0,sntest\n"
+        self.mock_client.command.return_value = mock_response
+
+        # Call download_report_execution
+        result = self.module.download_report_execution(id="execution-id-1")
+
+        # Verify client command was called with 'ids' parameter
+        self.mock_client.command.assert_called_once_with(
+            "report_executions_download_get",
+            parameters={"ids": "execution-id-1"},
+        )
+
+        # Verify result is the decoded string content
+        self.assertIsInstance(result, str)
+        self.assertIn("@timestamp", result)
+        self.assertIn("sntest", result)
+
+    def test_download_report_execution_json_format(self):
+        """Test downloading JSON format report returns list of resources.
+
+        When the scheduled report is configured with format=json,
+        FalconPy returns a dict with body.resources containing the results.
+        """
+        # Setup mock response - dict with resources (JSON format)
         mock_response = {
             "status_code": 200,
-            "body": mock_content,
+            "body": {
+                "resources": [
+                    {"event_id": "1", "hostname": "host1", "severity": "high"},
+                    {"event_id": "2", "hostname": "host2", "severity": "medium"},
+                ]
+            },
         }
         self.mock_client.command.return_value = mock_response
 
@@ -247,15 +279,35 @@ class TestScheduledReportsModule(TestModules):
         # Verify client command was called correctly
         self.mock_client.command.assert_called_once_with(
             "report_executions_download_get",
-            parameters={"id": "execution-id-1"},
+            parameters={"ids": "execution-id-1"},
         )
 
-        # Verify result is decoded string
-        self.assertIsInstance(result, str)
-        self.assertIn("Report,Data", result)
-        self.assertIn("Row1,Value1", result)
+        # Verify result is a list of resources
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["event_id"], "1")
+        self.assertEqual(result[1]["hostname"], "host2")
 
-    def test_download_report_execution_error(self):
+    def test_download_report_execution_pdf_format_returns_error(self):
+        """Test downloading PDF format report returns error.
+
+        PDF format is not supported for LLM consumption. When FalconPy returns
+        bytes starting with %PDF magic bytes, return an error message.
+        """
+        # Setup mock response - PDF bytes (starts with %PDF)
+        mock_response = b"%PDF-1.4\n%more binary content here..."
+        self.mock_client.command.return_value = mock_response
+
+        # Call download_report_execution
+        result = self.module.download_report_execution(id="execution-id-1")
+
+        # Verify result is an error dict
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result)
+        self.assertIn("PDF format not supported", result["error"])
+        self.assertIn("CSV or JSON format", result["error"])
+
+    def test_download_report_execution_api_error(self):
         """Test downloading report execution with API error."""
         # Setup mock response with error (execution not ready)
         mock_response = {
@@ -321,7 +373,7 @@ class TestScheduledReportsModule(TestModules):
         self.assertTrue(result[0]["error"].startswith("Failed to search for report executions"))
 
     def test_download_report_execution_not_complete(self):
-        """Test downloading report when execution is not complete."""
+        """Test downloading report when execution is not complete (PENDING status)."""
         # Setup mock response for trying to download a PENDING execution
         mock_response = {
             "status_code": 400,
@@ -333,8 +385,27 @@ class TestScheduledReportsModule(TestModules):
         result = self.module.download_report_execution(id="pending-execution-id")
 
         # Verify error is returned
+        self.assertIsInstance(result, dict)
         self.assertIn("error", result)
         self.assertIn("Failed to download report execution", result["error"])
+
+    def test_download_report_execution_json_empty_resources(self):
+        """Test downloading JSON format report with empty resources."""
+        # Setup mock response - dict with empty resources (JSON format with no results)
+        mock_response = {
+            "status_code": 200,
+            "body": {
+                "resources": []
+            },
+        }
+        self.mock_client.command.return_value = mock_response
+
+        # Call download_report_execution
+        result = self.module.download_report_execution(id="execution-id-1")
+
+        # Verify result is an empty list
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 0)
 
 
 if __name__ == "__main__":

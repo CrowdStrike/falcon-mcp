@@ -455,14 +455,13 @@ class TestBaseModule(TestModules):
         self.assertEqual(len(result["data"]["entities"]["nodes"]), 2)
 
     def test_base_get_api_call_binary_to_string_success(self):
-        """Test _base_get_api_call successfully converts binary response to string."""
-        # Setup mock response with binary content
+        """Test _base_get_api_call successfully converts binary response to string.
+
+        FalconPy returns raw bytes directly for binary download endpoints like GetMitreReport.
+        """
+        # Setup mock response - FalconPy returns raw bytes directly for binary endpoints
         binary_content = b'{"test": "binary_conversion", "status": "success"}'
-        mock_response = {
-            "status_code": 200,
-            "body": binary_content
-        }
-        self.mock_client.command.return_value = mock_response
+        self.mock_client.command.return_value = binary_content
 
         # Call _base_get_api_call with decode_binary=True (default)
         result = self.module._base_get_api_call(
@@ -483,33 +482,32 @@ class TestBaseModule(TestModules):
         )
 
     def test_base_get_api_call_binary_to_string_disabled(self):
-        """Test _base_get_api_call with decode_binary=False uses standard response handling."""
-        # Setup mock response with standard JSON body (not binary)
-        mock_response = {
-            "status_code": 200,
-            "body": {"resources": [{"decoded": "standard_handling"}]}  # Standard JSON response
-        }
-        self.mock_client.command.return_value = mock_response
+        """Test _base_get_api_call with decode_binary=False returns raw bytes.
+
+        When decode_binary=False, FalconPy's raw bytes response should be returned as-is.
+        """
+        # Setup mock response - FalconPy returns raw bytes directly
+        binary_content = b'{"raw": "bytes_data"}'
+        self.mock_client.command.return_value = binary_content
 
         # Call _base_get_api_call with decode_binary=False
         result = self.module._base_get_api_call(
-            operation="GetStandardData",
+            operation="GetRawBinaryData",
             api_params={"param1": "value1"},
             decode_binary=False
         )
 
-        # Verify result uses standard response handling (returns resources list)
-        self.assertIsInstance(result, list, "Result should be list from standard handling")
-        self.assertEqual(result, [{"decoded": "standard_handling"}])
+        # Verify result is raw bytes (not decoded)
+        self.assertIsInstance(result, bytes, "Result should be raw bytes when decode_binary=False")
+        self.assertEqual(result, binary_content)
 
     def test_base_get_api_call_empty_binary_response(self):
-        """Test _base_get_api_call handles empty binary response correctly."""
-        # Setup mock response with empty binary
-        mock_response = {
-            "status_code": 200,
-            "body": b""  # Empty binary
-        }
-        self.mock_client.command.return_value = mock_response
+        """Test _base_get_api_call handles empty binary response correctly.
+
+        FalconPy returns raw bytes directly for binary endpoints.
+        """
+        # Setup mock response - FalconPy returns raw bytes directly
+        self.mock_client.command.return_value = b""  # Empty binary
 
         # Call _base_get_api_call
         result = self.module._base_get_api_call(
@@ -522,16 +520,16 @@ class TestBaseModule(TestModules):
         self.assertEqual(result, "", "Empty binary should decode to empty string")
 
     def test_base_get_api_call_large_binary_response(self):
-        """Test _base_get_api_call handles large binary responses."""
+        """Test _base_get_api_call handles large binary responses.
+
+        FalconPy returns raw bytes directly for binary endpoints.
+        """
         # Create a large binary content (simulating large MITRE report)
         large_json = '{"data": "' + "x" * 10000 + '", "size": "large"}'
         large_binary = large_json.encode('utf-8')
 
-        mock_response = {
-            "status_code": 200,
-            "body": large_binary
-        }
-        self.mock_client.command.return_value = mock_response
+        # FalconPy returns raw bytes directly
+        self.mock_client.command.return_value = large_binary
 
         # Call _base_get_api_call
         result = self.module._base_get_api_call(
@@ -545,16 +543,15 @@ class TestBaseModule(TestModules):
         self.assertIn('"size": "large"', result, "Content should be preserved")
 
     def test_base_get_api_call_csv_binary_response(self):
-        """Test _base_get_api_call handles CSV binary responses."""
-        # Setup mock CSV response as binary
+        """Test _base_get_api_call handles CSV binary responses.
+
+        FalconPy returns raw bytes directly for binary endpoints.
+        """
+        # Setup mock CSV response - FalconPy returns raw bytes directly
         csv_content = "id,name,status\n1,Test Item,active\n2,Another Item,inactive"
         csv_binary = csv_content.encode('utf-8')
 
-        mock_response = {
-            "status_code": 200,
-            "body": csv_binary
-        }
-        self.mock_client.command.return_value = mock_response
+        self.mock_client.command.return_value = csv_binary
 
         # Call _base_get_api_call
         result = self.module._base_get_api_call(
@@ -568,16 +565,16 @@ class TestBaseModule(TestModules):
         self.assertIn("Test Item,active", result, "CSV data should be preserved")
 
     def test_base_get_api_call_utf8_special_characters(self):
-        """Test _base_get_api_call handles UTF-8 special characters in binary responses."""
+        """Test _base_get_api_call handles UTF-8 special characters in binary responses.
+
+        FalconPy returns raw bytes directly for binary endpoints.
+        """
         # Setup mock response with UTF-8 special characters
         special_content = '{"message": "Special chars: áéíóú ñ 中文 🚀"}'
         special_binary = special_content.encode('utf-8')
 
-        mock_response = {
-            "status_code": 200,
-            "body": special_binary
-        }
-        self.mock_client.command.return_value = mock_response
+        # FalconPy returns raw bytes directly
+        self.mock_client.command.return_value = special_binary
 
         # Call _base_get_api_call
         result = self.module._base_get_api_call(
@@ -592,11 +589,15 @@ class TestBaseModule(TestModules):
         self.assertIn("🚀", result, "Emoji should be preserved")
 
     def test_base_get_api_call_non_binary_response_with_decode_true(self):
-        """Test _base_get_api_call with non-binary response body when decode_binary=True."""
-        # Setup mock response with non-binary body (dict)
+        """Test _base_get_api_call with dict response uses standard handling.
+
+        For non-binary endpoints, FalconPy returns a dict with status_code and body.
+        The decode_binary flag only applies to raw bytes responses.
+        """
+        # Setup mock response with non-binary body (dict) - standard FalconPy response
         mock_response = {
             "status_code": 200,
-            "body": {"resources": [{"id": "test", "type": "non_binary"}]}  # Dict, not binary
+            "body": {"resources": [{"id": "test", "type": "non_binary"}]}
         }
         self.mock_client.command.return_value = mock_response
 
@@ -612,8 +613,11 @@ class TestBaseModule(TestModules):
         self.assertEqual(result, [{"id": "test", "type": "non_binary"}])
 
     def test_base_get_api_call_error_response(self):
-        """Test _base_get_api_call handles error responses correctly."""
-        # Setup mock error response
+        """Test _base_get_api_call handles error responses correctly.
+
+        For error responses, FalconPy returns a dict with status_code and body.
+        """
+        # Setup mock error response - dict format for errors
         mock_response = {
             "status_code": 404,
             "body": {"errors": [{"message": "Resource not found"}]}
@@ -633,13 +637,12 @@ class TestBaseModule(TestModules):
         self.assertIn("Custom error message", result["error"])
 
     def test_base_get_api_call_parameter_preparation(self):
-        """Test _base_get_api_call properly prepares API parameters."""
-        # Setup mock response
-        mock_response = {
-            "status_code": 200,
-            "body": b'{"prepared": true}'
-        }
-        self.mock_client.command.return_value = mock_response
+        """Test _base_get_api_call properly prepares API parameters.
+
+        FalconPy returns raw bytes directly for binary endpoints.
+        """
+        # Setup mock response - FalconPy returns raw bytes directly
+        self.mock_client.command.return_value = b'{"prepared": true}'
 
         # Call with parameters that need preparation (None values should be filtered)
         result = self.module._base_get_api_call(

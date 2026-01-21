@@ -283,7 +283,10 @@ class TestIntelModule(TestModules):
         self.assertTrue(result[0]["error"].startswith("Failed to search reports"))
 
     def test_get_mitre_report_success(self):
-        """Test getting MITRE report with successful response."""
+        """Test getting MITRE report with successful response.
+
+        FalconPy returns raw bytes directly for binary endpoints like GetMitreReport.
+        """
         # Setup mock response with fake MITRE JSON data as binary content
         fake_json_content = '''[
             {
@@ -306,11 +309,8 @@ class TestIntelModule(TestModules):
             }
         ]'''
 
-        mock_response = {
-            "status_code": 200,
-            "body": fake_json_content.encode('utf-8'),
-        }
-        self.mock_client.command.return_value = mock_response
+        # FalconPy returns raw bytes directly for binary endpoints
+        self.mock_client.command.return_value = fake_json_content.encode('utf-8')
 
         # Call get_mitre_report with numeric actor ID
         result = self.module.get_mitre_report(actor="123456", format="json")
@@ -333,7 +333,10 @@ class TestIntelModule(TestModules):
         self.assertIn("technique_id2", result)
 
     def test_get_mitre_report_csv_format(self):
-        """Test getting MITRE report with CSV format."""
+        """Test getting MITRE report with CSV format.
+
+        FalconPy returns raw bytes directly for binary endpoints like GetMitreReport.
+        """
         # Setup mock response for CSV format using fake CSV structure
         fake_csv = (
             "id,tactic_id,tactic_name,technique_id,technique_name,reports,observables\n"
@@ -342,11 +345,8 @@ class TestIntelModule(TestModules):
             "fake_id2,fake_tactic_id2,Another Fake Tactic,fake_technique_id2,Another Fake Technique,"
             "FAKE002,This is another fake observable for CSV testing."
         )
-        mock_response = {
-            "status_code": 200,
-            "body": fake_csv.encode('utf-8'),
-        }
-        self.mock_client.command.return_value = mock_response
+        # FalconPy returns raw bytes directly for binary endpoints
+        self.mock_client.command.return_value = fake_csv.encode('utf-8')
 
         # Call get_mitre_report with CSV format
         result = self.module.get_mitre_report(actor="123456", format="csv")
@@ -385,10 +385,12 @@ class TestIntelModule(TestModules):
         self.assertIn("details", result[0])
 
     def test_get_mitre_report_empty_response(self):
-        """Test getting MITRE report with empty response."""
-        # Setup mock response with empty binary content
-        mock_response = {"status_code": 200, "body": b""}
-        self.mock_client.command.return_value = mock_response
+        """Test getting MITRE report with empty response.
+
+        FalconPy returns raw bytes directly for binary endpoints like GetMitreReport.
+        """
+        # FalconPy returns raw bytes directly for binary endpoints
+        self.mock_client.command.return_value = b""
 
         # Call get_mitre_report
         result = self.module.get_mitre_report(actor="123456", format="json")
@@ -402,14 +404,14 @@ class TestIntelModule(TestModules):
         self.assertEqual(result, "")
 
     def test_get_mitre_report_default_format(self):
-        """Test that default format is JSON when not specified."""
+        """Test that default format is JSON when not specified.
+
+        FalconPy returns raw bytes directly for binary endpoints like GetMitreReport.
+        """
         # Setup mock response with binary content
         fake_json_content = '{"actor_id": "123456", "format": "JSON"}'
-        mock_response = {
-            "status_code": 200,
-            "body": fake_json_content.encode('utf-8')
-        }
-        self.mock_client.command.return_value = mock_response
+        # FalconPy returns raw bytes directly for binary endpoints
+        self.mock_client.command.return_value = fake_json_content.encode('utf-8')
 
         # Call get_mitre_report without format parameter - should use default json
         self.module.get_mitre_report(actor="123456", format="json")
@@ -424,8 +426,12 @@ class TestIntelModule(TestModules):
         )
 
     def test_get_mitre_report_by_actor_name(self):
-        """Test getting MITRE report using actor name (automatically resolves to ID)."""
-        # Setup mock response for actor search
+        """Test getting MITRE report using actor name (automatically resolves to ID).
+
+        FalconPy returns raw bytes directly for binary endpoints like GetMitreReport,
+        but returns dict for standard endpoints like QueryIntelActorEntities.
+        """
+        # Setup mock response for actor search (standard dict response)
         search_mock_response = {
             "status_code": 200,
             "body": {
@@ -440,7 +446,7 @@ class TestIntelModule(TestModules):
             },
         }
 
-        # Setup mock response for MITRE report
+        # Setup mock response for MITRE report (raw bytes)
         fake_json_content = '''[
             {
                 "id": "fake_id_1",
@@ -452,17 +458,14 @@ class TestIntelModule(TestModules):
                 "observables": ["This is fake observable data for testing."]
             }
         ]'''
-        mitre_mock_response = {
-            "status_code": 200,
-            "body": fake_json_content.encode('utf-8'),
-        }
 
         # Configure mock to return different responses for different operations
         def mock_command_side_effect(operation, **_):
             if operation == "QueryIntelActorEntities":
                 return search_mock_response
             elif operation == "GetMitreReport":
-                return mitre_mock_response
+                # FalconPy returns raw bytes directly for binary endpoints
+                return fake_json_content.encode('utf-8')
             return {"status_code": 404, "body": {"errors": [{"message": "Unknown operation"}]}}
 
         self.mock_client.command.side_effect = mock_command_side_effect

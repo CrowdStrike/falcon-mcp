@@ -5,12 +5,14 @@ This module provides tools for accessing and managing CrowdStrike Falcon
 scheduled reports and scheduled searches.
 """
 
-from typing import Any, List
+from typing import Any, Dict, List
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
 
+from falcon_mcp.common.errors import handle_api_response
+from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.scheduled_reports import (
     SEARCH_REPORT_EXECUTIONS_FQL_DOCUMENTATION,
@@ -258,22 +260,50 @@ class ScheduledReportsModule(BaseModule):
     def download_report_execution(
         self,
         id: str = Field(description="Report execution ID to download."),
-    ) -> str:
-        """Download generated report file.
+    ) -> str | List[Dict[str, Any]] | Dict[str, Any]:
+        """Download generated report results.
 
-        Download the report file for a completed execution. Only works for executions
-        with status='DONE'. The report is returned as a decoded string.
+        Download the report results for a completed execution. Only works for executions
+        with status='DONE'.
 
-        Returns:
-            The report content as a decoded UTF-8 string.
+        The return format depends on how the scheduled report was configured:
+        - CSV format reports: Returns string containing CSV data
+        - JSON format reports: Returns list of result records
+        - PDF format reports: Not supported (returns error - use CSV/JSON instead)
 
         Note: Check execution status first using falcon_search_report_executions with
         filter=id:'<execution-id>' to ensure the execution is complete (status='DONE')
         before attempting to download.
         """
-        return self._base_get_api_call(
-            operation="report_executions_download_get",
-            api_params={"id": id},
-            error_message="Failed to download report execution",
-            decode_binary=True,
+        prepared_params = prepare_api_parameters({"ids": id})
+        response = self.client.command(
+            "report_executions_download_get",
+            parameters=prepared_params,
         )
+
+        # CSV format: FalconPy returns raw bytes
+        if isinstance(response, bytes):
+            # Check if it's a PDF (starts with %PDF magic bytes)
+            if response[:4] == b"%PDF":
+                return {
+                    "error": "PDF format not supported for LLM consumption. "
+                    "Please configure the scheduled report to use CSV or JSON format instead."
+                }
+            # Decode CSV/text content
+            return response.decode("utf-8")
+
+        # JSON format: FalconPy returns dict with body.resources
+        if isinstance(response, dict):
+            status_code = response.get("status_code")
+            if status_code != 200:
+                return handle_api_response(
+                    response,
+                    operation="report_executions_download_get",
+                    error_message="Failed to download report execution",
+                    default_result=[],
+                )
+            # Extract resources list from JSON format response
+            return response.get("body", {}).get("resources", [])
+
+        # Unexpected response type
+        return {"error": f"Unexpected response type: {type(response).__name__}"}

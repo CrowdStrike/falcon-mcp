@@ -241,28 +241,24 @@ class BaseModule(ABC):
         # Make the API request
         command_response = self.client.command(operation, parameters=prepared_params)
 
-        # Handle the response - check status code first
+        # FalconPy returns raw bytes for binary download endpoints (e.g., GetMitreReport)
+        if isinstance(command_response, bytes):
+            if decode_binary:
+                return command_response.decode('utf-8')
+            return command_response
+
+        # Dict response - check status code and use standard error handling
         status_code = command_response.get("status_code")
 
         if status_code != 200:
-            # Use standard error handling for non-200 responses
-            api_response = handle_api_response(
+            return handle_api_response(
                 command_response,
                 operation=operation,
                 error_message=error_message,
                 default_result=[],
             )
-            return api_response
 
-        # For successful operations, check if we need to decode binary response
-        response_body = command_response.get("body", b"")
-
-        # If decode_binary is True and we have binary data, decode it
-        if decode_binary and isinstance(response_body, bytes):
-            content = response_body.decode('utf-8')
-            return content
-
-        # Otherwise, use standard response handling
+        # Standard response handling for dict responses
         return handle_api_response(
             command_response,
             operation=operation,
