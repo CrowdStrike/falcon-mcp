@@ -114,7 +114,7 @@ class TestMyModuleIntegration(BaseIntegrationTest):
 ### Available Assertions
 
 | Method | Description |
-|--------|-------------|
+| -------- | ------------- |
 | `assert_no_error(result)` | Verify result is not an API error |
 | `assert_valid_list_response(result, min_length)` | Verify result is a list with minimum length |
 | `assert_search_returns_details(result, expected_fields)` | Verify search returns full entity objects with expected fields |
@@ -165,6 +165,7 @@ Using `skip_with_warning()` ensures skipped tests are visible in CI output rathe
 ### 1. Test What Mocks Cannot
 
 Focus integration tests on validating:
+
 - FalconPy operation names are correct
 - HTTP methods and parameter positions match the API
 - Two-step search patterns return full details
