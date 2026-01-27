@@ -199,12 +199,12 @@ Resources can be particularly valuable when integrated with tools. Here's how th
 ```python
 def query_actor_entities(
     self,
-    filter: Optional[str] = Field(
+    filter: str | None = Field(
         default=None,
         description="FQL query expression that should be used to limit the results. IMPORTANT: use the 'falcon://query_actor_entities_fql_documentation' resource when building this parameter.",
     ),
     # Other parameters...
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Get info about actors that match provided FQL filters.
 
     IMPORTANT: You must call the FQL Guide for Intel Query Actor Entities (falcon://intel/query_actor_entities/fql-guide) resource first

@@ -23,14 +23,15 @@ Create a new file in the `falcon_mcp/modules` directory:
 
 This module provides tools for [brief description].
 """
-from typing import Dict, List, Optional, Any
+from typing import Any
 
 from mcp.server import FastMCP
+from pydantic import Field
 
 from falcon_mcp.common.logging import get_logger
-from falcon_mcp.common.errors import handle_api_response
-from falcon_mcp.common.utils import prepare_api_parameters, extract_first_resource
 from falcon_mcp.modules.base import BaseModule
+
+logger = get_logger(__name__)
 
 
 class YourModule(BaseModule):
@@ -51,35 +52,38 @@ class YourModule(BaseModule):
 
         # Add more tools as needed
 
-    def your_tool_method(self, param1: str, param2: Optional[int] = None) -> Dict[str, Any]:
+    def your_tool_method(
+        self,
+        param1: str = Field(
+            description="Description of param1. Explain what values are valid.",
+            examples=["example_value_1", "example_value_2"],
+        ),
+        param2: int | None = Field(
+            default=None,
+            ge=1,
+            le=100,
+            description="Description of param2. Include constraints if applicable.",
+        ),
+    ) -> dict[str, Any]:
         """Description of what your tool does.
 
-        Args:
-            param1: Description of param1
-            param2: Description of param2
-
-        Returns:
-            Tool result description
+        Provide context on when to use this tool and any important notes.
+        Tool descriptions are derived from this docstring.
         """
-        # Prepare parameters
-        params = prepare_api_parameters({
-            "param1": param1,
-            "param2": param2,
-        })
-
-        # Define the operation name (used for error handling)
-        operation = "YourFalconAPIOperation"
-
-        # Make the API request
-        response = self.client.command(operation, parameters=params)
-
-        # Handle the response
-        return handle_api_response(
-            response,
-            operation=operation,
+        # Use base class methods for common patterns
+        results = self._base_search_api_call(
+            operation="YourFalconAPIOperation",
+            search_params={
+                "param1": param1,
+                "param2": param2,
+            },
             error_message="Failed to perform operation",
-            default_result={},
         )
+
+        if self._is_error(results):
+            return results
+
+        return results
 ```
 
 ### 2. Update API Scope Requirements
@@ -108,7 +112,7 @@ from the class name (e.g., `YourModule` becomes `your`).
 During server initialization, the registry system will:
 
 1. Scan the modules directory using `pkgutil.iter_modules()`
-2. Dynamically import each module file using `importlib.import_module()`  
+2. Dynamically import each module file using `importlib.import_module()`
 3. Find classes that end with "Module" (excluding BaseModule) via introspection
 4. Register them in the `AVAILABLE_MODULES` dictionary
 5. Make them available to the server
@@ -295,6 +299,29 @@ if isinstance(result, dict) and "error" in result:
 2. **Parameter Descriptions**: Document all parameters and return values
 3. **Examples**: Include examples in docstrings where helpful
 
+### Type Hints
+
+1. **Use Modern Syntax**: Use Python 3.10+ type hints (PEP 585/604)
+2. **Built-in Generics**: Use `list[...]`, `dict[...]` instead of `List[...]`, `Dict[...]`
+3. **Union Syntax**: Use `X | None` instead of `Optional[X]`
+4. **Minimal Imports**: Only import `Any` from typing module when needed
+
+Example:
+
+```python
+# ✅ Correct - Modern type hints
+from typing import Any
+
+def search_entities(self, filter: str | None = None) -> list[dict[str, Any]]:
+    ...
+
+# ❌ Avoid - Legacy type hints
+from typing import Dict, List, Optional, Any
+
+def search_entities(self, filter: Optional[str] = None) -> List[Dict[str, Any]]:
+    ...
+```
+
 ### Testing
 
 1. **Test All Tools**: Write tests for all tools in your module
@@ -340,13 +367,15 @@ Hosts module for Falcon MCP Server
 
 This module provides tools for accessing and managing CrowdStrike Falcon hosts.
 """
-from typing import Dict, List, Optional, Any
+from typing import Any
 
 from mcp.server import FastMCP
+from pydantic import Field
 
-from falcon_mcp.common.errors import handle_api_response
-from falcon_mcp.common.utils import prepare_api_parameters, extract_resources, extract_first_resource
+from falcon_mcp.common.logging import get_logger
 from falcon_mcp.modules.base import BaseModule
+
+logger = get_logger(__name__)
 
 
 class HostsModule(BaseModule):
@@ -358,7 +387,6 @@ class HostsModule(BaseModule):
         Args:
             server: MCP server instance
         """
-        # Register tools
         self._add_tool(
             server=server,
             method=self.search_hosts,
@@ -371,118 +399,103 @@ class HostsModule(BaseModule):
             name="get_host_details",
         )
 
-        self._add_tool(
-            server=server,
-            method=self.get_host_count,
-            name="get_host_count",
-        )
+    def search_hosts(
+        self,
+        filter: str | None = Field(
+            default=None,
+            description="FQL Syntax formatted string used to limit the results.",
+            examples={"platform_name:'Windows'", "hostname:'PC*'"},
+        ),
+        limit: int = Field(
+            default=10,
+            ge=1,
+            le=5000,
+            description="The maximum records to return. [1-5000]",
+        ),
+        offset: int | None = Field(
+            default=None,
+            description="The offset to start retrieving records from.",
+        ),
+        sort: str | None = Field(
+            default=None,
+            description=dedent("""
+                Sort hosts using these options:
 
-    def search_hosts(self, query: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+                hostname: Host name/computer name
+                last_seen: Timestamp when the host was last seen
+                first_seen: Timestamp when the host was first seen
+                modified_timestamp: When the host record was last modified
+                platform_name: Operating system platform
+                agent_version: CrowdStrike agent version
+                os_version: Operating system version
+                external_ip: External IP address
+
+                Sort either asc (ascending) or desc (descending).
+                Both formats are supported: 'hostname.desc' or 'hostname|desc'
+
+                Examples: 'hostname.asc', 'last_seen.desc', 'platform_name.asc'
+            """).strip(),
+            examples={"hostname.asc", "last_seen.desc"},
+        ),
+    ) -> list[dict[str, Any]]:
         """Search for hosts in your CrowdStrike environment.
-
-        Args:
-            query: FQL query string to filter hosts
-            limit: Maximum number of results to return
-
-        Returns:
-            List of host details
         """
-        # Prepare parameters
-        params = prepare_api_parameters({
-            "filter": query,
-            "limit": limit,
-        })
-
-        # Define the operation name
-        operation = "QueryDevices"
-
-        # Make the API request
-        response = self.client.command(operation, parameters=params)
-
-        # Handle the response
-        host_ids = handle_api_response(
-            response,
-            operation=operation,
+        device_ids = self._base_search_api_call(
+            operation="QueryDevicesByFilter",
+            search_params={
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            },
             error_message="Failed to search hosts",
-            default_result=[],
-        )
-
-        # If we have host IDs, get the details for each one
-        if host_ids:
-            details_operation = "GetDeviceDetails"
-            details_response = self.client.command(
-                details_operation,
-                body={"ids": host_ids}
-            )
-
-            return handle_api_response(
-                details_response,
-                operation=details_operation,
-                error_message="Failed to get host details",
-                default_result=[],
-            )
-
-        return []
-
-    def get_host_details(self, host_id: str) -> Dict[str, Any]:
-        """Get detailed information about a specific host.
-
-        Args:
-            host_id: The ID of the host to retrieve
-
-        Returns:
-            Host details
-        """
-        # Define the operation name
-        operation = "GetDeviceDetails"
-
-        # Make the API request
-        response = self.client.command(
-            operation,
-            body={"ids": [host_id]},
-        )
-
-        # Extract the first resource
-        return extract_first_resource(
-            response,
-            operation=operation,
-            not_found_error="Host not found",
-        )
-
-    def get_host_count(self, query: Optional[str] = None) -> Dict[str, int]:
-        """Get the count of hosts matching a query.
-
-        Args:
-            query: FQL query string to filter hosts
-
-        Returns:
-            Dictionary with host count
-        """
-        # Prepare parameters
-        params = prepare_api_parameters({
-            "filter": query,
-        })
-
-        # Define the operation name
-        operation = "QueryDevices"
-
-        # Make the API request
-        response = self.client.command(operation, parameters=params)
-
-        # Use handle_api_response to get host IDs
-        host_ids = handle_api_response(
-            response,
-            operation=operation,
-            error_message="Failed to get host count",
-            default_result=[],
         )
 
         # If handle_api_response returns an error dict instead of a list,
-        # it means there was an error, so we return it with a count of 0
-        if isinstance(host_ids, dict) and "error" in host_ids:
-            return {"count": 0, **host_ids}
+        # it means there was an error, so we return it wrapped in a list
+        if self._is_error(device_ids):
+            return [device_ids]
 
-        return {"count": len(host_ids)}
+        # If we have device IDs, get the details for each one
+        if device_ids:
+            details = self._base_get_by_ids(
+                operation="PostDeviceDetailsV2",
+                ids=device_ids,
+                id_key="ids",
+            )
+
+            # If handle_api_response returns an error dict instead of a list,
+            # it means there was an error, so we return it wrapped in a list
+            if self._is_error(details):
+                return [details]
+
+            return details
+
+        return []
+
+    def get_host_details(
+        self,
+        ids: list[str] = Field(
+            description="Host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request."
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Retrieve detailed information for specified host device IDs.
+
+        This tool returns comprehensive host details for one or more device IDs.
+        Use this when you already have specific device IDs and need their full details.
+        For searching/discovering hosts, use the `falcon_search_hosts` tool instead.
+        """
+        logger.debug("Getting host details for IDs: %s", ids)
+
+        # Handle empty list case - return empty list without making API call
+        if not ids:
+            return []
+
+        return self._base_get_by_ids(
+            operation="PostDeviceDetailsV2",
+            ids=ids,
+            id_key="ids",
+        )
 ```
 
 The module will be automatically discovered by the registry system - no manual imports or registration needed.
