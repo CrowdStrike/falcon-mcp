@@ -4,7 +4,7 @@ Incidents module for Falcon MCP Server
 This module provides tools for accessing and analyzing CrowdStrike Falcon incidents.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -119,7 +119,7 @@ class IncidentsModule(BaseModule):
             description="The property to sort by. (Ex: modified_timestamp.desc)",
             examples={"modified_timestamp.desc"},
         ),
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """View calculated CrowdScores and security posture metrics for your environment.
 
         IMPORTANT: You must use the `falcon://incidents/crowd-score/fql-guide` resource when you need to use the `filter` parameter.
@@ -184,7 +184,7 @@ class IncidentsModule(BaseModule):
             default=None,
             description="The property to sort by. FQL syntax. Ex: state.asc, name.desc",
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Find and analyze security incidents to understand coordinated activity in your environment.
 
         IMPORTANT: You must use the `falcon://incidents/search/fql-guide` resource when you need to use the `filter` parameter.
@@ -209,8 +209,8 @@ class IncidentsModule(BaseModule):
 
     def get_incident_details(
         self,
-        ids: List[str] = Field(description="Incident ID(s) to retrieve."),
-    ) -> List[Dict[str, Any]]:
+        ids: list[str] = Field(description="Incident ID(s) to retrieve."),
+    ) -> list[dict[str, Any]]:
         """Get comprehensive incident details to understand attack patterns and coordinated activities.
 
         This tool returns comprehensive incident details for one or more incident IDs.
@@ -247,7 +247,7 @@ class IncidentsModule(BaseModule):
             default=None,
             description="The property to sort by. (Ex: modified_timestamp.desc)",
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Find and analyze behaviors to understand suspicious activity in your environment.
 
         Use this when you need to find behaviors matching certain criteria rather than retrieving specific behaviors by ID.
@@ -275,8 +275,8 @@ class IncidentsModule(BaseModule):
 
     def get_behavior_details(
         self,
-        ids: List[str] = Field(description="Behavior ID(s) to retrieve."),
-    ) -> List[Dict[str, Any]]:
+        ids: list[str] = Field(description="Behavior ID(s) to retrieve."),
+    ) -> list[dict[str, Any]]:
         """Get detailed behavior information to understand attack techniques and tactics.
 
         Use this when you already know the specific behavior ID(s) and need to retrieve their details.
@@ -299,7 +299,7 @@ class IncidentsModule(BaseModule):
         limit: int = 100,
         offset: int | None = None,
         sort: str | None = None,
-    ) -> List[str] | Dict[str, Any]:
+    ) -> list[str] | dict[str, Any]:
         return self._base_search_api_call(
             operation=operation,
             search_params={

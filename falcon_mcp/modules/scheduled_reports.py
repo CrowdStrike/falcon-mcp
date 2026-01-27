@@ -5,7 +5,7 @@ This module provides tools for accessing and managing CrowdStrike Falcon
 scheduled reports and scheduled searches.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -108,7 +108,7 @@ class ScheduledReportsModule(BaseModule):
             default=None,
             description="Free-text search for terms in id, name, description, type, status fields",
         ),
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for scheduled reports and searches in your CrowdStrike environment.
 
         Returns full details for matching scheduled report/search entities. Use the filter
@@ -163,7 +163,7 @@ class ScheduledReportsModule(BaseModule):
     def launch_scheduled_report(
         self,
         id: str = Field(description="Scheduled report/search entity ID to execute."),
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Launch a scheduled report on demand.
 
         Execute a scheduled report or search immediately, outside of its recurring schedule.
@@ -207,7 +207,7 @@ class ScheduledReportsModule(BaseModule):
             default=None,
             description="Property to sort by. Ex: created_on.asc, last_updated_on.desc",
         ),
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for scheduled report/search executions in your CrowdStrike environment.
 
         Returns full details for matching executions. Use the filter parameter to narrow
@@ -260,7 +260,7 @@ class ScheduledReportsModule(BaseModule):
     def download_report_execution(
         self,
         id: str = Field(description="Report execution ID to download."),
-    ) -> str | List[Dict[str, Any]] | Dict[str, Any]:
+    ) -> str | list[dict[str, Any]] | dict[str, Any]:
         """Download generated report results.
 
         Download the report results for a completed execution. Only works for executions

@@ -5,7 +5,7 @@ This module provides tools for accessing and managing CrowdStrike Falcon Spotlig
 """
 
 from textwrap import dedent
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -114,7 +114,7 @@ class SpotlightModule(BaseModule):
             """).strip(),
             examples={"host_info", "cve", "remediation", "evaluation_logic"},
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for vulnerabilities in your CrowdStrike environment.
 
         IMPORTANT: You must use the `falcon://spotlight/vulnerabilities/fql-guide` resource when you need to use the `filter` parameter.

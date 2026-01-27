@@ -5,7 +5,7 @@ This module provides tools for accessing and managing CrowdStrike Falcon hosts/d
 """
 
 from textwrap import dedent
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -96,7 +96,7 @@ class HostsModule(BaseModule):
             """).strip(),
             examples={"hostname.asc", "last_seen.desc"},
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for hosts in your CrowdStrike environment.
 
         IMPORTANT: You must use the `falcon://hosts/search/fql-guide` resource when you need to use the `filter` parameter.
@@ -137,10 +137,10 @@ class HostsModule(BaseModule):
 
     def get_host_details(
         self,
-        ids: List[str] = Field(
+        ids: list[str] = Field(
             description="Host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request."
         ),
-    ) -> List[Dict[str, Any]] | Dict[str, Any]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Retrieve detailed information for specified host device IDs.
 
         This tool returns comprehensive host details for one or more device IDs.

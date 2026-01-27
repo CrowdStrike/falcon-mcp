@@ -5,7 +5,7 @@ This module provides common utility functions for the Falcon MCP server.
 """
 
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from .errors import _format_error_response, is_success_response
 from .logging import get_logger
@@ -13,7 +13,7 @@ from .logging import get_logger
 logger = get_logger(__name__)
 
 
-def filter_none_values(data: Dict[str, Any]) -> Dict[str, Any]:
+def filter_none_values(data: dict[str, Any]) -> dict[str, Any]:
     """Remove None values from a dictionary.
 
     Args:
@@ -25,7 +25,7 @@ def filter_none_values(data: Dict[str, Any]) -> Dict[str, Any]:
     return {k: v for k, v in data.items() if v is not None}
 
 
-def prepare_api_parameters(params: Dict[str, Any]) -> Dict[str, Any]:
+def prepare_api_parameters(params: dict[str, Any]) -> dict[str, Any]:
     """Prepare parameters for Falcon API requests.
 
     Args:
@@ -46,9 +46,9 @@ def prepare_api_parameters(params: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def extract_resources(
-    response: Dict[str, Any],
-    default: Optional[List[Dict[str, Any]]] = None,
-) -> List[Dict[str, Any]]:
+    response: dict[str, Any],
+    default: Optional[list[dict[str, Any]]] = None,
+) -> list[dict[str, Any]]:
     """Extract resources from an API response.
 
     Args:
@@ -66,10 +66,10 @@ def extract_resources(
 
 
 def extract_first_resource(
-    response: Dict[str, Any],
+    response: dict[str, Any],
     operation: str,
     not_found_error: str = "Resource not found",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Extract the first resource from an API response.
 
     Args:
@@ -107,7 +107,7 @@ def sanitize_input(input_str: str) -> str:
     return sanitized[:255]
 
 
-def generate_md_table(data: List[Tuple]) -> str:
+def generate_md_table(data: list[tuple]) -> str:
     """Generate a Markdown table from a list of tuples.
 
     This function creates a compact Markdown table with the provided data.

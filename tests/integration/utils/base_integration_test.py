@@ -2,13 +2,13 @@
 
 import inspect
 import warnings
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 import pytest
 from pydantic.fields import FieldInfo
 
 
-def resolve_field_defaults(method: Callable, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+def resolve_field_defaults(method: Callable, kwargs: dict[str, Any]) -> dict[str, Any]:
     """Resolve Pydantic Field defaults for method parameters.
 
     When calling module methods directly (not through FastMCP), Field()
@@ -99,8 +99,8 @@ class BaseIntegrationTest:
 
     def assert_search_returns_details(
         self,
-        result: List[Dict[str, Any]],
-        expected_fields: List[str],
+        result: list[dict[str, Any]],
+        expected_fields: list[str],
         context: str = "",
     ) -> None:
         """Assert that search results contain full entity details, not just IDs.
@@ -133,7 +133,7 @@ class BaseIntegrationTest:
 
     def assert_result_has_id(
         self,
-        result: List[Dict[str, Any]],
+        result: list[dict[str, Any]],
         id_field: str = "id",
         context: str = "",
     ) -> None:
@@ -154,7 +154,7 @@ class BaseIntegrationTest:
 
     def get_first_id(
         self,
-        result: List[Dict[str, Any]],
+        result: list[dict[str, Any]],
         id_field: str = "id",
     ) -> Optional[str]:
         """Extract the first ID from a list of results.

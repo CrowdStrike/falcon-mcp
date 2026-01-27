@@ -4,25 +4,25 @@ Module registry for Falcon MCP Server
 This module provides a registry of available modules for the Falcon MCP server.
 """
 
+from __future__ import annotations
+
 import importlib
 import os
 import pkgutil
-from typing import Dict, List, Type
+from typing import TYPE_CHECKING
 
 from falcon_mcp.common.logging import get_logger
 
+if TYPE_CHECKING:
+    from falcon_mcp.modules.base import BaseModule
+
 logger = get_logger(__name__)
 
-# Forward reference for type hints
-# Using string to avoid circular import
-MODULE_TYPE = "BaseModule"  # type: ignore
-
-
 # This will be populated by the discovery process
-AVAILABLE_MODULES: Dict[str, Type[MODULE_TYPE]] = {}
+AVAILABLE_MODULES: dict[str, type[BaseModule]] = {}
 
 
-def discover_modules():
+def discover_modules() -> None:
     """Discover available modules by scanning the modules directory."""
     # Get the path to the modules directory
     current_dir = os.path.dirname(__file__)
@@ -45,7 +45,7 @@ def discover_modules():
                     logger.debug("Discovered module: %s", module_name)
 
 
-def get_available_modules() -> Dict[str, Type[MODULE_TYPE]]:
+def get_available_modules() -> dict[str, type[BaseModule]]:
     """Get available modules dict, discovering if needed (lazy loading).
 
     Returns:
@@ -57,7 +57,7 @@ def get_available_modules() -> Dict[str, Type[MODULE_TYPE]]:
     return AVAILABLE_MODULES
 
 
-def get_module_names() -> List[str]:
+def get_module_names() -> list[str]:
     """Get the names of all registered modules, discovering if needed (lazy loading).
 
     Returns:

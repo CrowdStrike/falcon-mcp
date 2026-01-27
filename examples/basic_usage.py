@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from falcon_mcp.server import FalconMCPServer
 
 
-def main():
+def main() -> None:
     """Run the Falcon MCP server with default settings."""
     # Load environment variables from .env file
     load_dotenv()

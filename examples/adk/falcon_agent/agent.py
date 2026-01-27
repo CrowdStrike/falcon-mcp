@@ -1,28 +1,29 @@
 import logging
 import os
 import sys
-from typing import List, Optional, TextIO, Union
+from typing import Optional, TextIO, Union
 
-from google.adk.agents import LlmAgent
-from google.adk.agents.callback_context import CallbackContext
-from google.adk.agents.readonly_context import ReadonlyContext
-from google.adk.models import LlmRequest, LlmResponse
-from google.adk.tools.base_tool import BaseTool
-from google.adk.tools.base_toolset import ToolPredicate
-from google.adk.tools.mcp_tool import MCPTool
-from google.adk.tools.mcp_tool.mcp_session_manager import (
+from google.adk.agents import LlmAgent  # type: ignore[import-untyped]
+from google.adk.agents.callback_context import CallbackContext  # type: ignore[import-untyped]
+from google.adk.agents.readonly_context import ReadonlyContext  # type: ignore[import-untyped]
+from google.adk.models import LlmRequest, LlmResponse  # type: ignore[import-untyped]
+from google.adk.tools.base_tool import BaseTool  # type: ignore[import-untyped]
+from google.adk.tools.base_toolset import ToolPredicate  # type: ignore[import-untyped]
+from google.adk.tools.mcp_tool import MCPTool  # type: ignore[import-untyped]
+from google.adk.tools.mcp_tool.mcp_session_manager import (  # type: ignore[import-untyped]
   SseConnectionParams,
   StdioConnectionParams,
   StreamableHTTPConnectionParams,
   retry_on_closed_resource,
 )
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset  # type: ignore[import-untyped]
 from mcp import StdioServerParameters
 from mcp.types import ListToolsResult
 
-tools_cache={}
+tools_cache: dict[str, list[BaseTool]] = {}
 
-def make_tools_compatible(tools):
+
+def make_tools_compatible(tools: list[BaseTool]) -> list[BaseTool]:
   """
   This function makes the schema compatible with Gemini/Vertex AI API
   It is only needed when API used is Gemini and model is other than 2.5 models
@@ -58,7 +59,7 @@ class MCPToolSetWithSchemaAccess(MCPToolset):
           SseConnectionParams,
           StreamableHTTPConnectionParams,
       ],
-      tool_filter: Optional[Union[ToolPredicate, List[str]]] = None,
+      tool_filter: Optional[Union[ToolPredicate, list[str]]] = None,
       errlog: TextIO = sys.stderr,
   ):
     super().__init__(
@@ -74,7 +75,7 @@ class MCPToolSetWithSchemaAccess(MCPToolset):
   async def get_tools(
       self,
       readonly_context: Optional[ReadonlyContext] = None,
-  ) -> List[BaseTool]:
+  ) -> list[BaseTool]:
     """Return all tools in the toolset based on the provided context.
 
     Args:
@@ -109,12 +110,16 @@ class MCPToolSetWithSchemaAccess(MCPToolset):
       if self._is_tool_selected(mcp_tool, readonly_context):
         tools.append(mcp_tool)
 
-    model_version = os.environ.get("GOOGLE_MODEL").split("-")[1]
-    if float(model_version) < 2.5 or os.environ.get("GOOGLE_GENAI_USE_VERTEXAI").upper() == "TRUE":
-      logging.error(f"Model - {os.environ.get('GOOGLE_MODEL')} needs Gemini compatible tools, updating schema ...")
+    model_env = os.environ.get("GOOGLE_MODEL")
+    if model_env is None:
+      raise ValueError("GOOGLE_MODEL environment variable is not set")
+    model_version = model_env.split("-")[1]
+    vertexai_env = os.environ.get("GOOGLE_GENAI_USE_VERTEXAI")
+    if float(model_version) < 2.5 or (vertexai_env is not None and vertexai_env.upper() == "TRUE"):
+      logging.error(f"Model - {model_env} needs Gemini compatible tools, updating schema ...")
       tools = make_tools_compatible(tools)
     else:
-      logging.info(f"Model - {os.environ.get('GOOGLE_MODEL')} does not need updating schema")
+      logging.info(f"Model - {model_env} does not need updating schema")
 
     tools_cache[self.tool_set_name] = tools
 
@@ -161,10 +166,17 @@ def bmc_trim_llm_request(
     return None
 
 
+# Get required environment variables
+_google_model = os.environ.get("GOOGLE_MODEL", "")
+_falcon_agent_prompt = os.environ.get("FALCON_AGENT_PROMPT", "")
+_falcon_client_id = os.environ.get("FALCON_CLIENT_ID", "")
+_falcon_client_secret = os.environ.get("FALCON_CLIENT_SECRET", "")
+_falcon_base_url = os.environ.get("FALCON_BASE_URL", "")
+
 root_agent = LlmAgent(
-    model=os.environ.get("GOOGLE_MODEL"),
+    model=_google_model,
     name='falcon_agent',
-    instruction=os.environ.get("FALCON_AGENT_PROMPT"),
+    instruction=_falcon_agent_prompt,
     tools=[
         MCPToolSetWithSchemaAccess(
           tool_set_name="falcon-tools",
@@ -172,9 +184,9 @@ root_agent = LlmAgent(
                     server_params=StdioServerParameters(
                       command='falcon-mcp',
                       env={
-                      "FALCON_CLIENT_ID":os.environ.get("FALCON_CLIENT_ID"),
-                      "FALCON_CLIENT_SECRET":os.environ.get("FALCON_CLIENT_SECRET"),
-                      "FALCON_BASE_URL":os.environ.get("FALCON_BASE_URL"),
+                      "FALCON_CLIENT_ID": _falcon_client_id,
+                      "FALCON_CLIENT_SECRET": _falcon_client_secret,
+                      "FALCON_BASE_URL": _falcon_base_url,
                       }
                     )
                     )

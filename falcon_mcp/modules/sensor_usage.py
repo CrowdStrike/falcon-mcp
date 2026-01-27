@@ -4,7 +4,7 @@ Sensor Usage module for Falcon MCP Server
 This module provides tools for accessing CrowdStrike Falcon sensor usage data.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -60,7 +60,7 @@ class SensorUsageModule(BaseModule):
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://sensor-usage/weekly/fql-guide` resource when building this filter parameter.",
             examples={"event_date:'2024-06-11'", "period:'30'"},
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for sensor usage data in your CrowdStrike environment.
 
         IMPORTANT: You must use the `falcon://sensor-usage/weekly/fql-guide` resource when you need to use the `filter` parameter.

@@ -5,7 +5,7 @@ This module provides tools for accessing and managing CrowdStrike Falcon Discove
 """
 
 from textwrap import dedent
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -106,7 +106,7 @@ class DiscoverModule(BaseModule):
             description="Property used to sort the results. All properties can be used to sort unless otherwise noted in their property descriptions.",
             examples={"name.asc", "vendor.desc", "last_updated_timestamp.desc"},
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for applications in your CrowdStrike environment.
 
         IMPORTANT: You must use the `falcon://discover/applications/fql-guide` resource when you need to use the `filter` parameter.
@@ -183,7 +183,7 @@ class DiscoverModule(BaseModule):
             """).strip(),
             examples={"hostname.asc", "last_seen_timestamp.desc", "criticality.desc"},
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for unmanaged assets (hosts) in your CrowdStrike environment.
 
         These are systems that do not have the Falcon sensor installed but have been

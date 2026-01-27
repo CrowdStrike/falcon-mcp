@@ -4,7 +4,7 @@ Error handling utilities for Falcon MCP Server
 This module provides error handling utilities for the Falcon MCP server.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .api_scopes import get_required_scopes
 from .logging import get_logger
@@ -36,9 +36,9 @@ class APIError(FalconError):
     def __init__(
         self,
         message: str,
-        status_code: Optional[int] = None,
-        body: Optional[Dict[str, Any]] = None,
-        operation: Optional[str] = None,
+        status_code: int | None = None,
+        body: dict[str, Any] | None = None,
+        operation: str | None = None,
     ):
         self.status_code = status_code
         self.body = body
@@ -46,7 +46,7 @@ class APIError(FalconError):
         super().__init__(message)
 
 
-def is_success_response(response: Dict[str, Any]) -> bool:
+def is_success_response(response: dict[str, Any]) -> bool:
     """Check if an API response indicates success.
 
     Args:
@@ -60,9 +60,9 @@ def is_success_response(response: Dict[str, Any]) -> bool:
 
 def _format_error_response(
     message: str,
-    details: Optional[Dict[str, Any]] = None,
-    operation: Optional[str] = None,
-) -> Dict[str, Any]:
+    details: dict[str, Any] | None = None,
+    operation: str | None = None,
+) -> dict[str, Any]:
     """Format an error as a standardized response.
 
     Args:
@@ -73,7 +73,7 @@ def _format_error_response(
     Returns:
         Dict[str, Any]: Formatted error response
     """
-    response = {"error": message}
+    response: dict[str, Any] = {"error": message}
 
     # Add details if provided
     if details:
@@ -98,11 +98,11 @@ def _format_error_response(
 
 
 def handle_api_response(
-    response: Dict[str, Any],
+    response: dict[str, Any],
     operation: str,
     error_message: str = "API request failed",
     default_result: Any = None,
-) -> Dict[str, Any] | Any:
+) -> dict[str, Any] | Any:
     """Handle an API response, returning either the result or an error.
 
     Args:
@@ -114,12 +114,12 @@ def handle_api_response(
     Returns:
         Dict[str, Any]|Any: The result or an error response
     """
-    status_code = response.get("status_code")
+    status_code: int | None = response.get("status_code")
 
     if status_code != 200:
         # Get a more descriptive error message based on status code
         status_message = ERROR_CODE_DESCRIPTIONS.get(
-            status_code, f"Request failed with status code {status_code}"
+            status_code or 0, f"Request failed with status code {status_code}"
         )
 
         # For permission errors, add more context

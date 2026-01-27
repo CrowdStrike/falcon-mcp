@@ -6,7 +6,7 @@ Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets.
 """
 
 from textwrap import dedent
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -123,7 +123,7 @@ class CloudModule(BaseModule):
             ).strip(),
             examples={"container_name.desc", "last_seen.desc"},
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for kubernetes containers in your CrowdStrike Kubernetes & Containers Inventory
 
         IMPORTANT: You must use the `falcon://cloud/kubernetes-containers/fql-guide` resource when you need to use the `filter` parameter.
@@ -212,7 +212,7 @@ class CloudModule(BaseModule):
             ).strip(),
             examples={"cvss_score.desc", "cps_current_rating.asc"},
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for images vulnerabilities in your CrowdStrike Image Assessments
 
         IMPORTANT: You must use the `falcon://cloud/images-vulnerabilities/fql-guide` resource when you need to use the `filter` parameter.

@@ -8,10 +8,10 @@ import os
 import platform
 import sys
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any, Dict, Optional
+from typing import Any
 
 # Import the APIHarnessV2 from FalconPy
-from falconpy import APIHarnessV2
+from falconpy import APIHarnessV2  # type: ignore[import-untyped]
 
 from falcon_mcp.common.logging import get_logger
 
@@ -23,11 +23,11 @@ class FalconClient:
 
     def __init__(
         self,
-        base_url: Optional[str] = None,
+        base_url: str | None = None,
         debug: bool = False,
-        user_agent_comment: Optional[str] = None,
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
+        user_agent_comment: str | None = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
     ):
         """Initialize the Falcon client.
 
@@ -72,7 +72,8 @@ class FalconClient:
         Returns:
             bool: True if authentication was successful
         """
-        return self.client.login()
+        result: bool = self.client.login()
+        return result
 
     def is_authenticated(self) -> bool:
         """Check if the client is authenticated.
@@ -80,9 +81,10 @@ class FalconClient:
         Returns:
             bool: True if the client is authenticated
         """
-        return self.client.token_valid
+        result: bool = self.client.token_valid
+        return result
 
-    def command(self, operation: str, **kwargs) -> Dict[str, Any]:
+    def command(self, operation: str, **kwargs: Any) -> dict[str, Any]:
         """Execute a Falcon API command.
 
         Args:
@@ -90,9 +92,10 @@ class FalconClient:
             **kwargs: Additional arguments to pass to the API
 
         Returns:
-            Dict[str, Any]: The API response
+            dict[str, Any]: The API response
         """
-        return self.client.command(operation, **kwargs)
+        result: dict[str, Any] = self.client.command(operation, **kwargs)
+        return result
 
     def get_user_agent(self) -> str:
         """Get RFC-compliant user agent string for API requests.
@@ -126,16 +129,17 @@ class FalconClient:
 
         return f"falcon-mcp/{falcon_mcp_version} ({'; '.join(comment_parts)})"
 
-    def get_headers(self) -> Dict[str, str]:
+    def get_headers(self) -> dict[str, str]:
         """Get authentication headers for API requests.
 
         This method returns the authentication headers from the underlying Falcon API client,
         which can be used for custom HTTP requests or advanced integration scenarios.
 
         Returns:
-            Dict[str, str]: Authentication headers including the bearer token
+            dict[str, str]: Authentication headers including the bearer token
         """
-        return self.client.auth_headers
+        headers: dict[str, str] = self.client.auth_headers
+        return headers
 
 
 def get_version() -> str:
@@ -169,7 +173,7 @@ def get_version() -> str:
             if pyproject_path.exists():
                 with open(pyproject_path, "rb") as f:
                     data = tomllib.load(f)
-                    version_str = data["project"]["version"]
+                    version_str: str = data["project"]["version"]
                     logger.debug(
                         "Found version %s in pyproject.toml at %s",
                         version_str,

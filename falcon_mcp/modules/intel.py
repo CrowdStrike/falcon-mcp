@@ -4,7 +4,7 @@ Intel module for Falcon MCP Server
 This module provides tools for accessing and analyzing CrowdStrike Falcon intelligence data.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -123,7 +123,7 @@ class IntelModule(BaseModule):
             description="Free text search across all indexed fields.",
             examples={"BEAR"},
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Research threat actors and adversary groups tracked by CrowdStrike intelligence.
 
         IMPORTANT: You must use the `falcon://intel/actors/fql-guide` resource when you need to use the `filter` parameter.
@@ -179,7 +179,7 @@ class IntelModule(BaseModule):
             default=False,
             description="Flag indicating if related indicators should be returned.",
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for threat indicators and indicators of compromise (IOCs) from CrowdStrike intelligence.
 
         IMPORTANT: You must use the `falcon://intel/indicators/fql-guide` resource when you need to use the `filter` parameter.
@@ -229,7 +229,7 @@ class IntelModule(BaseModule):
             default=None,
             description="Free text search across all indexed fields.",
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Access CrowdStrike intelligence publications and threat reports.
 
         This tool returns comprehensive intelligence report details based on your search criteria.
@@ -270,7 +270,7 @@ class IntelModule(BaseModule):
             description="Report format. Accepted options: 'csv' or 'json'.",
             examples={"json", "csv"},
         ),
-    ) -> List[Dict[str, Any]] | str:
+    ) -> list[dict[str, Any]] | str:
         """Generate MITRE ATT&CK report for a given threat actor.
 
         Provides detailed MITRE ATT&CK tactics, techniques, and procedures (TTPs)
@@ -302,8 +302,8 @@ class IntelModule(BaseModule):
             if self._is_error(search_results):
                 return [search_results]
 
-            # Check if we got any results
-            if not search_results:
+            # Check if we got any results - must be a list at this point
+            if not search_results or not isinstance(search_results, list):
                 return [{
                     "error": "Actor not found",
                     "message": f"No actor found with name: {actor}",

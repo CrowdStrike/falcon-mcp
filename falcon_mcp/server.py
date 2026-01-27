@@ -8,7 +8,7 @@ and serves as the entry point for the application.
 import argparse
 import os
 import sys
-from typing import Dict, List, Optional, Set
+from typing import Literal
 
 import uvicorn
 from dotenv import load_dotenv
@@ -20,19 +20,22 @@ from falcon_mcp.common.logging import configure_logging, get_logger
 
 logger = get_logger(__name__)
 
+# Type alias for transport options
+TransportType = Literal["stdio", "sse", "streamable-http"]
+
 
 class FalconMCPServer:
     """Main server class for the Falcon MCP server."""
 
     def __init__(
         self,
-        base_url: Optional[str] = None,
+        base_url: str | None = None,
         debug: bool = False,
-        enabled_modules: Optional[Set[str]] = None,
-        user_agent_comment: Optional[str] = None,
+        enabled_modules: set[str] | None = None,
+        user_agent_comment: str | None = None,
         stateless_http: bool = False,
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
     ):
         """Initialize the Falcon MCP server.
 
@@ -156,11 +159,11 @@ class FalconMCPServer:
 
         return sum(len(getattr(m, "resources", [])) for m in self.modules.values())
 
-    def falcon_check_connectivity(self) -> Dict[str, bool]:
+    def falcon_check_connectivity(self) -> dict[str, bool]:
         """Check connectivity to the Falcon API."""
         return {"connected": self.falcon_client.is_authenticated()}
 
-    def list_enabled_modules(self) -> Dict[str, List[str]]:
+    def list_enabled_modules(self) -> dict[str, list[str]]:
         """Lists enabled modules in the falcon-mcp server.
 
         These modules are determined by the --modules flag when starting the server.
@@ -168,11 +171,13 @@ class FalconMCPServer:
         """
         return {"modules": list(self.modules.keys())}
 
-    def list_modules(self) -> Dict[str, List[str]]:
+    def list_modules(self) -> dict[str, list[str]]:
         """Lists all available modules in the falcon-mcp server."""
         return {"modules": registry.get_module_names()}
 
-    def run(self, transport: str = "stdio", host: str = "127.0.0.1", port: int = 8000):
+    def run(
+        self, transport: TransportType = "stdio", host: str = "127.0.0.1", port: int = 8000
+    ) -> None:
         """Run the MCP server.
 
         Args:
@@ -213,7 +218,7 @@ class FalconMCPServer:
             self.server.run(transport)
 
 
-def parse_modules_list(modules_string):
+def parse_modules_list(modules_string: str) -> list[str]:
     """Parse and validate comma-separated module list.
 
     Args:
@@ -246,7 +251,7 @@ def parse_modules_list(modules_string):
     return modules
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Falcon MCP Server")
 
@@ -320,7 +325,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     """Main entry point for the Falcon MCP server."""
     # Load environment variables
     load_dotenv()

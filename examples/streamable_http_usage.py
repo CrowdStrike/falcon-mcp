@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from falcon_mcp.server import FalconMCPServer
 
 
-def main():
+def main() -> None:
     """Run the Falcon MCP server with streamable-http transport."""
     # Load environment variables from .env file
     load_dotenv()

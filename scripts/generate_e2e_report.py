@@ -6,13 +6,14 @@ import json
 import re
 import sys
 from html import escape
+from typing import Any
 
 
 def generate_static_report(
-    data,
-    template_path="scripts/test_results_viewer.html",
-    output_path="static_test_report.html",
-):
+    data: list[dict[str, Any]],
+    template_path: str = "scripts/test_results_viewer.html",
+    output_path: str = "static_test_report.html",
+) -> None:
     """
     Generates a static HTML report from test result data.
 
@@ -24,10 +25,9 @@ def generate_static_report(
     try:
         with open(template_path, "r", encoding="utf-8") as f:
             html_template = f.read()
-        style_content = re.search(
-            r"<style>(.*?)</style>", html_template, re.DOTALL
-        ).group(1)
-    except (FileNotFoundError, AttributeError):
+        match = re.search(r"<style>(.*?)</style>", html_template, re.DOTALL)
+        style_content = match.group(1) if match else ""
+    except FileNotFoundError:
         print(
             f"Warning: Could not read styles from {template_path}. Using default styles."
         )
@@ -39,7 +39,7 @@ def generate_static_report(
     success_rate = (successful_runs / total_runs * 100) if total_runs > 0 else 0
 
     # Group first by module, then by test name
-    grouped_by_module = {}
+    grouped_by_module: dict[str, dict[str, Any]] = {}
     for run in data:
         module_name = run.get("module_name", "Unknown Module")
         test_name = run.get("test_name", "Unnamed Test")
@@ -55,7 +55,7 @@ def generate_static_report(
     # Further group by model within each test
     for module_name, tests in grouped_by_module.items():
         for test_name, runs in tests.items():
-            grouped_by_model = {}
+            grouped_by_model: dict[str, list[dict[str, Any]]] = {}
             for run in runs:
                 model_name = run.get("model_name", "Unnamed Model")
                 grouped_by_model.setdefault(model_name, []).append(run)

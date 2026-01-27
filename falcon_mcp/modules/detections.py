@@ -5,7 +5,7 @@ This module provides tools for accessing and analyzing CrowdStrike Falcon detect
 """
 
 from textwrap import dedent
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -104,7 +104,7 @@ class DetectionsModule(BaseModule):
             examples=["severity.desc", "timestamp.desc"],
         ),
         include_hidden: bool = Field(default=True),
-    ) -> List[Dict[str, Any]] | Dict[str, Any]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Find detections by criteria and return their complete details.
 
         Use this tool to discover detections - filter by severity, status, hostname,
@@ -150,14 +150,14 @@ class DetectionsModule(BaseModule):
 
     def get_detection_details(
         self,
-        ids: List[str] = Field(
+        ids: list[str] = Field(
             description="Composite ID(s) to retrieve detection details for.",
         ),
         include_hidden: bool = Field(
             default=True,
             description="Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility.",
         ),
-    ) -> List[Dict[str, Any]] | Dict[str, Any]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Retrieve details for detection IDs you already have.
 
         Use ONLY when you have specific composite detection ID(s). To find detections

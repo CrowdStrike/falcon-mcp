@@ -4,8 +4,6 @@ API scope definitions and utilities for Falcon MCP Server
 This module provides API scope definitions and related utilities for the Falcon MCP server.
 """
 
-from typing import List, Optional
-
 from .logging import get_logger
 
 logger = get_logger(__name__)
@@ -64,7 +62,7 @@ API_SCOPE_REQUIREMENTS = {
 }
 
 
-def get_required_scopes(operation: Optional[str]) -> List[str]:
+def get_required_scopes(operation: str | None) -> list[str]:
     """Get the required API scopes for a specific operation.
 
     Args:
@@ -73,4 +71,6 @@ def get_required_scopes(operation: Optional[str]) -> List[str]:
     Returns:
         List[str]: List of required API scopes
     """
+    if operation is None:
+        return []
     return API_SCOPE_REQUIREMENTS.get(operation, [])

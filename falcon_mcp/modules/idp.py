@@ -8,7 +8,7 @@ Core use cases:
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server import FastMCP
 from pydantic import Field
@@ -107,7 +107,7 @@ class IdpModule(BaseModule):
             default=True,
             description="Include open security incidents in results",
         ),
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Comprehensive entity investigation tool.
 
         This tool provides complete entity investigation capabilities including:
@@ -313,7 +313,7 @@ class IdpModule(BaseModule):
 
     def _build_entity_details_query(
         self,
-        entity_ids: List[str],
+        entity_ids: list[str],
         include_risk_factors: bool,
         include_associations: bool,
         include_incidents: bool,
@@ -775,7 +775,7 @@ class IdpModule(BaseModule):
         """
 
     def _build_risk_assessment_query(
-        self, entity_ids: List[str], include_risk_factors: bool
+        self, entity_ids: list[str], include_risk_factors: bool
     ) -> str:
         """Build GraphQL query for risk assessment."""
         entity_ids_json = json.dumps(entity_ids)
@@ -805,7 +805,7 @@ class IdpModule(BaseModule):
         }}
         """
 
-    def _resolve_entities(self, identifiers: Dict[str, Any]) -> List[str] | Dict[str, Any]:
+    def _resolve_entities(self, identifiers: dict[str, Any]) -> list[str] | dict[str, Any]:
         """Resolve entity IDs from various identifier types using unified AND-based query.
 
         All provided identifiers are combined using AND logic in a single GraphQL query.
@@ -839,8 +839,8 @@ class IdpModule(BaseModule):
             ip_addresses = None
 
         # Build unified GraphQL query with AND logic
-        query_filters = []
-        query_fields = []
+        query_filters: list[str] = []
+        query_fields: list[str] = []
 
         # Add entity names filter
         self._add_entity_filters(identifiers, query_fields, query_filters)
@@ -954,9 +954,9 @@ class IdpModule(BaseModule):
 
     def _get_entity_details_batch(
         self,
-        entity_ids: List[str],
-        options: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        entity_ids: list[str],
+        options: dict[str, Any],
+    ) -> dict[str, Any]:
         """Get detailed entity information for multiple entities."""
         graphql_query = self._build_entity_details_query(
             entity_ids=entity_ids,
@@ -981,8 +981,8 @@ class IdpModule(BaseModule):
         return {"entities": entities, "entity_count": len(entities)}
 
     def _get_entity_timelines_batch(
-        self, entity_ids: List[str], options: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, entity_ids: list[str], options: dict[str, Any]
+    ) -> dict[str, Any]:
         """Get timeline analysis for multiple entities."""
         timeline_results = []
 
@@ -1019,9 +1019,9 @@ class IdpModule(BaseModule):
 
     def _analyze_relationships_batch(
         self,
-        entity_ids: List[str],
-        options: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        entity_ids: list[str],
+        options: dict[str, Any],
+    ) -> dict[str, Any]:
         """Analyze relationships for multiple entities."""
         relationship_results = []
 
@@ -1072,9 +1072,9 @@ class IdpModule(BaseModule):
 
     def _assess_risks_batch(
         self,
-        entity_ids: List[str],
-        options: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        entity_ids: list[str],
+        options: dict[str, Any],
+    ) -> dict[str, Any]:
         """Perform risk assessment for multiple entities."""
         graphql_query = self._build_risk_assessment_query(
             entity_ids=entity_ids,
@@ -1113,10 +1113,10 @@ class IdpModule(BaseModule):
 
     def _synthesize_investigation_response(
         self,
-        entity_ids: List[str],
-        investigation_results: Dict[str, Any],
-        metadata: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        entity_ids: list[str],
+        investigation_results: dict[str, Any],
+        metadata: dict[str, Any],
+    ) -> dict[str, Any]:
         """Synthesize comprehensive investigation response from multiple API results."""
 
         # Build investigation summary
@@ -1152,9 +1152,9 @@ class IdpModule(BaseModule):
 
     def _generate_investigation_insights(
         self,
-        investigation_results: Dict[str, Any],
-        entity_ids: List[str],
-    ) -> Dict[str, Any]:
+        investigation_results: dict[str, Any],
+        entity_ids: list[str],
+    ) -> dict[str, Any]:
         """Generate insights by analyzing results across different investigation types."""
         insights = {}
 
@@ -1178,11 +1178,11 @@ class IdpModule(BaseModule):
 
     def _analyze_activity_relationships(
         self,
-        timeline_analysis: Dict[str, Any],
-        relationship_analysis: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        timeline_analysis: dict[str, Any],
+        relationship_analysis: dict[str, Any],
+    ) -> dict[str, Any]:
         """Analyze correlation between timeline activities and entity relationships."""
-        correlation = {"related_entity_activities": [], "suspicious_patterns": []}
+        correlation: dict[str, Any] = {"related_entity_activities": [], "suspicious_patterns": []}
 
         # This would involve complex analysis of timeline events and relationships
         # For now, provide basic structure
@@ -1196,11 +1196,11 @@ class IdpModule(BaseModule):
 
     def _analyze_multi_entity_patterns(
         self,
-        investigation_results: Dict[str, Any],
-        entity_ids: List[str],
-    ) -> Dict[str, Any]:
+        investigation_results: dict[str, Any],
+        entity_ids: list[str],
+    ) -> dict[str, Any]:
         """Analyze patterns across multiple entities being investigated."""
-        patterns = {
+        patterns: dict[str, Any] = {
             "common_risk_factors": [],
             "shared_relationships": [],
             "coordinated_activities": [],
@@ -1209,7 +1209,7 @@ class IdpModule(BaseModule):
         # Analyze common risk factors across entities
         if "risk_assessment" in investigation_results:
             risk_assessments = investigation_results["risk_assessment"].get("risk_assessments", [])
-            risk_factor_counts = {}
+            risk_factor_counts: dict[str, int] = {}
 
             for assessment in risk_assessments:
                 for risk_factor in assessment.get("riskFactors", []):

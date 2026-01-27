@@ -5,7 +5,7 @@ This module provides the base class for all Falcon MCP server modules.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 from mcp import Resource
 from mcp.server import FastMCP
@@ -28,8 +28,8 @@ class BaseModule(ABC):
             client: Falcon API client
         """
         self.client = client
-        self.tools = []  # List to track registered tools
-        self.resources = []  # List to track registered resources
+        self.tools: list[str] = []  # List to track registered tools
+        self.resources: list[str] = []  # List to track registered resources
 
     @abstractmethod
     def register_tools(self, server: FastMCP) -> None:
@@ -46,7 +46,7 @@ class BaseModule(ABC):
             server: MCP server instance
         """
 
-    def _add_tool(self, server: FastMCP, method: Callable, name: str) -> None:
+    def _add_tool(self, server: FastMCP, method: Callable[..., Any], name: str) -> None:
         """Add a tool to the MCP server and track it.
 
         Args:
@@ -66,20 +66,21 @@ class BaseModule(ABC):
             server: MCP server instance
             resource: Resource object
         """
-        server.add_resource(resource=resource)
+        # FastMCP expects its own Resource type, cast accordingly
+        server.add_resource(resource=resource)  # type: ignore[arg-type]
 
         resource_uri = resource.uri
-        self.resources.append(resource_uri)
+        self.resources.append(str(resource_uri))
         logger.debug("Added resource: %s", resource_uri)
 
     def _base_get_by_ids(
         self,
         operation: str,
-        ids: List[str],
+        ids: list[str],
         id_key: str = "ids",
         use_params: bool = False,
-        **additional_params,
-    ) -> List[Dict[str, Any]] | Dict[str, Any]:
+        **additional_params: Any,
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Helper method for API operations that retrieve entities by IDs.
 
         Args:
@@ -116,10 +117,10 @@ class BaseModule(ABC):
     def _base_search_api_call(
         self,
         operation: str,
-        search_params: Dict[str, Any],
+        search_params: dict[str, Any],
         error_message: str = "Search operation failed",
         default_result: Any = None,
-    ) -> List[Dict[str, Any]] | Dict[str, Any]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Standardized API call for search operations with parameters.
 
         This method consolidates the common pattern of:
@@ -156,11 +157,11 @@ class BaseModule(ABC):
     def _base_query_api_call(
         self,
         operation: str,
-        query_params: Dict[str, Any] = None,
-        body_params: Dict[str, Any] = None,
+        query_params: dict[str, Any] | None = None,
+        body_params: dict[str, Any] | None = None,
         error_message: str = "Query operation failed",
         default_result: Any = None,
-    ) -> List[Dict[str, Any]] | Dict[str, Any]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Standardized API call for operations that can use both parameters and body.
 
         Args:
@@ -191,7 +192,8 @@ class BaseModule(ABC):
         if operation == "api_preempt_proxy_post_graphql":
             # For GraphQL, check status and return the full body on success
             if response.get("status_code") == 200:
-                return response.get("body", {})
+                body: dict[str, Any] = response.get("body", {})
+                return body
             else:
                 # Use standard error handling for failed GraphQL requests
                 return handle_api_response(
@@ -212,10 +214,10 @@ class BaseModule(ABC):
     def _base_get_api_call(
         self,
         operation: str,
-        api_params: Dict[str, Any],
+        api_params: dict[str, Any],
         error_message: str = "GET operation failed",
         decode_binary: bool = True,
-    ) -> List[Dict[str, Any]] | Dict[str, Any] | str:
+    ) -> list[dict[str, Any]] | dict[str, Any] | str:
         """Standardized API call for GET operations with optional binary response handling.
 
         This method handles various GET operations that may return:
@@ -271,10 +273,10 @@ class BaseModule(ABC):
 
     def _format_fql_error_response(
         self,
-        error_or_empty: List[Dict[str, Any]],
+        error_or_empty: list[dict[str, Any]],
         filter_used: str | None,
         fql_documentation: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Format response with FQL guide for search errors or empty results ONLY.
 
         Use this helper when the FQL filter itself may be the issue:

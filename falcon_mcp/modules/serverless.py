@@ -5,7 +5,7 @@ This module provides tools for accessing and managing CrowdStrike Falcon Serverl
 """
 
 from textwrap import dedent
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -104,7 +104,7 @@ class ServerlessModule(BaseModule):
                 "first_seen_timestamp",
             },
         ),
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for vulnerabilities in your serverless functions across all cloud service providers.
 
         This endpoint provides security information in SARIF format, including:
