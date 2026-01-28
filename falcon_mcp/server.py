@@ -16,6 +16,7 @@ from mcp.server.fastmcp import FastMCP
 
 from falcon_mcp import registry
 from falcon_mcp.client import FalconClient
+from falcon_mcp.common.auth import auth_middleware
 from falcon_mcp.common.logging import configure_logging, get_logger
 
 logger = get_logger(__name__)
@@ -36,6 +37,7 @@ class FalconMCPServer:
         stateless_http: bool = False,
         client_id: str | None = None,
         client_secret: str | None = None,
+        api_key: str | None = None,
     ):
         """Initialize the Falcon MCP server.
 
@@ -47,12 +49,14 @@ class FalconMCPServer:
             stateless_http: Enable stateless HTTP mode (creates new transport per request)
             client_id: Falcon API Client ID (defaults to FALCON_CLIENT_ID env var)
             client_secret: Falcon API Client Secret (defaults to FALCON_CLIENT_SECRET env var)
+            api_key: API key for HTTP transport authentication (x-api-key header)
         """
         # Store configuration
         self.base_url = base_url
         self.debug = debug
         self.user_agent_comment = user_agent_comment
         self.stateless_http = stateless_http
+        self.api_key = api_key
 
         self.enabled_modules = enabled_modules or set(registry.get_module_names())
 
@@ -192,6 +196,11 @@ class FalconMCPServer:
             # Get the ASGI app from FastMCP (handles /mcp path automatically)
             app = self.server.streamable_http_app()
 
+            # Add API key authentication middleware if configured
+            if self.api_key:
+                app = auth_middleware(app, self.api_key)
+                logger.info("API key authentication enabled")
+
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
                 app,
@@ -205,6 +214,11 @@ class FalconMCPServer:
 
             # Get the ASGI app from FastMCP
             app = self.server.sse_app()
+
+            # Add API key authentication middleware if configured
+            if self.api_key:
+                app = auth_middleware(app, self.api_key)
+                logger.info("API key authentication enabled")
 
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
@@ -322,6 +336,13 @@ def parse_args() -> argparse.Namespace:
         help="Enable stateless HTTP mode for scalable deployments (env: FALCON_MCP_STATELESS_HTTP)",
     )
 
+    # API key authentication for HTTP transports
+    parser.add_argument(
+        "--api-key",
+        default=os.environ.get("FALCON_MCP_API_KEY"),
+        help="API key for HTTP transport authentication (x-api-key header, env: FALCON_MCP_API_KEY)",
+    )
+
     return parser.parse_args()
 
 
@@ -341,6 +362,7 @@ def main() -> None:
             enabled_modules=set(args.modules),
             user_agent_comment=args.user_agent_comment,
             stateless_http=args.stateless_http,
+            api_key=args.api_key,
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport, host=args.host, port=args.port)
