@@ -26,6 +26,7 @@
   - [Identity Protection Module](#identity-protection-module)
   - [Incidents Module](#incidents-module)
   - [Intel Module](#intel-module)
+  - [NGSIEM Module](#ngsiem-module)
   - [Scheduled Reports Module](#scheduled-reports-module)
   - [Sensor Usage Module](#sensor-usage-module)
   - [Serverless Module](#serverless-module)
@@ -88,6 +89,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read`<br>`Identity Protection Assessment:read`<br>`Identity Protection GraphQL:write` | Comprehensive entity investigation and identity protection analysis |
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
+| **NGSIEM** | `ngsiem:read`<br>`ngsiem:write` | Start/monitor NGSIEM searches |
 | **Scheduled Reports** | `Scheduled Reports:read` | Get details about scheduled reports and searches, run reports on demand, and download report files |
 | **Sensor Usage** | `Sensor Usage:read` | Access and analyze sensor usage data |
 | **Serverless** | `Falcon Container Image:read` | Search for vulnerabilities in serverless functions across cloud service providers |
@@ -229,6 +231,37 @@ Provides tools for accessing and analyzing CrowdStrike Intelligence:
 
 **Use Cases**: Threat intelligence research, adversary tracking, IOC analysis, threat landscape assessment, MITRE ATT&CK framework analysis
 
+### NGSIEM Module
+
+**API Scopes Required**:
+
+- `ngsiem:read`
+- `ngsiem:write`
+
+Provides tools for initiating and managing NGSIEM searches:
+
+- `falcon_start_ngsiem_search`: Start an NGSIEM search job in the selected repository
+- `falcon_get_ngsiem_event_schema`: Get event table details and fields from the ontology
+- `falcon_search_ngsiem_events`: Search event tables by name, field, or platform
+- `falcon_list_ngsiem_event_tables`: List event tables with name + description for quick browsing
+- `falcon_list_ngsiem_event_fields`: List fields for multiple event tables at once
+- `falcon_get_ngsiem_search_status`: Get status for an NGSIEM search job
+- `falcon_get_ngsiem_search_results`: Get search results (events/results) for an NGSIEM search job
+- `falcon_stop_ngsiem_search`: Stop a running NGSIEM search job
+- `falcon_search_ngsiem_and_wait`: Start an NGSIEM search and wait for results
+- `falcon_upload_ngsiem_lookup_file`: Upload a lookup file for NGSIEM searches
+- `falcon_get_ngsiem_lookup_file`: Download a lookup file by filename
+- `falcon_get_ngsiem_lookup_file_from_package`: Download a lookup file from a package
+- `falcon_get_ngsiem_lookup_file_from_package_with_namespace`: Download a lookup file from a namespaced package
+
+**Resources**:
+
+- `falcon://ngsiem/query/functions-guide`: NGSIEM query functions reference for composing `queryString`
+- `falcon://ngsiem/events/fields-guide`: Sample queries and key NGSIEM event fields
+- `falcon://ngsiem/events/ontology-guide`: NGSIEM event ontology reference (event tables and fields)
+
+**Use Cases**: Event search execution, alert triage queries, log investigations
+
 ### Sensor Usage Module
 
 **API Scopes Required**: `Sensor Usage:read`
@@ -332,6 +365,7 @@ FALCON_BASE_URL=https://api.crowdstrike.com
 #FALCON_MCP_HOST=127.0.0.1
 #FALCON_MCP_PORT=8000
 #FALCON_MCP_STATELESS_HTTP=false
+#FALCON_NGSIEM_REPOSITORY=base_sensor
 ```
 
 #### Environment Variables
@@ -353,6 +387,7 @@ export FALCON_MCP_DEBUG="false"                         # Enable debug logging: 
 export FALCON_MCP_HOST="127.0.0.1"                      # Host for HTTP transports
 export FALCON_MCP_PORT="8000"                           # Port for HTTP transports
 export FALCON_MCP_STATELESS_HTTP="false"                # Stateless mode for scalable deployments
+export FALCON_NGSIEM_REPOSITORY="base_sensor"           # Default NGSIEM repository (optional)
 ```
 
 **CrowdStrike API Region URLs:**

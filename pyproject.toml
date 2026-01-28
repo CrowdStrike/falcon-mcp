@@ -41,6 +41,9 @@ dev = [
 [project.scripts]
 falcon-mcp = "falcon_mcp.server:main"
 
+[tool.setuptools.package-data]
+"falcon_mcp.resources" = ["data/*.json"]
+
 [tool.black]
 line-length = 100
 target-version = ["py311"]
