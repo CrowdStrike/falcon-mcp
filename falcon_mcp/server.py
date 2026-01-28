@@ -13,6 +13,7 @@ from typing import Literal
 import uvicorn
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from falcon_mcp import registry
 from falcon_mcp.client import FalconClient
@@ -75,12 +76,36 @@ class FalconMCPServer:
             raise RuntimeError("Failed to authenticate with the Falcon API")
 
         # Initialize the MCP server
+        host_setting = os.environ.get("FALCON_MCP_HOST", "127.0.0.1")
+        allowed_hosts = self._parse_csv_env("FALCON_MCP_ALLOWED_HOSTS")
+        allowed_origins = self._parse_csv_env("FALCON_MCP_ALLOWED_ORIGINS")
+        disable_rebinding = os.environ.get("FALCON_MCP_DISABLE_DNS_REBINDING", "").lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        transport_security = None
+        if disable_rebinding:
+            transport_security = TransportSecuritySettings(
+                enable_dns_rebinding_protection=False,
+                allowed_hosts=allowed_hosts,
+                allowed_origins=allowed_origins,
+            )
+        elif allowed_hosts or allowed_origins:
+            transport_security = TransportSecuritySettings(
+                enable_dns_rebinding_protection=True,
+                allowed_hosts=allowed_hosts,
+                allowed_origins=allowed_origins,
+            )
+
         self.server = FastMCP(
             name="Falcon MCP Server",
             instructions="This server provides access to CrowdStrike Falcon capabilities.",
             debug=self.debug,
             log_level="DEBUG" if self.debug else "INFO",
             stateless_http=self.stateless_http,
+            host=host_setting,
+            transport_security=transport_security,
         )
 
         # Initialize and register modules
@@ -174,6 +199,13 @@ class FalconMCPServer:
     def list_modules(self) -> dict[str, list[str]]:
         """Lists all available modules in the falcon-mcp server."""
         return {"modules": registry.get_module_names()}
+
+    @staticmethod
+    def _parse_csv_env(var_name: str) -> list[str]:
+        raw = os.environ.get(var_name, "")
+        if not raw:
+            return []
+        return [item.strip() for item in raw.split(",") if item.strip()]
 
     def run(
         self, transport: TransportType = "stdio", host: str = "127.0.0.1", port: int = 8000

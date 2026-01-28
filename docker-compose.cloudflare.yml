@@ -1,0 +1,26 @@
+services:
+  falcon-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: falcon-mcp:local
+    env_file:
+      - .env
+    environment:
+      FALCON_MCP_TRANSPORT: streamable-http
+      FALCON_MCP_HOST: 0.0.0.0
+      FALCON_MCP_PORT: 8000
+      FALCON_MCP_ALLOWED_HOSTS: ${FALCON_MCP_ALLOWED_HOSTS}
+      FALCON_MCP_ALLOWED_ORIGINS: ${FALCON_MCP_ALLOWED_ORIGINS}
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TUNNEL_TOKEN}
+    environment:
+      CLOUDFLARED_TUNNEL_TOKEN: ${CLOUDFLARED_TUNNEL_TOKEN}
+    depends_on:
+      - falcon-mcp
+    restart: unless-stopped

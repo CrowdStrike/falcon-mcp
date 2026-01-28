@@ -50,6 +50,14 @@ API_SCOPE_REQUIREMENTS = {
     "GetSensorUsageWeekly": ["Sensor Usage:read"],
     # Serverless operations
     "GetCombinedVulnerabilitiesSARIF": ["Falcon Container Image:read"],
+    # NGSIEM operations
+    "StartSearchV1": ["NGSIEM:write"],
+    "GetSearchStatusV1": ["NGSIEM:read"],
+    "StopSearchV1": ["NGSIEM:write"],
+    "UploadLookupV1": ["NGSIEM Lookup Files:write"],
+    "GetLookupV1": ["NGSIEM Lookup Files:read"],
+    "GetLookupFromPackageV1": ["NGSIEM Lookup Files:read"],
+    "GetLookupFromPackageWithNamespaceV1": ["NGSIEM Lookup Files:read"],
     # Scheduled Reports operations
     "scheduled_reports_query": ["Scheduled Reports:read"],
     "scheduled_reports_get": ["Scheduled Reports:read"],
