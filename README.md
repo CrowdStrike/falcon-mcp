@@ -332,6 +332,7 @@ FALCON_BASE_URL=https://api.crowdstrike.com
 #FALCON_MCP_HOST=127.0.0.1
 #FALCON_MCP_PORT=8000
 #FALCON_MCP_STATELESS_HTTP=false
+#FALCON_MCP_API_KEY=your-api-key
 ```
 
 #### Environment Variables
@@ -353,6 +354,7 @@ export FALCON_MCP_DEBUG="false"                         # Enable debug logging: 
 export FALCON_MCP_HOST="127.0.0.1"                      # Host for HTTP transports
 export FALCON_MCP_PORT="8000"                           # Port for HTTP transports
 export FALCON_MCP_STATELESS_HTTP="false"                # Stateless mode for scalable deployments
+export FALCON_MCP_API_KEY="your-api-key"                # API key for HTTP transport auth (x-api-key header)
 ```
 
 **CrowdStrike API Region URLs:**
@@ -418,6 +420,14 @@ Run with stateless HTTP mode (for scalable deployments like AWS AgentCore):
 falcon-mcp --transport streamable-http --stateless-http
 ```
 
+Run with API key authentication (recommended for HTTP transports):
+
+```bash
+falcon-mcp --transport streamable-http --api-key your-secret-key
+```
+
+> **Security Note**: When using HTTP transports (`sse` or `streamable-http`), consider enabling API key authentication via `--api-key` or `FALCON_MCP_API_KEY` to protect the endpoint. This is a self-generated key (any secure string you create) that ensures only authorized clients with the matching key can access the MCP server when running remotely. This is separate from your CrowdStrike API credentials.
+
 ### Module Configuration
 
 The Falcon MCP Server supports multiple ways to specify which modules to enable:
@@ -474,7 +484,8 @@ from falcon_mcp.server import FalconMCPServer
 server = FalconMCPServer(
     base_url="https://api.us-2.crowdstrike.com",  # Optional, defaults to env var
     debug=True,  # Optional, enable debug logging
-    enabled_modules=["detections", "incidents", "spotlight", "idp"]  # Optional, defaults to all modules
+    enabled_modules=["detections", "incidents", "spotlight", "idp"],  # Optional, defaults to all modules
+    api_key="your-api-key"  # Optional: API key for HTTP transport auth
 )
 
 # Run with stdio transport (default)
