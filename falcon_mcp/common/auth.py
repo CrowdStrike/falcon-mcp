@@ -6,12 +6,20 @@ transports (SSE, streamable-http).
 """
 
 import secrets
+from collections.abc import Awaitable, Callable, MutableMapping
+from typing import Any
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+# ASGI type aliases - using MutableMapping for Starlette compatibility
+Scope = MutableMapping[str, Any]
+ASGIReceive = Callable[[], Awaitable[MutableMapping[str, Any]]]
+ASGISend = Callable[[MutableMapping[str, Any]], Awaitable[None]]
+ASGIApp = Callable[[Scope, ASGIReceive, ASGISend], Awaitable[None]]
 
-def auth_middleware(app, api_key: str):
+
+def auth_middleware(app: ASGIApp, api_key: str) -> ASGIApp:
     """Wrap an ASGI app with API key authentication.
 
     Args:
@@ -22,7 +30,7 @@ def auth_middleware(app, api_key: str):
         ASGI app that validates x-api-key header before passing to wrapped app
     """
 
-    async def middleware(scope, receive, send):
+    async def middleware(scope: Scope, receive: ASGIReceive, send: ASGISend) -> None:
         if scope["type"] == "http":
             request = Request(scope)
             provided_key = request.headers.get("x-api-key", "")
