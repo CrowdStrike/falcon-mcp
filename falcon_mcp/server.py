@@ -16,7 +16,7 @@ from mcp.server.fastmcp import FastMCP
 
 from falcon_mcp import registry
 from falcon_mcp.client import FalconClient
-from falcon_mcp.common.auth import auth_middleware
+from falcon_mcp.common.auth import ASGIApp, auth_middleware
 from falcon_mcp.common.logging import configure_logging, get_logger
 
 logger = get_logger(__name__)
@@ -189,6 +189,7 @@ class FalconMCPServer:
             host: Host to bind to for HTTP transports (default: 127.0.0.1)
             port: Port to listen on for HTTP transports (default: 8000)
         """
+        app: ASGIApp
         if transport == "streamable-http":
             # For streamable-http, use uvicorn directly for custom host/port
             logger.info("Starting streamable-http server on %s:%d", host, port)
