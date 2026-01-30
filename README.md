@@ -682,6 +682,12 @@ To deploy the MCP Server as a tool in Amazon Bedrock AgentCore, please refer to 
 
 To deploy the MCP server as an agent within Cloud Run or Vertex AI Agent Engine (including for registration within Agentspace), refer to the [Google ADK example](./examples/adk/README.md).
 
+### Gemini CLI
+
+1. Install `uv`
+1. `gemini extensions install https://github.com/CrowdStrike/falcon-mcp`
+1. Copy a valid `.env` file to `~/.gemini/extensions/falcon-mcp/.env`
+
 ## Contributing
 
 ### Getting Started for Contributors
