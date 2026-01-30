@@ -5,8 +5,8 @@
     "falcon-mcp": {
       "command": "uvx",
       "args": [
-	"--env-file",
-	"${extensionPath}${pathSeparator}.env",
+        "--env-file",
+        "${extensionPath}${pathSeparator}.env",
         "falcon-mcp"
       ]
     }
