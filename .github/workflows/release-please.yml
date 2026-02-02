@@ -21,9 +21,30 @@ jobs:
           egress-policy: audit
 
       - uses: google-github-actions/release-please-action@db8f2c60ee802b3748b512940dde88eabd7b7e01 # v3.7.13
+        id: release-please
         with:
           release-type: python
           package-name: falcon-mcp
           pull-request-header: ':rocket: New Release Incoming! :rocket:'
           changelog-types: '[{"type":"feat","section":"Features","hidden":false},{"type":"fix","section":"Bug Fixes","hidden":false},{"type":"refactor","section":"Refactoring","hidden":false},{"type":"chore","section":"Miscellaneous","hidden":true}]'
-          extra-files: gemini-extension.json
+
+      - name: Checkout PR branch
+        if: ${{ steps.release-please.outputs.pr }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ fromJSON(steps.release-please.outputs.pr).headBranchName }}
+
+      - name: Sync gemini-extension.json version
+        if: ${{ steps.release-please.outputs.pr }}
+        run: |
+          # Extract version from pyproject.toml (already updated by release-please)
+          VERSION=$(grep -Po '(?<=^version = ")[^"]*' pyproject.toml)
+          CURRENT=$(jq -r '.version' gemini-extension.json)
+          if [ "$VERSION" != "$CURRENT" ]; then
+            jq --arg v "$VERSION" '.version = $v' gemini-extension.json > tmp.json && mv tmp.json gemini-extension.json
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add gemini-extension.json
+            git commit -m "chore: sync gemini-extension.json version to $VERSION"
+            git push
+          fi
