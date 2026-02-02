@@ -19,7 +19,6 @@ API_SCOPE_REQUIREMENTS = {
     "PostDeviceDetailsV2": ["Hosts:read"],
     # Incidents operations
     "QueryIncidents": ["Incidents:read"],
-    "GetIncidentDetails": ["Incidents:read"],
     "CrowdScore": ["Incidents:read"],
     "GetIncidents": ["Incidents:read"],
     "GetBehaviors": ["Incidents:read"],
@@ -55,7 +54,7 @@ API_SCOPE_REQUIREMENTS = {
     "scheduled_reports_get": ["Scheduled Reports:read"],
     "scheduled_reports_launch": ["Scheduled Reports:read"],
     # Report Executions operations (same scope as Scheduled Reports)
-    "reports_executions_query": ["Scheduled Reports:read"],
+    "report_executions_query": ["Scheduled Reports:read"],
     "report_executions_get": ["Scheduled Reports:read"],
     "report_executions_download_get": ["Scheduled Reports:read"],
     # Add more mappings as needed
