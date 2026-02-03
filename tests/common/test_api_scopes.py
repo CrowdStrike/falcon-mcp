@@ -6,7 +6,6 @@ import re
 import unittest
 import warnings
 from pathlib import Path
-from typing import Set
 
 from falcon_mcp.common.api_scopes import API_SCOPE_REQUIREMENTS, get_required_scopes
 
@@ -15,11 +14,11 @@ class TestApiScopes(unittest.TestCase):
     """Test cases for the API scope utilities."""
 
     @staticmethod
-    def _extract_operations_from_modules() -> Set[str]:
+    def _extract_operations_from_modules() -> set[str]:
         """Extract all operation names used in module files.
 
         Returns:
-            Set[str]: Set of operation names found in modules
+            set[str]: Set of operation names found in modules
         """
         operations = set()
 
