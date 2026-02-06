@@ -57,6 +57,10 @@ API_SCOPE_REQUIREMENTS = {
     "report_executions_query": ["Scheduled Reports:read"],
     "report_executions_get": ["Scheduled Reports:read"],
     "report_executions_download_get": ["Scheduled Reports:read"],
+    # NGSIEM operations
+    "StartSearchV1": ["NGSIEM:write"],
+    "GetSearchStatusV1": ["NGSIEM:read"],
+    "StopSearchV1": ["NGSIEM:write"],
     # Add more mappings as needed
 }
 
