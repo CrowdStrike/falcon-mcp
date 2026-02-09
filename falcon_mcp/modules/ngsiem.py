@@ -182,5 +182,5 @@ class NGSIEMModule(BaseModule):
             message=f"NGSIEM search timed out after {TIMEOUT_SECONDS} seconds. "
             "Try narrowing your query or reducing the time range.",
             details={"job_id": job_id, "timeout_seconds": TIMEOUT_SECONDS},
-            operation="search_ngsiem",
+            operation="GetSearchStatusV1",
         )
