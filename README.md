@@ -25,6 +25,7 @@
   - [Hosts Module](#hosts-module)
   - [Identity Protection Module](#identity-protection-module)
   - [Incidents Module](#incidents-module)
+  - [NGSIEM Module](#ngsiem-module)
   - [Intel Module](#intel-module)
   - [Scheduled Reports Module](#scheduled-reports-module)
   - [Sensor Usage Module](#sensor-usage-module)
@@ -79,7 +80,7 @@ Before using the Falcon MCP Server, you need to create API credentials in your C
 The Falcon MCP Server supports different modules, each requiring specific API scopes:
 
 | Module | Required API Scopes | Purpose |
-|-|-|-|
+| - | - | - |
 | **Cloud Security** | `Falcon Container Image:read` | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
 | **Core** | _No additional scopes_ | Basic connectivity and system information |
 | **Detections** | `Alerts:read` | Find and analyze detections to understand malicious activity |
@@ -87,6 +88,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Hosts** | `Hosts:read` | Manage and query host/device information |
 | **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read`<br>`Identity Protection Assessment:read`<br>`Identity Protection GraphQL:write` | Comprehensive entity investigation and identity protection analysis |
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
+| **NGSIEM** | `NGSIEM:read`<br>`NGSIEM:write` | Execute CQL queries against Next-Gen SIEM (LogScale) |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
 | **Scheduled Reports** | `Scheduled Reports:read` | Get details about scheduled reports and searches, run reports on demand, and download report files |
 | **Sensor Usage** | `Sensor Usage:read` | Access and analyze sensor usage data |
@@ -205,6 +207,19 @@ Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
 - `falcon://incidents/behaviors/fql-guide`: Comprehensive FQL documentation and examples for behavior searches
 
 **Use Cases**: Incident management, threat assessment, attack pattern analysis, security posture monitoring
+
+### NGSIEM Module
+
+**API Scopes Required**: `NGSIEM:read`, `NGSIEM:write`
+
+Provides tools for executing CQL queries against CrowdStrike's Next-Gen SIEM (LogScale):
+
+- `search_ngsiem`: Execute a CQL query against Next-Gen SIEM repositories
+
+> [!IMPORTANT]
+> This tool executes pre-written CQL queries only. It does **not** assist with query construction or provide CQL syntax guidance. Users must supply complete, valid CQL queries. For CQL documentation, refer to the [CrowdStrike LogScale documentation](https://library.humio.com/).
+
+**Use Cases**: Log search and analysis, event correlation, threat hunting with custom CQL queries, security monitoring
 
 ### Intel Module
 
