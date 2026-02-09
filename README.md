@@ -88,7 +88,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Hosts** | `Hosts:read` | Manage and query host/device information |
 | **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read`<br>`Identity Protection Assessment:read`<br>`Identity Protection GraphQL:write` | Comprehensive entity investigation and identity protection analysis |
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
-| **NGSIEM** | `NGSIEM:read`<br>`NGSIEM:write` | Execute CQL queries against Next-Gen SIEM (LogScale) |
+| **NGSIEM** | `NGSIEM:read`<br>`NGSIEM:write` | Execute CQL queries against Next-Gen SIEM |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
 | **Scheduled Reports** | `Scheduled Reports:read` | Get details about scheduled reports and searches, run reports on demand, and download report files |
 | **Sensor Usage** | `Sensor Usage:read` | Access and analyze sensor usage data |
@@ -212,7 +212,7 @@ Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
 
 **API Scopes Required**: `NGSIEM:read`, `NGSIEM:write`
 
-Provides tools for executing CQL queries against CrowdStrike's Next-Gen SIEM (LogScale):
+Provides tools for executing CQL queries against CrowdStrike's Next-Gen SIEM:
 
 - `search_ngsiem`: Execute a CQL query against Next-Gen SIEM repositories
 

@@ -2,7 +2,7 @@
 NGSIEM module for Falcon MCP Server
 
 This module provides tools for running search queries against CrowdStrike's
-Next-Gen SIEM (LogScale-based) via the asynchronous job-based search API.
+Next-Gen SIEM via the asynchronous job-based search API.
 """
 
 import asyncio
@@ -74,8 +74,8 @@ class NGSIEMModule(BaseModule):
             description=(
                 "Repository to search. Valid options: "
                 "search-all (default - all event data), "
-                "investigate_view (endpoint events - requires Falcon Insight XDR), "
-                "third-party (third-party source events - requires Falcon LogScale), "
+                "investigate_view (endpoint events), "
+                "third-party (third-party source events), "
                 "falcon_for_it_view (Falcon for IT data), "
                 "forensics_view (Falcon Forensics triage data)"
             ),
@@ -90,7 +90,7 @@ class NGSIEMModule(BaseModule):
             examples={"2025-01-01T00:00:00Z"},
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Execute a CQL query against CrowdStrike Next-Gen SIEM (LogScale).
+        """Execute a CQL query against CrowdStrike Next-Gen SIEM.
 
         This tool executes pre-written CQL queries provided by the user. It does NOT
         assist with query construction - users must supply complete, valid CQL syntax.
