@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.5.0...v0.6.0) (2026-02-09)
+
+
+### Features
+
+* **modules/ngsiem:** add NGSIEM module for Next-Gen SIEM search ([#281](https://github.com/CrowdStrike/falcon-mcp/issues/281)) ([00b8385](https://github.com/CrowdStrike/falcon-mcp/commit/00b8385b9c5a404a97fff1a4544a7dc91706b213))
+
 ## [0.5.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.4.1...v0.5.0) (2026-02-02)
 
 
