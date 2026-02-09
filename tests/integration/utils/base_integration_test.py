@@ -1,5 +1,6 @@
 """Base class for integration tests with real API calls."""
 
+import asyncio
 import inspect
 import warnings
 from typing import Any, Callable, Optional
@@ -182,6 +183,9 @@ class BaseIntegrationTest:
         default values are not resolved automatically. This helper ensures
         Field defaults are properly resolved before calling the method.
 
+        Handles both sync and async methods - if the method returns a
+        coroutine, it will be executed with asyncio.run().
+
         Args:
             method: The module method to call
             **kwargs: Keyword arguments to pass to the method
@@ -190,7 +194,13 @@ class BaseIntegrationTest:
             The result of calling the method
         """
         resolved_kwargs = resolve_field_defaults(method, kwargs)
-        return method(**resolved_kwargs)
+        result = method(**resolved_kwargs)
+
+        # If result is a coroutine, run it to completion
+        if inspect.iscoroutine(result):
+            return asyncio.run(result)
+
+        return result
 
     def skip_with_warning(self, reason: str, context: str = "") -> None:
         """Skip a test with a warning to make it visible in CI output.

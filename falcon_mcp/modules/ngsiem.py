@@ -5,21 +5,23 @@ This module provides tools for running search queries against CrowdStrike's
 Next-Gen SIEM (LogScale-based) via the asynchronous job-based search API.
 """
 
-import time
+import asyncio
+import os
 from datetime import datetime
 from typing import Any
 
 from mcp.server import FastMCP
 from pydantic import Field
 
-from falcon_mcp.common.errors import handle_api_response
+from falcon_mcp.common.errors import _format_error_response, handle_api_response
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.modules.base import BaseModule
 
 logger = get_logger(__name__)
 
-POLL_INTERVAL_SECONDS = 5
-TIMEOUT_SECONDS = 300
+# Configurable polling settings
+POLL_INTERVAL_SECONDS = int(os.environ.get("FALCON_MCP_NGSIEM_POLL_INTERVAL", "5"))
+TIMEOUT_SECONDS = int(os.environ.get("FALCON_MCP_NGSIEM_TIMEOUT", "300"))
 
 
 def _iso_to_epoch_ms(iso_timestamp: str) -> int:
@@ -50,30 +52,32 @@ class NGSIEMModule(BaseModule):
             name="search_ngsiem",
         )
 
-    def search_ngsiem(
+    async def search_ngsiem(
         self,
         query_string: str = Field(
             description=(
-                "CQL query string to execute against Next-Gen SIEM. "
-                "This is the CrowdStrike Query Language expression. "
-                'Examples: "aid=abc123", "#event_simpleName=ProcessRollup2", "ComputerName=DC*"'
+                "The CQL query string to execute. "
+                "This tool executes pre-written CQL queries - it does NOT help construct queries. "
+                "Users must provide a complete, valid CQL query. "
+                "Example: '#event_simpleName=ProcessRollup2' or 'source=firewall | count()'"
             ),
         ),
         start: str = Field(
             description=(
-                "Search start time as an ISO 8601 timestamp. "
-                'Example: "2025-01-01T00:00:00Z"'
+                "Search start time as an ISO 8601 timestamp (REQUIRED format). "
+                "Example: start='2025-01-01T00:00:00Z'"
             ),
+            examples={"2025-01-01T00:00:00Z"},
         ),
         repository: str = Field(
             default="search-all",
             description=(
                 "Repository to search. Valid options: "
-                "search-all (all event data from CrowdStrike and third-party sources), "
-                "investigate_view (endpoint event data and sensor events - requires Falcon Insight XDR), "
-                "third-party (event data from third-party sources - requires Falcon LogScale), "
-                "falcon_for_it_view (data collected by Falcon for IT), "
-                "forensics_view (triage data from Falcon Forensics)"
+                "search-all (default - all event data), "
+                "investigate_view (endpoint events - requires Falcon Insight XDR), "
+                "third-party (third-party source events - requires Falcon LogScale), "
+                "falcon_for_it_view (Falcon for IT data), "
+                "forensics_view (Falcon Forensics triage data)"
             ),
         ),
         end: str | None = Field(
@@ -81,28 +85,31 @@ class NGSIEMModule(BaseModule):
             description=(
                 "Search end time as an ISO 8601 timestamp. "
                 "If not provided, defaults to the current time. "
-                'Example: "2025-02-06T00:00:00Z"'
+                "Example: end='2025-02-06T00:00:00Z'"
             ),
+            examples={"2025-01-01T00:00:00Z"},
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search CrowdStrike Next-Gen SIEM (LogScale) for events.
+        """Execute a CQL query against CrowdStrike Next-Gen SIEM (LogScale).
 
-        Executes a CQL (CrowdStrike Query Language) query against the NGSIEM search API.
-        This tool starts an asynchronous search job, polls for completion, and returns
-        the matching events.
+        This tool executes pre-written CQL queries provided by the user. It does NOT
+        assist with query construction - users must supply complete, valid CQL syntax.
 
-        The search is asynchronous and job-based: it starts a search job, polls until
-        the job completes, then returns the events found.
+        The tool starts an asynchronous search job, polls for completion (up to the
+        configured timeout), and returns matching events.
 
-        Common use cases:
-        - Search for events by agent ID: query_string="aid=abc123"
-        - Search for process events: query_string="#event_simpleName=ProcessRollup2"
-        - Search by hostname pattern: query_string="ComputerName=DC*"
-        - Search third-party logs: repository="third-party"
+        Note: Search times out after FALCON_MCP_NGSIEM_TIMEOUT seconds (default: 300).
+        Polling interval is controlled by FALCON_MCP_NGSIEM_POLL_INTERVAL (default: 5).
+
+        Args:
+            query_string (required): The CQL query to execute. Example: '#event_simpleName=ProcessRollup2'
+            start (required): ISO 8601 timestamp for search start. Example: '2025-01-01T00:00:00Z'
+            repository (optional): Repository to search. Default: 'search-all'.
+                Options: search-all, investigate_view, third-party, falcon_for_it_view, forensics_view
+            end (optional): ISO 8601 timestamp for search end. Defaults to current time.
         """
         # Step 1: Start the search job
         # Note: FalconPy uber class passes body unchanged; API expects camelCase keys
-        # and Unix epoch milliseconds for timestamps
         body_params: dict[str, Any] = {
             "queryString": query_string,
             "start": _iso_to_epoch_ms(start),
@@ -129,17 +136,18 @@ class NGSIEMModule(BaseModule):
 
         job_id = start_response.get("body", {}).get("id")
         if not job_id:
-            return {
-                "error": "Failed to start NGSIEM search: no job ID returned",
-                "details": start_response.get("body", {}),
-            }
+            return _format_error_response(
+                message="Failed to start NGSIEM search: no job ID returned",
+                details=start_response.get("body", {}),
+                operation="StartSearchV1",
+            )
 
         logger.debug("NGSIEM search job started: %s", job_id)
 
         # Step 2: Poll for completion
         elapsed = 0.0
         while elapsed < TIMEOUT_SECONDS:
-            time.sleep(POLL_INTERVAL_SECONDS)
+            await asyncio.sleep(POLL_INTERVAL_SECONDS)
             elapsed += POLL_INTERVAL_SECONDS
 
             poll_response = self.client.command(
@@ -170,11 +178,9 @@ class NGSIEMModule(BaseModule):
             id=job_id,
         )
 
-        return {
-            "error": f"NGSIEM search timed out after {TIMEOUT_SECONDS} seconds",
-            "hint": (
-                "The search did not complete within the timeout period. "
-                "Try narrowing your query or reducing the time range."
-            ),
-            "job_id": job_id,
-        }
+        return _format_error_response(
+            message=f"NGSIEM search timed out after {TIMEOUT_SECONDS} seconds. "
+            "Try narrowing your query or reducing the time range.",
+            details={"job_id": job_id, "timeout_seconds": TIMEOUT_SECONDS},
+            operation="search_ngsiem",
+        )
