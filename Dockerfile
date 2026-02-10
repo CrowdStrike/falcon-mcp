@@ -35,7 +35,7 @@ RUN find /app/.venv -name '__pycache__' -type d -exec rm -rf {} + && \
 
 # Final stage
 # python:3.13-alpine (multi-arch: amd64, arm64)
-FROM python@sha256:9ba6d8cbebf0fb6546ae71f2a1c14f6ffd2fdab83af7fa5669734ef30ad48844
+FROM python@sha256:4b827abf32c14b7df9a0dc5199c2f0bc46e2c9862cd5d77eddae8a2cd8460f60
 
 # Create a non-root user 'app'
 RUN adduser -D -h /home/app -s /bin/sh app
