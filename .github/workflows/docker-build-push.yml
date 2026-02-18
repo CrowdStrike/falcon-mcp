@@ -5,6 +5,12 @@ on:
     branches: [main]
   release:
     types: [created]
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'Release tag name (e.g., v0.7.0)'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -20,6 +26,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ inputs.tag_name || github.ref }}
+
+      - name: Determine build context
+        id: context
+        run: |
+          if [ -n "${{ inputs.tag_name }}" ]; then
+            echo "is_release=true" >> $GITHUB_OUTPUT
+            echo "version=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            echo "is_release=true" >> $GITHUB_OUTPUT
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
@@ -37,10 +58,10 @@ jobs:
         with:
           images: quay.io/crowdstrike/falcon-mcp
           tags: |
-            type=raw,value=latest,enable=${{ github.event_name == 'push' }}
-            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
+            type=raw,value=latest,enable=${{ steps.context.outputs.is_release != 'true' }}
+            type=semver,pattern={{version}},enable=${{ steps.context.outputs.is_release == 'true' }},value=${{ steps.context.outputs.version }}
           flavor: |
-            latest=${{ github.event_name == 'push' }}
+            latest=${{ steps.context.outputs.is_release != 'true' }}
           labels: |
             org.opencontainers.image.title=Falcon MCP Server
             org.opencontainers.image.description=Model Context Protocol server for CrowdStrike Falcon
@@ -67,10 +88,10 @@ jobs:
           FULL_TAG=$(echo "$TAGS" | head -n1)
           TAG_ONLY=$(echo "$FULL_TAG" | sed 's/.*://')
 
-          if [ "${{ github.event_name }}" = "push" ]; then
-            EVENT_TYPE="Main Branch Push"
-          else
+          if [ "${{ steps.context.outputs.is_release }}" = "true" ]; then
             EVENT_TYPE="Release"
+          else
+            EVENT_TYPE="Main Branch Push"
           fi
 
           echo "## 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY
