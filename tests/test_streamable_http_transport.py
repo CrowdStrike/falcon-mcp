@@ -31,11 +31,11 @@ class TestStreamableHttpTransport(unittest.TestCase):
         mock_server_instance.streamable_http_app.return_value = mock_app
         mock_fastmcp.return_value = mock_server_instance
 
-        # Create server
-        server = FalconMCPServer(debug=True)
+        # Create server with custom host/port
+        server = FalconMCPServer(debug=True, host="0.0.0.0", port=8080)
 
         # Test streamable-http transport
-        server.run("streamable-http", host="0.0.0.0", port=8080)
+        server.run("streamable-http")
 
         # Verify uvicorn was called with correct parameters
         mock_uvicorn.run.assert_called_once_with(
@@ -259,11 +259,11 @@ class TestStreamableHttpTransport(unittest.TestCase):
         mock_server_instance.streamable_http_app.return_value = mock_app
         mock_fastmcp.return_value = mock_server_instance
 
-        # Create server
-        server = FalconMCPServer(debug=True)
+        # Create server with custom host/port
+        server = FalconMCPServer(debug=True, host="192.168.1.100", port=9000)
 
         # Test streamable-http transport with custom parameters
-        server.run("streamable-http", host="192.168.1.100", port=9000)
+        server.run("streamable-http")
 
         # Verify uvicorn was called with custom parameters
         mock_uvicorn.run.assert_called_once_with(

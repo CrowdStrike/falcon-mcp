@@ -18,33 +18,22 @@ def main() -> None:
     # Load environment variables from .env file
     load_dotenv()
 
-    # Create and run the server with streamable-http transport
+    # Example 1: Default settings (port 8000, localhost)
+    # server = FalconMCPServer(
+    #     debug=os.environ.get("DEBUG", "").lower() == "true",
+    # )
+    # server.run("streamable-http")
+    #   -> http://127.0.0.1:8000/mcp
+
+    # Example 2: Custom host/port for external access
     server = FalconMCPServer(
         # You can override the base URL if needed
         # base_url="https://api.us-2.crowdstrike.com",
         debug=os.environ.get("DEBUG", "").lower() == "true",
+        host="0.0.0.0",
+        port=8080,
     )
-
-    # Example 1: Run with default settings (port 8000, localhost)
-    print("Example 1: Default streamable-http configuration")
-    print("  - Host: 127.0.0.1 (localhost only)")
-    print("  - Port: 8000")
-    print("  - Path: /mcp")
-    print("  - URL: http://127.0.0.1:8000/mcp")
-    print()
-
-    # Uncomment to run with defaults:
-    # server.run("streamable-http")
-
-    # Example 2: Custom configuration
-    print("Example 2: Custom configuration")
-    print("  - Host: 0.0.0.0 (external access)")
-    print("  - Port: 8080")
-    print("  - URL: http://0.0.0.0:8080/mcp")
-    print()
-
-    # Run with custom requirements
-    server.run("streamable-http", host="0.0.0.0", port=8080)
+    server.run("streamable-http")
 
 
 if __name__ == "__main__":

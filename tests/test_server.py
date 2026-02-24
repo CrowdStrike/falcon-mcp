@@ -52,6 +52,8 @@ class TestFalconMCPServer(unittest.TestCase):
             debug=True,
             log_level="DEBUG",
             stateless_http=False,
+            host="127.0.0.1",
+            port=8000,
         )
 
         # Verify modules initialization
@@ -229,6 +231,8 @@ class TestFalconMCPServer(unittest.TestCase):
             debug=False,
             log_level="INFO",
             stateless_http=True,
+            host="127.0.0.1",
+            port=8000,
         )
 
     @patch("falcon_mcp.server.FalconClient")
@@ -256,6 +260,8 @@ class TestFalconMCPServer(unittest.TestCase):
             debug=False,
             log_level="INFO",
             stateless_http=False,
+            host="127.0.0.1",
+            port=8000,
         )
 
     @patch("falcon_mcp.server.FalconClient")
@@ -308,6 +314,64 @@ class TestFalconMCPServer(unittest.TestCase):
         self.assertTrue(call_args["debug"])
         self.assertEqual(call_args["client_id"], "direct-client-id")
         self.assertEqual(call_args["client_secret"], "direct-client-secret")
+
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_server_passes_non_localhost_host_to_fastmcp(self, mock_fastmcp, mock_client):
+        """Test that non-localhost host is passed to FastMCP to avoid DNS rebinding protection."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server with 0.0.0.0 host (containerized deployment)
+        server = FalconMCPServer(host="0.0.0.0", port=9090)
+
+        # Verify host and port are stored
+        self.assertEqual(server.host, "0.0.0.0")
+        self.assertEqual(server.port, 9090)
+
+        # Verify FastMCP receives the non-localhost host
+        mock_fastmcp.assert_called_once_with(
+            name="Falcon MCP Server",
+            instructions="This server provides access to CrowdStrike Falcon capabilities.",
+            debug=False,
+            log_level="INFO",
+            stateless_http=False,
+            host="0.0.0.0",
+            port=9090,
+        )
+
+    @patch("falcon_mcp.server.uvicorn")
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_run_streamable_http_uses_instance_host_port(
+        self, mock_fastmcp, mock_client, mock_uvicorn
+    ):
+        """Test that run() uses host/port from the server instance for uvicorn."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server with custom host/port
+        server = FalconMCPServer(host="0.0.0.0", port=9090)
+
+        # Run with streamable-http transport
+        server.run("streamable-http")
+
+        # Verify uvicorn was called with instance host/port
+        mock_uvicorn.run.assert_called_once()
+        call_kwargs = mock_uvicorn.run.call_args[1]
+        self.assertEqual(call_kwargs["host"], "0.0.0.0")
+        self.assertEqual(call_kwargs["port"], 9090)
 
 
 if __name__ == "__main__":
