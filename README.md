@@ -27,6 +27,7 @@
   - [Incidents Module](#incidents-module)
   - [NGSIEM Module](#ngsiem-module)
   - [Intel Module](#intel-module)
+  - [IOC Module](#ioc-module)
   - [Scheduled Reports Module](#scheduled-reports-module)
   - [Sensor Usage Module](#sensor-usage-module)
   - [Serverless Module](#serverless-module)
@@ -90,6 +91,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
 | **NGSIEM** | `NGSIEM:read`<br>`NGSIEM:write` | Execute CQL queries against Next-Gen SIEM |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
+| **IOC** | `Indicators:read`<br>`Indicators:write` | Search, create, and remove custom IOCs using IOC Service Collection endpoints |
 | **Scheduled Reports** | `Scheduled Reports:read` | Get details about scheduled reports and searches, run reports on demand, and download report files |
 | **Sensor Usage** | `Sensor Usage:read` | Access and analyze sensor usage data |
 | **Serverless** | `Falcon Container Image:read` | Search for vulnerabilities in serverless functions across cloud service providers |
@@ -243,6 +245,25 @@ Provides tools for accessing and analyzing CrowdStrike Intelligence:
 - `falcon://intel/reports/fql-guide`: Comprehensive FQL documentation and examples for intelligence report searches
 
 **Use Cases**: Threat intelligence research, adversary tracking, IOC analysis, threat landscape assessment, MITRE ATT&CK framework analysis
+
+### IOC Module
+
+**API Scopes Required**:
+
+- `Indicators:read`
+- `Indicators:write`
+
+Provides tools for managing custom indicators of compromise (IOCs) with Falcon IOC Service Collection endpoints:
+
+- `falcon_search_iocs`: Search custom IOCs using FQL and return full IOC details
+- `falcon_add_ioc`: Create one IOC or submit multiple IOCs in a single request
+- `falcon_remove_iocs`: Remove IOCs by explicit IDs or by FQL filter for bulk cleanup
+
+**Resources**:
+
+- `falcon://ioc/search/fql-guide`: FQL documentation and examples for IOC searches
+
+**Use Cases**: IOC lifecycle management, automated IOC onboarding, IOC cleanup and hygiene workflows
 
 ### Sensor Usage Module
 
