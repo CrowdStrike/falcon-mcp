@@ -38,6 +38,8 @@ class FalconMCPServer:
         client_id: str | None = None,
         client_secret: str | None = None,
         api_key: str | None = None,
+        host: str = "127.0.0.1",
+        port: int = 8000,
     ):
         """Initialize the Falcon MCP server.
 
@@ -50,6 +52,8 @@ class FalconMCPServer:
             client_id: Falcon API Client ID (defaults to FALCON_CLIENT_ID env var)
             client_secret: Falcon API Client Secret (defaults to FALCON_CLIENT_SECRET env var)
             api_key: API key for HTTP transport authentication (x-api-key header)
+            host: Host to bind to for HTTP transports (default: 127.0.0.1)
+            port: Port to listen on for HTTP transports (default: 8000)
         """
         # Store configuration
         self.base_url = base_url
@@ -57,6 +61,8 @@ class FalconMCPServer:
         self.user_agent_comment = user_agent_comment
         self.stateless_http = stateless_http
         self.api_key = api_key
+        self.host = host
+        self.port = port
 
         self.enabled_modules = enabled_modules or set(registry.get_module_names())
 
@@ -85,6 +91,8 @@ class FalconMCPServer:
             debug=self.debug,
             log_level="DEBUG" if self.debug else "INFO",
             stateless_http=self.stateless_http,
+            host=self.host,
+            port=self.port,
         )
 
         # Initialize and register modules
@@ -179,20 +187,16 @@ class FalconMCPServer:
         """Lists all available modules in the falcon-mcp server."""
         return {"modules": registry.get_module_names()}
 
-    def run(
-        self, transport: TransportType = "stdio", host: str = "127.0.0.1", port: int = 8000
-    ) -> None:
+    def run(self, transport: TransportType = "stdio") -> None:
         """Run the MCP server.
 
         Args:
             transport: Transport protocol to use ("stdio", "sse", or "streamable-http")
-            host: Host to bind to for HTTP transports (default: 127.0.0.1)
-            port: Port to listen on for HTTP transports (default: 8000)
         """
         app: ASGIApp
         if transport == "streamable-http":
             # For streamable-http, use uvicorn directly for custom host/port
-            logger.info("Starting streamable-http server on %s:%d", host, port)
+            logger.info("Starting streamable-http server on %s:%d", self.host, self.port)
 
             # Get the ASGI app from FastMCP (handles /mcp path automatically)
             app = self.server.streamable_http_app()
@@ -205,13 +209,13 @@ class FalconMCPServer:
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
                 app,
-                host=host,
-                port=port,
+                host=self.host,
+                port=self.port,
                 log_level="info" if not self.debug else "debug",
             )
         elif transport == "sse":
             # For sse, use uvicorn directly for custom host/port (same pattern as streamable-http)
-            logger.info("Starting sse server on %s:%d", host, port)
+            logger.info("Starting sse server on %s:%d", self.host, self.port)
 
             # Get the ASGI app from FastMCP
             app = self.server.sse_app()
@@ -224,8 +228,8 @@ class FalconMCPServer:
             # Run with uvicorn for custom host/port configuration
             uvicorn.run(
                 app,
-                host=host,
-                port=port,
+                host=self.host,
+                port=self.port,
                 log_level="info" if not self.debug else "debug",
             )
         else:
@@ -364,9 +368,11 @@ def main() -> None:
             user_agent_comment=args.user_agent_comment,
             stateless_http=args.stateless_http,
             api_key=args.api_key,
+            host=args.host,
+            port=args.port,
         )
         logger.info("Starting server with %s transport", args.transport)
-        server.run(args.transport, host=args.host, port=args.port)
+        server.run(args.transport)
     except RuntimeError as e:
         logger.error("Runtime error: %s", e)
         sys.exit(1)

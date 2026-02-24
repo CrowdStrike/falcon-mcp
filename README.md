@@ -513,7 +513,8 @@ server.run("sse")
 server.run("streamable-http")
 
 # Or run with streamable-http transport on custom host/port
-server.run("streamable-http", host="0.0.0.0", port=8080)
+server = FalconMCPServer(host="0.0.0.0", port=8080)
+server.run("streamable-http")
 ```
 
 #### Direct Credentials (Secret Management Integration)
