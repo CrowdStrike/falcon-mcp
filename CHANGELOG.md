@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.6.0...v0.7.0) (2026-02-26)
+
+
+### Features
+
+* **ioc:** add IOC Service Collection search/create/delete module ([#292](https://github.com/CrowdStrike/falcon-mcp/issues/292)) ([ef1b502](https://github.com/CrowdStrike/falcon-mcp/commit/ef1b502e17efb9065777d2f9dcf2014866013a70))
+* **server:** pass host/port to FastMCP to prevent HTTP 421 in proxied deployments ([#293](https://github.com/CrowdStrike/falcon-mcp/issues/293)) ([7aff692](https://github.com/CrowdStrike/falcon-mcp/commit/7aff69254f6e505d8b7449108ebf8f02bdeece86)), closes [#291](https://github.com/CrowdStrike/falcon-mcp/issues/291)
+
 ## [0.6.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.5.0...v0.6.0) (2026-02-09)
 
 
