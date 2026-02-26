@@ -28,6 +28,11 @@ API_SCOPE_REQUIREMENTS = {
     "QueryIntelIndicatorEntities": ["Indicators (Falcon Intelligence):read"],
     "QueryIntelReportEntities": ["Reports (Falcon Intelligence):read"],
     "GetMitreReport": ["Actors (Falcon Intelligence):read"],
+    # IOC operations
+    "indicator_search_v1": ["IOC Management:read"],
+    "indicator_get_v1": ["IOC Management:read"],
+    "indicator_create_v1": ["IOC Management:write"],
+    "indicator_delete_v1": ["IOC Management:write"],
     # Spotlight operations
     "combinedQueryVulnerabilities": ["Vulnerabilities:read"],
     # Discover operations
