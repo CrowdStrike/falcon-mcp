@@ -116,7 +116,7 @@ def handle_api_response(
     """
     status_code: int | None = response.get("status_code")
 
-    if status_code != 200:
+    if status_code is None or status_code >= 300:
         # Get a more descriptive error message based on status code
         status_message = ERROR_CODE_DESCRIPTIONS.get(
             status_code or 0, f"Request failed with status code {status_code}"
