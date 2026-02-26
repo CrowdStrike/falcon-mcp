@@ -91,7 +91,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
 | **NGSIEM** | `NGSIEM:read`<br>`NGSIEM:write` | Execute CQL queries against Next-Gen SIEM |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
-| **IOC** | `Indicators:read`<br>`Indicators:write` | Search, create, and remove custom IOCs using IOC Service Collection endpoints |
+| **IOC** | `IOC Management:read`<br>`IOC Management:write` | Search, create, and remove custom IOCs using IOC Service Collection endpoints |
 | **Scheduled Reports** | `Scheduled Reports:read` | Get details about scheduled reports and searches, run reports on demand, and download report files |
 | **Sensor Usage** | `Sensor Usage:read` | Access and analyze sensor usage data |
 | **Serverless** | `Falcon Container Image:read` | Search for vulnerabilities in serverless functions across cloud service providers |
@@ -250,8 +250,8 @@ Provides tools for accessing and analyzing CrowdStrike Intelligence:
 
 **API Scopes Required**:
 
-- `Indicators:read`
-- `Indicators:write`
+- `IOC Management:read`
+- `IOC Management:write`
 
 Provides tools for managing custom indicators of compromise (IOCs) with Falcon IOC Service Collection endpoints:
 

@@ -11,7 +11,6 @@ from typing import Any
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
-from pydantic.fields import FieldInfo
 
 from falcon_mcp.common.errors import _format_error_response
 from falcon_mcp.common.logging import get_logger
@@ -111,13 +110,6 @@ class IOCModule(BaseModule):
         IMPORTANT: You must use the `falcon://ioc/search/fql-guide` resource
         when you need to use the `filter` parameter.
         """
-        filter = self._normalize_field_value(filter)
-        limit = self._normalize_field_value(limit)
-        offset = self._normalize_field_value(offset)
-        sort = self._normalize_field_value(sort)
-        after = self._normalize_field_value(after)
-        from_parent = self._normalize_field_value(from_parent)
-
         indicator_ids = self._base_search_api_call(
             operation="indicator_search_v1",
             search_params={
@@ -226,25 +218,6 @@ class IOCModule(BaseModule):
         ),
     ) -> list[dict[str, Any]]:
         """Create one or more custom IOCs."""
-        type = self._normalize_field_value(type)
-        value = self._normalize_field_value(value)
-        action = self._normalize_field_value(action)
-        source = self._normalize_field_value(source)
-        severity = self._normalize_field_value(severity)
-        description = self._normalize_field_value(description)
-        expiration = self._normalize_field_value(expiration)
-        applied_globally = self._normalize_field_value(applied_globally)
-        mobile_action = self._normalize_field_value(mobile_action)
-        platforms = self._normalize_field_value(platforms)
-        host_groups = self._normalize_field_value(host_groups)
-        tags = self._normalize_field_value(tags)
-        metadata = self._normalize_field_value(metadata)
-        filename = self._normalize_field_value(filename)
-        comment = self._normalize_field_value(comment)
-        indicators = self._normalize_field_value(indicators)
-        ignore_warnings = self._normalize_field_value(ignore_warnings)
-        retrodetects = self._normalize_field_value(retrodetects)
-
         payload_or_error = self._build_add_ioc_payload(
             type=type,
             value=value,
@@ -303,11 +276,6 @@ class IOCModule(BaseModule):
         ),
     ) -> list[dict[str, Any]]:
         """Remove custom IOCs by IDs or FQL filter."""
-        ids = self._normalize_field_value(ids)
-        filter = self._normalize_field_value(filter)
-        comment = self._normalize_field_value(comment)
-        from_parent = self._normalize_field_value(from_parent)
-
         if not ids and not filter:
             return [
                 _format_error_response(
@@ -400,10 +368,3 @@ class IOCModule(BaseModule):
             payload["comment"] = comment
 
         return payload
-
-    @staticmethod
-    def _normalize_field_value(value: Any) -> Any:
-        """Normalize direct function-call defaults produced by pydantic Field()."""
-        if isinstance(value, FieldInfo):
-            return value.default
-        return value
