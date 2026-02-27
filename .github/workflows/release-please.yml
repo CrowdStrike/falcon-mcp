@@ -47,6 +47,21 @@ jobs:
             git push
           fi
 
+      - name: Update uv.lock
+        if: ${{ steps.release-please.outputs.pr }}
+        run: |
+          pip install uv==0.9.21
+          uv lock
+          if git diff --quiet uv.lock; then
+            echo "uv.lock is already up to date"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add uv.lock
+            git commit -m "chore: update uv.lock"
+            git push
+          fi
+
   pypi-publish:
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
