@@ -52,6 +52,7 @@ Configure these environment variables when deploying your AgentCore agent:
 | `FALCON_MCP_PORT` | `8000` | Server port |
 | `FALCON_MCP_USER_AGENT_COMMENT` | `AWS/Bedrock/AgentCore` | Request identifier |
 | `FALCON_MCP_STATELESS_HTTP` | `true` | **Required** for AgentCore |
+| `FALCON_MCP_API_KEY` | *(optional)* | API key to secure the MCP endpoint |
 
 > **Important:** `FALCON_MCP_STATELESS_HTTP` must be set to `true` for proper operation in AgentCore's stateless container environment.
 
@@ -68,6 +69,9 @@ The Falcon MCP Server provides security tools organized into modules. Each modul
 | Identity Protection | Entity investigation and identity protection analysis |
 | Incidents | Analyze security incidents and coordinated activities |
 | Intel | Research threat actors, IOCs, and intelligence reports |
+| IOC Management | Create, search, and delete custom indicators of compromise |
+| Next-Gen SIEM | Execute CQL queries against CrowdStrike LogScale |
+| Scheduled Reports | Manage scheduled reports, launch on demand, and download results |
 | Sensor Usage | Access and analyze sensor usage data |
 | Serverless | Search vulnerabilities in serverless functions |
 | Spotlight | Manage vulnerability data and security assessments |
