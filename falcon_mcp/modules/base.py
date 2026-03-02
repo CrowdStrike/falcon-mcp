@@ -9,6 +9,7 @@ from typing import Any, Callable
 
 from mcp import Resource
 from mcp.server import FastMCP
+from mcp.types import ToolAnnotations
 
 from falcon_mcp.client import FalconClient
 from falcon_mcp.common.errors import handle_api_response
@@ -16,6 +17,14 @@ from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import prepare_api_parameters
 
 logger = get_logger(__name__)
+
+# Default: read-only tool that talks to an external API
+READ_ONLY_ANNOTATIONS = ToolAnnotations(
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+)
 
 
 class BaseModule(ABC):
@@ -46,16 +55,23 @@ class BaseModule(ABC):
             server: MCP server instance
         """
 
-    def _add_tool(self, server: FastMCP, method: Callable[..., Any], name: str) -> None:
+    def _add_tool(
+        self,
+        server: FastMCP,
+        method: Callable[..., Any],
+        name: str,
+        annotations: ToolAnnotations | None = None,
+    ) -> None:
         """Add a tool to the MCP server and track it.
 
         Args:
             server: MCP server instance
             method: Method to register
             name: Tool name
+            annotations: MCP tool annotations. Defaults to READ_ONLY_ANNOTATIONS.
         """
         prefixed_name = f"falcon_{name}"
-        server.add_tool(method, name=prefixed_name)
+        server.add_tool(method, name=prefixed_name, annotations=annotations or READ_ONLY_ANNOTATIONS)
         self.tools.append(prefixed_name)
         logger.debug("Added tool: %s", prefixed_name)
 

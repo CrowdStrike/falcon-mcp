@@ -26,6 +26,7 @@ This module provides tools for [brief description].
 from typing import Any
 
 from mcp.server import FastMCP
+from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from falcon_mcp.common.logging import get_logger
@@ -43,11 +44,24 @@ class YourModule(BaseModule):
         Args:
             server: MCP server instance
         """
-        # Register tools
+        # Read-only tool — default annotations apply automatically
         self._add_tool(
             server=server,
             method=self.your_tool_method,
             name="your_tool_name",
+        )
+
+        # Mutating tool — must override annotations
+        self._add_tool(
+            server=server,
+            method=self.your_create_method,
+            name="your_create_name",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
         )
 
         # Add more tools as needed
@@ -127,6 +141,9 @@ Create a test file in the `tests/modules` directory that inherits from the `Test
 """
 Tests for the YourModule module.
 """
+from mcp.types import ToolAnnotations
+
+from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
 from falcon_mcp.modules.your_module import YourModule
 from tests.modules.utils.test_modules import TestModules
 
@@ -145,6 +162,22 @@ class TestYourModule(TestModules):
             # Add other tools here
         ]
         self.assert_tools_registered(expected_tools)
+
+    def test_tool_annotations(self):
+        """Test tool annotations are correctly set."""
+        self.module.register_tools(self.mock_server)
+        # Read-only tools should use defaults
+        self.assert_tool_annotations("falcon_your_tool_name", READ_ONLY_ANNOTATIONS)
+        # Mutating tools must have explicit annotations
+        self.assert_tool_annotations(
+            "falcon_your_create_name",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
 
     def test_your_tool_method(self):
         """Test your tool method."""
@@ -292,6 +325,24 @@ if isinstance(result, dict) and "error" in result:
 1. **Use extract_resources**: Extract resources from API responses
 2. **Handle Empty Results**: Provide appropriate defaults for empty results
 3. **Return Structured Data**: Return well-structured data that follows consistent patterns
+
+### Tool Annotations
+
+Tools are annotated with MCP `ToolAnnotations` to inform clients about tool behavior:
+
+- `readOnlyHint`: Does the tool only read data? (default: `True`)
+- `destructiveHint`: Does the tool delete or destroy data? (default: `False`)
+- `idempotentHint`: Is repeating the call safe? (default: `True`)
+- `openWorldHint`: Does the tool interact with external systems? (default: `True`)
+
+The `_add_tool()` helper applies `READ_ONLY_ANNOTATIONS` by default. **Override for any tool that creates, modifies, deletes, or triggers actions.**
+
+| Tool Type | readOnlyHint | destructiveHint | idempotentHint | Example |
+|-----------|:---:|:---:|:---:|---------|
+| Search/Get/List | True | False | True | `falcon_search_hosts` |
+| Create/Write | False | False | False | `falcon_add_ioc` |
+| Delete/Remove | False | True | True | `falcon_remove_iocs` |
+| Launch/Trigger | False | False | False | `falcon_launch_scheduled_report` |
 
 ### Documentation
 

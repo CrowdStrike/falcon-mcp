@@ -4,6 +4,9 @@ Tests for the IOC module.
 
 import unittest
 
+from mcp.types import ToolAnnotations
+
+from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
 from falcon_mcp.modules.ioc import IOCModule
 from tests.modules.utils.test_modules import TestModules
 
@@ -419,6 +422,37 @@ class TestIOCModule(TestModules):
 
         call_args = self.mock_client.command.call_args
         self.assertIn(long_value, call_args[1]["parameters"]["filter"])
+
+    def test_search_iocs_has_read_only_annotations(self):
+        """Test that search_iocs is registered with read-only annotations."""
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations("falcon_search_iocs", READ_ONLY_ANNOTATIONS)
+
+    def test_add_ioc_has_mutating_annotations(self):
+        """Test that add_ioc is registered with non-read-only, non-destructive annotations."""
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations(
+            "falcon_add_ioc",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
+
+    def test_remove_iocs_has_destructive_annotations(self):
+        """Test that remove_iocs is registered with destructive annotations."""
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations(
+            "falcon_remove_iocs",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=True,
+                openWorldHint=True,
+            ),
+        )
 
 
 if __name__ == "__main__":

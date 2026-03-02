@@ -10,6 +10,7 @@ from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
+from mcp.types import ToolAnnotations
 from pydantic import AnyUrl, Field
 
 from falcon_mcp.common.errors import _format_error_response
@@ -39,12 +40,24 @@ class IOCModule(BaseModule):
             server=server,
             method=self.add_ioc,
             name="add_ioc",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
         )
 
         self._add_tool(
             server=server,
             method=self.remove_iocs,
             name="remove_iocs",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=True,
+                openWorldHint=True,
+            ),
         )
 
     def register_resources(self, server: FastMCP) -> None:

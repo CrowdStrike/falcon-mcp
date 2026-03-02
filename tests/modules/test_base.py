@@ -4,7 +4,9 @@ Tests for the Base module.
 
 import unittest
 
-from falcon_mcp.modules.base import BaseModule
+from mcp.types import ToolAnnotations
+
+from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS, BaseModule
 from tests.modules.utils.test_modules import TestModules
 
 
@@ -668,6 +670,38 @@ class TestBaseModule(TestModules):
 
         # Verify result
         self.assertEqual(result, '{"prepared": true}')
+
+    def test_add_tool_applies_default_annotations(self):
+        """Test that _add_tool applies READ_ONLY_ANNOTATIONS when no annotations provided."""
+        self.module._add_tool(
+            server=self.mock_server,
+            method=lambda: None,
+            name="test_tool",
+        )
+
+        self.mock_server.add_tool.assert_called_once()
+        call_kwargs = self.mock_server.add_tool.call_args[1]
+        self.assertEqual(call_kwargs["annotations"], READ_ONLY_ANNOTATIONS)
+
+    def test_add_tool_passes_custom_annotations(self):
+        """Test that _add_tool passes through custom annotations when provided."""
+        custom_annotations = ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=False,
+            openWorldHint=True,
+        )
+
+        self.module._add_tool(
+            server=self.mock_server,
+            method=lambda: None,
+            name="mutating_tool",
+            annotations=custom_annotations,
+        )
+
+        self.mock_server.add_tool.assert_called_once()
+        call_kwargs = self.mock_server.add_tool.call_args[1]
+        self.assertEqual(call_kwargs["annotations"], custom_annotations)
 
 
 if __name__ == "__main__":

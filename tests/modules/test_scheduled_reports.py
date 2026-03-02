@@ -4,6 +4,9 @@ Tests for the Scheduled Reports module.
 
 import unittest
 
+from mcp.types import ToolAnnotations
+
+from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
 from falcon_mcp.modules.scheduled_reports import ScheduledReportsModule
 from tests.modules.utils.test_modules import TestModules
 
@@ -388,6 +391,40 @@ class TestScheduledReportsModule(TestModules):
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)
         self.assertIn("Failed to download report execution", result["error"])
+
+    def test_launch_scheduled_report_has_mutating_annotations(self):
+        """Test that launch_scheduled_report is registered with non-read-only annotations."""
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations(
+            "falcon_launch_scheduled_report",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
+
+    def test_search_scheduled_reports_has_read_only_annotations(self):
+        """Test that search_scheduled_reports is registered with read-only annotations."""
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations(
+            "falcon_search_scheduled_reports", READ_ONLY_ANNOTATIONS
+        )
+
+    def test_search_report_executions_has_read_only_annotations(self):
+        """Test that search_report_executions is registered with read-only annotations."""
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations(
+            "falcon_search_report_executions", READ_ONLY_ANNOTATIONS
+        )
+
+    def test_download_report_execution_has_read_only_annotations(self):
+        """Test that download_report_execution is registered with read-only annotations."""
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations(
+            "falcon_download_report_execution", READ_ONLY_ANNOTATIONS
+        )
 
     def test_download_report_execution_json_empty_resources(self):
         """Test downloading JSON format report with empty resources."""

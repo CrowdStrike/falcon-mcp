@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from mcp.server import FastMCP
+from mcp.types import ToolAnnotations
 
 from falcon_mcp.client import FalconClient
 
@@ -69,3 +70,16 @@ class TestModules(unittest.TestCase):
         # Verify that all expected tools were registered
         for tool in expected_resources:
             self.assertIn(tool, registered_resources)
+
+    def assert_tool_annotations(self, tool_name: str, expected_annotations: ToolAnnotations):
+        """Verify that a tool was registered with the expected annotations.
+
+        Args:
+            tool_name: The full tool name (e.g., "falcon_search_detections")
+            expected_annotations: The expected ToolAnnotations instance
+        """
+        for call in self.mock_server.add_tool.call_args_list:
+            if call.kwargs.get("name") == tool_name:
+                self.assertEqual(call.kwargs.get("annotations"), expected_annotations)
+                return
+        self.fail(f"Tool {tool_name} not found in registered tools")
