@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Any
 
 from google.adk.agents import LlmAgent  # type: ignore[import-untyped]
 from google.adk.agents.callback_context import CallbackContext  # type: ignore[import-untyped]
@@ -18,7 +19,7 @@ tools_cache: dict[str, list[BaseTool]] = {}
 class CachedMCPToolset(MCPToolset):
     """Adds tool caching on top of MCPToolset to avoid repeated MCP server round-trips."""
 
-    def __init__(self, *, tool_set_name: str, **kwargs):
+    def __init__(self, *, tool_set_name: str, **kwargs: Any):
         super().__init__(**kwargs)
         self.tool_set_name = tool_set_name
         logging.info(f"CachedMCPToolset initialized: '{self.tool_set_name}'")
