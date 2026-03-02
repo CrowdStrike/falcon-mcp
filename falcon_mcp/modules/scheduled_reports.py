@@ -9,6 +9,7 @@ from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
+from mcp.types import ToolAnnotations
 from pydantic import AnyUrl, Field
 
 from falcon_mcp.common.errors import handle_api_response
@@ -40,6 +41,12 @@ class ScheduledReportsModule(BaseModule):
             server=server,
             method=self.launch_scheduled_report,
             name="launch_scheduled_report",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
         )
 
         # Register execution tools

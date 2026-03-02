@@ -18,6 +18,7 @@ from falcon_mcp import registry
 from falcon_mcp.client import FalconClient
 from falcon_mcp.common.auth import ASGIApp, auth_middleware
 from falcon_mcp.common.logging import configure_logging, get_logger
+from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
 
 logger = get_logger(__name__)
 
@@ -135,16 +136,19 @@ class FalconMCPServer:
         self.server.add_tool(
             self.falcon_check_connectivity,
             name="falcon_check_connectivity",
+            annotations=READ_ONLY_ANNOTATIONS,
         )
 
         self.server.add_tool(
             self.list_enabled_modules,
             name="falcon_list_enabled_modules",
+            annotations=READ_ONLY_ANNOTATIONS,
         )
 
         self.server.add_tool(
             self.list_modules,
             name="falcon_list_modules",
+            annotations=READ_ONLY_ANNOTATIONS,
         )
 
         tool_count = 3  # the tools added above
