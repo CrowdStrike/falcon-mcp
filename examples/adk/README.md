@@ -12,8 +12,8 @@ The goal is to provide customers an opinionated and validated set of instruction
 4. [Deploying to Vertex AI Agent Engine and registering on Agentspace](#deploying-to-vertex-ai-agent-engine-and-registering-on-agentspace)
 5. [Securing access, Evaluating, Optimizing performance and costs](#securing-access-evaluating-optimizing-performance-and-costs)
 
-
 ### Setting up and running locally (5 minutes)
+
 You can run the following commands locally on Linux / Mac or in Google Cloud Shell.
 If you plan to deploy the agent, it is recommended to run in Google Cloud Shell.
 
@@ -38,10 +38,10 @@ chmod +x adk_agent_operations.sh
 
 ```
 
-
-
 The script will create `.env` file in `falcon_agent/` directory and prompt you to update it. At a minimum update the `General Agent Configuration` section.
 
+> [!WARNING]
+> **Do not use curly braces** (`{variable}`) in the `FALCON_AGENT_PROMPT` value. Google ADK interprets `{name}` patterns as context variables that must exist in session state, which causes `Context variable not found` errors at runtime. Use square brackets or plain text instead.
 
 <details>
 
@@ -55,6 +55,7 @@ SUCCESS: './falcon_agent/env.properties' copied to './falcon_agent/.env'.
 ACTION REQUIRED: Please update the variables in './falcon_agent/.env' before running this script with an operation mode.
 
 ```
+
 </details>
 
 <br>
@@ -64,16 +65,12 @@ ACTION REQUIRED: Please update the variables in './falcon_agent/.env' before run
 
 Now run the script with `local_run` parameter.
 
-
 ```bash
 # local run
 ./adk_agent_operations.sh local_run
 ```
 
-
-
 Here is the sample output
-
 
 <details>
 
@@ -107,18 +104,19 @@ INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
 
 ```
+
 </details>
 
 <br>
 
-You can access the agent on http://localhost:8000 🚀
+You can access the agent on <http://localhost:8000> 🚀
 
 > If running in the Google Cloud Shell - please use the web preview with port 8000.
 
 You can stop the agent with `ctrl+C`
 
-
 ### Deployment - Why Deploy?
+
 You may want to deploy the agent (with the `falcon-mcp` server) for following reasons
 
 1. You do not want to hand out credentials to everyone to run MCP server locally
@@ -126,6 +124,7 @@ You may want to deploy the agent (with the `falcon-mcp` server) for following re
 3. Use it for demos without any setup
 
 You have two distinct paths to deployment:
+
 1. Deploy on Cloud Run
 2. Deploy on Vertex AI Agent Engine (and access through Agentspace after registration)
 
@@ -147,7 +146,6 @@ In the sample output below, note the lines marked with ➡️
 
 1. You will have to provide input for `Allow unauthenticated invocations?` (say N)
 2. Once deployment is completed you get a URL to access your agent.
-
 
 <details>
 
@@ -206,14 +204,13 @@ INFO: Restoring .env file from backup: './falcon_agent/.env.bak'.
 > [!NOTE]
 > By default the service has IAM authentication enabled for it. Please follow steps below to enable access to yourself and your team.
 
-
 1. Cloud Run - Services - select `falcon-agent-service`, by clicking the checkbox next to it.
 2. At the top click `permissions`, a pane `Permissions for falcon-agent-service` should open on the right hand side.
 3. Click `Add principal`
 4. Add the users you want to provide access to and provide them `Cloud Run Invoker` role.
 5. Wait for some time.
 
-**Accessing the service**
+#### Accessing the service
 
 1. Ask your users to run the following command (replace project id and region with the project id & region in which you have deployed the service)
 
@@ -225,7 +222,6 @@ gcloud run services proxy falcon-agent-service --project PROJECT-ID --region YOU
 
 <summary><b>Sample Output Accessing Cloud Run service through local proxy</b></summary>
 
-
 ```bash
 # You might be asked to install a component, for the proxy to work locally
 This command requires the `cloud-run-proxy` component to be installed. Would
@@ -236,9 +232,10 @@ Proxying to Cloud Run service [falcon-agent-service] in project [crowdstrike-xxx
 http://127.0.0.1:8080 proxies to https://falcon-agent-service-abc1234-uc.a.run.app
 
 ```
+
 </details>
 
-2. Now they can access the Cloud Run Service locally on `http://localhost:8080`
+1. Now they can access the Cloud Run Service locally on `http://localhost:8080`
 
 ### Deploying to Vertex AI Agent Engine and registering on Agentspace
 
@@ -318,7 +315,6 @@ INFO: Restoring .env file from backup: './falcon_agent/.env.bak'.
 
 ```
 
-
 </details>
 
 <br>
@@ -326,7 +322,6 @@ INFO: Restoring .env file from backup: './falcon_agent/.env.bak'.
 Once the agent is deployed on Agent Engine, you can register it on Agentspace to work with an Agent Engine Application.
 
 Make sure you have the Agent Engine Number from the previous step
-
 
 1. Go to the Agentspace [page](https://console.cloud.google.com/gen-app-builder/engines) in Google Cloud Console.
 2. Create an App (Type - Agentspace)
@@ -350,7 +345,6 @@ cd examples/adk/
 <details>
 
 <summary><b>Sample Output - Agentspace Registration</b></summary>
-
 
 ```bash
 INFO: Operation mode selected: 'agentspace_register'.
@@ -407,14 +401,14 @@ SUCCESS: cURL command completed successfully for AgentSpace registration.
 --- Operation 'agentspace_register' complete. ---
 
 ```
+
 </details>
 
 <br>
 
-> You can find more about Agentspace registration [here](https://cloud.google.com/agentspace/agentspace-enterprise/docs/assistant#create-assistant-existing-app).
+> You can find more about [Agentspace registration](https://cloud.google.com/agentspace/agentspace-enterprise/docs/assistant#create-assistant-existing-app).
 
 Now you can access the agent in the Agentspace application you created earlier.
-
 
 In case you want to delete the agent from the Agentspace application, use the following set of commands (replace the variables as needed).
 
@@ -439,17 +433,33 @@ https://discoveryengine.googleapis.com/v1alpha/projects/$PROJECT_ID/locations/gl
 
 
 ```
+
 </details>
 
 ### Securing access, Evaluating, Optimizing performance and costs
 
 #### Securing access
+
   1. For local runs make sure that you are not using a shared machine
   2. For Cloud Run deployment you can use - [Control access on an individual service or job](https://cloud.google.com/run/docs/securing/managing-access#control-service-or-job-access) - that is the default behavior for this deployment.
   3. For agent running in Agentspace - you can provide access (Predefined role - `Discovery Engine User`) selectively by navigating to Agentspace-Apps-Your App -Integration-Grant Permissions.
 
 #### Evaluating
+
 It is advised to evaluate the agent for the trajectory it takes and the output it produces - you can use [ADK documentation](https://google.github.io/adk-docs/evaluate/) to evaluate this agent. You can also test with different models.
 
 #### Optimizing performance and costs
+
 Various native performance improvements are already part of the codebase. You can further optimize the performance and reduce the LLM costs by controlling the value of the environment variable `MAX_PREV_USER_INTERACTIONS`. You can test how many previous conversations (instead of ALL conversations by default) work for your use case (recommended 5). You can also use the appropriate [Gemini Model](https://ai.google.dev/gemini-api/docs/models#model-variations) for both cost and performance optimizations.
+
+### FQL Guide Resources
+
+The agent is configured with `use_mcp_resources=True`, which enables ADK's MCP resource support. The falcon-mcp server exposes FQL (Falcon Query Language) guide resources (e.g., `falcon://detections/search/fql-guide`) that the agent can fetch on demand via the auto-discovered `load_mcp_resource` tool. This gives the LLM access to field names, filter syntax, and query examples — resulting in more accurate Falcon queries without needing to embed all FQL documentation in the system prompt.
+
+### Troubleshooting
+
+#### `Context variable not found: 'user_name'`
+
+Google ADK interprets `{variable_name}` patterns in agent instruction strings as template variables that must be resolved from session state. If your `FALCON_AGENT_PROMPT` contains curly braces, you will see this error when sending messages.
+
+**Fix:** Remove all curly braces from your prompt. The default prompt in `env.properties` is safe to use as-is.
