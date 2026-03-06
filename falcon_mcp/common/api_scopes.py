@@ -66,6 +66,18 @@ API_SCOPE_REQUIREMENTS = {
     "StartSearchV1": ["NGSIEM:write"],
     "GetSearchStatusV1": ["NGSIEM:read"],
     "StopSearchV1": ["NGSIEM:write"],
+    # Custom IOA operations
+    "query_rule_groups_full": ["Custom IOA Rules:read"],
+    "query_platformsMixin0": ["Custom IOA Rules:read"],
+    "get_platformsMixin0": ["Custom IOA Rules:read"],
+    "query_rule_types": ["Custom IOA Rules:read"],
+    "get_rule_types": ["Custom IOA Rules:read"],
+    "create_rule_groupMixin0": ["Custom IOA Rules:write"],
+    "update_rule_groupMixin0": ["Custom IOA Rules:write"],
+    "delete_rule_groupsMixin0": ["Custom IOA Rules:write"],
+    "create_rule": ["Custom IOA Rules:write"],
+    "update_rules_v2": ["Custom IOA Rules:write"],
+    "delete_rules": ["Custom IOA Rules:write"],
     # Add more mappings as needed
 }
 
