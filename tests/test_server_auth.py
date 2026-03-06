@@ -2,7 +2,7 @@
 Tests for server-level API key authentication integration.
 
 These tests verify that the FalconMCPServer correctly stores and applies
-API key authentication for HTTP transports.
+API key authentication and ASGI middleware for HTTP transports.
 """
 
 from unittest.mock import MagicMock, patch
@@ -225,3 +225,230 @@ class TestLogging:
             "API key authentication enabled" in str(call) for call in info_calls
         )
         assert not auth_log_found, f"Unexpected auth log found: {info_calls}"
+
+
+class TestTrailingSlashMiddlewareApplication:
+    """Test that trailing slash middleware is correctly applied to HTTP transports."""
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.registry")
+    @patch("falcon_mcp.server.strip_trailing_slash_middleware")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_trailing_slash_middleware_applied_to_streamable_http(
+        self, _mock_uvicorn, mock_slash_middleware, mock_registry, mock_client_class
+    ):
+        """Trailing slash middleware is applied to streamable-http transport."""
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client = MagicMock()
+        mock_client.authenticate.return_value = True
+        mock_client_class.return_value = mock_client
+        mock_registry.get_module_names.return_value = []
+        mock_registry.get_available_modules.return_value = {}
+
+        mock_slash_middleware.return_value = MagicMock()
+
+        server = FalconMCPServer()
+        server.run(transport="streamable-http")
+
+        mock_slash_middleware.assert_called_once()
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.registry")
+    @patch("falcon_mcp.server.strip_trailing_slash_middleware")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_trailing_slash_middleware_applied_to_sse(
+        self, _mock_uvicorn, mock_slash_middleware, mock_registry, mock_client_class
+    ):
+        """Trailing slash middleware is applied to SSE transport."""
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client = MagicMock()
+        mock_client.authenticate.return_value = True
+        mock_client_class.return_value = mock_client
+        mock_registry.get_module_names.return_value = []
+        mock_registry.get_available_modules.return_value = {}
+
+        mock_slash_middleware.return_value = MagicMock()
+
+        server = FalconMCPServer()
+        server.run(transport="sse")
+
+        mock_slash_middleware.assert_called_once()
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.registry")
+    @patch("falcon_mcp.server.strip_trailing_slash_middleware")
+    def test_trailing_slash_middleware_not_applied_to_stdio(
+        self, mock_slash_middleware, mock_registry, mock_client_class
+    ):
+        """Trailing slash middleware is NOT applied for stdio transport."""
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client = MagicMock()
+        mock_client.authenticate.return_value = True
+        mock_client_class.return_value = mock_client
+        mock_registry.get_module_names.return_value = []
+        mock_registry.get_available_modules.return_value = {}
+
+        server = FalconMCPServer()
+        server.server.run = MagicMock()
+        server.run(transport="stdio")
+
+        mock_slash_middleware.assert_not_called()
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.registry")
+    @patch("falcon_mcp.server.auth_middleware")
+    @patch("falcon_mcp.server.normalize_content_type_middleware")
+    @patch("falcon_mcp.server.strip_trailing_slash_middleware")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_middleware_ordering_slash_before_auth(
+        self,
+        mock_uvicorn,
+        mock_slash_middleware,
+        mock_ct_middleware,
+        mock_auth_middleware,
+        mock_registry,
+        mock_client_class,
+    ):
+        """Trailing slash middleware wraps base app, then content-type, then auth.
+
+        The ordering ensures: request -> auth -> normalize_ct -> trailing_slash_strip -> app
+        """
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client = MagicMock()
+        mock_client.authenticate.return_value = True
+        mock_client_class.return_value = mock_client
+        mock_registry.get_module_names.return_value = []
+        mock_registry.get_available_modules.return_value = {}
+
+        # Track the call chain
+        slash_wrapped = MagicMock(name="slash_wrapped_app")
+        ct_wrapped = MagicMock(name="ct_wrapped_app")
+        auth_wrapped = MagicMock(name="auth_wrapped_app")
+        mock_slash_middleware.return_value = slash_wrapped
+        mock_ct_middleware.return_value = ct_wrapped
+        mock_auth_middleware.return_value = auth_wrapped
+
+        server = FalconMCPServer(api_key="test-key")
+        server.run(transport="streamable-http")
+
+        # strip_trailing_slash_middleware is called with the base app
+        mock_slash_middleware.assert_called_once()
+        base_app = mock_slash_middleware.call_args[0][0]
+        assert base_app is not None
+
+        # normalize_content_type_middleware wraps the slash-wrapped app
+        mock_ct_middleware.assert_called_once_with(slash_wrapped)
+
+        # auth_middleware is called with the ct-wrapped app
+        mock_auth_middleware.assert_called_once_with(ct_wrapped, "test-key")
+
+        # uvicorn gets the fully wrapped app (auth on top)
+        uvicorn_app = mock_uvicorn.run.call_args[0][0]
+        assert uvicorn_app == auth_wrapped
+
+
+class TestContentTypeMiddlewareApplication:
+    """Test that content-type normalization middleware is correctly applied."""
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.registry")
+    @patch("falcon_mcp.server.normalize_content_type_middleware")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_ct_middleware_applied_to_streamable_http(
+        self, _mock_uvicorn, mock_ct_middleware, mock_registry, mock_client_class
+    ):
+        """Content-type normalization middleware is applied to streamable-http."""
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client = MagicMock()
+        mock_client.authenticate.return_value = True
+        mock_client_class.return_value = mock_client
+        mock_registry.get_module_names.return_value = []
+        mock_registry.get_available_modules.return_value = {}
+
+        mock_ct_middleware.return_value = MagicMock()
+
+        server = FalconMCPServer()
+        server.run(transport="streamable-http")
+
+        mock_ct_middleware.assert_called_once()
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.registry")
+    @patch("falcon_mcp.server.normalize_content_type_middleware")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_ct_middleware_applied_to_sse(
+        self, _mock_uvicorn, mock_ct_middleware, mock_registry, mock_client_class
+    ):
+        """Content-type normalization middleware is applied to SSE transport."""
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client = MagicMock()
+        mock_client.authenticate.return_value = True
+        mock_client_class.return_value = mock_client
+        mock_registry.get_module_names.return_value = []
+        mock_registry.get_available_modules.return_value = {}
+
+        mock_ct_middleware.return_value = MagicMock()
+
+        server = FalconMCPServer()
+        server.run(transport="sse")
+
+        mock_ct_middleware.assert_called_once()
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.registry")
+    @patch("falcon_mcp.server.normalize_content_type_middleware")
+    def test_ct_middleware_not_applied_to_stdio(
+        self, mock_ct_middleware, mock_registry, mock_client_class
+    ):
+        """Content-type normalization middleware is NOT applied for stdio transport."""
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client = MagicMock()
+        mock_client.authenticate.return_value = True
+        mock_client_class.return_value = mock_client
+        mock_registry.get_module_names.return_value = []
+        mock_registry.get_available_modules.return_value = {}
+
+        server = FalconMCPServer()
+        server.server.run = MagicMock()
+        server.run(transport="stdio")
+
+        mock_ct_middleware.assert_not_called()
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.registry")
+    @patch("falcon_mcp.server.normalize_content_type_middleware")
+    @patch("falcon_mcp.server.strip_trailing_slash_middleware")
+    @patch("falcon_mcp.server.uvicorn")
+    def test_ct_middleware_wraps_slash_middleware_result(
+        self,
+        _mock_uvicorn,
+        mock_slash_middleware,
+        mock_ct_middleware,
+        mock_registry,
+        mock_client_class,
+    ):
+        """normalize_content_type wraps the strip_trailing_slash result."""
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client = MagicMock()
+        mock_client.authenticate.return_value = True
+        mock_client_class.return_value = mock_client
+        mock_registry.get_module_names.return_value = []
+        mock_registry.get_available_modules.return_value = {}
+
+        slash_wrapped = MagicMock(name="slash_wrapped_app")
+        mock_slash_middleware.return_value = slash_wrapped
+        mock_ct_middleware.return_value = MagicMock()
+
+        server = FalconMCPServer()
+        server.run(transport="streamable-http")
+
+        # normalize_content_type is called with the slash-wrapped app
+        mock_ct_middleware.assert_called_once_with(slash_wrapped)

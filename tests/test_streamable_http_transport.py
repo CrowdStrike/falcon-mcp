@@ -14,8 +14,12 @@ class TestStreamableHttpTransport(unittest.TestCase):
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
     @patch("falcon_mcp.server.uvicorn")
+    @patch("falcon_mcp.server.strip_trailing_slash_middleware", side_effect=lambda app: app)
+    @patch("falcon_mcp.server.normalize_content_type_middleware", side_effect=lambda app: app)
     def test_streamable_http_transport_initialization(
         self,
+        _mock_ct_mw,
+        _mock_slash_mw,
         mock_uvicorn,
         mock_fastmcp,
         mock_client,
@@ -180,8 +184,12 @@ class TestStreamableHttpTransport(unittest.TestCase):
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
     @patch("falcon_mcp.server.uvicorn")
+    @patch("falcon_mcp.server.strip_trailing_slash_middleware", side_effect=lambda app: app)
+    @patch("falcon_mcp.server.normalize_content_type_middleware", side_effect=lambda app: app)
     def test_streamable_http_default_parameters(
         self,
+        _mock_ct_mw,
+        _mock_slash_mw,
         mock_uvicorn,
         mock_fastmcp,
         mock_client,
@@ -242,8 +250,12 @@ class TestStreamableHttpTransport(unittest.TestCase):
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
     @patch("falcon_mcp.server.uvicorn")
+    @patch("falcon_mcp.server.strip_trailing_slash_middleware", side_effect=lambda app: app)
+    @patch("falcon_mcp.server.normalize_content_type_middleware", side_effect=lambda app: app)
     def test_streamable_http_custom_parameters(
         self,
+        _mock_ct_mw,
+        _mock_slash_mw,
         mock_uvicorn,
         mock_fastmcp,
         mock_client,
@@ -276,8 +288,12 @@ class TestStreamableHttpTransport(unittest.TestCase):
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
     @patch("falcon_mcp.server.uvicorn")
+    @patch("falcon_mcp.server.strip_trailing_slash_middleware", side_effect=lambda app: app)
+    @patch("falcon_mcp.server.normalize_content_type_middleware", side_effect=lambda app: app)
     def test_streamable_http_logging_levels(
         self,
+        _mock_ct_mw,
+        _mock_slash_mw,
         mock_uvicorn,
         mock_fastmcp,
         mock_client,
