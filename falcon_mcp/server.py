@@ -16,7 +16,12 @@ from mcp.server.fastmcp import FastMCP
 
 from falcon_mcp import registry
 from falcon_mcp.client import FalconClient
-from falcon_mcp.common.auth import ASGIApp, auth_middleware
+from falcon_mcp.common.auth import (
+    ASGIApp,
+    auth_middleware,
+    normalize_content_type_middleware,
+    strip_trailing_slash_middleware,
+)
 from falcon_mcp.common.logging import configure_logging, get_logger
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
 
@@ -191,53 +196,39 @@ class FalconMCPServer:
         """Lists all available modules in the falcon-mcp server."""
         return {"modules": registry.get_module_names()}
 
+    def _run_http_transport(self, app: ASGIApp) -> None:
+        """Apply middleware and start uvicorn for an HTTP transport.
+
+        Args:
+            app: The ASGI application from FastMCP
+        """
+        app = strip_trailing_slash_middleware(app)
+        app = normalize_content_type_middleware(app)
+        if self.api_key:
+            app = auth_middleware(app, self.api_key)
+            logger.info("API key authentication enabled")
+        uvicorn.run(
+            app,
+            host=self.host,
+            port=self.port,
+            log_level="debug" if self.debug else "info",
+        )
+
     def run(self, transport: TransportType = "stdio") -> None:
         """Run the MCP server.
 
         Args:
             transport: Transport protocol to use ("stdio", "sse", or "streamable-http")
         """
-        app: ASGIApp
-        if transport == "streamable-http":
-            # For streamable-http, use uvicorn directly for custom host/port
-            logger.info("Starting streamable-http server on %s:%d", self.host, self.port)
-
-            # Get the ASGI app from FastMCP (handles /mcp path automatically)
-            app = self.server.streamable_http_app()
-
-            # Add API key authentication middleware if configured
-            if self.api_key:
-                app = auth_middleware(app, self.api_key)
-                logger.info("API key authentication enabled")
-
-            # Run with uvicorn for custom host/port configuration
-            uvicorn.run(
-                app,
-                host=self.host,
-                port=self.port,
-                log_level="info" if not self.debug else "debug",
+        if transport in ("streamable-http", "sse"):
+            logger.info("Starting %s server on %s:%d", transport, self.host, self.port)
+            app_method = (
+                self.server.streamable_http_app
+                if transport == "streamable-http"
+                else self.server.sse_app
             )
-        elif transport == "sse":
-            # For sse, use uvicorn directly for custom host/port (same pattern as streamable-http)
-            logger.info("Starting sse server on %s:%d", self.host, self.port)
-
-            # Get the ASGI app from FastMCP
-            app = self.server.sse_app()
-
-            # Add API key authentication middleware if configured
-            if self.api_key:
-                app = auth_middleware(app, self.api_key)
-                logger.info("API key authentication enabled")
-
-            # Run with uvicorn for custom host/port configuration
-            uvicorn.run(
-                app,
-                host=self.host,
-                port=self.port,
-                log_level="info" if not self.debug else "debug",
-            )
+            self._run_http_transport(app_method())
         else:
-            # For stdio, use the default FastMCP run method (no host/port needed)
             self.server.run(transport)
 
 
