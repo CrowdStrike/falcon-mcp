@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.8.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.7.0...v0.8.0) (2026-03-06)
+
+
+### Features
+
+* **modules:** add MCP tool annotations for all tools ([#303](https://github.com/CrowdStrike/falcon-mcp/issues/303)) ([339e7c4](https://github.com/CrowdStrike/falcon-mcp/commit/339e7c4b723bed7b5759a9f9a5c2ae07d2094d5b)), closes [#229](https://github.com/CrowdStrike/falcon-mcp/issues/229)
+
+
+### Bug Fixes
+
+* handle trailing-slash redirects and json-rpc content-type in HTTP transports ([#308](https://github.com/CrowdStrike/falcon-mcp/issues/308)) ([b4260b7](https://github.com/CrowdStrike/falcon-mcp/commit/b4260b7c862c0e98e5683f0b1d5f643e63f43e14))
+
+
+### Refactoring
+
+* **examples/adk:** simplify agent.py and clean up documentation ([#304](https://github.com/CrowdStrike/falcon-mcp/issues/304)) ([4baef37](https://github.com/CrowdStrike/falcon-mcp/commit/4baef37686abe74595f10dc08358de7030baa67b))
+
 ## [0.7.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.6.0...v0.7.0) (2026-02-26)
 
 
