@@ -33,6 +33,14 @@ API_SCOPE_REQUIREMENTS = {
     "indicator_get_v1": ["IOC Management:read"],
     "indicator_create_v1": ["IOC Management:write"],
     "indicator_delete_v1": ["IOC Management:write"],
+    # Firewall Management operations
+    "query_rules": ["Firewall Management:read"],
+    "get_rules": ["Firewall Management:read"],
+    "query_rule_groups": ["Firewall Management:read"],
+    "get_rule_groups": ["Firewall Management:read"],
+    "query_policy_rules": ["Firewall Management:read"],
+    "create_rule_group": ["Firewall Management:write"],
+    "delete_rule_groups": ["Firewall Management:write"],
     # Spotlight operations
     "combinedQueryVulnerabilities": ["Vulnerabilities:read"],
     # Discover operations
