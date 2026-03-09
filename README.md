@@ -29,6 +29,7 @@
   - [NGSIEM Module](#ngsiem-module)
   - [Intel Module](#intel-module)
   - [IOC Module](#ioc-module)
+  - [Firewall Management Module](#firewall-management-module)
   - [Scheduled Reports Module](#scheduled-reports-module)
   - [Sensor Usage Module](#sensor-usage-module)
   - [Serverless Module](#serverless-module)
@@ -94,6 +95,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **NGSIEM** | `NGSIEM:read`<br>`NGSIEM:write` | Execute CQL queries against Next-Gen SIEM |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
 | **IOC** | `IOC Management:read`<br>`IOC Management:write` | Search, create, and remove custom IOCs using IOC Service Collection endpoints |
+| **Firewall Management** | `Firewall Management:read`<br>`Firewall Management:write` | Search and manage firewall rules and rule groups |
 | **Scheduled Reports** | `Scheduled Reports:read` | Get details about scheduled reports and searches, run reports on demand, and download report files |
 | **Sensor Usage** | `Sensor Usage:read` | Access and analyze sensor usage data |
 | **Serverless** | `Falcon Container Image:read` | Search for vulnerabilities in serverless functions across cloud service providers |
@@ -291,6 +293,27 @@ Provides tools for managing custom indicators of compromise (IOCs) with Falcon I
 - `falcon://ioc/search/fql-guide`: FQL documentation and examples for IOC searches
 
 **Use Cases**: IOC lifecycle management, automated IOC onboarding, IOC cleanup and hygiene workflows
+
+### Firewall Management Module
+
+**API Scopes Required**:
+
+- `Firewall Management:read`
+- `Firewall Management:write`
+
+Provides tools for searching and managing Falcon firewall rule entities:
+
+- `falcon_search_firewall_rules`: Search firewall rules and return full rule details
+- `falcon_search_firewall_rule_groups`: Search firewall rule groups and return full group details
+- `falcon_search_firewall_policy_rules`: Search rules within a specific policy container
+- `falcon_create_firewall_rule_group`: Create a firewall rule group using convenience fields or a full body payload
+- `falcon_delete_firewall_rule_groups`: Delete firewall rule groups by ID
+
+**Resources**:
+
+- `falcon://firewall/rules/fql-guide`: FQL documentation and examples for firewall rule searches
+
+**Use Cases**: Firewall policy hygiene, rule group lifecycle management, rule auditing, policy-specific rule analysis
 
 ### Sensor Usage Module
 
