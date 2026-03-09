@@ -20,6 +20,7 @@
 - [Available Modules, Tools \& Resources](#available-modules-tools--resources)
   - [Cloud Security Module](#cloud-security-module)
   - [Core Functionality (Built into Server)](#core-functionality-built-into-server)
+  - [Custom IOA Module](#custom-ioa-module)
   - [Detections Module](#detections-module)
   - [Discover Module](#discover-module)
   - [Hosts Module](#hosts-module)
@@ -85,6 +86,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | - | - | - |
 | **Cloud Security** | `Falcon Container Image:read` | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
 | **Core** | _No additional scopes_ | Basic connectivity and system information |
+| **Custom IOA** | `Custom IOA Rules:read`<br>`Custom IOA Rules:write` | Create and manage Custom IOA behavioral detection rules and rule groups |
 | **Detections** | `Alerts:read` | Find and analyze detections to understand malicious activity |
 | **Discover** | `Assets:read` | Search and analyze application inventory across your environment |
 | **Hosts** | `Hosts:read` | Manage and query host/device information |
@@ -135,6 +137,31 @@ The server provides core tools for interacting with the Falcon API:
 - `falcon_list_enabled_modules`: Lists enabled modules in the falcon-mcp server
     > These modules are determined by the `--modules` [flag](#module-configuration) when starting the server. If no modules are specified, all available modules are enabled.
 - `falcon_list_modules`: Lists all available modules in the falcon-mcp server
+
+### Custom IOA Module
+
+**API Scopes Required**:
+
+- `Custom IOA Rules:read`
+- `Custom IOA Rules:write`
+
+Provides tools for managing Custom IOA (Indicators of Attack) behavioral detection rules and rule groups:
+
+- `search_ioa_rule_groups`: Search Custom IOA rule groups and return full details including their rules
+- `get_ioa_platforms`: Get all available platforms for Custom IOA rule groups
+- `get_ioa_rule_types`: Get all available Custom IOA rule types with fields and disposition IDs
+- `create_ioa_rule_group`: Create a new Custom IOA rule group for a specific platform
+- `update_ioa_rule_group`: Update an existing Custom IOA rule group (name, description, enabled state)
+- `delete_ioa_rule_groups`: Delete Custom IOA rule groups by ID
+- `create_ioa_rule`: Create a new behavioral detection rule within a rule group
+- `update_ioa_rule`: Update an existing behavioral detection rule
+- `delete_ioa_rules`: Delete behavioral detection rules from a rule group
+
+**Resources**:
+
+- `falcon://custom-ioa/rule-groups/fql-guide`: FQL documentation and examples for IOA rule group searches
+
+**Use Cases**: Custom behavioral detection management, IOA rule lifecycle, platform-specific detection rules, security policy enforcement
 
 ### Detections Module
 
