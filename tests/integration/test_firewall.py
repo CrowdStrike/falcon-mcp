@@ -116,3 +116,47 @@ class TestFirewallIntegration(BaseIntegrationTest):
                 result, min_length=0, context="search_firewall_rule_groups with filter"
             )
 
+    def test_search_firewall_policy_rules(self):
+        """Test searching policy rules using a discovered rule group ID.
+
+        Uses dynamic ID discovery: first searches for a rule group,
+        then uses its ID to search for policy rules.
+        """
+        groups_result = self.call_method(
+            self.module.search_firewall_rule_groups,
+            limit=1,
+        )
+
+        if not groups_result or (isinstance(groups_result, list) and len(groups_result) == 0):
+            self.skip_with_warning(
+                "No firewall rule groups available",
+                context="test_search_firewall_policy_rules",
+            )
+
+        group_id = self.get_first_id(groups_result)
+        if not group_id:
+            self.skip_with_warning(
+                "Could not extract rule group ID from search results",
+                context="test_search_firewall_policy_rules",
+            )
+
+        result = self.call_method(
+            self.module.search_firewall_policy_rules,
+            policy_id=group_id,
+            limit=3,
+        )
+
+        # Gracefully handle cases where no firewall policy matches the ID
+        if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict):
+            if "error" in result[0]:
+                self.skip_with_warning(
+                    "No firewall policy found for the discovered ID",
+                    context="test_search_firewall_policy_rules",
+                )
+
+        self.assert_no_error(result, context="search_firewall_policy_rules")
+        if isinstance(result, list):
+            self.assert_valid_list_response(
+                result, min_length=0, context="search_firewall_policy_rules"
+            )
+

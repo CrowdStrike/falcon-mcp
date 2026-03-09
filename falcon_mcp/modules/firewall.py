@@ -88,7 +88,7 @@ class FirewallModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description="FQL filter for firewall rule search. IMPORTANT: use the `falcon://firewall/rules/fql-guide` resource when building this filter parameter.",
-            examples={"enabled:true", "platform:'windows'+name:'Block*'"},
+            examples=["enabled:true", "platform:'windows'+name:'Block*'"],
         ),
         limit: int = Field(
             default=10,
@@ -107,7 +107,7 @@ class FirewallModule(BaseModule):
 
                 Supported examples: name.asc, modified_on.desc, platform|asc
             """).strip(),
-            examples={"modified_on.desc", "name|asc"},
+            examples=["modified_on.desc", "name|asc"],
         ),
         q: str | None = Field(
             default=None,
@@ -160,7 +160,7 @@ class FirewallModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description="FQL filter for firewall rule group search. IMPORTANT: use the `falcon://firewall/rules/fql-guide` resource when building this filter parameter.",
-            examples={"enabled:true", "platform:'windows'+name:'Default*'"},
+            examples=["enabled:true", "platform:'windows'+name:'Default*'"],
         ),
         limit: int = Field(
             default=10,

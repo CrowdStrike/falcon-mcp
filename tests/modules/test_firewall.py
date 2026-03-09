@@ -282,6 +282,93 @@ class TestFirewallModule(TestModules):
         self.assertIn("error", result[0])
         self.mock_client.command.assert_not_called()
 
+    def test_search_firewall_rules_query_error_with_filter(self):
+        """Test query error with filter returns FQL-wrapped response."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid filter syntax"}]},
+        }
+
+        result = self.module.search_firewall_rules(
+            filter="bad_field:'value'",
+            limit=10,
+            offset=None,
+            sort=None,
+            q=None,
+            after=None,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("fql_guide", result)
+        self.assertIn("hint", result)
+
+    def test_search_firewall_rules_query_error_without_filter(self):
+        """Test query error without filter returns plain error list."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Bad request"}]},
+        }
+
+        result = self.module.search_firewall_rules(
+            filter=None,
+            limit=10,
+            offset=None,
+            sort=None,
+            q=None,
+            after=None,
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
+
+    def test_search_firewall_rules_details_error(self):
+        """Test details step error returns plain error list."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["rule-id-1"]},
+        }
+        details_response = {
+            "status_code": 500,
+            "body": {"errors": [{"message": "Internal server error"}]},
+        }
+        self.mock_client.command.side_effect = [query_response, details_response]
+
+        result = self.module.search_firewall_rules(
+            filter="enabled:true",
+            limit=10,
+            offset=None,
+            sort=None,
+            q=None,
+            after=None,
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
+
+    def test_search_firewall_rule_groups_query_error_with_filter(self):
+        """Test rule groups query error with filter returns FQL-wrapped response."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid filter"}]},
+        }
+
+        result = self.module.search_firewall_rule_groups(
+            filter="bad_field:'value'",
+            limit=10,
+            offset=None,
+            sort=None,
+            q=None,
+            after=None,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("fql_guide", result)
+        self.assertIn("hint", result)
+
 
 if __name__ == "__main__":
     unittest.main()
