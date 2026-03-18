@@ -251,7 +251,7 @@ class TestCloudModule(TestModules):
         self.assertIn("fql_guide", result)
         self.assertIn("filter_used", result)
         self.assertIn("hint", result)
-        self.assertIn("tags.'key':'value'", result["fql_guide"])
+        self.assertIn("tag_key", result["fql_guide"])
 
     def test_search_cspm_assets_empty_returns_fql_guide(self):
         """Test CSPM assets search returns FQL guide on empty results."""

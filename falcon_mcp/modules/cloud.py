@@ -267,7 +267,7 @@ class CloudModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/cspm-assets/fql-guide` resource when building this filter parameter.",
-            examples=["cloud_provider:'AWS'", "tags.'Environment':'Production'"],
+            examples=["cloud_provider:'AWS'", "tag_key:'Environment'+tag_value:'Production'"],
         ),
         limit: int = Field(
             default=100,

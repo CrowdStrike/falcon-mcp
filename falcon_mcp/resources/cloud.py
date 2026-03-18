@@ -648,16 +648,43 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         """
     ),
     (
+        "tag_key",
+        "String",
+        """
+        Filter by cloud resource tag key name.
+
+        Ex: tag_key:'Environment'
+        Ex: tag_key:'CostCenter'
+        """
+    ),
+    (
+        "tag_value",
+        "String",
+        """
+        Filter by cloud resource tag value.
+
+        Ex: tag_value:'Production'
+        Ex: tag_value:'*web*'
+        """
+    ),
+    (
         "tags",
         "String",
         """
-        AWS/Azure/GCP tags in key-value format.
-        IMPORTANT: Use tags.'key':'value' syntax with single quotes.
+        Filter by tag in key:value format.
 
-        Ex: tags.'Environment':'Production'
-        Ex: tags.'Application':'*web*'
-        Ex: tags.'Owner':'CloudOps'+tags.'CostCenter':'12345'
-        Ex: tags.'Team':*  (tag key exists, any value)
+        Ex: tags:'Environment:Production'
+        Ex: tags:'CostCenter:12345'
+        """
+    ),
+    (
+        "tags_string",
+        "String",
+        """
+        Filter by tag string representation. Supports wildcards.
+
+        Ex: tags_string:'*Production*'
+        Ex: tags_string:'*Environment*'
         """
     ),
     (
@@ -719,6 +746,96 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         Ex: location:'global'
         """
     ),
+    (
+        "highest_severity",
+        "String",
+        """
+        Highest severity finding associated with the asset.
+        Values: critical, high, medium, informational.
+
+        Ex: highest_severity:'critical'
+        Ex: highest_severity:['critical', 'high']
+        """
+    ),
+    (
+        "publicly_exposed",
+        "Boolean",
+        """
+        Whether the resource is publicly exposed.
+
+        Ex: publicly_exposed:true
+        """
+    ),
+    (
+        "status",
+        "String",
+        """
+        Asset lifecycle status.
+        Values: ResourceDiscovered, ResourceUpdated, ResourceDeleted.
+
+        Ex: status:'ResourceDiscovered'
+        """
+    ),
+    (
+        "instance_state",
+        "String",
+        """
+        Instance state for compute resources.
+
+        Ex: instance_state:'running'
+        Ex: instance_state:'stopped'
+        """
+    ),
+    (
+        "managed_by",
+        "String",
+        """
+        How the asset is managed by CrowdStrike.
+        Values: Sensor, Snapshot, Unmanaged.
+
+        Ex: managed_by:'Sensor'
+        Ex: managed_by:'Unmanaged'
+        """
+    ),
+    (
+        "instance_id",
+        "String",
+        """
+        Cloud instance identifier.
+
+        Ex: instance_id:'i-0abc123def456'
+        """
+    ),
+    (
+        "platform_name",
+        "String",
+        """
+        OS platform name.
+
+        Ex: platform_name:'Linux'
+        Ex: platform_name:'Windows'
+        """
+    ),
+    (
+        "ioa_count",
+        "Number",
+        """
+        Count of Indicators of Attack associated with the asset.
+
+        Ex: ioa_count:>0
+        Ex: ioa_count:>=5
+        """
+    ),
+    (
+        "iom_count",
+        "Number",
+        """
+        Count of Indicators of Misconfiguration associated with the asset.
+
+        Ex: iom_count:>0
+        Ex: iom_count:>=10
+        """
+    ),
 ]
 
 SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION = (
@@ -731,16 +848,16 @@ SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION = (
 === falcon_search_cspm_assets FQL filter examples ===
 
 # Find AWS production assets by tag
-tags.'Environment':'Production'+cloud_provider:'AWS'
+tag_key:'Environment'+tag_value:'Production'+cloud_provider:'AWS'
 
 # Find EC2 instances
 resource_type:'AWS::EC2::Instance'
 
 # Find assets by multiple tags (AND condition)
-tags.'Owner':'CloudOps'+tags.'CostCenter':'12345'
+tag_key:'Owner'+tag_value:'CloudOps'
 
-# Find assets with any value for a specific tag key
-tags.'Team':*
+# Find assets using combined tag format
+tags:'Environment:Production'
 
 # Find assets by cloud provider and region
 cloud_provider:'AWS'+region:['us-east-1', 'us-west-2']
@@ -757,40 +874,53 @@ resource_type:*'*S3*'
 # Find assets by account and service
 account_name:'production-account'+service:'Lambda'
 
+# Find publicly exposed critical-severity assets
+publicly_exposed:true+highest_severity:'critical'
+
+# Find running instances managed by Sensor
+instance_state:'running'+managed_by:'Sensor'
+
+# Find assets with active misconfigurations
+iom_count:>0+cloud_provider:'AWS'
+
 === Cloud Resource Tag Filtering Syntax ===
 
-Cloud resource tags (AWS/Azure/GCP) use a special nested syntax: tags.'key':'value'
+Cloud resource tags (AWS/Azure/GCP) use separate filter fields for keys and values.
 
-IMPORTANT RULES:
-• Always use single quotes: tags.'Environment':'Production'
-• Tag keys and values are case-sensitive: 'Production' ≠ 'production'
-• Wildcards supported: tags.'Application':'*web*'
-• Multiple tags with AND: tags.'Env':'Prod'+tags.'Owner':'Ops'
-• Check if tag exists: tags.'CostCenter':*
-• Combine with other filters: tags.'Env':'Prod'+cloud_provider:'AWS'
+AVAILABLE TAG FIELDS:
+• tag_key — Filter by tag key name: tag_key:'Environment'
+• tag_value — Filter by tag value: tag_value:'Production'
+• tags — Filter by key:value pair: tags:'Environment:Production'
+• tags_string — Filter by tag string with wildcards: tags_string:'*Production*'
 
 EXAMPLES:
-tags.'Environment':'Production'              # Exact match
-tags.'Application':'*web*'                   # Contains 'web'
-tags.'Owner':'CloudOps'+tags.'Env':'Prod'    # Multiple tags
-tags.'CostCenter':*                          # Tag key exists
-cloud_provider:'AWS'+tags.'Team':'Security'  # Tags + provider
+tag_key:'Environment'+tag_value:'Production'   # Key + value match
+tags:'Environment:Production'                  # Combined key:value format
+tags_string:'*Production*'                     # Wildcard tag search
+tag_key:'CostCenter'                           # Any asset with this tag key
+tag_key:'Env'+tag_value:'Prod'+cloud_provider:'AWS'  # Tags + provider
 
 === Common Use Cases ===
 
 # Compliance: Find production assets for audit
-tags.'Environment':'Production'+tags.'Compliance':'PCI'
+tag_key:'Environment'+tag_value:'Production'+tag_key:'Compliance'+tag_value:'PCI'
 
 # Cost Management: Find resources by cost center
-tags.'CostCenter':'12345'+active:true
+tags:'CostCenter:12345'+active:true
 
-# Security: Find exposed compute resources
-service_category:'Compute'+cloud_provider:'AWS'
+# Security: Find publicly exposed compute resources
+service_category:'Compute'+publicly_exposed:true+cloud_provider:'AWS'
+
+# Security: Find assets with critical findings
+highest_severity:'critical'+managed_by:'Sensor'
 
 # Multi-region inventory
 cloud_provider:'AWS'+region:['us-east-1', 'eu-west-1']
 
 # Recent changes: Assets updated in last 7 days
 updated_at:>'2025-03-11T00:00:00Z'
+
+# Find unmanaged assets with IOAs
+managed_by:'Unmanaged'+ioa_count:>0
 """
 )

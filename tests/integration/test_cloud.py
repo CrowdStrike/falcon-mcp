@@ -174,12 +174,12 @@ class TestCloudIntegration(BaseIntegrationTest):
     def test_search_cspm_assets_with_tag_filter(self):
         """Test search_cspm_assets with tag FQL filter syntax.
 
-        Validates the tags.'key':'value' FQL syntax is accepted by the API.
+        Validates the tag_key FQL syntax is accepted by the API.
         May return empty results if no assets have this tag.
         """
         result = self.call_method(
             self.module.search_cspm_assets,
-            filter="tags.'Environment':*",
+            filter="tag_key:'Environment'",
             limit=10,
         )
 
