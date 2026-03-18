@@ -28,6 +28,7 @@ class FalconClient:
         user_agent_comment: str | None = None,
         client_id: str | None = None,
         client_secret: str | None = None,
+        member_cid: str | None = None,
     ):
         """Initialize the Falcon client.
 
@@ -37,6 +38,7 @@ class FalconClient:
             user_agent_comment: Additional information to include in the User-Agent comment section
             client_id: Falcon API Client ID (defaults to FALCON_CLIENT_ID env var)
             client_secret: Falcon API Client Secret (defaults to FALCON_CLIENT_SECRET env var)
+            member_cid: Child CID for Flight Control (MSSP) support (defaults to FALCON_MEMBER_CID env var)
         """
         # Get credentials from parameters or environment variables (parameters take precedence)
         self.client_id = client_id or os.environ.get("FALCON_CLIENT_ID")
@@ -48,6 +50,7 @@ class FalconClient:
         self.user_agent_comment = user_agent_comment or os.environ.get(
             "FALCON_MCP_USER_AGENT_COMMENT"
         )
+        self.member_cid = member_cid or os.environ.get("FALCON_MEMBER_CID")
 
         if not self.client_id or not self.client_secret:
             raise ValueError(
@@ -55,16 +58,25 @@ class FalconClient:
                 "parameters or set FALCON_CLIENT_ID and FALCON_CLIENT_SECRET environment variables."
             )
 
+        # Build APIHarnessV2 initialization parameters
+        api_params = {
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "base_url": self.base_url,
+            "debug": debug,
+            "user_agent": self.get_user_agent(),
+        }
+
+        # Only include member_cid if it's provided
+        if self.member_cid:
+            api_params["member_cid"] = self.member_cid
+
         # Initialize the Falcon API client using APIHarnessV2
-        self.client = APIHarnessV2(
-            client_id=self.client_id,
-            client_secret=self.client_secret,
-            base_url=self.base_url,
-            debug=debug,
-            user_agent=self.get_user_agent(),
-        )
+        self.client = APIHarnessV2(**api_params)
 
         logger.debug("Initialized Falcon client with base URL: %s", self.base_url)
+        if self.member_cid:
+            logger.debug("Flight Control member_cid: %s", self.member_cid)
 
     def authenticate(self) -> bool:
         """Authenticate with the Falcon API.

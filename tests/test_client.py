@@ -315,6 +315,88 @@ class TestFalconClient(unittest.TestCase):
         call_args = mock_apiharness.call_args[1]
         self.assertEqual(call_args["user_agent"], expected)
 
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
+    def test_client_initialization_with_member_cid(
+        self, mock_apiharness, mock_environ_get
+    ):
+        """Test client initialization with member_cid parameter."""
+        # Setup mock environment variables
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret",
+        }.get(key, default)
+
+        # Create client with member_cid parameter
+        _client = FalconClient(member_cid="abc123-child-cid-xyz")
+
+        # Verify APIHarnessV2 was initialized with member_cid
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["member_cid"], "abc123-child-cid-xyz")
+
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
+    def test_client_initialization_with_member_cid_env_var(
+        self, mock_apiharness, mock_environ_get
+    ):
+        """Test client initialization with FALCON_MEMBER_CID environment variable."""
+        # Setup mock environment variables including member_cid
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret",
+            "FALCON_MEMBER_CID": "env-child-cid-456",
+        }.get(key, default)
+
+        # Create client without member_cid parameter (should use env var)
+        _client = FalconClient()
+
+        # Verify APIHarnessV2 was initialized with member_cid from env var
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["member_cid"], "env-child-cid-456")
+
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
+    def test_client_member_cid_parameter_overrides_env_var(
+        self, mock_apiharness, mock_environ_get
+    ):
+        """Test that member_cid parameter takes precedence over environment variable."""
+        # Setup mock environment variables with both member_cid
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret",
+            "FALCON_MEMBER_CID": "env-child-cid",
+        }.get(key, default)
+
+        # Create client with member_cid parameter (should override env var)
+        _client = FalconClient(member_cid="param-child-cid")
+
+        # Verify APIHarnessV2 was initialized with member_cid from parameter, not env var
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["member_cid"], "param-child-cid")
+
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
+    def test_client_initialization_without_member_cid(
+        self, mock_apiharness, mock_environ_get
+    ):
+        """Test client initialization without member_cid (parent CID mode)."""
+        # Setup mock environment variables without member_cid
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret",
+        }.get(key, default)
+
+        # Create client without member_cid
+        _client = FalconClient()
+
+        # Verify APIHarnessV2 was initialized without member_cid
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertNotIn("member_cid", call_args)
+
 
 if __name__ == "__main__":
     unittest.main()

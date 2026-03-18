@@ -46,6 +46,7 @@ class FalconMCPServer:
         api_key: str | None = None,
         host: str = "127.0.0.1",
         port: int = 8000,
+        member_cid: str | None = None,
     ):
         """Initialize the Falcon MCP server.
 
@@ -60,6 +61,7 @@ class FalconMCPServer:
             api_key: API key for HTTP transport authentication (x-api-key header)
             host: Host to bind to for HTTP transports (default: 127.0.0.1)
             port: Port to listen on for HTTP transports (default: 8000)
+            member_cid: Child CID for Flight Control (MSSP) support (defaults to FALCON_MEMBER_CID env var)
         """
         # Store configuration
         self.base_url = base_url
@@ -83,6 +85,7 @@ class FalconMCPServer:
             user_agent_comment=self.user_agent_comment,
             client_id=client_id,
             client_secret=client_secret,
+            member_cid=member_cid,
         )
 
         # Authenticate with the Falcon API
@@ -343,6 +346,13 @@ def parse_args() -> argparse.Namespace:
         help="API key for HTTP transport authentication (x-api-key header, env: FALCON_MCP_API_KEY)",
     )
 
+    # Flight Control (MSSP) support
+    parser.add_argument(
+        "--member-cid",
+        default=os.environ.get("FALCON_MEMBER_CID"),
+        help="Child CID for Flight Control (MSSP) support (env: FALCON_MEMBER_CID)",
+    )
+
     return parser.parse_args()
 
 
@@ -365,6 +375,7 @@ def main() -> None:
             api_key=args.api_key,
             host=args.host,
             port=args.port,
+            member_cid=args.member_cid,
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport)

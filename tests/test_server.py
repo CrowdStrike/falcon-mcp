@@ -429,6 +429,47 @@ class TestFalconMCPServer(unittest.TestCase):
                 f"or pass explicit annotations for mutating tools.",
             )
 
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_server_initialization_with_member_cid(self, mock_fastmcp, mock_client):
+        """Test server initialization with member_cid parameter."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server with member_cid
+        _server = FalconMCPServer(member_cid="abc123-child-cid-xyz")
+
+        # Verify FalconClient was initialized with member_cid
+        mock_client.assert_called_once()
+        call_args = mock_client.call_args[1]
+        self.assertEqual(call_args["member_cid"], "abc123-child-cid-xyz")
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_server_initialization_without_member_cid(self, mock_fastmcp, mock_client):
+        """Test server initialization without member_cid (parent CID mode)."""
+        # Setup mocks
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_fastmcp.return_value = mock_server_instance
+
+        # Create server without member_cid
+        _server = FalconMCPServer()
+
+        # Verify FalconClient was initialized without member_cid
+        mock_client.assert_called_once()
+        call_args = mock_client.call_args[1]
+        # Should be None (the default)
+        self.assertIsNone(call_args["member_cid"])
+
 
 if __name__ == "__main__":
     unittest.main()

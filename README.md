@@ -412,6 +412,7 @@ FALCON_CLIENT_SECRET=your-client-secret
 FALCON_BASE_URL=https://api.crowdstrike.com
 
 # Optional Configuration (uncomment and modify as needed)
+#FALCON_MEMBER_CID=your-child-cid                       # Flight Control child CID
 #FALCON_MCP_MODULES=detections,incidents,intel
 #FALCON_MCP_TRANSPORT=stdio
 #FALCON_MCP_DEBUG=false
@@ -434,6 +435,7 @@ export FALCON_CLIENT_SECRET="your-client-secret"
 export FALCON_BASE_URL="https://api.crowdstrike.com"
 
 # Optional Configuration
+export FALCON_MEMBER_CID="your-child-cid"               # Flight Control child CID
 export FALCON_MCP_MODULES="detections,incidents,intel"  # Comma-separated list (default: all modules)
 export FALCON_MCP_TRANSPORT="stdio"                     # Transport method: stdio, sse, streamable-http
 export FALCON_MCP_DEBUG="false"                         # Enable debug logging: true, false
@@ -442,6 +444,66 @@ export FALCON_MCP_PORT="8000"                           # Port for HTTP transpor
 export FALCON_MCP_STATELESS_HTTP="false"                # Stateless mode for scalable deployments
 export FALCON_MCP_API_KEY="your-api-key"                # API key for HTTP transport auth (x-api-key header)
 ```
+
+### Flight Control (MSSP) Support
+
+falcon-mcp supports CrowdStrike Flight Control for MSSP (Managed Security Service Provider) environments. Use parent CID API credentials with the `--member-cid` flag or `FALCON_MEMBER_CID` environment variable to target a specific child CID.
+
+#### Configuration
+
+**Environment Variable**:
+
+```bash
+export FALCON_MEMBER_CID="abc123-child-cid-xyz"
+falcon-mcp
+```
+
+**Command Line Flag**:
+
+```bash
+falcon-mcp --member-cid "abc123-child-cid-xyz"
+```
+
+**In `.env` file**:
+
+```bash
+# Parent CID credentials (required)
+FALCON_CLIENT_ID=parent-client-id
+FALCON_CLIENT_SECRET=parent-client-secret
+
+# Child CID to target (optional - for Flight Control)
+FALCON_MEMBER_CID=abc123-child-cid-xyz
+```
+
+#### Requirements
+
+- Parent CID API credentials (use parent's `FALCON_CLIENT_ID` and `FALCON_CLIENT_SECRET`)
+- Flight Control enabled on the parent tenant
+- Valid child CID identifier
+- Parent API client must have appropriate scopes for operations on the child CID
+
+#### Behavior
+
+- **Session-level**: All tools in the server instance target the specified child CID
+- **Cannot switch mid-session**: The member_cid is set during authentication and persists for the server's lifetime
+- **Multiple child CIDs**: To query multiple child CIDs, run separate server instances on different ports
+
+#### Multi-Tenant Workflow Example
+
+To work with multiple child CIDs simultaneously, run separate server instances:
+
+```bash
+# Parent CID (default)
+falcon-mcp --transport streamable-http --port 8000
+
+# Child CID 1
+falcon-mcp --member-cid "child-cid-1" --transport streamable-http --port 8001
+
+# Child CID 2
+falcon-mcp --member-cid "child-cid-2" --transport streamable-http --port 8002
+```
+
+Each instance maintains its own authentication context and can be accessed independently by your MCP client.
 
 **CrowdStrike API Region URLs:**
 
