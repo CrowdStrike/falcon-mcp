@@ -84,7 +84,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 
 | Module | Required API Scopes | Purpose |
 | - | - | - |
-| **Cloud Security** | `Falcon Container Image:read` | Find and analyze kubernetes containers inventory and container imges vulnerabilities |
+| **Cloud Security** | `Falcon Container Image:read`<br>`Cloud Security API Assets:Read` | Find and analyze kubernetes containers inventory, container images vulnerabilities, and CSPM cloud asset inventory |
 | **Core** | _No additional scopes_ | Basic connectivity and system information |
 | **Custom IOA** | `Custom IOA Rules:read`<br>`Custom IOA Rules:write` | Create and manage Custom IOA behavioral detection rules and rule groups |
 | **Detections** | `Alerts:read` | Find and analyze detections to understand malicious activity |
@@ -112,20 +112,23 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 
 **API Scopes Required**:
 
-- `Falcon Container Image:read`
+- `Falcon Container Image:read` (for Kubernetes containers and image vulnerabilities)
+- `Cloud Security API Assets:Read` (for CSPM asset inventory)
 
 Provides tools for accessing and analyzing CrowdStrike Cloud Security resources:
 
 - `falcon_search_kubernetes_containers`: Search for containers from CrowdStrike Kubernetes & Containers inventory
 - `falcon_count_kubernetes_containers`: Count for containers by filter criteria from CrowdStrike Kubernetes & Containers inventory
 - `falcon_search_images_vulnerabilities`: Search for images vulnerabilities from CrowdStrike Image Assessments
+- `falcon_search_cspm_assets`: Search cloud assets in CSPM inventory with comprehensive FQL filtering (resource types, tags, compliance, security posture)
 
 **Resources**:
 
 - `falcon://cloud/kubernetes-containers/fql-guide`: Comprehensive FQL documentation and examples for kubernetes containers searches
 - `falcon://cloud/images-vulnerabilities/fql-guide`: Comprehensive FQL documentation and examples for images vulnerabilities searches
+- `falcon://cloud/cspm-assets/fql-guide`: Comprehensive FQL documentation and examples for CSPM asset searches with filtering by resource type, tags, compliance, and security posture
 
-**Use Cases**: Manage kubernetes containers inventory, container images vulnerabilities analysis
+**Use Cases**: Manage kubernetes containers inventory, container images vulnerabilities analysis, cloud asset inventory with tag-based filtering for compliance and cost management
 
 ### Core Functionality (Built into Server)
 

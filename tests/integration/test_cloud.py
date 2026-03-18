@@ -122,3 +122,92 @@ class TestCloudIntegration(BaseIntegrationTest):
         # Test ReadCombinedVulnerabilities
         result = self.call_method(self.module.search_images_vulnerabilities, limit=1)
         self.assert_no_error(result, context="ReadCombinedVulnerabilities operation name")
+
+        # Test cloud_security_assets_queries and cloud_security_assets_entities_get
+        result = self.call_method(self.module.search_cspm_assets, limit=1)
+        self.assert_no_error(result, context="CSPM operation names")
+
+    def test_search_cspm_assets_returns_details(self):
+        """Test that search_cspm_assets returns full asset details using two-step pattern.
+
+        Validates:
+        - cloud_security_assets_queries operation name is correct
+        - cloud_security_assets_entities_get operation name is correct
+        - Two-step pattern (query IDs -> get details) works correctly
+        - Returns full asset records, not just IDs
+        """
+        result = self.call_method(self.module.search_cspm_assets, limit=5)
+
+        self.assert_no_error(result, context="search_cspm_assets")
+        self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets")
+
+        if len(result) > 0:
+            # Verify we get full details, not just IDs
+            self.assert_search_returns_details(
+                result,
+                expected_fields=["id", "cloud_provider", "resource_type"],
+                context="search_cspm_assets",
+            )
+
+    def test_search_cspm_assets_with_cloud_provider_filter(self):
+        """Test search_cspm_assets with cloud provider FQL filter."""
+        result = self.call_method(
+            self.module.search_cspm_assets,
+            filter="cloud_provider:'AWS'",
+            limit=3,
+        )
+
+        self.assert_no_error(result, context="search_cspm_assets with cloud_provider filter")
+        self.assert_valid_list_response(
+            result, min_length=0, context="search_cspm_assets with cloud_provider filter"
+        )
+
+        # If results exist, verify they match the filter
+        if len(result) > 0:
+            for asset in result:
+                assert "cloud_provider" in asset, "Asset should have cloud_provider field"
+                # Note: Filter may return AWS and aws, be flexible
+                assert asset["cloud_provider"].upper() == "AWS", (
+                    f"Expected cloud_provider AWS, got {asset['cloud_provider']}"
+                )
+
+    def test_search_cspm_assets_with_tag_filter(self):
+        """Test search_cspm_assets with tag FQL filter syntax.
+
+        Validates the tags.'key':'value' FQL syntax is accepted by the API.
+        May return empty results if no assets have this tag.
+        """
+        result = self.call_method(
+            self.module.search_cspm_assets,
+            filter="tags.'Environment':*",
+            limit=10,
+        )
+
+        self.assert_no_error(result, context="search_cspm_assets with tag filter")
+        self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets with tag filter")
+
+    def test_search_cspm_assets_with_sort(self):
+        """Test search_cspm_assets with sort parameter."""
+        result = self.call_method(
+            self.module.search_cspm_assets,
+            sort="updated_at.desc",
+            limit=3,
+        )
+
+        self.assert_no_error(result, context="search_cspm_assets with sort")
+        self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets with sort")
+
+    def test_search_cspm_assets_batching_large_result(self):
+        """Test search_cspm_assets with large limit to verify batching works.
+
+        If the environment has >100 assets, this tests the batching logic.
+        """
+        result = self.call_method(self.module.search_cspm_assets, limit=500)
+
+        self.assert_no_error(result, context="search_cspm_assets with large limit")
+        self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets large result")
+
+        # If we got >100 results, batching was tested successfully
+        if len(result) > 100:
+            print(f"✅ Batching tested successfully with {len(result)} assets")
+

@@ -19,6 +19,7 @@ from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.cloud import (
     IMAGES_VULNERABILITIES_FQL_DOCUMENTATION,
     KUBERNETES_CONTAINERS_FQL_DOCUMENTATION,
+    SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION,
 )
 
 logger = get_logger(__name__)
@@ -53,6 +54,12 @@ class CloudModule(BaseModule):
             name="search_images_vulnerabilities",
         )
 
+        self._add_tool(
+            server=server,
+            method=self.search_cspm_assets,
+            name="search_cspm_assets",
+        )
+
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.
         Args:
@@ -79,6 +86,18 @@ class CloudModule(BaseModule):
         self._add_resource(
             server,
             images_vulnerabilities_fql_resource,
+        )
+
+        cspm_assets_fql_resource = TextResource(
+            uri=AnyUrl("falcon://cloud/cspm-assets/fql-guide"),
+            name="falcon_search_cspm_assets_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_cspm_assets` tool.",
+            text=SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION,
+        )
+
+        self._add_resource(
+            server,
+            cspm_assets_fql_resource,
         )
 
     def search_kubernetes_containers(
@@ -242,3 +261,134 @@ class CloudModule(BaseModule):
             error_message="Failed to perform operation",
             default_result=[],
         )
+
+    def search_cspm_assets(
+        self,
+        filter: str | None = Field(
+            default=None,
+            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/cspm-assets/fql-guide` resource when building this filter parameter.",
+            examples=["cloud_provider:'AWS'", "tags.'Environment':'Production'"],
+        ),
+        limit: int = Field(
+            default=100,
+            ge=1,
+            le=1000,
+            description="The maximum number of assets to return in this response (default: 100; max: 1000). Use with the offset or after parameter to manage pagination of results.",
+        ),
+        offset: int | None = Field(
+            default=None,
+            description="Starting index of overall result set from which to return assets.",
+        ),
+        after: str | None = Field(
+            default=None,
+            description="A pagination token used with the limit parameter to manage pagination of results. On your first request, don't provide an after token. On subsequent requests, provide the after token from the previous response to continue from that result set.",
+        ),
+        sort: str | None = Field(
+            default=None,
+            description=dedent(
+                """
+                Sort cloud assets using these options:
+
+                cloud_provider: Cloud provider name (AWS, Azure, GCP)
+                account_id: Cloud account ID
+                account_name: Cloud account name
+                resource_type: Resource type (e.g., AWS::EC2::Instance)
+                region: Cloud region
+                creation_time: When the asset was created
+                updated_at: When the asset was last updated
+
+                Sort either asc (ascending) or desc (descending).
+                Both formats are supported: 'updated_at.desc' or 'updated_at|desc'
+
+                Examples: 'updated_at.desc', 'resource_type.asc'
+            """
+            ).strip(),
+            examples=["updated_at.desc", "resource_type.asc"],
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Search for cloud assets in your CrowdStrike CSPM Asset Inventory.
+
+        This tool queries cloud resources (EC2 instances, VPCs, subnets, load balancers, etc.)
+        managed by CrowdStrike CSPM. Supports comprehensive FQL filtering including:
+        - Cloud provider and resource type filtering
+        - Tag-based filtering (AWS/Azure/GCP tags)
+        - Security posture (publicly exposed, severity, IOM/IOA counts)
+        - Compliance status and benchmarks
+        - Temporal filtering (creation time, last updated)
+
+        IMPORTANT: You must use the `falcon://cloud/cspm-assets/fql-guide` resource when you need to use the `filter` parameter.
+        This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_cspm_assets` tool.
+
+        Returns FQL syntax guide on error or empty results to help refine queries.
+        """
+        # Step 1: Query for asset IDs
+        asset_ids = self._base_search_api_call(
+            operation="cloud_security_assets_queries",
+            search_params={
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "after": after,
+                "sort": sort,
+            },
+            error_message="Failed to query CSPM assets",
+        )
+
+        # Handle search error - return with FQL guide
+        if self._is_error(asset_ids):
+            return self._format_fql_error_response(
+                [asset_ids],
+                filter,
+                SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION,
+            )
+
+        # Handle empty results - return with FQL guide
+        if not asset_ids:
+            return self._format_fql_error_response(
+                [],
+                filter,
+                SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION,
+            )
+
+        # Step 2: Batch fetch full details (API limit: 100 IDs per request)
+        details = self._batch_get_cspm_assets(asset_ids)
+
+        if self._is_error(details):
+            return [details]
+
+        return details
+
+    def _batch_get_cspm_assets(self, asset_ids: list[str]) -> list[dict[str, Any]] | dict[str, Any]:
+        """Fetch CSPM asset details in batches of 100 (API limit).
+
+        The cloud_security_assets_entities_get API endpoint has a strict limit of 100 IDs
+        per request (as confirmed by API validation). This helper method splits large ID
+        lists into chunks and aggregates the results.
+
+        Args:
+            asset_ids: List of asset IDs to fetch
+
+        Returns:
+            List of asset details or error dict
+        """
+        BATCH_SIZE = 100
+        all_assets: list[dict[str, Any]] = []
+
+        for i in range(0, len(asset_ids), BATCH_SIZE):
+            batch = asset_ids[i : i + BATCH_SIZE]
+            result = self._base_get_by_ids(
+                operation="cloud_security_assets_entities_get",
+                ids=batch,
+                id_key="ids",
+                use_params=True,  # CRITICAL: GET method requires use_params
+            )
+
+            # Fail fast on error
+            if self._is_error(result):
+                return result
+
+            # Aggregate results
+            if isinstance(result, list):
+                all_assets.extend(result)
+
+        return all_assets

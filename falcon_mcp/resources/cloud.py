@@ -579,3 +579,218 @@ cvss_score:>5+container_running_status:true
 registry:*'*docker*'
 """
 )
+
+# List of tuples containing filter options data: (name, type, description)
+SEARCH_CSPM_ASSETS_FQL_FILTERS = [
+    (
+        "Name",
+        "Type",
+        "Description"
+    ),
+    (
+        "account_id",
+        "String",
+        """
+        The cloud provider account ID.
+
+        Ex: account_id:'123456789012'
+        """
+    ),
+    (
+        "account_name",
+        "String",
+        """
+        The cloud provider account name.
+
+        Ex: account_name:'production-account'
+        """
+    ),
+    (
+        "cloud_provider",
+        "String",
+        """
+        The cloud provider hosting the resource.
+        Values: AWS, Azure, GCP (case-sensitive).
+
+        Ex: cloud_provider:'AWS'
+        Ex: cloud_provider:['AWS', 'Azure']
+        """
+    ),
+    (
+        "resource_type",
+        "String",
+        """
+        The cloud resource type in ARN format or short format.
+        Examples: AWS::EC2::Instance, ec2-instance, AWS::S3::Bucket.
+
+        Ex: resource_type:'AWS::EC2::Instance'
+        Ex: resource_type:'ec2-instance'
+        Ex: resource_type:*'*S3*'
+        """
+    ),
+    (
+        "resource_id",
+        "String",
+        """
+        The unique identifier of the cloud resource.
+
+        Ex: resource_id:'//ec2.amazonaws.com/i-1234567890abcdef0'
+        """
+    ),
+    (
+        "region",
+        "String",
+        """
+        The cloud region where the resource is deployed.
+
+        Ex: region:'us-east-1'
+        Ex: region:['us-east-1', 'us-west-2']
+        """
+    ),
+    (
+        "tags",
+        "String",
+        """
+        AWS/Azure/GCP tags in key-value format.
+        IMPORTANT: Use tags.'key':'value' syntax with single quotes.
+
+        Ex: tags.'Environment':'Production'
+        Ex: tags.'Application':'*web*'
+        Ex: tags.'Owner':'CloudOps'+tags.'CostCenter':'12345'
+        Ex: tags.'Team':*  (tag key exists, any value)
+        """
+    ),
+    (
+        "creation_time",
+        "Timestamp",
+        """
+        Timestamp when the cloud resource was created in UTC format.
+
+        Ex: creation_time:>'2025-01-01T00:00:00Z'
+        Ex: creation_time:<='2024-12-31T23:59:59Z'
+        """
+    ),
+    (
+        "updated_at",
+        "Timestamp",
+        """
+        Timestamp when the asset was last updated in CrowdStrike in UTC format.
+
+        Ex: updated_at:>'2025-03-01T00:00:00Z'
+        """
+    ),
+    (
+        "active",
+        "Boolean",
+        """
+        Indicates if the asset is currently active.
+
+        Ex: active:true
+        """
+    ),
+    (
+        "service",
+        "String",
+        """
+        The cloud service category.
+        Examples: EC2, S3, API Gateway, Lambda, VPC.
+
+        Ex: service:'EC2'
+        Ex: service:*'*Gateway*'
+        """
+    ),
+    (
+        "service_category",
+        "String",
+        """
+        The broader service category.
+        Examples: Compute, Storage, Networking, Database.
+
+        Ex: service_category:'Compute'
+        """
+    ),
+    (
+        "location",
+        "String",
+        """
+        The geographic location of the resource (may differ from region).
+
+        Ex: location:'us-central1'
+        Ex: location:'global'
+        """
+    ),
+]
+
+SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION = (
+    FQL_DOCUMENTATION
+    + """
+=== falcon_search_cspm_assets FQL filter available fields ===
+
+""" + generate_md_table(SEARCH_CSPM_ASSETS_FQL_FILTERS) + """
+
+=== falcon_search_cspm_assets FQL filter examples ===
+
+# Find AWS production assets by tag
+tags.'Environment':'Production'+cloud_provider:'AWS'
+
+# Find EC2 instances
+resource_type:'AWS::EC2::Instance'
+
+# Find assets by multiple tags (AND condition)
+tags.'Owner':'CloudOps'+tags.'CostCenter':'12345'
+
+# Find assets with any value for a specific tag key
+tags.'Team':*
+
+# Find assets by cloud provider and region
+cloud_provider:'AWS'+region:['us-east-1', 'us-west-2']
+
+# Find assets created in the last 30 days
+creation_time:>'2025-02-16T00:00:00Z'
+
+# Find assets by service category and active status
+service_category:'Compute'+active:true
+
+# Find assets with wildcard on resource type
+resource_type:*'*S3*'
+
+# Find assets by account and service
+account_name:'production-account'+service:'Lambda'
+
+=== Cloud Resource Tag Filtering Syntax ===
+
+Cloud resource tags (AWS/Azure/GCP) use a special nested syntax: tags.'key':'value'
+
+IMPORTANT RULES:
+• Always use single quotes: tags.'Environment':'Production'
+• Tag keys and values are case-sensitive: 'Production' ≠ 'production'
+• Wildcards supported: tags.'Application':'*web*'
+• Multiple tags with AND: tags.'Env':'Prod'+tags.'Owner':'Ops'
+• Check if tag exists: tags.'CostCenter':*
+• Combine with other filters: tags.'Env':'Prod'+cloud_provider:'AWS'
+
+EXAMPLES:
+tags.'Environment':'Production'              # Exact match
+tags.'Application':'*web*'                   # Contains 'web'
+tags.'Owner':'CloudOps'+tags.'Env':'Prod'    # Multiple tags
+tags.'CostCenter':*                          # Tag key exists
+cloud_provider:'AWS'+tags.'Team':'Security'  # Tags + provider
+
+=== Common Use Cases ===
+
+# Compliance: Find production assets for audit
+tags.'Environment':'Production'+tags.'Compliance':'PCI'
+
+# Cost Management: Find resources by cost center
+tags.'CostCenter':'12345'+active:true
+
+# Security: Find exposed compute resources
+service_category:'Compute'+cloud_provider:'AWS'
+
+# Multi-region inventory
+cloud_provider:'AWS'+region:['us-east-1', 'eu-west-1']
+
+# Recent changes: Assets updated in last 7 days
+updated_at:>'2025-03-11T00:00:00Z'
+"""
+)
