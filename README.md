@@ -26,11 +26,15 @@
   - [Hosts Module](#hosts-module)
   - [Identity Protection Module](#identity-protection-module)
   - [Incidents Module](#incidents-module)
+  - [ODS Module](#ods-module)
+  - [Quarantine Module](#quarantine-module)
   - [NGSIEM Module](#ngsiem-module)
   - [Intel Module](#intel-module)
   - [IOC Module](#ioc-module)
   - [Firewall Management Module](#firewall-management-module)
+  - [Sample Uploads Module](#sample-uploads-module)
   - [Scheduled Reports Module](#scheduled-reports-module)
+  - [Sandbox Module](#sandbox-module)
   - [Sensor Usage Module](#sensor-usage-module)
   - [Serverless Module](#serverless-module)
   - [Spotlight Module](#spotlight-module)
@@ -92,11 +96,15 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Hosts** | `Hosts:read` | Manage and query host/device information |
 | **Identity Protection** | `Identity Protection Entities:read`<br>`Identity Protection Timeline:read`<br>`Identity Protection Detections:read`<br>`Identity Protection Assessment:read`<br>`Identity Protection GraphQL:write` | Comprehensive entity investigation and identity protection analysis |
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
+| **ODS** | `On-demand scans (ODS):read`<br>`On-demand scans (ODS):write` | Hunt scan results, launch scans, manage scheduled scans, and review malicious files found by ODS |
+| **Quarantine** | `Quarantined Files:read`<br>`Quarantined Files:write` | Search quarantine records, preview action counts, and release or delete quarantined files |
 | **NGSIEM** | `NGSIEM:read`<br>`NGSIEM:write` | Execute CQL queries against Next-Gen SIEM |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
 | **IOC** | `IOC Management:read`<br>`IOC Management:write` | Search, create, and remove custom IOCs using IOC Service Collection endpoints |
 | **Firewall Management** | `Firewall Management:read`<br>`Firewall Management:write` | Search and manage firewall rules and rule groups |
+| **Sample Uploads** | `Sample uploads:read`<br>`Sample uploads:write` | Upload suspicious files and archives, inspect archive contents, and extract files for analysis |
 | **Scheduled Reports** | `Scheduled Reports:read` | Get details about scheduled reports and searches, run reports on demand, and download report files |
+| **Sandbox** | `Sandbox (Falcon Intelligence):read`<br>`Sandbox (Falcon Intelligence):write` | Upload samples, submit detonations, and retrieve sandbox submission and report details |
 | **Sensor Usage** | `Sensor Usage:read` | Access and analyze sensor usage data |
 | **Serverless** | `Falcon Container Image:read` | Search for vulnerabilities in serverless functions across cloud service providers |
 | **Spotlight** | `Vulnerabilities:read` | Manage and analyze vulnerability data and security assessments |
@@ -242,6 +250,47 @@ Provides tools for accessing and analyzing CrowdStrike Falcon incidents:
 
 **Use Cases**: Incident management, threat assessment, attack pattern analysis, security posture monitoring
 
+### ODS Module
+
+**API Scopes Required**:
+
+- `On-demand scans (ODS):read`
+- `On-demand scans (ODS):write`
+
+Provides tools for reviewing on-demand scan activity and orchestrating new scan jobs:
+
+- `falcon_search_ods_scans`: Search ODS scans and return full scan details
+- `falcon_get_ods_scan_details`: Retrieve detailed metadata for specific ODS scan IDs
+- `falcon_search_ods_scan_hosts`: Search ODS scan-host metadata and return full details
+- `falcon_get_ods_scan_host_details`: Retrieve detailed metadata for specific ODS scan-host IDs
+- `falcon_launch_ods_scan`: Create and start an on-demand scan
+- `falcon_cancel_ods_scans`: Cancel one or more running ODS scans
+- `falcon_search_ods_scheduled_scans`: Search scheduled ODS scans and return full details
+- `falcon_get_ods_scheduled_scan_details`: Retrieve detailed metadata for specific scheduled ODS scan IDs
+- `falcon_schedule_ods_scan`: Create or update a scheduled ODS scan definition
+- `falcon_delete_ods_scheduled_scans`: Delete scheduled ODS scans by ID or FQL filter
+- `falcon_search_ods_malicious_files`: Search malicious files found by ODS and return full details
+- `falcon_get_ods_malicious_file_details`: Retrieve detailed metadata for specific ODS malicious file IDs
+
+**Use Cases**: On-demand scan review, scan fleet coverage analysis, malicious file triage, scheduled scan hygiene, targeted scan orchestration
+
+### Quarantine Module
+
+**API Scopes Required**:
+
+- `Quarantined Files:read`
+- `Quarantined Files:write`
+
+Provides tools for investigating Falcon quarantine records and applying quarantine actions:
+
+- `falcon_search_quarantined_files`: Search quarantined files and return full metadata
+- `falcon_get_quarantined_file_details`: Retrieve detailed metadata for specific quarantine file IDs
+- `falcon_preview_quarantine_action_counts`: Estimate how many files would be affected by each quarantine action
+- `falcon_update_quarantined_files_by_ids`: Apply release, unrelease, or delete actions to specific quarantine file IDs
+- `falcon_update_quarantined_files_by_filter`: Apply release, unrelease, or delete actions to quarantined files selected by query
+
+**Use Cases**: Quarantine review, remediation planning, release validation, bulk cleanup of stale quarantine records
+
 ### NGSIEM Module
 
 **API Scopes Required**: `NGSIEM:read`, `NGSIEM:write`
@@ -277,6 +326,27 @@ Provides tools for accessing and analyzing CrowdStrike Intelligence:
 - `falcon://intel/reports/fql-guide`: Comprehensive FQL documentation and examples for intelligence report searches
 
 **Use Cases**: Threat intelligence research, adversary tracking, IOC analysis, threat landscape assessment, MITRE ATT&CK framework analysis
+
+### Sample Uploads Module
+
+**API Scopes Required**:
+
+- `Sample uploads:read`
+- `Sample uploads:write`
+
+Provides tools for uploading suspicious content and managing archive extraction workflows:
+
+- `falcon_upload_sample_for_cloud_analysis`: Upload a suspicious file to the Sample Uploads service
+- `falcon_delete_uploaded_samples`: Delete previously uploaded samples by SHA256
+- `falcon_list_uploaded_archives`: List files discovered within an uploaded archive
+- `falcon_get_archive_upload_status`: Retrieve processing status for an uploaded archive
+- `falcon_upload_archive_for_extraction`: Upload an archive for extraction-aware analysis workflows
+- `falcon_delete_uploaded_archive`: Delete an uploaded archive by SHA256
+- `falcon_list_archive_extractions`: List files associated with an archive extraction job
+- `falcon_get_archive_extraction_status`: Retrieve status for an archive extraction job
+- `falcon_create_archive_extraction`: Extract archive contents into Falcon internal storage for downstream analysis
+
+**Use Cases**: Suspicious file staging, archive triage, batch content extraction, sample pipeline preparation
 
 ### IOC Module
 
@@ -349,6 +419,26 @@ Provides tools for accessing and managing CrowdStrike Falcon scheduled reports a
 - `falcon://scheduled-reports/executions/search/fql-guide`: Comprehensive FQL documentation for searching report executions
 
 **Use Cases**: Automated report management, report execution monitoring, scheduled search analysis, report download automation
+
+### Sandbox Module
+
+**API Scopes Required**:
+
+- `Sandbox (Falcon Intelligence):read`
+- `Sandbox (Falcon Intelligence):write`
+
+Provides tools for Falcon Sandbox submission and report retrieval workflows:
+
+- `falcon_upload_sandbox_sample`: Upload a file directly to Falcon Sandbox
+- `falcon_check_sandbox_samples`: Check whether one or more SHA256 hashes already exist in Falcon Sandbox sample storage
+- `falcon_submit_sandbox_analysis`: Submit an uploaded SHA256 or URL for sandbox detonation
+- `falcon_search_sandbox_submissions`: Search Falcon Sandbox submissions and return full submission details
+- `falcon_get_sandbox_submission_details`: Retrieve detailed status for specific Falcon Sandbox submission IDs
+- `falcon_search_sandbox_reports`: Search Falcon Sandbox reports and return summary report data
+- `falcon_get_sandbox_report_summaries`: Retrieve summary data for specific Falcon Sandbox report IDs
+- `falcon_get_sandbox_report_details`: Retrieve full Falcon Sandbox reports for specific report IDs
+
+**Use Cases**: Sample detonation, report retrieval, verdict confirmation, sandbox queue tracking, behavior-backed malware triage
 
 ### Serverless Module
 

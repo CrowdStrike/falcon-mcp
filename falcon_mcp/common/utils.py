@@ -4,13 +4,25 @@ Common utility functions for Falcon MCP Server
 This module provides common utility functions for the Falcon MCP server.
 """
 
+import base64
+import binascii
 import re
+from pathlib import Path
 from typing import Any, Optional
+
+from pydantic.fields import FieldInfo
 
 from .errors import _format_error_response, is_success_response
 from .logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def normalize_field_value(value: Any) -> Any:
+    """Unwrap direct-call Pydantic Field defaults into plain Python values."""
+    if isinstance(value, FieldInfo):
+        return None if value.is_required() else value.default
+    return value
 
 
 def filter_none_values(data: dict[str, Any]) -> dict[str, Any]:
@@ -22,7 +34,12 @@ def filter_none_values(data: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Dict[str, Any]: Filtered dictionary
     """
-    return {k: v for k, v in data.items() if v is not None}
+    filtered: dict[str, Any] = {}
+    for key, value in data.items():
+        normalized = normalize_field_value(value)
+        if normalized is not None:
+            filtered[key] = normalized
+    return filtered
 
 
 def prepare_api_parameters(params: dict[str, Any]) -> dict[str, Any]:
@@ -172,3 +189,47 @@ def generate_md_table(data: list[tuple]) -> str:
         lines.append("|" + "|".join(row_values) + "|")
 
     return "\n".join(lines)
+
+
+def resolve_binary_upload_input(
+    file_path: str | None = None,
+    file_base64: str | None = None,
+    file_name: str | None = None,
+) -> tuple[bytes, str]:
+    """Resolve upload bytes from either a local file path or base64 input.
+
+    Args:
+        file_path: Local file path containing upload data.
+        file_base64: Base64-encoded file content.
+        file_name: Optional filename override.
+
+    Returns:
+        Tuple containing the raw bytes and upload filename.
+
+    Raises:
+        ValueError: If the provided input combination is invalid.
+    """
+    file_path = normalize_field_value(file_path)
+    file_base64 = normalize_field_value(file_base64)
+    file_name = normalize_field_value(file_name)
+
+    if bool(file_path) == bool(file_base64):
+        raise ValueError("Provide exactly one of `file_path` or `file_base64`.")
+
+    if file_path:
+        path = Path(file_path).expanduser()
+        if not path.is_file():
+            raise ValueError(f"File not found: {path}")
+        return path.read_bytes(), file_name or path.name
+
+    assert file_base64 is not None
+
+    if not file_name:
+        raise ValueError("`file_name` is required when using `file_base64`.")
+
+    try:
+        file_bytes = base64.b64decode(file_base64, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ValueError("`file_base64` must contain valid base64-encoded content.") from exc
+
+    return file_bytes, file_name
