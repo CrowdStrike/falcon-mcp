@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.8.0...v0.9.0) (2026-04-10)
+
+
+### Features
+
+* add Flight Control (MSSP) support with member_cid parameter ([#317](https://github.com/CrowdStrike/falcon-mcp/issues/317)) ([d15b1c8](https://github.com/CrowdStrike/falcon-mcp/commit/d15b1c8ea7dcb8739e0a41a6eb9e8f1a823d1973)), closes [#283](https://github.com/CrowdStrike/falcon-mcp/issues/283)
+* add version reporting via startup log, CLI flag, and MCP metadata ([#334](https://github.com/CrowdStrike/falcon-mcp/issues/334)) ([27acc45](https://github.com/CrowdStrike/falcon-mcp/commit/27acc450109ea447330d61985656f6d91137dfc4))
+* **modules/cloud:** add CSPM asset inventory search ([#319](https://github.com/CrowdStrike/falcon-mcp/issues/319)) ([cbf2614](https://github.com/CrowdStrike/falcon-mcp/commit/cbf2614cc75a550f20170fef97b99e2d992ac50e))
+* **modules/rtr:** add real time response support ([#327](https://github.com/CrowdStrike/falcon-mcp/issues/327)) ([d975534](https://github.com/CrowdStrike/falcon-mcp/commit/d975534ff7027d40744d51f3b5594641dbad7b80))
+
+
+### Bug Fixes
+
+* **modules/cloud:** correct CSPM asset FQL tag filter syntax ([#320](https://github.com/CrowdStrike/falcon-mcp/issues/320)) ([95fd9bd](https://github.com/CrowdStrike/falcon-mcp/commit/95fd9bd1b086b67f0c6b5c92f18334df24034d83))
+
 ## [0.8.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.7.0...v0.8.0) (2026-03-09)
 
 
