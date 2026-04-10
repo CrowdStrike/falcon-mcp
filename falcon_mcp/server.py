@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
 from falcon_mcp import registry
-from falcon_mcp.client import FalconClient
+from falcon_mcp.client import FalconClient, get_version
 from falcon_mcp.common.auth import (
     ASGIApp,
     auth_middleware,
@@ -104,6 +104,9 @@ class FalconMCPServer:
             port=self.port,
         )
 
+        # Set the server version in MCP protocol metadata (returned in initialize handshake)
+        self.server._mcp_server.version = get_version()
+
         # Initialize and register modules
         self.modules = {}
         available_modules = registry.get_available_modules()
@@ -125,7 +128,8 @@ class FalconMCPServer:
         module_word = "module" if module_count == 1 else "modules"
 
         logger.info(
-            "Initialized %d %s with %d %s and %d %s",
+            "Falcon MCP v%s — %d %s, %d %s, %d %s",
+            get_version(),
             module_count,
             module_word,
             tool_count,
@@ -271,6 +275,14 @@ def parse_modules_list(modules_string: str) -> list[str]:
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Falcon MCP Server")
+
+    # Version
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="version",
+        version=f"%(prog)s {get_version()}",
+    )
 
     # Transport options
     parser.add_argument(

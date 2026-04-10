@@ -620,9 +620,11 @@ If no modules are specified via command line or environment variable, all availa
 
 ### Additional Command Line Options
 
-For all available options:
-
 ```bash
+# Print the server version and exit
+falcon-mcp --version
+
+# Show all available options
 falcon-mcp --help
 ```
 

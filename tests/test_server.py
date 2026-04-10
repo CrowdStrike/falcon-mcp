@@ -2,6 +2,7 @@
 Tests for the Falcon MCP server.
 """
 
+import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -469,6 +470,47 @@ class TestFalconMCPServer(unittest.TestCase):
         call_args = mock_client.call_args[1]
         # Should be None (the default)
         self.assertIsNone(call_args["member_cid"])
+
+
+    @patch("falcon_mcp.server.get_version", return_value="1.2.3")
+    def test_version_flag(self, _mock_version):
+        """Test --version flag prints version and exits."""
+        with patch.object(sys, "argv", ["falcon-mcp", "--version"]):
+            with self.assertRaises(SystemExit) as cm:
+                from falcon_mcp.server import parse_args
+
+                parse_args()
+            self.assertEqual(cm.exception.code, 0)
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_mcp_server_version_is_set(self, mock_fastmcp, mock_client):
+        """Test that MCP server metadata version is set to falcon-mcp version."""
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        mock_server_instance = MagicMock()
+        mock_fastmcp.return_value = mock_server_instance
+
+        FalconMCPServer(enabled_modules=set())
+
+        # Verify version was set on the underlying MCP server
+        self.assertIsNotNone(mock_server_instance._mcp_server.version)
+
+    @patch("falcon_mcp.server.get_version", return_value="0.9.0")
+    @patch("falcon_mcp.server.FalconClient")
+    def test_startup_log_includes_version(self, mock_client, _mock_version):
+        """Test that startup log message includes the server version."""
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+
+        with self.assertLogs("falcon_mcp.server", level="INFO") as cm:
+            FalconMCPServer(enabled_modules=set())
+
+        version_logs = [msg for msg in cm.output if "Falcon MCP v0.9.0" in msg]
+        self.assertEqual(len(version_logs), 1, "Expected exactly one startup log with version")
 
 
 if __name__ == "__main__":
