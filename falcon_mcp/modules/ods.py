@@ -8,12 +8,23 @@ review workflows.
 from typing import Any
 
 from mcp.server import FastMCP
+from mcp.server.fastmcp.resources import TextResource
 from mcp.types import ToolAnnotations
-from pydantic import Field
+from pydantic import AnyUrl, Field
 
 from falcon_mcp.common.errors import _format_error_response
 from falcon_mcp.common.utils import normalize_field_value, prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
+from falcon_mcp.resources.ods import (
+    SEARCH_ODS_MALICIOUS_FILES_EMBEDDED_FQL_SYNTAX,
+    SEARCH_ODS_MALICIOUS_FILES_FQL_DOCUMENTATION,
+    SEARCH_ODS_SCAN_HOSTS_EMBEDDED_FQL_SYNTAX,
+    SEARCH_ODS_SCAN_HOSTS_FQL_DOCUMENTATION,
+    SEARCH_ODS_SCANS_EMBEDDED_FQL_SYNTAX,
+    SEARCH_ODS_SCANS_FQL_DOCUMENTATION,
+    SEARCH_ODS_SCHEDULED_SCANS_EMBEDDED_FQL_SYNTAX,
+    SEARCH_ODS_SCHEDULED_SCANS_FQL_DOCUMENTATION,
+)
 
 MUTATING_ANNOTATIONS = ToolAnnotations(
     readOnlyHint=False,
@@ -34,7 +45,11 @@ class ODSModule(BaseModule):
     """Module for on-demand scan investigation and orchestration workflows."""
 
     def register_tools(self, server: FastMCP) -> None:
-        """Register tools with the MCP server."""
+        """Register tools with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
         self._add_tool(server=server, method=self.search_ods_scans, name="search_ods_scans")
         self._add_tool(server=server, method=self.get_ods_scan_details, name="get_ods_scan_details")
         self._add_tool(server=server, method=self.search_ods_scan_hosts, name="search_ods_scan_hosts")
@@ -84,14 +99,62 @@ class ODSModule(BaseModule):
             name="get_ods_malicious_file_details",
         )
 
+    def register_resources(self, server: FastMCP) -> None:
+        """Register resources with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
+        resources = [
+            TextResource(
+                uri=AnyUrl("falcon://ods/scans/search/fql-guide"),
+                name="falcon_search_ods_scans_fql_guide",
+                description="Contains the guide for the `filter` param of the `falcon_search_ods_scans` tool.",
+                text=SEARCH_ODS_SCANS_FQL_DOCUMENTATION,
+            ),
+            TextResource(
+                uri=AnyUrl("falcon://ods/scan-hosts/search/fql-guide"),
+                name="falcon_search_ods_scan_hosts_fql_guide",
+                description="Contains the guide for the `filter` param of the `falcon_search_ods_scan_hosts` tool.",
+                text=SEARCH_ODS_SCAN_HOSTS_FQL_DOCUMENTATION,
+            ),
+            TextResource(
+                uri=AnyUrl("falcon://ods/scheduled-scans/search/fql-guide"),
+                name="falcon_search_ods_scheduled_scans_fql_guide",
+                description="Contains the guide for the `filter` param of the `falcon_search_ods_scheduled_scans` and `falcon_delete_ods_scheduled_scans` tools.",
+                text=SEARCH_ODS_SCHEDULED_SCANS_FQL_DOCUMENTATION,
+            ),
+            TextResource(
+                uri=AnyUrl("falcon://ods/malicious-files/search/fql-guide"),
+                name="falcon_search_ods_malicious_files_fql_guide",
+                description="Contains the guide for the `filter` param of the `falcon_search_ods_malicious_files` tool.",
+                text=SEARCH_ODS_MALICIOUS_FILES_FQL_DOCUMENTATION,
+            ),
+        ]
+
+        for resource in resources:
+            self._add_resource(server, resource)
+
     def search_ods_scans(
         self,
-        filter: str | None = Field(default=None, description="FQL filter for ODS scans."),
+        filter: str | None = Field(
+            default=None,
+            description=SEARCH_ODS_SCANS_EMBEDDED_FQL_SYNTAX,
+        ),
         limit: int = Field(default=10, ge=1, le=500, description="Maximum number of scan IDs to return."),
         offset: int | None = Field(default=None, description="Starting index of overall result set from which to return IDs."),
         sort: str | None = Field(default=None, description="FQL sort for ODS scans, such as `created_on|desc`."),
-    ) -> list[dict[str, Any]]:
-        """Search ODS scans and return full scan details."""
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Search ODS scans and return full scan details.
+
+        IMPORTANT: You must use the `falcon://ods/scans/search/fql-guide`
+        resource when building the `filter` parameter for this tool.
+
+        Use this tool to discover ODS scans by status, description, or time
+        range. If matching scan IDs are found, the tool retrieves the full scan
+        records before returning them. Empty results and filter errors include
+        the FQL guide to help refine the query.
+        """
         scan_ids = self._base_search_api_call(
             operation="query_scans",
             search_params={
@@ -105,10 +168,14 @@ class ODSModule(BaseModule):
         )
 
         if self._is_error(scan_ids):
-            return [scan_ids]
+            return self._format_fql_error_response(
+                [scan_ids], filter, SEARCH_ODS_SCANS_FQL_DOCUMENTATION
+            )
 
         if not scan_ids:
-            return []
+            return self._format_fql_error_response(
+                [], filter, SEARCH_ODS_SCANS_FQL_DOCUMENTATION
+            )
 
         details = self._base_get_by_ids(
             operation="get_scans_by_scan_ids_v2",
@@ -125,7 +192,11 @@ class ODSModule(BaseModule):
         self,
         ids: list[str] = Field(description="ODS scan ID(s) to retrieve."),
     ) -> list[dict[str, Any]]:
-        """Get full details for one or more ODS scans."""
+        """Get full details for ODS scan IDs you already know.
+
+        Use this tool only when you already have scan IDs. To discover scans by
+        status, description, or time range, use `falcon_search_ods_scans`.
+        """
         if not ids:
             return []
 
@@ -142,12 +213,23 @@ class ODSModule(BaseModule):
 
     def search_ods_scan_hosts(
         self,
-        filter: str | None = Field(default=None, description="FQL filter for ODS scan-host metadata."),
+        filter: str | None = Field(
+            default=None,
+            description=SEARCH_ODS_SCAN_HOSTS_EMBEDDED_FQL_SYNTAX,
+        ),
         limit: int = Field(default=10, ge=1, le=500, description="Maximum number of scan-host IDs to return."),
         offset: int | None = Field(default=None, description="Starting index of overall result set from which to return IDs."),
         sort: str | None = Field(default=None, description="FQL sort for ODS scan hosts, such as `last_updated|desc`."),
-    ) -> list[dict[str, Any]]:
-        """Search ODS scan-host records and return full details."""
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Search ODS scan-host records and return full details.
+
+        IMPORTANT: You must use the `falcon://ods/scan-hosts/search/fql-guide`
+        resource when building the `filter` parameter for this tool.
+
+        Use this tool to discover host-level ODS scan records. If matching IDs
+        are found, the tool retrieves the full host metadata before returning
+        it. Empty results and filter errors include the FQL guide.
+        """
         scan_host_ids = self._base_search_api_call(
             operation="query_scan_host_metadata",
             search_params={
@@ -161,10 +243,14 @@ class ODSModule(BaseModule):
         )
 
         if self._is_error(scan_host_ids):
-            return [scan_host_ids]
+            return self._format_fql_error_response(
+                [scan_host_ids], filter, SEARCH_ODS_SCAN_HOSTS_FQL_DOCUMENTATION
+            )
 
         if not scan_host_ids:
-            return []
+            return self._format_fql_error_response(
+                [], filter, SEARCH_ODS_SCAN_HOSTS_FQL_DOCUMENTATION
+            )
 
         details = self._base_get_by_ids(
             operation="get_scan_host_metadata_by_ids",
@@ -181,7 +267,12 @@ class ODSModule(BaseModule):
         self,
         ids: list[str] = Field(description="ODS scan-host metadata ID(s) to retrieve."),
     ) -> list[dict[str, Any]]:
-        """Get full details for one or more ODS scan-host records."""
+        """Get full details for ODS scan-host IDs you already know.
+
+        Use this tool only when you already have scan-host metadata IDs. To
+        discover records by scan, host, or time range, use
+        `falcon_search_ods_scan_hosts`.
+        """
         if not ids:
             return []
 
@@ -222,7 +313,12 @@ class ODSModule(BaseModule):
         cloud_ml_level_detection: int | None = Field(default=None, description="Cloud ML detection level."),
         cloud_ml_level_prevention: int | None = Field(default=None, description="Cloud ML prevention level."),
     ) -> list[dict[str, Any]]:
-        """Create and start an on-demand scan."""
+        """Create and start an on-demand scan.
+
+        Provide either a complete `body` payload or use the individual
+        parameters to build one. Use this tool when you want to immediately
+        launch a new ODS scan against one or more hosts or host groups.
+        """
         body = normalize_field_value(body)
         payload = body or self._build_scan_payload(
             scheduled=False,
@@ -263,7 +359,7 @@ class ODSModule(BaseModule):
         self,
         ids: list[str] = Field(description="ODS scan ID(s) to cancel."),
     ) -> list[dict[str, Any]]:
-        """Cancel one or more running ODS scans."""
+        """Cancel one or more running ODS scans by ID."""
         result = self._base_query_api_call(
             operation="cancel_scans",
             body_params={"ids": ids},
@@ -277,12 +373,24 @@ class ODSModule(BaseModule):
 
     def search_ods_scheduled_scans(
         self,
-        filter: str | None = Field(default=None, description="FQL filter for scheduled ODS scans."),
+        filter: str | None = Field(
+            default=None,
+            description=SEARCH_ODS_SCHEDULED_SCANS_EMBEDDED_FQL_SYNTAX,
+        ),
         limit: int = Field(default=10, ge=1, le=500, description="Maximum number of scheduled scan IDs to return."),
         offset: int | None = Field(default=None, description="Starting index of overall result set from which to return IDs."),
         sort: str | None = Field(default=None, description="FQL sort for scheduled scans, such as `schedule.start_timestamp|desc`."),
-    ) -> list[dict[str, Any]]:
-        """Search scheduled ODS scans and return full schedule details."""
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Search scheduled ODS scans and return full schedule details.
+
+        IMPORTANT: You must use the `falcon://ods/scheduled-scans/search/fql-guide`
+        resource when building the `filter` parameter for this tool.
+
+        Use this tool to discover scheduled ODS scans by status, description, or
+        schedule time. If matching IDs are found, the tool retrieves the full
+        schedule records before returning them. Empty results and filter errors
+        include the FQL guide.
+        """
         scan_ids = self._base_search_api_call(
             operation="query_scheduled_scans",
             search_params={
@@ -296,10 +404,14 @@ class ODSModule(BaseModule):
         )
 
         if self._is_error(scan_ids):
-            return [scan_ids]
+            return self._format_fql_error_response(
+                [scan_ids], filter, SEARCH_ODS_SCHEDULED_SCANS_FQL_DOCUMENTATION
+            )
 
         if not scan_ids:
-            return []
+            return self._format_fql_error_response(
+                [], filter, SEARCH_ODS_SCHEDULED_SCANS_FQL_DOCUMENTATION
+            )
 
         details = self._base_get_by_ids(
             operation="get_scheduled_scans_by_scan_ids",
@@ -316,7 +428,11 @@ class ODSModule(BaseModule):
         self,
         ids: list[str] = Field(description="Scheduled ODS scan ID(s) to retrieve."),
     ) -> list[dict[str, Any]]:
-        """Get full details for one or more scheduled ODS scans."""
+        """Get full details for scheduled ODS scan IDs you already know.
+
+        Use this tool only when you already have schedule IDs. To discover
+        scheduled scans by filter, use `falcon_search_ods_scheduled_scans`.
+        """
         if not ids:
             return []
 
@@ -358,7 +474,12 @@ class ODSModule(BaseModule):
         cloud_ml_level_detection: int | None = Field(default=None, description="Cloud ML detection level."),
         cloud_ml_level_prevention: int | None = Field(default=None, description="Cloud ML prevention level."),
     ) -> list[dict[str, Any]]:
-        """Create or update a scheduled on-demand scan definition."""
+        """Create or update a scheduled ODS scan definition.
+
+        Provide either a complete `body` payload or use the individual
+        parameters to build one. Use this tool to create or update recurring
+        ODS scan definitions for host groups or supported host targets.
+        """
         body = normalize_field_value(body)
         payload = body or self._build_scan_payload(
             scheduled=True,
@@ -403,10 +524,14 @@ class ODSModule(BaseModule):
         ),
         filter: str | None = Field(
             default=None,
-            description="Optional FQL filter to delete scheduled scans by query instead of IDs.",
+            description="Optional FQL filter to delete scheduled scans by query instead of IDs. IMPORTANT: use the `falcon://ods/scheduled-scans/search/fql-guide` resource when building this filter parameter.",
         ),
     ) -> list[dict[str, Any]]:
-        """Delete scheduled ODS scan definitions by ID or filter."""
+        """Delete scheduled ODS scan definitions by ID or filter.
+
+        Use this tool when you need to remove one or more recurring ODS scan
+        definitions. Provide either explicit IDs or a query filter.
+        """
         ids = normalize_field_value(ids)
         filter = normalize_field_value(filter)
 
@@ -433,12 +558,23 @@ class ODSModule(BaseModule):
 
     def search_ods_malicious_files(
         self,
-        filter: str | None = Field(default=None, description="FQL filter for malicious files found by ODS."),
+        filter: str | None = Field(
+            default=None,
+            description=SEARCH_ODS_MALICIOUS_FILES_EMBEDDED_FQL_SYNTAX,
+        ),
         limit: int = Field(default=10, ge=1, le=500, description="Maximum number of malicious file IDs to return."),
         offset: int | None = Field(default=None, description="Starting index of overall result set from which to return IDs."),
         sort: str | None = Field(default=None, description="FQL sort for malicious files, such as `last_updated|desc`."),
-    ) -> list[dict[str, Any]]:
-        """Search malicious files found by ODS and return full details."""
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Search malicious files found by ODS and return full details.
+
+        IMPORTANT: You must use the `falcon://ods/malicious-files/search/fql-guide`
+        resource when building the `filter` parameter for this tool.
+
+        Use this tool to discover malicious files found by ODS. If matching IDs
+        are found, the tool retrieves the full malicious-file records before
+        returning them. Empty results and filter errors include the FQL guide.
+        """
         file_ids = self._base_search_api_call(
             operation="query_malicious_files",
             search_params={
@@ -452,10 +588,14 @@ class ODSModule(BaseModule):
         )
 
         if self._is_error(file_ids):
-            return [file_ids]
+            return self._format_fql_error_response(
+                [file_ids], filter, SEARCH_ODS_MALICIOUS_FILES_FQL_DOCUMENTATION
+            )
 
         if not file_ids:
-            return []
+            return self._format_fql_error_response(
+                [], filter, SEARCH_ODS_MALICIOUS_FILES_FQL_DOCUMENTATION
+            )
 
         details = self._base_get_by_ids(
             operation="get_malicious_files_by_ids",
@@ -472,7 +612,11 @@ class ODSModule(BaseModule):
         self,
         ids: list[str] = Field(description="ODS malicious file ID(s) to retrieve."),
     ) -> list[dict[str, Any]]:
-        """Get full details for one or more malicious files found by ODS."""
+        """Get full details for ODS malicious file IDs you already know.
+
+        Use this tool only when you already have malicious file IDs. To
+        discover records by filter, use `falcon_search_ods_malicious_files`.
+        """
         if not ids:
             return []
 

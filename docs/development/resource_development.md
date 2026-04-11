@@ -194,23 +194,22 @@ In this example:
 
 ## Integrating Resources with Tools
 
-Resources can be particularly valuable when integrated with tools. Here's how the Intel module references its resource in a tool method:
+Resources can be particularly valuable when integrated with tools. Here's how an
+Intel search tool references its resource in a tool method:
 
 ```python
 def query_actor_entities(
     self,
     filter: str | None = Field(
         default=None,
-        description="FQL query expression that should be used to limit the results. IMPORTANT: use the 'falcon://query_actor_entities_fql_documentation' resource when building this parameter.",
+        description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/query_actor_entities/fql-guide` resource when building this parameter.",
     ),
     # Other parameters...
 ) -> list[dict[str, Any]]:
     """Get info about actors that match provided FQL filters.
 
-    IMPORTANT: You must call the FQL Guide for Intel Query Actor Entities (falcon://intel/query_actor_entities/fql-guide) resource first
-
-    Returns:
-        Information about actors that match the provided filters.
+    IMPORTANT: You must use the `falcon://intel/query_actor_entities/fql-guide`
+    resource when you need to build the `filter` parameter for this tool.
     """
     # Method implementation...
 ```

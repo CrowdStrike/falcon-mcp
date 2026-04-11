@@ -287,6 +287,45 @@ See the main [CONTRIBUTING.md](CONTRIBUTING.md) guide for complete conventional 
 
 ## Best Practices
 
+### Merge-Ready Checklist
+
+Before opening a PR for a new module or a substantial module update, compare it
+against the most recently accepted modules and walk through this checklist:
+
+1. **Follow the existing MCP surface patterns**: register tools through
+   `_add_tool()`, keep snake_case names, and let the server expose them as
+   `falcon_<tool_name>`.
+2. **Be precise with annotations**: read-only tools should rely on the default
+   `READ_ONLY_ANNOTATIONS`; action tools must explicitly set the correct
+   `ToolAnnotations`.
+3. **Add FQL resources for filter-driven searches**: if a tool accepts a
+   Falcon Query Language `filter`, add a `TextResource` under
+   `falcon_mcp/resources/`, register it with `register_resources()`, and refer
+   to the resource URI in both the parameter description and the tool docstring.
+4. **Return full records, not just IDs**: when the Falcon API search operation
+   returns IDs, follow the standard two-step pattern of searching first and then
+   fetching details by ID.
+5. **Use shared helpers instead of bespoke API plumbing**: prefer
+   `_base_search_api_call()`, `_base_get_by_ids()`, `_base_query_api_call()`,
+   and `_format_fql_error_response()` so behavior stays consistent across
+   modules.
+6. **Keep scope mappings complete**: every Falcon API `operation=` string used
+   in a module must have an entry in `falcon_mcp/common/api_scopes.py`.
+7. **Treat docstrings as product surface area**: tool docstrings become MCP
+   descriptions, so they should tell the model when to use the tool, what the
+   important constraints are, and how it differs from nearby tools.
+8. **Match the README module format**: add or update the API scopes, tools,
+   resources, and use cases for the module so the public docs stay in sync.
+9. **Test the contracts that reviewers care about**: unit tests should verify
+   tool registration, resource registration, annotations, happy paths, empty
+   results, and error handling; integration tests should prove the real
+   FalconPy operation names, request shape, and search-to-detail pattern.
+
+The RTR merge is a good example of how maintainers tend to tighten a feature
+before accepting it upstream: they expanded resource-backed FQL guidance,
+clarified tool descriptions, corrected annotation and parameter details, and
+deepened the unit/integration test coverage before merging.
+
 ### Error Handling
 
 1. **Use Common Error Utilities**: Always use `handle_api_response` for API responses instead of manual status code checks

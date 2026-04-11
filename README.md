@@ -28,6 +28,7 @@
   - [Incidents Module](#incidents-module)
   - [ODS Module](#ods-module)
   - [Quarantine Module](#quarantine-module)
+  - [Real Time Response Module](#real-time-response-module)
   - [NGSIEM Module](#ngsiem-module)
   - [Intel Module](#intel-module)
   - [IOC Module](#ioc-module)
@@ -98,6 +99,7 @@ The Falcon MCP Server supports different modules, each requiring specific API sc
 | **Incidents** | `Incidents:read` | Analyze security incidents and coordinated activities |
 | **ODS** | `On-demand scans (ODS):read`<br>`On-demand scans (ODS):write` | Hunt scan results, launch scans, manage scheduled scans, and review malicious files found by ODS |
 | **Quarantine** | `Quarantined Files:read`<br>`Quarantined Files:write` | Search quarantine records, preview action counts, and release or delete quarantined files |
+| **Real Time Response** | `Real time response:read`<br>`Real time response:write` | Initialize RTR sessions, execute read-only triage commands, inspect command output, and review RTR session artifacts |
 | **NGSIEM** | `NGSIEM:read`<br>`NGSIEM:write` | Execute CQL queries against Next-Gen SIEM |
 | **Intel** | `Actors (Falcon Intelligence):read`<br>`Indicators (Falcon Intelligence):read`<br>`Reports (Falcon Intelligence):read` | Research threat actors, IOCs, and intelligence reports |
 | **IOC** | `IOC Management:read`<br>`IOC Management:write` | Search, create, and remove custom IOCs using IOC Service Collection endpoints |
@@ -272,6 +274,13 @@ Provides tools for reviewing on-demand scan activity and orchestrating new scan 
 - `falcon_search_ods_malicious_files`: Search malicious files found by ODS and return full details
 - `falcon_get_ods_malicious_file_details`: Retrieve detailed metadata for specific ODS malicious file IDs
 
+**Resources**:
+
+- `falcon://ods/scans/search/fql-guide`: FQL documentation and examples for ODS scan searches
+- `falcon://ods/scan-hosts/search/fql-guide`: FQL documentation and examples for ODS scan-host searches
+- `falcon://ods/scheduled-scans/search/fql-guide`: FQL documentation and examples for scheduled ODS scan searches
+- `falcon://ods/malicious-files/search/fql-guide`: FQL documentation and examples for malicious file searches
+
 **Use Cases**: On-demand scan review, scan fleet coverage analysis, malicious file triage, scheduled scan hygiene, targeted scan orchestration
 
 ### Quarantine Module
@@ -289,7 +298,31 @@ Provides tools for investigating Falcon quarantine records and applying quaranti
 - `falcon_update_quarantined_files_by_ids`: Apply release, unrelease, or delete actions to specific quarantine file IDs
 - `falcon_update_quarantined_files_by_filter`: Apply release, unrelease, or delete actions to quarantined files selected by query
 
+**Resources**:
+
+- `falcon://quarantine/files/search/fql-guide`: FQL documentation and examples for quarantine searches and filter-based quarantine actions
+
 **Use Cases**: Quarantine review, remediation planning, release validation, bulk cleanup of stale quarantine records
+
+### Real Time Response Module
+
+**API Scopes Required**:
+
+- `Real time response:read`
+- `Real time response:write`
+
+Provides tools for host-level hunt and triage workflows through CrowdStrike Real Time Response:
+
+- `falcon_search_rtr_sessions`: Search RTR sessions and return full session details
+- `falcon_get_rtr_session_details`: Retrieve detailed metadata for specific RTR session IDs
+- `falcon_init_rtr_session`: Initialize or reuse an RTR session for a host
+- `falcon_pulse_rtr_session`: Refresh an RTR session timeout for a host
+- `falcon_execute_rtr_read_only_command`: Execute a read-only RTR command such as `ls`, `ps`, `cat`, or `filehash`
+- `falcon_check_rtr_command_status`: Retrieve command execution status and output chunks
+- `falcon_list_rtr_session_files`: List files associated with an RTR session
+- `falcon_delete_rtr_session`: Close an RTR session
+
+**Use Cases**: Live host triage, evidence collection, execution verification, session-aware investigative workflows
 
 ### NGSIEM Module
 
@@ -437,6 +470,11 @@ Provides tools for Falcon Sandbox submission and report retrieval workflows:
 - `falcon_search_sandbox_reports`: Search Falcon Sandbox reports and return summary report data
 - `falcon_get_sandbox_report_summaries`: Retrieve summary data for specific Falcon Sandbox report IDs
 - `falcon_get_sandbox_report_details`: Retrieve full Falcon Sandbox reports for specific report IDs
+
+**Resources**:
+
+- `falcon://sandbox/submissions/search/fql-guide`: FQL documentation and examples for Falcon Sandbox submission searches
+- `falcon://sandbox/reports/search/fql-guide`: FQL documentation and examples for Falcon Sandbox report searches
 
 **Use Cases**: Sample detonation, report retrieval, verdict confirmation, sandbox queue tracking, behavior-backed malware triage
 

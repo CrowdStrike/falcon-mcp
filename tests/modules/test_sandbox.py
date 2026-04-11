@@ -32,6 +32,14 @@ class TestSandboxModule(TestModules):
         ]
         self.assert_tools_registered(expected_tools)
 
+    def test_register_resources(self):
+        """Test registering sandbox resources."""
+        expected_resources = [
+            "falcon_search_sandbox_submissions_fql_guide",
+            "falcon_search_sandbox_reports_fql_guide",
+        ]
+        self.assert_resources_registered(expected_resources)
+
     def test_tool_annotations(self):
         """Test sandbox tool annotations."""
         self.module.register_tools(self.mock_server)
@@ -40,8 +48,19 @@ class TestSandboxModule(TestModules):
         self.assert_tool_annotations("falcon_search_sandbox_submissions", READ_ONLY_ANNOTATIONS)
         self.assert_tool_annotations("falcon_get_sandbox_submission_details", READ_ONLY_ANNOTATIONS)
         self.assert_tool_annotations("falcon_search_sandbox_reports", READ_ONLY_ANNOTATIONS)
+        self.assert_tool_annotations("falcon_get_sandbox_report_summaries", READ_ONLY_ANNOTATIONS)
+        self.assert_tool_annotations("falcon_get_sandbox_report_details", READ_ONLY_ANNOTATIONS)
         self.assert_tool_annotations(
             "falcon_upload_sandbox_sample",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
+        self.assert_tool_annotations(
+            "falcon_submit_sandbox_analysis",
             ToolAnnotations(
                 readOnlyHint=False,
                 destructiveHint=False,
@@ -133,6 +152,20 @@ class TestSandboxModule(TestModules):
 
         self.assertEqual(result[0]["status"], "in_progress")
 
+    def test_search_sandbox_submissions_error_returns_fql_guide(self):
+        """Test sandbox submission search returns FQL guide on filter error."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid filter"}]},
+        }
+
+        result = self.module.search_sandbox_submissions(filter="invalid::syntax")
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("fql_guide", result)
+        self.assertIn("Filter error occurred", result["hint"])
+
     def test_search_sandbox_reports_returns_summaries(self):
         """Test sandbox report search flow returns summaries."""
         query_response = {
@@ -148,3 +181,32 @@ class TestSandboxModule(TestModules):
         result = self.module.search_sandbox_reports(filter="sha256:'abc123'")
 
         self.assertEqual(result[0]["verdict"], "malicious")
+
+    def test_get_sandbox_report_details(self):
+        """Test full sandbox report lookup by IDs."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "report-1", "verdict": "malicious"}]},
+        }
+
+        result = self.module.get_sandbox_report_details(ids=["report-1"])
+
+        self.mock_client.command.assert_called_once_with(
+            "GetReports",
+            parameters={"ids": ["report-1"]},
+        )
+        self.assertEqual(result[0]["id"], "report-1")
+
+    def test_search_sandbox_reports_empty_returns_fql_guide(self):
+        """Test sandbox report search returns FQL guide on empty results."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+
+        result = self.module.search_sandbox_reports(filter="verdict:'nonexistent'")
+
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["results"], [])
+        self.assertIn("fql_guide", result)
+        self.assertIn("No results matched", result["hint"])

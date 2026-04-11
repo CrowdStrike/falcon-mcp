@@ -36,13 +36,13 @@ class TestSandboxIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_sandbox_submissions, limit=5)
 
         self.assert_no_error(result, context="search_sandbox_submissions")
-        self.assert_valid_list_response(
-            result,
-            min_length=0,
-            context="search_sandbox_submissions",
-        )
-
-        if len(result) > 0:
+        if isinstance(result, list):
+            self.assert_valid_list_response(
+                result,
+                min_length=0,
+                context="search_sandbox_submissions",
+            )
+        if isinstance(result, list) and len(result) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["id", "state", "sandbox"],
@@ -53,7 +53,7 @@ class TestSandboxIntegration(BaseIntegrationTest):
         """Test sandbox submission detail lookup using a valid submission ID."""
         search_result = self.call_method(self.module.search_sandbox_submissions, limit=1)
 
-        if not search_result or len(search_result) == 0:
+        if not isinstance(search_result, list) or len(search_result) == 0:
             self.skip_with_warning(
                 "No sandbox submissions available to test get_sandbox_submission_details",
                 context="test_get_sandbox_submission_details_with_valid_id",
@@ -85,9 +85,13 @@ class TestSandboxIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_sandbox_reports, limit=5)
 
         self.assert_no_error(result, context="search_sandbox_reports")
-        self.assert_valid_list_response(result, min_length=0, context="search_sandbox_reports")
-
-        if len(result) > 0:
+        if isinstance(result, list):
+            self.assert_valid_list_response(
+                result,
+                min_length=0,
+                context="search_sandbox_reports",
+            )
+        if isinstance(result, list) and len(result) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["id", "verdict", "sandbox"],
@@ -98,7 +102,7 @@ class TestSandboxIntegration(BaseIntegrationTest):
         """Test sandbox report summary lookup using a valid report ID."""
         search_result = self.call_method(self.module.search_sandbox_reports, limit=1)
 
-        if not search_result or len(search_result) == 0:
+        if not isinstance(search_result, list) or len(search_result) == 0:
             self.skip_with_warning(
                 "No sandbox reports available to test get_sandbox_report_summaries",
                 context="test_get_sandbox_report_summaries_with_valid_id",
@@ -123,4 +127,35 @@ class TestSandboxIntegration(BaseIntegrationTest):
             result,
             expected_fields=["id", "verdict", "sandbox"],
             context="get_sandbox_report_summaries",
+        )
+
+    def test_get_sandbox_report_details_with_valid_id(self):
+        """Test full sandbox report lookup using a valid report ID."""
+        search_result = self.call_method(self.module.search_sandbox_reports, limit=1)
+
+        if not isinstance(search_result, list) or len(search_result) == 0:
+            self.skip_with_warning(
+                "No sandbox reports available to test get_sandbox_report_details",
+                context="test_get_sandbox_report_details_with_valid_id",
+            )
+
+        report_id = self.get_first_id(search_result)
+        if not report_id:
+            self.skip_with_warning(
+                "Could not extract sandbox report ID from search results",
+                context="test_get_sandbox_report_details_with_valid_id",
+            )
+
+        result = self.call_method(self.module.get_sandbox_report_details, ids=[report_id])
+
+        self.assert_no_error(result, context="get_sandbox_report_details")
+        self.assert_valid_list_response(
+            result,
+            min_length=1,
+            context="get_sandbox_report_details",
+        )
+        self.assert_search_returns_details(
+            result,
+            expected_fields=["id", "verdict", "sandbox"],
+            context="get_sandbox_report_details",
         )

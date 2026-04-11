@@ -61,6 +61,33 @@ class TestSampleUploadsModule(TestModules):
                 openWorldHint=True,
             ),
         )
+        self.assert_tool_annotations(
+            "falcon_upload_archive_for_extraction",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
+        self.assert_tool_annotations(
+            "falcon_delete_uploaded_archive",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=True,
+                openWorldHint=True,
+            ),
+        )
+        self.assert_tool_annotations(
+            "falcon_create_archive_extraction",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
 
     def test_upload_sample_from_base64(self):
         """Test uploading a sample from base64 input."""
@@ -152,6 +179,21 @@ class TestSampleUploadsModule(TestModules):
         )
         self.assertEqual(result[0]["sha256"], "archive-sha")
 
+    def test_upload_archive_rejects_invalid_file_type(self):
+        """Test archive uploads reject unsupported file_type values."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_path = Path(temp_dir) / "payload.zip"
+            archive_path.write_bytes(b"zip-bytes")
+
+            result = self.module.upload_archive_for_extraction(
+                file_path=str(archive_path),
+                file_type="rar",
+            )
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
+        self.mock_client.command.assert_not_called()
+
     def test_create_archive_extraction_requires_selection(self):
         """Test archive extraction requires extract_all or files."""
         result = self.module.create_archive_extraction(archive_sha256="archive-sha")
@@ -177,3 +219,18 @@ class TestSampleUploadsModule(TestModules):
             body={"sha256": "archive-sha", "extract_all": True},
         )
         self.assertEqual(result[0]["id"], "extract-1")
+
+    def test_delete_uploaded_archive(self):
+        """Test deleting an uploaded archive by SHA256."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"deleted": True}]},
+        }
+
+        result = self.module.delete_uploaded_archive(id="archive-sha")
+
+        self.mock_client.command.assert_called_once_with(
+            "ArchiveDeleteV1",
+            parameters={"id": "archive-sha"},
+        )
+        self.assertTrue(result[0]["deleted"])

@@ -27,6 +27,13 @@ class TestQuarantineModule(TestModules):
         ]
         self.assert_tools_registered(expected_tools)
 
+    def test_register_resources(self):
+        """Test registering quarantine resources with the server."""
+        expected_resources = [
+            "falcon_search_quarantined_files_fql_guide",
+        ]
+        self.assert_resources_registered(expected_resources)
+
     def test_tool_annotations(self):
         """Test quarantine tool annotations."""
         self.module.register_tools(self.mock_server)
@@ -120,6 +127,50 @@ class TestQuarantineModule(TestModules):
         )
         self.assertEqual(result[0]["delete"], 1)
 
+    def test_get_quarantined_file_details(self):
+        """Test quarantine detail lookup by ID."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "qf-1", "sha256": "abc"}]},
+        }
+
+        result = self.module.get_quarantined_file_details(ids=["qf-1"])
+
+        self.mock_client.command.assert_called_once_with(
+            "GetQuarantineFiles",
+            body={"ids": ["qf-1"]},
+        )
+        self.assertEqual(result[0]["id"], "qf-1")
+
+    def test_search_quarantined_files_error_returns_fql_guide(self):
+        """Test quarantine search returns FQL guide on filter error."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid filter"}]},
+        }
+
+        result = self.module.search_quarantined_files(filter="invalid::syntax")
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("fql_guide", result)
+        self.assertIn("hint", result)
+        self.assertIn("Filter error occurred", result["hint"])
+
+    def test_search_quarantined_files_empty_returns_fql_guide(self):
+        """Test quarantine search returns FQL guide on empty results."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+
+        result = self.module.search_quarantined_files(filter="status:'nonexistent'")
+
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["results"], [])
+        self.assertIn("fql_guide", result)
+        self.assertIn("No results matched", result["hint"])
+
     def test_update_quarantined_files_by_ids(self):
         """Test updating quarantined files by IDs."""
         self.mock_client.command.return_value = {
@@ -139,6 +190,17 @@ class TestQuarantineModule(TestModules):
         )
         self.assertEqual(result[0]["updated"], 2)
 
+    def test_update_quarantined_files_by_ids_rejects_invalid_action(self):
+        """Test invalid quarantine actions are rejected before the API call."""
+        result = self.module.update_quarantined_files_by_ids(
+            ids=["qf-1"],
+            action="restore",
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
+        self.mock_client.command.assert_not_called()
+
     def test_update_quarantined_files_by_filter_requires_scope(self):
         """Test updating by filter requires filter or q."""
         result = self.module.update_quarantined_files_by_filter(action="release")
@@ -146,3 +208,28 @@ class TestQuarantineModule(TestModules):
         self.assertEqual(len(result), 1)
         self.assertIn("error", result[0])
         self.mock_client.command.assert_not_called()
+
+    def test_update_quarantined_files_by_filter(self):
+        """Test updating quarantine records by query."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"updated": 3}]},
+        }
+
+        result = self.module.update_quarantined_files_by_filter(
+            action="delete",
+            filter="status:'quarantined'",
+            q="sample.exe",
+            comment="cleanup",
+        )
+
+        self.mock_client.command.assert_called_once_with(
+            "UpdateQfByQuery",
+            body={
+                "action": "delete",
+                "filter": "status:'quarantined'",
+                "q": "sample.exe",
+                "comment": "cleanup",
+            },
+        )
+        self.assertEqual(result[0]["updated"], 3)

@@ -1,4 +1,5 @@
 """Integration tests for the Sample Uploads module."""
+
 from zipfile import ZipFile
 
 import pytest
@@ -54,8 +55,9 @@ class TestSampleUploadsIntegration(BaseIntegrationTest):
         assert sample_sha in delete_result, "Expected deleted sample SHA256 in delete_uploaded_samples response"
 
     def test_archive_upload_status_list_and_delete_round_trip(self, tmp_path):
-        """Test archive upload, status lookup, listing, and cleanup."""
+        """Test archive upload, status lookup, extraction flow, and cleanup."""
         archive_sha = None
+        extraction_id = None
         archive_path = tmp_path / "integration-archive.zip"
         inner_file = tmp_path / "integration-archive.txt"
         inner_file.write_text("falcon-mcp integration archive\n", encoding="utf-8")
@@ -105,6 +107,51 @@ class TestSampleUploadsIntegration(BaseIntegrationTest):
                 list_result,
                 min_length=0,
                 context="list_uploaded_archives",
+            )
+
+            extraction_result = self.call_method(
+                self.module.create_archive_extraction,
+                archive_sha256=archive_sha,
+                extract_all=True,
+            )
+            self.assert_no_error(extraction_result, context="create_archive_extraction")
+            self.assert_valid_list_response(
+                extraction_result,
+                min_length=1,
+                context="create_archive_extraction",
+            )
+
+            if isinstance(extraction_result[0], dict):
+                extraction_id = extraction_result[0].get("id")
+
+            if not extraction_id:
+                self.skip_with_warning(
+                    "Archive extraction did not return an extraction ID",
+                    context="test_archive_upload_status_list_and_delete_round_trip",
+                )
+
+            extraction_status = self.call_method(
+                self.module.get_archive_extraction_status,
+                id=extraction_id,
+                include_files=True,
+            )
+            self.assert_no_error(extraction_status, context="get_archive_extraction_status")
+            self.assert_valid_list_response(
+                extraction_status,
+                min_length=0,
+                context="get_archive_extraction_status",
+            )
+
+            extraction_list = self.call_method(
+                self.module.list_archive_extractions,
+                id=extraction_id,
+                limit=5,
+            )
+            self.assert_no_error(extraction_list, context="list_archive_extractions")
+            self.assert_valid_list_response(
+                extraction_list,
+                min_length=0,
+                context="list_archive_extractions",
             )
         finally:
             if archive_sha:

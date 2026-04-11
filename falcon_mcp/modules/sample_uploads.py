@@ -33,12 +33,22 @@ DESTRUCTIVE_ANNOTATIONS = ToolAnnotations(
     openWorldHint=True,
 )
 
+ARCHIVE_CONTENT_TYPES = {
+    "zip": "application/zip",
+    "7zip": "application/x-7z-compressed",
+    "7z": "application/x-7z-compressed",
+}
+
 
 class SampleUploadsModule(BaseModule):
     """Module for Falcon sample and archive upload workflows."""
 
     def register_tools(self, server: FastMCP) -> None:
-        """Register tools with the MCP server."""
+        """Register tools with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
         self._add_tool(
             server=server,
             method=self.upload_sample_for_cloud_analysis,
@@ -113,7 +123,12 @@ class SampleUploadsModule(BaseModule):
             description="Whether the uploaded sample should remain visible only to your tenant.",
         ),
     ) -> list[dict[str, Any]]:
-        """Upload a sample for cloud analysis using the Sample Uploads service."""
+        """Upload a file or base64 payload to the Sample Uploads service.
+
+        Provide exactly one of `file_path` or `file_base64`. Use this tool when
+        you want Falcon cloud-side analysis for a sample or need the sample
+        available for later archive and extraction workflows.
+        """
         try:
             sample_bytes, upload_name = resolve_binary_upload_input(
                 file_path=file_path,
@@ -169,7 +184,7 @@ class SampleUploadsModule(BaseModule):
         limit: int | None = Field(default=None, description="Maximum number of archive file entries to return."),
         offset: str | None = Field(default=None, description="Offset for paginating archive file entries."),
     ) -> list[dict[str, Any]]:
-        """List files discovered inside an uploaded archive."""
+        """List files discovered inside an uploaded archive by SHA256."""
         result = self._base_query_api_call(
             operation="ArchiveListV1",
             query_params={
@@ -193,7 +208,7 @@ class SampleUploadsModule(BaseModule):
             description="Whether to include processed archive file entries in the response.",
         ),
     ) -> list[dict[str, Any]]:
-        """Get processing status for an uploaded archive."""
+        """Get processing status for an uploaded archive by SHA256."""
         result = self._base_query_api_call(
             operation="ArchiveGetV1",
             query_params={
@@ -239,7 +254,11 @@ class SampleUploadsModule(BaseModule):
             description="Whether the uploaded archive should remain visible only to your tenant.",
         ),
     ) -> list[dict[str, Any]]:
-        """Upload an archive and queue it for extraction-aware analysis workflows."""
+        """Upload an archive and queue it for extraction-aware analysis workflows.
+
+        Provide exactly one of `file_path` or `file_base64`. The `file_type`
+        value must be `zip`, `7zip`, or `7z`.
+        """
         try:
             archive_bytes, upload_name = resolve_binary_upload_input(
                 file_path=file_path,
@@ -250,11 +269,12 @@ class SampleUploadsModule(BaseModule):
             return [_format_error_response(str(exc))]
 
         normalized_type = (normalize_field_value(file_type) or "zip").lower()
-        content_type_map = {
-            "zip": "application/zip",
-            "7zip": "application/x-7z-compressed",
-            "7z": "application/x-7z-compressed",
-        }
+        if normalized_type not in ARCHIVE_CONTENT_TYPES:
+            return [
+                _format_error_response(
+                    "Unsupported `file_type`. Use `zip`, `7zip`, or `7z`."
+                )
+            ]
 
         response = self.client.command(
             "ArchiveUploadV2",
@@ -264,7 +284,7 @@ class SampleUploadsModule(BaseModule):
                     (
                         upload_name,
                         archive_bytes,
-                        content_type_map.get(normalized_type, "application/zip"),
+                        ARCHIVE_CONTENT_TYPES[normalized_type],
                     ),
                 )
             ],
@@ -312,7 +332,7 @@ class SampleUploadsModule(BaseModule):
         limit: int | None = Field(default=None, description="Maximum number of extraction file entries to return."),
         offset: str | None = Field(default=None, description="Offset for paginating extraction file entries."),
     ) -> list[dict[str, Any]]:
-        """List files associated with an archive extraction operation."""
+        """List files associated with an archive extraction operation ID."""
         result = self._base_query_api_call(
             operation="ExtractionListV1",
             query_params={
@@ -336,7 +356,7 @@ class SampleUploadsModule(BaseModule):
             description="Whether to include processed extraction file entries in the response.",
         ),
     ) -> list[dict[str, Any]]:
-        """Get status for an archive extraction job."""
+        """Get status for an archive extraction job by extraction ID."""
         result = self._base_query_api_call(
             operation="ExtractionGetV1",
             query_params={
@@ -363,7 +383,11 @@ class SampleUploadsModule(BaseModule):
             description="Optional list of specific files to extract. Each entry may include `name`, `comment`, and `is_confidential`.",
         ),
     ) -> list[dict[str, Any]]:
-        """Extract files from an uploaded archive into Falcon internal storage."""
+        """Extract files from an uploaded archive into Falcon internal storage.
+
+        Use `extract_all=true` to extract every file or provide a `files` list
+        to selectively extract specific archive members.
+        """
         extract_all = normalize_field_value(extract_all)
         files = normalize_field_value(files)
 

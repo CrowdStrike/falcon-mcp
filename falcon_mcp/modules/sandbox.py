@@ -8,8 +8,9 @@ submission/report status review.
 from typing import Any
 
 from mcp.server import FastMCP
+from mcp.server.fastmcp.resources import TextResource
 from mcp.types import ToolAnnotations
-from pydantic import Field
+from pydantic import AnyUrl, Field
 
 from falcon_mcp.common.errors import _format_error_response, handle_api_response
 from falcon_mcp.common.utils import (
@@ -18,6 +19,12 @@ from falcon_mcp.common.utils import (
     resolve_binary_upload_input,
 )
 from falcon_mcp.modules.base import BaseModule
+from falcon_mcp.resources.sandbox import (
+    SEARCH_SANDBOX_REPORTS_EMBEDDED_FQL_SYNTAX,
+    SEARCH_SANDBOX_REPORTS_FQL_DOCUMENTATION,
+    SEARCH_SANDBOX_SUBMISSIONS_EMBEDDED_FQL_SYNTAX,
+    SEARCH_SANDBOX_SUBMISSIONS_FQL_DOCUMENTATION,
+)
 
 MUTATING_ANNOTATIONS = ToolAnnotations(
     readOnlyHint=False,
@@ -31,7 +38,11 @@ class SandboxModule(BaseModule):
     """Module for Falcon Sandbox submission and report workflows."""
 
     def register_tools(self, server: FastMCP) -> None:
-        """Register tools with the MCP server."""
+        """Register tools with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
         self._add_tool(
             server=server,
             method=self.upload_sandbox_sample,
@@ -75,6 +86,30 @@ class SandboxModule(BaseModule):
             name="get_sandbox_report_details",
         )
 
+    def register_resources(self, server: FastMCP) -> None:
+        """Register resources with the MCP server.
+
+        Args:
+            server: MCP server instance
+        """
+        resources = [
+            TextResource(
+                uri=AnyUrl("falcon://sandbox/submissions/search/fql-guide"),
+                name="falcon_search_sandbox_submissions_fql_guide",
+                description="Contains the guide for the `filter` param of the `falcon_search_sandbox_submissions` tool.",
+                text=SEARCH_SANDBOX_SUBMISSIONS_FQL_DOCUMENTATION,
+            ),
+            TextResource(
+                uri=AnyUrl("falcon://sandbox/reports/search/fql-guide"),
+                name="falcon_search_sandbox_reports_fql_guide",
+                description="Contains the guide for the `filter` param of the `falcon_search_sandbox_reports` tool.",
+                text=SEARCH_SANDBOX_REPORTS_FQL_DOCUMENTATION,
+            ),
+        ]
+
+        for resource in resources:
+            self._add_resource(server, resource)
+
     def upload_sandbox_sample(
         self,
         file_name: str | None = Field(
@@ -98,7 +133,12 @@ class SandboxModule(BaseModule):
             description="Whether the uploaded sample should remain visible only to your tenant.",
         ),
     ) -> list[dict[str, Any]]:
-        """Upload a sample directly to Falcon Sandbox."""
+        """Upload a local file or base64 payload directly to Falcon Sandbox.
+
+        Provide exactly one of `file_path` or `file_base64`. Use this tool when
+        you need a sample available in Sandbox storage before checking existing
+        hashes or creating a detonation request.
+        """
         try:
             sample_bytes, upload_name = resolve_binary_upload_input(
                 file_path=file_path,
@@ -136,7 +176,7 @@ class SandboxModule(BaseModule):
         self,
         sha256s: list[str] = Field(description="SHA256 value(s) to check for Sandbox sample availability."),
     ) -> list[dict[str, Any]]:
-        """Check which SHA256 hashes already exist in Falcon Sandbox sample storage."""
+        """Check which SHA256 hashes already exist in Falcon Sandbox storage."""
         result = self._base_query_api_call(
             operation="QuerySampleV1",
             body_params={"sha256s": sha256s},
@@ -203,7 +243,12 @@ class SandboxModule(BaseModule):
             description="Optional Falcon agent ID associated with the sample or URL.",
         ),
     ) -> list[dict[str, Any]]:
-        """Submit a URL or uploaded sample SHA256 for Falcon Sandbox analysis."""
+        """Submit a URL or uploaded SHA256 for Falcon Sandbox analysis.
+
+        Provide exactly one of `sha256` or `url`. Use this tool after uploading
+        a sample or when detonating a URL directly, and optionally tune the
+        environment, networking, and analyst metadata for the detonation.
+        """
         sha256 = normalize_field_value(sha256)
         url = normalize_field_value(url)
 
@@ -243,12 +288,24 @@ class SandboxModule(BaseModule):
 
     def search_sandbox_submissions(
         self,
-        filter: str | None = Field(default=None, description="FQL filter for Sandbox submissions."),
+        filter: str | None = Field(
+            default=None,
+            description=SEARCH_SANDBOX_SUBMISSIONS_EMBEDDED_FQL_SYNTAX,
+        ),
         limit: int = Field(default=10, ge=1, le=5000, description="Maximum number of submission IDs to return."),
         offset: str | None = Field(default=None, description="Starting offset for submission search results."),
         sort: str | None = Field(default=None, description="Sort direction or FQL sort expression supported by Falcon Sandbox."),
-    ) -> list[dict[str, Any]]:
-        """Search Falcon Sandbox submissions and return full submission details."""
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Search Falcon Sandbox submissions and return full submission details.
+
+        IMPORTANT: You must use the `falcon://sandbox/submissions/search/fql-guide`
+        resource when building the `filter` parameter for this tool.
+
+        Use this tool to discover Sandbox submissions by state, hash, or time
+        range. If matching submission IDs are found, the tool retrieves the full
+        submission details before returning them. Empty results and filter
+        errors include the FQL guide.
+        """
         submission_ids = self._base_search_api_call(
             operation="QuerySubmissions",
             search_params={
@@ -262,10 +319,14 @@ class SandboxModule(BaseModule):
         )
 
         if self._is_error(submission_ids):
-            return [submission_ids]
+            return self._format_fql_error_response(
+                [submission_ids], filter, SEARCH_SANDBOX_SUBMISSIONS_FQL_DOCUMENTATION
+            )
 
         if not submission_ids:
-            return []
+            return self._format_fql_error_response(
+                [], filter, SEARCH_SANDBOX_SUBMISSIONS_FQL_DOCUMENTATION
+            )
 
         details = self._base_get_by_ids(
             operation="GetSubmissions",
@@ -282,7 +343,12 @@ class SandboxModule(BaseModule):
         self,
         ids: list[str] = Field(description="Falcon Sandbox submission ID(s) to retrieve."),
     ) -> list[dict[str, Any]]:
-        """Retrieve detailed status for specific Falcon Sandbox submissions."""
+        """Retrieve submission details for IDs you already know.
+
+        Use this tool only when you already have submission IDs. To discover
+        submissions by hash, state, or time range, use
+        `falcon_search_sandbox_submissions`.
+        """
         if not ids:
             return []
 
@@ -299,12 +365,24 @@ class SandboxModule(BaseModule):
 
     def search_sandbox_reports(
         self,
-        filter: str | None = Field(default=None, description="FQL filter for Sandbox reports."),
+        filter: str | None = Field(
+            default=None,
+            description=SEARCH_SANDBOX_REPORTS_EMBEDDED_FQL_SYNTAX,
+        ),
         limit: int = Field(default=10, ge=1, le=5000, description="Maximum number of report IDs to return."),
         offset: str | None = Field(default=None, description="Starting offset for report search results."),
         sort: str | None = Field(default=None, description="Sort direction or FQL sort expression supported by Falcon Sandbox."),
-    ) -> list[dict[str, Any]]:
-        """Search Falcon Sandbox reports and return summary report data."""
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Search Falcon Sandbox reports and return summary report data.
+
+        IMPORTANT: You must use the `falcon://sandbox/reports/search/fql-guide`
+        resource when building the `filter` parameter for this tool.
+
+        Use this tool to discover Sandbox reports by verdict, hash, or time
+        range. If matching report IDs are found, the tool retrieves the summary
+        report data before returning it. Empty results and filter errors include
+        the FQL guide.
+        """
         report_ids = self._base_search_api_call(
             operation="QueryReports",
             search_params={
@@ -318,10 +396,14 @@ class SandboxModule(BaseModule):
         )
 
         if self._is_error(report_ids):
-            return [report_ids]
+            return self._format_fql_error_response(
+                [report_ids], filter, SEARCH_SANDBOX_REPORTS_FQL_DOCUMENTATION
+            )
 
         if not report_ids:
-            return []
+            return self._format_fql_error_response(
+                [], filter, SEARCH_SANDBOX_REPORTS_FQL_DOCUMENTATION
+            )
 
         details = self._base_get_by_ids(
             operation="GetSummaryReports",
@@ -338,7 +420,11 @@ class SandboxModule(BaseModule):
         self,
         ids: list[str] = Field(description="Falcon Sandbox report ID(s) to summarize."),
     ) -> list[dict[str, Any]]:
-        """Retrieve summary report data for specific Falcon Sandbox reports."""
+        """Retrieve summary report data for IDs you already know.
+
+        Use this tool only when you already have report IDs. To discover reports
+        by verdict, hash, or time range, use `falcon_search_sandbox_reports`.
+        """
         if not ids:
             return []
 
@@ -357,7 +443,12 @@ class SandboxModule(BaseModule):
         self,
         ids: list[str] = Field(description="Falcon Sandbox report ID(s) to retrieve in full."),
     ) -> list[dict[str, Any]]:
-        """Retrieve full Falcon Sandbox reports for one or more report IDs."""
+        """Retrieve full Falcon Sandbox reports for one or more report IDs.
+
+        Use this tool only when you already have report IDs and need the full
+        report body rather than the lighter summary data returned by
+        `falcon_get_sandbox_report_summaries`.
+        """
         if not ids:
             return []
 

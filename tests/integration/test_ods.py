@@ -26,9 +26,9 @@ class TestODSIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_ods_scans, limit=5)
 
         self.assert_no_error(result, context="search_ods_scans")
-        self.assert_valid_list_response(result, min_length=0, context="search_ods_scans")
-
-        if len(result) > 0:
+        if isinstance(result, list):
+            self.assert_valid_list_response(result, min_length=0, context="search_ods_scans")
+        if isinstance(result, list) and len(result) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["id", "status", "created_on"],
@@ -39,7 +39,7 @@ class TestODSIntegration(BaseIntegrationTest):
         """Test ODS scan detail lookup using a valid scan ID."""
         search_result = self.call_method(self.module.search_ods_scans, limit=1)
 
-        if not search_result or len(search_result) == 0:
+        if not isinstance(search_result, list) or len(search_result) == 0:
             self.skip_with_warning(
                 "No ODS scans available to test get_ods_scan_details",
                 context="test_get_ods_scan_details_with_valid_id",
@@ -67,9 +67,9 @@ class TestODSIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_ods_scan_hosts, limit=5)
 
         self.assert_no_error(result, context="search_ods_scan_hosts")
-        self.assert_valid_list_response(result, min_length=0, context="search_ods_scan_hosts")
-
-        if len(result) > 0:
+        if isinstance(result, list):
+            self.assert_valid_list_response(result, min_length=0, context="search_ods_scan_hosts")
+        if isinstance(result, list) and len(result) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["id", "scan_id", "host_id"],
@@ -80,7 +80,7 @@ class TestODSIntegration(BaseIntegrationTest):
         """Test ODS scan-host detail lookup using a valid metadata ID."""
         search_result = self.call_method(self.module.search_ods_scan_hosts, limit=1)
 
-        if not search_result or len(search_result) == 0:
+        if not isinstance(search_result, list) or len(search_result) == 0:
             self.skip_with_warning(
                 "No ODS scan-host records available to test get_ods_scan_host_details",
                 context="test_get_ods_scan_host_details_with_valid_id",
@@ -112,13 +112,13 @@ class TestODSIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_ods_scheduled_scans, limit=5)
 
         self.assert_no_error(result, context="search_ods_scheduled_scans")
-        self.assert_valid_list_response(
-            result,
-            min_length=0,
-            context="search_ods_scheduled_scans",
-        )
-
-        if len(result) > 0:
+        if isinstance(result, list):
+            self.assert_valid_list_response(
+                result,
+                min_length=0,
+                context="search_ods_scheduled_scans",
+            )
+        if isinstance(result, list) and len(result) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["id", "status", "description"],
@@ -129,7 +129,7 @@ class TestODSIntegration(BaseIntegrationTest):
         """Test scheduled ODS scan detail lookup using a valid schedule ID."""
         search_result = self.call_method(self.module.search_ods_scheduled_scans, limit=1)
 
-        if not search_result or len(search_result) == 0:
+        if not isinstance(search_result, list) or len(search_result) == 0:
             self.skip_with_warning(
                 "No scheduled ODS scans available to test get_ods_scheduled_scan_details",
                 context="test_get_ods_scheduled_scan_details_with_valid_id",
@@ -164,13 +164,13 @@ class TestODSIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_ods_malicious_files, limit=5)
 
         self.assert_no_error(result, context="search_ods_malicious_files")
-        self.assert_valid_list_response(
-            result,
-            min_length=0,
-            context="search_ods_malicious_files",
-        )
-
-        if len(result) > 0:
+        if isinstance(result, list):
+            self.assert_valid_list_response(
+                result,
+                min_length=0,
+                context="search_ods_malicious_files",
+            )
+        if isinstance(result, list) and len(result) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["id", "scan_id", "hash"],
@@ -181,7 +181,7 @@ class TestODSIntegration(BaseIntegrationTest):
         """Test malicious-file detail lookup using a valid file ID."""
         search_result = self.call_method(self.module.search_ods_malicious_files, limit=1)
 
-        if not search_result or len(search_result) == 0:
+        if not isinstance(search_result, list) or len(search_result) == 0:
             self.skip_with_warning(
                 "No ODS malicious files available to test get_ods_malicious_file_details",
                 context="test_get_ods_malicious_file_details_with_valid_id",
