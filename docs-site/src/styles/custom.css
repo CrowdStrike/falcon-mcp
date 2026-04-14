@@ -151,3 +151,10 @@
     --circuit-mask: radial-gradient(ellipse 100% 90% at 50% 40%, black 60%, transparent 95%);
   }
 }
+
+/* ===== TOC — truncate long tool names instead of wrapping ===== */
+.right-sidebar-panel starlight-toc a {
+  overflow: hidden;
+  /* text-overflow: ellipsis; */
+  white-space: nowrap;
+}
