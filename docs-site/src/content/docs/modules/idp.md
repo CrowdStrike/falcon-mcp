@@ -1,11 +1,11 @@
 ---
 title: Identity Protection
-description: Comprehensive entity investigation and identity protection analysis.
+description: Accessing and managing CrowdStrike Falcon Identity Protection capabilities
 sidebar:
   order: 10
 ---
 
-Comprehensive entity investigation and identity protection analysis.
+Accessing and managing CrowdStrike Falcon Identity Protection capabilities
 
 ## API Scopes
 
@@ -24,7 +24,6 @@ Comprehensive entity investigation and identity protection analysis.
 Comprehensive entity investigation tool.
 
 This tool provides complete entity investigation capabilities including:
-
 - Entity search and details lookup
 - Activity timeline analysis
 - Relationship and association mapping

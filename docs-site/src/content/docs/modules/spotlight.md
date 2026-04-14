@@ -1,11 +1,11 @@
 ---
 title: Spotlight
-description: Manage and analyze vulnerability data and security assessments.
+description: Accessing and managing CrowdStrike Falcon Spotlight vulnerabilities
 sidebar:
   order: 10
 ---
 
-Manage and analyze vulnerability data and security assessments.
+Accessing and managing CrowdStrike Falcon Spotlight vulnerabilities
 
 ## API Scopes
 

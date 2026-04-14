@@ -1,11 +1,11 @@
 ---
 title: Discover
-description: Search and analyze application inventory and unmanaged assets across your environment.
+description: Accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets
 sidebar:
   order: 10
 ---
 
-Search and analyze application inventory and unmanaged assets across your environment.
+Accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets
 
 ## API Scopes
 

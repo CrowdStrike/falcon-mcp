@@ -1,11 +1,11 @@
 ---
 title: Intel
-description: Research threat actors, IOCs, and intelligence reports.
+description: Accessing and analyzing CrowdStrike Falcon intelligence data
 sidebar:
   order: 10
 ---
 
-Research threat actors, IOCs, and intelligence reports.
+Accessing and analyzing CrowdStrike Falcon intelligence data
 
 ## API Scopes
 

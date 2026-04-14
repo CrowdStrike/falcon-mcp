@@ -1,11 +1,11 @@
 ---
 title: Hosts
-description: Manage and query host/device information across your CrowdStrike environment.
+description: Accessing and managing CrowdStrike Falcon hosts/devices
 sidebar:
   order: 10
 ---
 
-Manage and query host/device information across your CrowdStrike environment.
+Accessing and managing CrowdStrike Falcon hosts/devices
 
 ## API Scopes
 

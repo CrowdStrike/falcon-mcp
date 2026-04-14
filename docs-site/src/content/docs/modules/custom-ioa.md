@@ -1,11 +1,11 @@
 ---
 title: Custom IOA
-description: Create and manage Custom IOA behavioral detection rules and rule groups.
+description: Searching, creating, updating, and deleting Custom IOA (Indicators of Attack) behavioral rules and rule groups using Falcon Custom IOA Service Collection endpoints
 sidebar:
   order: 10
 ---
 
-Create and manage Custom IOA behavioral detection rules and rule groups.
+Searching, creating, updating, and deleting Custom IOA (Indicators of Attack) behavioral rules and rule groups using Falcon Custom IOA Service Collection endpoints
 
 ## API Scopes
 
@@ -25,7 +25,6 @@ This tool modifies data.
 Create a new Custom IOA behavioral detection rule within a rule group.
 
 Before creating a rule:
-
 1. Use `falcon_get_ioa_rule_types` to discover available rule types, their IDs,
    required fields, and valid disposition IDs.
 2. Use `falcon_search_ioa_rule_groups` to find the target rule group ID.

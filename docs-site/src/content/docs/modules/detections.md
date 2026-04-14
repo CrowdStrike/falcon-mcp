@@ -1,11 +1,11 @@
 ---
 title: Detections
-description: Find and analyze detections to understand malicious activity in your environment.
+description: Accessing and analyzing CrowdStrike Falcon detections
 sidebar:
   order: 10
 ---
 
-Find and analyze detections to understand malicious activity in your environment.
+Accessing and analyzing CrowdStrike Falcon detections
 
 ## API Scopes
 

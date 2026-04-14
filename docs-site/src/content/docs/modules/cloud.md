@@ -1,11 +1,11 @@
 ---
 title: Cloud Security
-description: Find and analyze Kubernetes containers, container image vulnerabilities, and CSPM cloud asset inventory.
+description: Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets
 sidebar:
   order: 10
 ---
 
-Find and analyze Kubernetes containers, container image vulnerabilities, and CSPM cloud asset inventory.
+Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets
 
 ## API Scopes
 
@@ -32,7 +32,6 @@ Search for cloud assets in your CrowdStrike CSPM Asset Inventory.
 
 This tool queries cloud resources (EC2 instances, VPCs, subnets, load balancers, etc.)
 managed by CrowdStrike CSPM. Supports comprehensive FQL filtering including:
-
 - Cloud provider and resource type filtering
 - Tag-based filtering (AWS/Azure/GCP tags)
 - Security posture (publicly exposed, severity, IOM/IOA counts)

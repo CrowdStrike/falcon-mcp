@@ -1,11 +1,11 @@
 ---
 title: NGSIEM
-description: Execute CQL queries against CrowdStrike Next-Gen SIEM.
+description: Running search queries against CrowdStrike's Next-Gen SIEM via the asynchronous job-based search API
 sidebar:
   order: 10
 ---
 
-Execute CQL queries against CrowdStrike Next-Gen SIEM.
+Running search queries against CrowdStrike's Next-Gen SIEM via the asynchronous job-based search API
 
 ## API Scopes
 

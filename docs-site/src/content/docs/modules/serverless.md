@@ -1,11 +1,11 @@
 ---
 title: Serverless
-description: Search for vulnerabilities in serverless functions across cloud providers.
+description: Accessing and managing CrowdStrike Falcon Serverless Vulnerabilities
 sidebar:
   order: 10
 ---
 
-Search for vulnerabilities in serverless functions across cloud providers.
+Accessing and managing CrowdStrike Falcon Serverless Vulnerabilities
 
 ## API Scopes
 
@@ -20,7 +20,6 @@ Search for vulnerabilities in serverless functions across cloud providers.
 Search for vulnerabilities in your serverless functions across all cloud service providers.
 
 This endpoint provides security information in SARIF format, including:
-
 - CVE IDs for identified vulnerabilities
 - Severity levels
 - Vulnerability descriptions

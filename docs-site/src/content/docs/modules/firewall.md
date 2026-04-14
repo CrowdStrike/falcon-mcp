@@ -1,11 +1,11 @@
 ---
 title: Firewall Management
-description: Search and manage Falcon firewall rules and rule groups.
+description: Searching and managing firewall rules and rule groups
 sidebar:
   order: 10
 ---
 
-Search and manage Falcon firewall rules and rule groups.
+Searching and managing firewall rules and rule groups
 
 ## API Scopes
 

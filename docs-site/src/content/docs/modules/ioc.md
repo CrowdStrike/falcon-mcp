@@ -1,11 +1,11 @@
 ---
 title: IOC
-description: Search, create, and remove custom indicators of compromise.
+description: Searching, creating, and deleting custom IOCs using Falcon IOC Service Collection endpoints
 sidebar:
   order: 10
 ---
 
-Search, create, and remove custom indicators of compromise.
+Searching, creating, and deleting custom IOCs using Falcon IOC Service Collection endpoints
 
 ## API Scopes
 

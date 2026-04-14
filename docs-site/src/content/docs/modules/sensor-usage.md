@@ -1,11 +1,11 @@
 ---
 title: Sensor Usage
-description: Access and analyze sensor usage data.
+description: Accessing CrowdStrike Falcon sensor usage data
 sidebar:
   order: 10
 ---
 
-Access and analyze sensor usage data.
+Accessing CrowdStrike Falcon sensor usage data
 
 ## API Scopes
 

@@ -26,70 +26,27 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 OUTPUT_DIR = PROJECT_ROOT / "docs-site" / "src" / "content" / "docs" / "modules"
 
-# Module display metadata (scopes are derived from api_scopes.py automatically)
+# Module display metadata — overrides only.
+# Titles and descriptions are auto-derived from module docstrings.
+# Add entries here when you need a custom title, slug, or description.
 MODULE_METADATA: dict[str, dict[str, Any]] = {
     "cloud": {
         "title": "Cloud Security",
-        "description": "Find and analyze Kubernetes containers, container image vulnerabilities, and CSPM cloud asset inventory.",
     },
     "customioa": {
-        "title": "Custom IOA",
         "slug": "custom-ioa",
-        "description": "Create and manage Custom IOA behavioral detection rules and rule groups.",
-    },
-    "detections": {
-        "title": "Detections",
-        "description": "Find and analyze detections to understand malicious activity in your environment.",
-    },
-    "discover": {
-        "title": "Discover",
-        "description": "Search and analyze application inventory and unmanaged assets across your environment.",
-    },
-    "firewall": {
-        "title": "Firewall Management",
-        "description": "Search and manage Falcon firewall rules and rule groups.",
-    },
-    "hosts": {
-        "title": "Hosts",
-        "description": "Manage and query host/device information across your CrowdStrike environment.",
     },
     "idp": {
         "title": "Identity Protection",
-        "description": "Comprehensive entity investigation and identity protection analysis.",
-    },
-    "incidents": {
-        "title": "Incidents",
-        "description": "Analyze security incidents, behaviors, and coordinated activities.",
-    },
-    "intel": {
-        "title": "Intel",
-        "description": "Research threat actors, IOCs, and intelligence reports.",
-    },
-    "ioc": {
-        "title": "IOC",
-        "description": "Search, create, and remove custom indicators of compromise.",
-    },
-    "ngsiem": {
-        "title": "NGSIEM",
-        "description": "Execute CQL queries against CrowdStrike Next-Gen SIEM.",
     },
     "scheduledreports": {
-        "title": "Scheduled Reports",
         "slug": "scheduled-reports",
-        "description": "Manage scheduled reports and searches, run on demand, and download results.",
     },
     "sensorusage": {
-        "title": "Sensor Usage",
         "slug": "sensor-usage",
-        "description": "Access and analyze sensor usage data.",
     },
     "serverless": {
         "title": "Serverless",
-        "description": "Search for vulnerabilities in serverless functions across cloud providers.",
-    },
-    "spotlight": {
-        "title": "Spotlight",
-        "description": "Manage and analyze vulnerability data and security assessments.",
     },
 }
 
@@ -257,6 +214,33 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Show me open HIGH severity vulnerabilities",
         "Find vulnerabilities on host xyz",
     ],
+    # Real Time Response
+    "falcon_search_rtr_sessions": [
+        "Find all active RTR sessions",
+        "Show me RTR sessions for host abc123",
+    ],
+    "falcon_get_rtr_session_details": [
+        "Get details for RTR session abc123",
+    ],
+    "falcon_init_rtr_session": [
+        "Start an RTR session on host xyz",
+    ],
+    "falcon_pulse_rtr_session": [
+        "Refresh the RTR session to keep it alive",
+    ],
+    "falcon_execute_rtr_read_only_command": [
+        "Run 'ps' on this host via RTR",
+        "List running processes on host xyz",
+    ],
+    "falcon_check_rtr_command_status": [
+        "Check the status of RTR command request abc123",
+    ],
+    "falcon_list_rtr_session_files": [
+        "List files extracted during RTR session abc123",
+    ],
+    "falcon_delete_rtr_session": [
+        "End the RTR session abc123",
+    ],
 }
 
 # Lines matching these patterns are stripped from docstrings
@@ -291,20 +275,60 @@ def clean_docstring(doc: str) -> str:
     return "\n".join(result).strip()
 
 
-def discover_module_classes() -> dict[str, type]:
-    """Discover all module classes using the same logic as the registry."""
+def discover_module_classes() -> dict[str, dict[str, Any]]:
+    """Discover all module classes and auto-derive titles/descriptions from file docstrings."""
     modules_path = str(PROJECT_ROOT / "falcon_mcp" / "modules")
-    result = {}
+    result: dict[str, dict[str, Any]] = {}
 
     for _, name, is_pkg in pkgutil.iter_modules([modules_path]):
         if is_pkg or name == "base":
             continue
         mod = importlib.import_module(f"falcon_mcp.modules.{name}")
+
+        doc_lines = (mod.__doc__ or "").strip().splitlines() if mod.__doc__ else []
+
+        # Extract title from first line:
+        # "Real Time Response module for Falcon MCP Server." → "Real Time Response"
+        first_line = doc_lines[0].strip() if doc_lines else ""
+        auto_title = re.sub(
+            r"\s+module for Falcon MCP Server\.?$", "", first_line, flags=re.IGNORECASE
+        )
+
+        # Extract description from the second paragraph (first non-blank line after title)
+        # Stops at the next blank line so numbered lists / extra sections aren't included.
+        auto_description = ""
+        past_blank = False
+        desc_parts: list[str] = []
+        for line in doc_lines[1:]:
+            stripped = line.strip()
+            if not stripped:
+                if past_blank and desc_parts:
+                    break  # stop at the next blank line after description
+                past_blank = True
+                continue
+            if past_blank:
+                desc_parts.append(stripped)
+        if desc_parts:
+            desc_text = " ".join(desc_parts)
+            # Take only the first sentence to avoid leaking numbered lists / extra sections
+            first_sentence = re.split(r"(?<=\.)\s", desc_text, maxsplit=1)[0].rstrip(".")
+            # Strip the common "This module provides tools for ..." prefix
+            auto_description = re.sub(
+                r"^This module provides tools? for\s+", "", first_sentence, flags=re.IGNORECASE
+            )
+            # Capitalise first letter after stripping
+            if auto_description:
+                auto_description = auto_description[0].upper() + auto_description[1:]
+
         for attr_name in dir(mod):
             if attr_name.endswith("Module") and attr_name != "BaseModule":
                 cls = getattr(mod, attr_name)
                 module_key = attr_name.lower().replace("module", "")
-                result[module_key] = cls
+                result[module_key] = {
+                    "cls": cls,
+                    "auto_title": auto_title or module_key.title(),
+                    "auto_description": auto_description,
+                }
 
     return result
 
@@ -431,11 +455,12 @@ def extract_tool_annotations(module_cls: type) -> dict[str, dict[str, bool]]:
     return annotations
 
 
-def generate_module_page(module_key: str, module_cls: type) -> str:
+def generate_module_page(module_key: str, module_cls: type, auto_title: str, auto_description: str) -> str:
     """Generate a complete markdown page for a module."""
     meta = MODULE_METADATA.get(module_key, {})
-    title = meta.get("title", module_key.title())
-    description = meta.get("description", f"{title} module for CrowdStrike Falcon.")
+    title = meta.get("title", auto_title)
+    fallback_desc = auto_description or f"{title} module for CrowdStrike Falcon."
+    description = meta.get("description", fallback_desc)
     scopes = extract_module_scopes(module_cls)
 
     # Extract tools
@@ -553,7 +578,7 @@ def generate_module_page(module_key: str, module_cls: type) -> str:
     return "\n".join(lines)
 
 
-def generate_overview_page(modules: dict[str, type]) -> str:
+def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
     """Generate the modules overview page with summary table."""
     lines = []
     lines.append("---")
@@ -570,14 +595,15 @@ def generate_overview_page(modules: dict[str, type]) -> str:
     lines.append("| Module | API Scopes | Description |")
     lines.append("|--------|-------------------|-------------|")
 
-    for key in sorted(MODULE_METADATA.keys()):
-        meta = MODULE_METADATA[key]
-        title = meta["title"]
+    for key in sorted(modules.keys()):
+        meta = MODULE_METADATA.get(key, {})
+        title = meta.get("title", modules[key]["auto_title"])
         slug = meta.get("slug", key)
-        module_cls = modules.get(key)
-        scopes_list = extract_module_scopes(module_cls) if module_cls else []
+        module_cls = modules[key]["cls"]
+        scopes_list = extract_module_scopes(module_cls)
         scopes = ", ".join(f"`{s}`" for s in scopes_list)
-        desc = meta.get("description", "")
+        fallback_desc = modules[key]["auto_description"] or f"{title} module for CrowdStrike Falcon."
+        desc = meta.get("description", fallback_desc)
         lines.append(f"| [{title}](/falcon-mcp/modules/{slug}/) | {scopes} | {desc} |")
 
     lines.append("")
@@ -598,13 +624,13 @@ def main() -> None:
 
     # Generate per-module pages
     expected_files = {"overview.md"}
-    for key, cls in sorted(modules.items()):
+    for key, mod_info in sorted(modules.items()):
         meta = MODULE_METADATA.get(key, {})
         slug = meta.get("slug", key)
         filename = f"{slug}.md"
         expected_files.add(filename)
 
-        page = generate_module_page(key, cls)
+        page = generate_module_page(key, mod_info["cls"], mod_info["auto_title"], mod_info["auto_description"])
         (OUTPUT_DIR / filename).write_text(page)
         print(f"  Generated: modules/{filename}")
 

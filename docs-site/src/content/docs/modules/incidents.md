@@ -1,11 +1,11 @@
 ---
 title: Incidents
-description: Analyze security incidents, behaviors, and coordinated activities.
+description: Accessing and analyzing CrowdStrike Falcon incidents
 sidebar:
   order: 10
 ---
 
-Analyze security incidents, behaviors, and coordinated activities.
+Accessing and analyzing CrowdStrike Falcon incidents
 
 ## API Scopes
 
