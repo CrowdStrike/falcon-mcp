@@ -397,7 +397,7 @@ def extract_tool_info(method: Any) -> dict[str, Any]:
 def extract_resource_info(module_cls: type) -> list[dict[str, str]]:
     """Extract resource URIs and descriptions by inspecting register_resources."""
     try:
-        source = inspect.getsource(module_cls.register_resources)
+        source = inspect.getsource(module_cls.register_resources)  # type: ignore[attr-defined]
     except (AttributeError, TypeError):
         return []
 
@@ -434,7 +434,7 @@ def extract_resource_info(module_cls: type) -> list[dict[str, str]]:
 
 def extract_tool_annotations(module_cls: type) -> dict[str, dict[str, bool]]:
     """Extract tool annotations from register_tools source."""
-    source = inspect.getsource(module_cls.register_tools)
+    source = inspect.getsource(module_cls.register_tools)  # type: ignore[attr-defined]
     annotations = {}
 
     # Find _add_tool calls with explicit annotations
@@ -474,7 +474,7 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
             and attr_name not in ("register_tools", "register_resources")
         ):
             # Check if this method is registered as a tool
-            source = inspect.getsource(module_cls.register_tools)
+            source = inspect.getsource(module_cls.register_tools)  # type: ignore[attr-defined]
             if attr_name in source:
                 info = extract_tool_info(method)
                 info["name"] = f"falcon_{attr_name}"
