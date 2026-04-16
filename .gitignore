@@ -216,6 +216,3 @@ docs-site/.astro/
 
 # Playwright MCP screenshots
 .playwright-mcp/
-
-# Docs
-docs-site/package-lock.json

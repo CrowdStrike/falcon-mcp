@@ -3,6 +3,12 @@ name: Deploy Docs to GitHub Pages
 on:
   push:
     branches: [main]
+    paths:
+      - 'falcon_mcp/**'
+      - 'scripts/generate_module_docs.py'
+      - 'docs-site/**'
+      - 'CHANGELOG.md'
+      - '.github/workflows/docs-deploy.yml'
   workflow_dispatch:
 
 # Deny all permissions at the workflow level; each job grants only what it needs.
@@ -51,14 +57,17 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 9
 
       - name: Install docs dependencies
-        run: cd docs-site && npm ci
+        run: cd docs-site && pnpm install --frozen-lockfile
 
       - name: Build docs site
-        run: cd docs-site && npm run build
+        run: cd docs-site && pnpm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
