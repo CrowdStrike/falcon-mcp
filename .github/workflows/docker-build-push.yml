@@ -54,7 +54,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf
         with:
           images: quay.io/crowdstrike/falcon-mcp
           tags: |
