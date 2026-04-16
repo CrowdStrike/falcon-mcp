@@ -60,6 +60,7 @@ export default defineConfig({
             { label: 'Resource Development', slug: 'development/resource-development' },
             { label: 'Integration Testing', slug: 'development/integration-testing' },
             { label: 'E2E Testing', slug: 'development/e2e-testing' },
+            { label: 'Docs Site Guide', slug: 'development/docs-site' },
           ],
         },
         {

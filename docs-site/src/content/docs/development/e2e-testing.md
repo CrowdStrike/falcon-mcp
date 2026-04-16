@@ -41,11 +41,11 @@ MODELS_TO_TEST=example-model-1,example-model-2
 
 E2E tests require the `--run-e2e` flag:
 
-```bash
-# Run all E2E tests
+```bash title="Run all E2E tests"
 uv run pytest --run-e2e tests/e2e/
+```
 
-# Run a specific test
+```bash title="Run a specific test"
 uv run pytest --run-e2e tests/e2e/test_mcp_server.py::TestFalconMCPServerE2E::test_get_top_3_high_severity_detections
 ```
 
@@ -55,14 +55,15 @@ The `-s` flag is **required** to see any meaningful output from E2E tests. Witho
 
 ## Verbosity Levels
 
-```bash
-# Standard output
+```bash title="Standard output"
 uv run pytest --run-e2e -s tests/e2e/
+```
 
-# Verbose — tool calls and responses
+```bash title="Verbose — tool calls and responses"
 uv run pytest --run-e2e -v -s tests/e2e/
+```
 
-# Extra verbose — agent thought process, all events
+```bash title="Extra verbose — agent thought process, all events"
 uv run pytest --run-e2e -vv -s tests/e2e/
 ```
 

@@ -25,8 +25,8 @@ npx markdownlint-cli --fix 'docs-site/src/content/docs/**/*.md' \
 
 echo "=== Step 4: Build Starlight site ==="
 cd "$PROJECT_ROOT/docs-site"
-npm ci
-npm run build
+pnpm install --frozen-lockfile
+pnpm run build
 
 echo "=== Done ==="
 echo "Output: docs-site/dist/"
