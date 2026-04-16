@@ -8,7 +8,7 @@ All source files live in the `docs-site/` directory within the main repository.
 
 ## Directory Structure
 
-```
+```text
 docs-site/
   src/
     content/docs/
