@@ -69,10 +69,23 @@ jobs:
       - name: Build docs site
         run: cd docs-site && pnpm run build
 
+      - name: Archive pages artifact
+        run: |
+          tar \
+            --dereference --hard-dereference \
+            --directory docs-site/dist/ \
+            -cvf "$RUNNER_TEMP/artifact.tar" \
+            --exclude=.git \
+            --exclude=.github \
+            .
+
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          path: docs-site/dist/
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+          if-no-files-found: error
 
   deploy:
     needs: build
