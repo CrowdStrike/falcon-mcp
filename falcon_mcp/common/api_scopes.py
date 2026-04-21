@@ -98,7 +98,22 @@ API_SCOPE_REQUIREMENTS = {
     "create_rule": ["Custom IOA Rules:write"],
     "update_rules_v2": ["Custom IOA Rules:write"],
     "delete_rules": ["Custom IOA Rules:write"],
-    # Add more mappings as needed
+    # Shield (SaaS Security) operations
+    "GetSecurityChecksV3": ["SaaS Security:read"],
+    "GetSecurityCheckAffectedV3": ["SaaS Security:read"],
+    "GetMetricsV3": ["SaaS Security:read"],
+    "GetSecurityCheckComplianceV3": ["SaaS Security:read"],
+    "GetAlertsV3": ["SaaS Security:read"],
+    "GetActivityMonitorV3": ["SaaS Security:read"],
+    "GetUserInventoryV3": ["SaaS Security:read"],
+    "GetDeviceInventoryV3": ["SaaS Security:read"],
+    "GetAppInventory": ["SaaS Security:read"],
+    "GetAppInventoryUsers": ["SaaS Security:read"],
+    "GetAssetInventoryV3": ["SaaS Security:read"],
+    "GetIntegrationsV3": ["SaaS Security:read"],
+    "GetSystemUsersV3": ["SaaS Security:read"],
+    "DismissSecurityCheckV3": ["SaaS Security:write"],
+    "DismissAffectedEntityV3": ["SaaS Security:write"],
 }
 
 
