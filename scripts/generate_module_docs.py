@@ -17,11 +17,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from falcon_mcp.common.api_scopes import API_SCOPE_REQUIREMENTS
-
 # Ensure project root is on sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+from falcon_mcp.common.api_scopes import API_SCOPE_REQUIREMENTS  # noqa: E402
 
 OUTPUT_DIR = PROJECT_ROOT / "docs-site" / "src" / "content" / "docs" / "modules"
 
@@ -321,6 +321,14 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Find all active RTR sessions",
         "Show me RTR sessions for host abc123",
     ],
+    "falcon_search_rtr_audit_sessions": [
+        "Show me RTR audit activity from the last 7 days",
+        "Who used RTR against host BRR-WB-LIB-22?",
+    ],
+    "falcon_aggregate_rtr_sessions": [
+        "Summarize RTR sessions by command for the last 30 days",
+        "Which hosts have the most RTR activity this week?",
+    ],
     "falcon_get_rtr_session_details": [
         "Get details for RTR session abc123",
     ],
@@ -333,6 +341,10 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_execute_rtr_read_only_command": [
         "Run 'ps' on this host via RTR",
         "List running processes on host xyz",
+    ],
+    "falcon_run_rtr_read_only_command_and_wait": [
+        "Run 'ps' via RTR and return the output when it completes",
+        "Check C:\\Windows\\win.ini on this RTR session and wait for the result",
     ],
     "falcon_check_rtr_command_status": [
         "Check the status of RTR command request abc123",
@@ -497,6 +509,40 @@ def extract_tool_info(method: Any) -> dict[str, Any]:
     }
 
 
+def extract_registered_tool_names(module_cls: type) -> dict[str, str]:
+    """Extract method-to-tool-name mappings from register_tools.
+
+    Registered MCP tool names can differ from Python method names. The docs
+    should show the actual tool names exposed to MCP clients.
+    """
+    try:
+        source = inspect.getsource(module_cls.register_tools)  # type: ignore[attr-defined]
+    except (AttributeError, TypeError):
+        return {}
+
+    registered: dict[str, str] = {}
+
+    # Find each _add_tool( block and collect its full call by tracking parens.
+    for match in re.finditer(r"self\._add_tool\(", source):
+        start = match.end()
+        depth = 1
+        pos = start
+        while pos < len(source) and depth > 0:
+            if source[pos] == "(":
+                depth += 1
+            elif source[pos] == ")":
+                depth -= 1
+            pos += 1
+        block = source[start : pos - 1]
+
+        method_match = re.search(r"method=self\.(\w+)", block)
+        name_match = re.search(r'name=["\']([^"\']+)["\']', block)
+        if method_match and name_match:
+            registered[method_match.group(1)] = name_match.group(1)
+
+    return registered
+
+
 def extract_resource_info(module_cls: type) -> list[dict[str, str]]:
     """Extract resource URIs and descriptions by inspecting register_resources."""
     try:
@@ -568,6 +614,7 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
     # Extract tools
     tools = []
     tool_annotations = extract_tool_annotations(module_cls)
+    registered_tool_names = extract_registered_tool_names(module_cls)
 
     for attr_name in dir(module_cls):
         method = getattr(module_cls, attr_name)
@@ -576,17 +623,16 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
             and not attr_name.startswith("_")
             and attr_name not in ("register_tools", "register_resources")
         ):
-            # Check if this method is registered as a tool
-            source = inspect.getsource(module_cls.register_tools)  # type: ignore[attr-defined]
-            if attr_name in source:
+            registered_name = registered_tool_names.get(attr_name)
+            if registered_name:
                 info = extract_tool_info(method)
-                info["name"] = f"falcon_{attr_name}"
-                info["raw_name"] = attr_name
+                info["name"] = f"falcon_{registered_name}"
+                info["raw_name"] = registered_name
                 info["method"] = method
 
                 # Get annotations
-                if attr_name in tool_annotations:
-                    info["annotations"] = tool_annotations[attr_name]
+                if registered_name in tool_annotations:
+                    info["annotations"] = tool_annotations[registered_name]
                 else:
                     info["annotations"] = {
                         "readOnlyHint": True,

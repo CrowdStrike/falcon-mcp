@@ -20,10 +20,13 @@ class TestRTRModule(TestModules):
         """Test registering tools with the server."""
         expected_tools = [
             "falcon_search_rtr_sessions",
+            "falcon_search_rtr_audit_sessions",
+            "falcon_aggregate_rtr_sessions",
             "falcon_get_rtr_session_details",
             "falcon_init_rtr_session",
             "falcon_pulse_rtr_session",
             "falcon_execute_rtr_read_only_command",
+            "falcon_run_rtr_read_only_command_and_wait",
             "falcon_check_rtr_command_status",
             "falcon_list_rtr_session_files",
             "falcon_delete_rtr_session",
@@ -35,6 +38,8 @@ class TestRTRModule(TestModules):
         self.module.register_tools(self.mock_server)
 
         self.assert_tool_annotations("falcon_search_rtr_sessions", READ_ONLY_ANNOTATIONS)
+        self.assert_tool_annotations("falcon_search_rtr_audit_sessions", READ_ONLY_ANNOTATIONS)
+        self.assert_tool_annotations("falcon_aggregate_rtr_sessions", READ_ONLY_ANNOTATIONS)
         self.assert_tool_annotations("falcon_get_rtr_session_details", READ_ONLY_ANNOTATIONS)
         self.assert_tool_annotations(
             "falcon_init_rtr_session",
@@ -63,6 +68,15 @@ class TestRTRModule(TestModules):
                 openWorldHint=True,
             ),
         )
+        self.assert_tool_annotations(
+            "falcon_run_rtr_read_only_command_and_wait",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
         self.assert_tool_annotations("falcon_check_rtr_command_status", READ_ONLY_ANNOTATIONS)
         self.assert_tool_annotations("falcon_list_rtr_session_files", READ_ONLY_ANNOTATIONS)
         self.assert_tool_annotations(
@@ -79,6 +93,9 @@ class TestRTRModule(TestModules):
         """Test registering resources with the server."""
         expected_resources = [
             "falcon_search_rtr_sessions_fql_guide",
+            "falcon_search_rtr_audit_sessions_fql_guide",
+            "falcon_aggregate_rtr_sessions_guide",
+            "falcon_rtr_read_only_investigation_guide",
         ]
         self.assert_resources_registered(expected_resources)
 
@@ -121,6 +138,158 @@ class TestRTRModule(TestModules):
 
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "session-1")
+
+    def test_search_audit_sessions(self):
+        """Test searching RTR audit sessions."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {
+                        "id": "audit-session-1",
+                        "hostname": "BRR-WB-LIB-22",
+                        "user_id": "user@example.com",
+                    }
+                ]
+            },
+        }
+
+        result = self.module.search_audit_sessions(
+            filter="created_at:>'now-7d'",
+            limit=25,
+            offset=0,
+            sort="created_at|desc",
+            with_command_info=True,
+        )
+
+        self.mock_client.command.assert_called_once_with(
+            "RTRAuditSessions",
+            parameters={
+                "filter": "created_at:>'now-7d'",
+                "limit": 25,
+                "offset": 0,
+                "sort": "created_at|desc",
+                "with_command_info": True,
+            },
+        )
+        self.assertEqual(result[0]["id"], "audit-session-1")
+
+    def test_search_audit_sessions_error_returns_fql_guide(self):
+        """Test audit search with API error returns the RTR audit FQL guide."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid filter"}]},
+        }
+
+        result = self.module.search_audit_sessions(
+            filter="invalid:::filter",
+            limit=10,
+            offset=None,
+            sort=None,
+            with_command_info=False,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("fql_guide", result)
+        self.assertIn("RTR Audit Sessions", result["fql_guide"])
+        self.assertIn("Filter error occurred", result["hint"])
+
+    def test_search_audit_sessions_empty_returns_fql_guide(self):
+        """Test audit search with no results returns the RTR audit FQL guide."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+
+        result = self.module.search_audit_sessions(
+            filter="created_at:>'2099-01-01T00:00:00Z'",
+            limit=10,
+            offset=None,
+            sort=None,
+            with_command_info=False,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("fql_guide", result)
+        self.assertIn("No results matched", result["hint"])
+
+    def test_aggregate_sessions_terms(self):
+        """Test RTR session terms aggregation."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {
+                        "name": "commands",
+                        "buckets": [{"key": "ps", "count": 5}],
+                    }
+                ]
+            },
+        }
+
+        result = self.module.aggregate_sessions(
+            field="base_command",
+            aggregate_type="terms",
+            name="commands",
+            filter="created_at:>'now-7d'",
+            size=5,
+            interval=None,
+            date_ranges=None,
+        )
+
+        self.mock_client.command.assert_called_once_with(
+            "RTR_AggregateSessions",
+            body=[
+                {
+                    "field": "base_command",
+                    "filter": "created_at:>'now-7d'",
+                    "name": "commands",
+                    "size": 5,
+                    "type": "terms",
+                }
+            ],
+        )
+        self.assertEqual(result[0]["name"], "commands")
+
+    def test_aggregate_sessions_date_range(self):
+        """Test RTR session date range aggregation."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {
+                        "name": "activity_by_day",
+                        "buckets": [{"key": "now-7d_now", "count": 3}],
+                    }
+                ]
+            },
+        }
+
+        result = self.module.aggregate_sessions(
+            field="created_at",
+            aggregate_type="date_range",
+            name="activity_by_day",
+            filter=None,
+            size=None,
+            interval="day",
+            date_ranges=[{"from": "now-7d", "to": "now"}],
+        )
+
+        self.mock_client.command.assert_called_once_with(
+            "RTR_AggregateSessions",
+            body=[
+                {
+                    "date_ranges": [{"from": "now-7d", "to": "now"}],
+                    "field": "created_at",
+                    "interval": "day",
+                    "name": "activity_by_day",
+                    "type": "date_range",
+                }
+            ],
+        )
+        self.assertEqual(result[0]["name"], "activity_by_day")
 
     def test_get_session_details_empty_ids(self):
         """Test get_session_details returns early for empty input."""
@@ -182,6 +351,132 @@ class TestRTRModule(TestModules):
             },
         )
         self.assertEqual(result[0]["cloud_request_id"], "req-123")
+
+    def test_run_read_only_command_and_wait(self):
+        """Test RTR read-only command execution with status polling."""
+        execute_response = {
+            "status_code": 200,
+            "body": {"resources": [{"cloud_request_id": "req-123", "session_id": "session-1"}]},
+        }
+        status_response = {
+            "status_code": 200,
+            "body": {"resources": [{"complete": True, "stdout": "ok"}]},
+        }
+        self.mock_client.command.side_effect = [execute_response, status_response]
+
+        result = self.module.run_read_only_command_and_wait(
+            session_id="session-1",
+            base_command="cat",
+            command_string=r"cat C:\Windows\win.ini",
+            persist=False,
+            timeout_seconds=1,
+            poll_interval_seconds=0,
+        )
+
+        self.assertEqual(self.mock_client.command.call_count, 2)
+        self.mock_client.command.assert_any_call(
+            "RTR_ExecuteCommand",
+            body={
+                "session_id": "session-1",
+                "base_command": "cat",
+                "command_string": r"cat C:\Windows\win.ini",
+                "persist": False,
+            },
+        )
+        self.mock_client.command.assert_any_call(
+            "RTR_CheckCommandStatus",
+            parameters={"cloud_request_id": "req-123", "sequence_id": 0},
+        )
+        self.assertEqual(result["cloud_request_id"], "req-123")
+        self.assertTrue(result["complete"])
+        self.assertFalse(result["timed_out"])
+        self.assertEqual(result["stdout"], "ok")
+
+    def test_run_read_only_command_and_wait_advances_sequence_chunks(self):
+        """Test command-and-wait polls the next sequence chunk until complete."""
+        execute_response = {
+            "status_code": 200,
+            "body": {"resources": [{"cloud_request_id": "req-123", "session_id": "session-1"}]},
+        }
+        first_chunk_response = {
+            "status_code": 200,
+            "body": {"resources": [{"complete": False, "stdout": "part1"}]},
+        }
+        second_chunk_response = {
+            "status_code": 200,
+            "body": {"resources": [{"complete": True, "stdout": "part2"}]},
+        }
+        self.mock_client.command.side_effect = [
+            execute_response,
+            first_chunk_response,
+            second_chunk_response,
+        ]
+
+        result = self.module.run_read_only_command_and_wait(
+            session_id="session-1",
+            base_command="cat",
+            command_string=r"cat C:\Windows\win.ini",
+            persist=False,
+            timeout_seconds=1,
+            poll_interval_seconds=0,
+        )
+
+        self.mock_client.command.assert_any_call(
+            "RTR_CheckCommandStatus",
+            parameters={"cloud_request_id": "req-123", "sequence_id": 0},
+        )
+        self.mock_client.command.assert_any_call(
+            "RTR_CheckCommandStatus",
+            parameters={"cloud_request_id": "req-123", "sequence_id": 1},
+        )
+        self.assertEqual(result["stdout"], "part1part2")
+        self.assertTrue(result["complete"])
+
+    def test_run_read_only_command_and_wait_execute_error(self):
+        """Test command-and-wait returns execute phase on execute failure."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Session ID is invalid"}]},
+        }
+
+        result = self.module.run_read_only_command_and_wait(
+            session_id="not-a-real-session",
+            base_command="ps",
+            command_string="ps",
+            persist=False,
+            timeout_seconds=1,
+            poll_interval_seconds=0,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result)
+        self.assertEqual(result["phase"], "execute")
+
+    def test_run_read_only_command_and_wait_timeout(self):
+        """Test command-and-wait returns partial status on timeout."""
+        execute_response = {
+            "status_code": 200,
+            "body": {"resources": [{"cloud_request_id": "req-123", "session_id": "session-1"}]},
+        }
+        status_response = {
+            "status_code": 200,
+            "body": {"resources": [{"complete": False, "stdout": ""}]},
+        }
+        self.mock_client.command.side_effect = [execute_response, status_response]
+
+        result = self.module.run_read_only_command_and_wait(
+            session_id="session-1",
+            base_command="ps",
+            command_string="ps",
+            persist=False,
+            timeout_seconds=0,
+            poll_interval_seconds=0,
+        )
+
+        self.assertEqual(result["cloud_request_id"], "req-123")
+        self.assertFalse(result["complete"])
+        self.assertTrue(result["timed_out"])
+        self.assertIn("warning", result)
 
     def test_check_command_status(self):
         """Test retrieving RTR command status."""

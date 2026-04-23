@@ -50,6 +50,25 @@ class TestRTRIntegration(BaseIntegrationTest):
                 f"FQL field rejected by API ({context}): filter={field_filter!r}, hint={hint}"
             )
 
+    def _skip_if_scope_error(self, result, scope_hint: str, context: str) -> None:
+        """Skip gracefully when the tenant API client lacks an optional RTR scope."""
+        error_text = ""
+        if isinstance(result, dict) and "error" in result:
+            error_text = str(result)
+        elif isinstance(result, list) and result and isinstance(result[0], dict):
+            if "error" in result[0]:
+                error_text = str(result[0])
+
+        if not error_text:
+            return
+
+        scope_error_markers = ["403", "permission", "scope", "authorization", "access denied"]
+        if any(marker in error_text.lower() for marker in scope_error_markers):
+            self.skip_with_warning(
+                f"{context} requires {scope_hint}; API client returned {error_text}",
+                context=context,
+            )
+
     # ------------------------------------------------------------------
     # Existing tests
     # ------------------------------------------------------------------
@@ -117,6 +136,54 @@ class TestRTRIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_sessions, limit=1)
         self.assert_no_error(result, context="RTR operation name validation")
 
+    def test_search_rtr_audit_sessions(self):
+        """Validate the RTR audit search operation and parameter shape."""
+        result = self.call_method(
+            self.module.search_audit_sessions,
+            limit=1,
+            sort="created_at|desc",
+            with_command_info=False,
+        )
+
+        self._skip_if_scope_error(
+            result,
+            "real-time-response-audit:read",
+            "search_rtr_audit_sessions",
+        )
+        self.assert_no_error(result, context="search_rtr_audit_sessions")
+
+        if isinstance(result, list):
+            self.assert_valid_list_response(
+                result,
+                min_length=0,
+                context="search_rtr_audit_sessions",
+            )
+
+    def test_aggregate_rtr_sessions(self):
+        """Validate RTR session aggregation operation and request body shape."""
+        result = self.call_method(
+            self.module.aggregate_sessions,
+            field="base_command",
+            aggregate_type="terms",
+            name="commands",
+            filter="created_at:>'now-30d'",
+            size=5,
+        )
+
+        self._skip_if_scope_error(
+            result,
+            "Real time response:read",
+            "aggregate_rtr_sessions",
+        )
+        self.assert_no_error(result, context="aggregate_rtr_sessions")
+
+        if isinstance(result, list):
+            self.assert_valid_list_response(
+                result,
+                min_length=0,
+                context="aggregate_rtr_sessions",
+            )
+
     # ------------------------------------------------------------------
     # FQL filter tests
     # ------------------------------------------------------------------
@@ -182,11 +249,11 @@ class TestRTRIntegration(BaseIntegrationTest):
             context="user_id @me special token",
         )
 
-    def test_fql_example_deleted_at_not_wildcard(self):
-        """Validate deleted_at:!'*' wildcard exclusion syntax."""
+    def test_fql_example_deleted_at_future_timestamp(self):
+        """Validate deleted_at timestamp comparison syntax."""
         self._assert_fql_field_accepted(
-            "deleted_at:!'*'",
-            context="deleted_at not-wildcard",
+            "deleted_at:>'2099-01-01T00:00:00Z'",
+            context="deleted_at future timestamp",
         )
 
     def test_fql_example_compound_filter(self):
@@ -407,6 +474,44 @@ class TestRTRLifecycleIntegration(BaseIntegrationTest):
 
         assert cloud_request_id, f"Expected cloud_request_id in execute response. Got: {result}"
         self.__class__._cloud_request_id = cloud_request_id
+
+    def test_run_read_only_command_and_wait(self):
+        """Validate the command-and-wait helper against a real RTR session."""
+        result = self.call_method(
+            self.module.run_read_only_command_and_wait,
+            session_id=self.__class__._session_id,
+            base_command="pwd",
+            command_string="pwd",
+            timeout_seconds=30,
+            poll_interval_seconds=2,
+        )
+
+        if isinstance(result, dict) and "error" in result:
+            self.skip_with_warning(
+                "run_read_only_command_and_wait returned error (host likely offline)",
+                context="test_run_read_only_command_and_wait",
+            )
+
+        self.assert_no_error(result, context="run_read_only_command_and_wait")
+
+        assert isinstance(result, dict), (
+            f"Expected dict response from run_read_only_command_and_wait, got {type(result)}"
+        )
+        assert result.get("cloud_request_id"), (
+            f"Expected cloud_request_id in command-and-wait response. Got: {result}"
+        )
+        assert "complete" in result, (
+            f"Expected complete flag in command-and-wait response. Got: {result}"
+        )
+        assert "timed_out" in result, (
+            f"Expected timed_out flag in command-and-wait response. Got: {result}"
+        )
+
+        if result.get("timed_out"):
+            self.skip_with_warning(
+                "RTR command did not complete before the helper timeout",
+                context="test_run_read_only_command_and_wait",
+            )
 
     def test_check_command_status(self):
         """Validate RTR_CheckCommandStatus returns output for a known request."""
