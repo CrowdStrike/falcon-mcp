@@ -47,6 +47,27 @@ jobs:
             git push
           fi
 
+      - name: Sync server.json version
+        if: ${{ steps.release-please.outputs.pr }}
+        run: |
+          VERSION=$(grep -Po '(?<=^version = ")[^"]*' pyproject.toml)
+          CURRENT=$(jq -r '.version' server.json)
+          if [ "$VERSION" != "$CURRENT" ]; then
+            jq --arg v "$VERSION" '
+              .version = $v |
+              .packages = [.packages[] |
+                if .registryType == "pypi" then .version = $v
+                elif .registryType == "oci" then .identifier = (.identifier | sub(":[^:]+$"; ":" + $v))
+                else . end
+              ]
+            ' server.json > tmp.json && mv tmp.json server.json
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add server.json
+            git commit -m "chore: sync server.json version to $VERSION"
+            git push
+          fi
+
       - name: Update uv.lock
         if: ${{ steps.release-please.outputs.pr }}
         run: |
@@ -91,13 +112,26 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
 
-  docker-release:
-    needs: release-please
+  mcp-registry-publish:
+    needs: [release-please, pypi-publish]
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
+      id-token: write
       contents: read
-      packages: write
-    uses: ./.github/workflows/docker-build-push.yml
-    with:
-      tag_name: ${{ needs.release-please.outputs.tag_name }}
-    secrets: inherit
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server to MCP Registry
+        run: ./mcp-publisher publish

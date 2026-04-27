@@ -1,0 +1,118 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.CrowdStrike/falcon-mcp",
+  "title": "CrowdStrike Falcon MCP Server",
+  "description": "Connects AI agents with CrowdStrike Falcon for security analysis and automation.",
+  "repository": {
+    "url": "https://github.com/CrowdStrike/falcon-mcp",
+    "source": "github",
+    "id": "999737146"
+  },
+  "version": "0.9.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "falcon-mcp",
+      "version": "0.9.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "FALCON_CLIENT_ID",
+          "description": "CrowdStrike API client ID",
+          "format": "string",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "FALCON_CLIENT_SECRET",
+          "description": "CrowdStrike API client secret",
+          "format": "string",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "FALCON_BASE_URL",
+          "description": "CrowdStrike API region URL",
+          "format": "string",
+          "default": "https://api.crowdstrike.com",
+          "placeholder": "https://api.crowdstrike.com",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "FALCON_MEMBER_CID",
+          "description": "Child CID for Flight Control (MSSP) support",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "FALCON_MCP_MODULES",
+          "description": "Comma-separated list of modules to enable",
+          "format": "string",
+          "placeholder": "detections,incidents,hosts",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "FALCON_MCP_TRANSPORT",
+          "description": "Transport protocol to use",
+          "format": "string",
+          "default": "stdio",
+          "choices": ["stdio", "sse", "streamable-http"],
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "FALCON_MCP_DEBUG",
+          "description": "Enable debug logging",
+          "format": "boolean",
+          "default": "false",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "FALCON_MCP_HOST",
+          "description": "Host to bind to for HTTP transports",
+          "format": "string",
+          "default": "127.0.0.1",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "FALCON_MCP_PORT",
+          "description": "Port to listen on for HTTP transports",
+          "format": "number",
+          "default": "8000",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "FALCON_MCP_USER_AGENT_COMMENT",
+          "description": "Additional information to include in the User-Agent comment section",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "FALCON_MCP_STATELESS_HTTP",
+          "description": "Enable stateless HTTP mode for scalable deployments",
+          "format": "boolean",
+          "default": "false",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "FALCON_MCP_API_KEY",
+          "description": "API key for HTTP transport authentication (x-api-key header)",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
