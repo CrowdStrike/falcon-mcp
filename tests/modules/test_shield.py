@@ -5,7 +5,7 @@ import unittest
 from mcp.types import ToolAnnotations
 
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
-from falcon_mcp.modules.shield import IMPACT_MAP, ShieldModule
+from falcon_mcp.modules.shield import IMPACT_NAMES, ShieldModule
 from tests.modules.utils.test_modules import TestModules
 
 
@@ -115,31 +115,31 @@ class TestShieldModule(TestModules):
 
     # --- Impact mapping tests ---
 
-    def test_impact_map_values(self):
-        self.assertEqual(IMPACT_MAP["low"], 1)
-        self.assertEqual(IMPACT_MAP["medium"], 2)
-        self.assertEqual(IMPACT_MAP["high"], 3)
+    def test_impact_names_values(self):
+        self.assertEqual(IMPACT_NAMES["low"], "Low")
+        self.assertEqual(IMPACT_NAMES["medium"], "Medium")
+        self.assertEqual(IMPACT_NAMES["high"], "High")
 
-    def test_map_impact_low(self):
-        self.assertEqual(self.module._map_impact("Low"), 1)
+    def test_normalize_impact_low(self):
+        self.assertEqual(self.module._normalize_impact("Low"), "Low")
 
-    def test_map_impact_high(self):
-        self.assertEqual(self.module._map_impact("High"), 3)
+    def test_normalize_impact_high(self):
+        self.assertEqual(self.module._normalize_impact("High"), "High")
 
-    def test_map_impact_none(self):
-        self.assertIsNone(self.module._map_impact(None))
+    def test_normalize_impact_none(self):
+        self.assertIsNone(self.module._normalize_impact(None))
 
-    def test_map_impact_case_insensitive(self):
-        self.assertEqual(self.module._map_impact("low"), 1)
-        self.assertEqual(self.module._map_impact("MEDIUM"), 2)
-        self.assertEqual(self.module._map_impact("high"), 3)
+    def test_normalize_impact_case_insensitive(self):
+        self.assertEqual(self.module._normalize_impact("low"), "Low")
+        self.assertEqual(self.module._normalize_impact("MEDIUM"), "Medium")
+        self.assertEqual(self.module._normalize_impact("high"), "High")
 
-    def test_map_impact_invalid_string_returns_none(self):
-        self.assertIsNone(self.module._map_impact("critical"))
+    def test_normalize_impact_invalid_string_returns_none(self):
+        self.assertIsNone(self.module._normalize_impact("critical"))
 
-    def test_map_impact_invalid_string_logs_warning(self):
+    def test_normalize_impact_invalid_string_logs_warning(self):
         with self.assertLogs("falcon_mcp.modules.shield", level="WARNING") as cm:
-            self.module._map_impact("critical")
+            self.module._normalize_impact("critical")
         self.assertTrue(any("critical" in msg for msg in cm.output))
 
     # --- Functional tests: search_shield_checks ---
@@ -160,7 +160,7 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetSecurityChecksV3")
         self.assertEqual(call_args[1]["parameters"]["status"], "Failed")
-        self.assertEqual(call_args[1]["parameters"]["impact"], 3)
+        self.assertEqual(call_args[1]["parameters"]["impact"], "High")
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["id"], "check-1")
 
@@ -233,7 +233,7 @@ class TestShieldModule(TestModules):
 
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetMetricsV3")
-        self.assertEqual(call_args[1]["parameters"]["impact"], 2)
+        self.assertEqual(call_args[1]["parameters"]["impact"], "Medium")
         self.assertEqual(len(result), 1)
 
     # --- Functional tests: get_shield_check_compliance ---
@@ -268,6 +268,18 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetAlertsV3")
         self.assertEqual(call_args[1]["parameters"]["type"], "configuration_drift")
+        self.assertEqual(len(result), 1)
+
+    def test_search_shield_alerts_threat_type(self):
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "alert-1", "alert_type": "Threat"}]},
+        }
+
+        result = self.module.search_shield_alerts(type="Threat")
+
+        call_args = self.mock_client.command.call_args
+        self.assertEqual(call_args[1]["parameters"]["type"], "Threat")
         self.assertEqual(len(result), 1)
 
     def test_search_shield_alerts_empty(self):
@@ -344,6 +356,21 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetAppInventory")
         self.assertEqual(call_args[1]["parameters"]["type"], "oauth")
+        self.assertEqual(len(result), 1)
+
+    def test_search_shield_apps_with_offset(self):
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [{"app_name": "Slack", "app_type": "oauth", "access_level": "high"}]
+            },
+        }
+
+        result = self.module.search_shield_apps(offset=10)
+
+        call_args = self.mock_client.command.call_args
+        self.assertEqual(call_args[0][0], "GetAppInventory")
+        self.assertEqual(call_args[1]["parameters"]["offset"], 10)
         self.assertEqual(len(result), 1)
 
     # --- Functional tests: get_shield_app_users ---
@@ -425,8 +452,9 @@ class TestShieldModule(TestModules):
 
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "DismissSecurityCheckV3")
-        self.assertEqual(call_args[1]["body"]["id"], "check-1")
-        self.assertEqual(call_args[1]["body"]["reason"], "Accepted risk")
+        self.assertEqual(call_args[1]["parameters"]["id"], "check-1")
+        self.assertEqual(call_args[1]["body"], {"reason": "Accepted risk"})
+        self.assertNotIn("id", call_args[1]["body"])
         self.assertEqual(len(result), 1)
 
     def test_dismiss_shield_check_specific_entities(self):
@@ -442,9 +470,10 @@ class TestShieldModule(TestModules):
 
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "DismissAffectedEntityV3")
-        self.assertEqual(call_args[1]["body"]["id"], "check-1")
+        self.assertEqual(call_args[1]["parameters"]["id"], "check-1")
         self.assertEqual(call_args[1]["body"]["reason"], "User exception")
         self.assertEqual(call_args[1]["body"]["entities"], ["user@ex.com", "admin@ex.com"])
+        self.assertNotIn("id", call_args[1]["body"])
         self.assertEqual(len(result), 1)
 
     def test_dismiss_shield_check_api_error(self):
@@ -509,6 +538,20 @@ class TestShieldModule(TestModules):
 
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[1]["parameters"]["check_tags"], long_value)
+
+    def test_search_shield_checks_falcon_shield_security_check_type(self):
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "check-1", "check_type": "Falcon Shield Security Check"}]},
+        }
+
+        result = self.module.search_shield_checks(check_type="Falcon Shield Security Check")
+
+        call_args = self.mock_client.command.call_args
+        self.assertEqual(
+            call_args[1]["parameters"]["check_type"], "Falcon Shield Security Check"
+        )
+        self.assertEqual(len(result), 1)
 
 
 if __name__ == "__main__":

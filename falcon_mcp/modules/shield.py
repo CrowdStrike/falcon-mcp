@@ -13,22 +13,23 @@ from falcon_mcp.resources.shield import SHIELD_QUERY_DOCUMENTATION
 
 logger = get_logger(__name__)
 
-IMPACT_MAP = {"low": 1, "medium": 2, "high": 3}
+IMPACT_NAMES = {"low": "Low", "medium": "Medium", "high": "High"}
 
 
 class ShieldModule(BaseModule):
     """Module for CrowdStrike Falcon Shield (SaaS Security) API operations."""
 
     @staticmethod
-    def _map_impact(impact: str | None) -> int | None:
+    def _normalize_impact(impact: str | None) -> str | None:
+        """Normalize impact to title-case for endpoints that accept named values."""
         if not isinstance(impact, str):
             return None
-        mapped = IMPACT_MAP.get(impact.lower())
-        if mapped is None:
+        normalized = IMPACT_NAMES.get(impact.lower())
+        if normalized is None:
             logger.warning(
-                "Unknown impact value '%s'; expected one of: %s", impact, ", ".join(IMPACT_MAP)
+                "Unknown impact value '%s'; expected one of: %s", impact, ", ".join(IMPACT_NAMES)
             )
-        return mapped
+        return normalized
 
     def _format_empty_or_error(
         self,
@@ -158,7 +159,7 @@ class ShieldModule(BaseModule):
         ),
         status: str | None = Field(
             default=None,
-            description="Filter by status: Passed, Failed, Dismissed, Pending, Can't Run, Stale, Not Available.",
+            description="Filter by status: Passed, Failed, Dismissed, Pending, Can't Run, Stale.",
         ),
         impact: str | None = Field(
             default=None,
@@ -177,7 +178,7 @@ class ShieldModule(BaseModule):
         ),
         check_type: str | None = Field(
             default=None,
-            description="Filter by type: apps, devices, users, assets, permissions, custom.",
+            description="Filter by type: apps, devices, users, assets, permissions, custom, Falcon Shield Security Check.",
         ),
         check_tags: str | None = Field(
             default=None,
@@ -215,7 +216,7 @@ class ShieldModule(BaseModule):
             search_params={
                 "id": id,
                 "status": status,
-                "impact": self._map_impact(impact),
+                "impact": self._normalize_impact(impact),
                 "integration_id": integration_id,
                 "compliance": compliance,
                 "check_type": check_type,
@@ -280,7 +281,7 @@ class ShieldModule(BaseModule):
         ),
         check_type: str | None = Field(
             default=None,
-            description="Filter by type: apps, devices, users, assets, permissions, custom.",
+            description="Filter by type: apps, devices, users, assets, permissions, custom, Falcon Shield Security Check.",
         ),
         limit: int = Field(
             default=10,
@@ -307,7 +308,7 @@ class ShieldModule(BaseModule):
             operation="GetMetricsV3",
             search_params={
                 "status": status,
-                "impact": self._map_impact(impact),
+                "impact": self._normalize_impact(impact),
                 "integration_id": integration_id,
                 "compliance": compliance,
                 "check_type": check_type,
@@ -344,7 +345,7 @@ class ShieldModule(BaseModule):
         ),
         type: str | None = Field(
             default=None,
-            description="Filter by type: configuration_drift, check_degraded, integration_failure, threat.",
+            description="Filter by type: configuration_drift, check_degraded, integration_failure, Threat.",
         ),
         integration_id: str | None = Field(
             default=None,
@@ -386,7 +387,7 @@ class ShieldModule(BaseModule):
 
         Alert types: configuration_drift (a previously passing check now fails),
         check_degraded (check status worsened), integration_failure (connectivity issue
-        with a SaaS platform), threat (active threat indicator).
+        with a SaaS platform), Threat (active threat indicator).
 
         Pagination: use last_id from the last result for cursor-based pagination, or
         use offset for offset-based pagination.
@@ -647,6 +648,13 @@ class ShieldModule(BaseModule):
             ge=1,
             description="Maximum number of results to return (default: 10).",
         ),
+        offset: int | None = Field(
+            default=None,
+            description=(
+                "Zero-based offset for pagination. Omit or set to 0 for the first page."
+                " Increment by limit for subsequent pages."
+            ),
+        ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """List third-party applications (OAuth apps, API tokens, browser extensions,
         service principals) with access to Falcon Shield (SaaS Security) monitored
@@ -669,6 +677,7 @@ class ShieldModule(BaseModule):
                 "groups": groups,
                 "last_activity": last_activity,
                 "limit": limit,
+                "offset": offset,
             },
             error_message="Failed to search Shield apps",
         )
@@ -688,8 +697,7 @@ class ShieldModule(BaseModule):
         Use this after `search_shield_apps` to drill into a specific app's user
         population.
 
-        Returns user objects including email, display name, and granted
-        permissions."""
+        Returns user objects including email, display name, and granted permissions."""
         return self._search_with_docs(
             operation="GetAppInventoryUsers",
             search_params={"item_id": item_id},
@@ -867,16 +875,16 @@ class ShieldModule(BaseModule):
         if isinstance(entities, str):
             operation = "DismissAffectedEntityV3"
             body = {
-                "id": id,
                 "reason": reason,
                 "entities": [e.strip() for e in entities.split(",")],
             }
         else:
             operation = "DismissSecurityCheckV3"
-            body = {"id": id, "reason": reason}
+            body = {"reason": reason}
 
         return self._base_query_api_call(
             operation=operation,
+            query_params={"id": id},
             body_params=body,
             error_message="Failed to dismiss Shield check",
         )

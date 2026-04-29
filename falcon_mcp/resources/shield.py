@@ -7,14 +7,14 @@ SHIELD_COMMON_PARAMS = [
     (
         "status",
         "String",
-        "Passed, Failed, Dismissed, Pending, Can't Run, Stale, Not Available",
+        "Passed, Failed, Dismissed, Pending, Can't Run, Stale",
         "shield_checks, shield_posture_metrics",
     ),
     ("impact", "String", "Low, Medium, High", "shield_checks, shield_posture_metrics"),
     (
         "check_type",
         "String",
-        "apps, devices, users, assets, permissions, custom",
+        "apps, devices, users, assets, permissions, custom, Falcon Shield Security Check",
         "shield_checks, shield_posture_metrics",
     ),
     (
@@ -38,7 +38,7 @@ SHIELD_QUERY_DOCUMENTATION = f"""# Falcon Shield Query Parameter Guide
 {generate_md_table(SHIELD_COMMON_PARAMS)}
 
 ## Alert Types
-configuration_drift, check_degraded, integration_failure, threat
+configuration_drift, check_degraded, integration_failure, Threat
 
 ## App Types
 oauth, sign_in, api_token, App Registration, Connected Apps, browser_extension, Portal, Service Principal

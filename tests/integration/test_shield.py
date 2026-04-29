@@ -13,7 +13,7 @@ class TestShieldIntegration(BaseIntegrationTest):
     Validates:
     - Correct FalconPy operation names for all 13 read-only tools
     - Direct GET endpoints return full entity details (no two-step pattern)
-    - Impact string-to-int mapping works against real API
+    - Impact string normalization works against real API
     - Dismiss tool (DismissSecurityCheckV3/DismissAffectedEntityV3) is skipped
       — write operations are not run in integration tests
 
@@ -37,7 +37,7 @@ class TestShieldIntegration(BaseIntegrationTest):
             self.assert_valid_list_response(result, min_length=0, context="search_shield_checks")
 
     def test_search_shield_checks_with_impact_filter(self):
-        """Validate impact string-to-int mapping works against real API."""
+        """Validate impact string normalization works against real API."""
         result = self.call_method(
             self.module.search_shield_checks,
             impact="High",
