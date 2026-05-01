@@ -47,6 +47,9 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     "serverless": {
         "title": "Serverless",
     },
+    "shield": {
+        "title": "Shield",
+    },
 }
 
 # Natural language prompt examples for each tool, shown in generated docs
@@ -207,6 +210,58 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     # Serverless
     "falcon_search_serverless_vulnerabilities": [
         "Find HIGH severity vulnerabilities in AWS Lambda functions",
+    ],
+    # Shield
+    "falcon_search_shield_checks": [
+        "Show me the failed Shield security checks",
+        "Search for high impact Shield checks related to devices",
+    ],
+    "falcon_get_shield_check_affected_entities": [
+        "Show me the entities affected by a failed Shield check",
+    ],
+    "falcon_get_shield_posture_metrics": [
+        "Show me my overall Falcon Shield posture metrics",
+    ],
+    "falcon_get_shield_check_compliance": [
+        "Find a Shield check with compliance framework mappings",
+    ],
+    "falcon_search_shield_alerts": [
+        "Show me Shield alerts of type Threat",
+        "Show me the 5 oldest Shield alerts sorted by date",
+    ],
+    "falcon_get_shield_activity_monitor": [
+        "Show me Shield activity events from the last 24 hours",
+    ],
+    "falcon_search_shield_users": [
+        "List privileged users across my connected SaaS apps in Shield",
+    ],
+    "falcon_search_shield_devices": [
+        "Show me devices in Shield not associated with any known user",
+    ],
+    "falcon_search_shield_apps": [
+        "Find OAuth apps in Shield that haven't been active in 90 days",
+        "List all Shield apps with status 'in review'",
+    ],
+    "falcon_get_shield_app_users": [
+        "Show me which users have authorized Shield app abc123",
+    ],
+    "falcon_search_shield_data_shares": [
+        "Find files shared via public link in Shield",
+    ],
+    "falcon_get_shield_integrations": [
+        "List all connected SaaS integrations in Falcon Shield",
+    ],
+    "falcon_get_shield_system_users": [
+        "Show me the Falcon Shield platform administrators and their MFA status",
+    ],
+    "falcon_get_shield_supported_saas": [
+        "List all SaaS platforms supported by Falcon Shield",
+    ],
+    "falcon_get_shield_system_logs": [
+        "Show me the last 10 Falcon Shield system audit logs",
+    ],
+    "falcon_dismiss_shield_check": [
+        "Dismiss a low-impact Shield check entity with reason 'No longer applicable'",
     ],
     # Spotlight
     "falcon_search_vulnerabilities": [

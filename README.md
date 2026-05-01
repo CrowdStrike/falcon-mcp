@@ -37,6 +37,7 @@ Full docs are available at **[crowdstrike.github.io/falcon-mcp](https://crowdstr
 | [Scheduled Reports](https://crowdstrike.github.io/falcon-mcp/modules/scheduled-reports/) | Manage scheduled reports and download report files |
 | [Sensor Usage](https://crowdstrike.github.io/falcon-mcp/modules/sensor-usage/) | Access and analyze sensor usage data |
 | [Serverless](https://crowdstrike.github.io/falcon-mcp/modules/serverless/) | Search for vulnerabilities in serverless functions |
+| [Shield](https://crowdstrike.github.io/falcon-mcp/modules/shield/) | SaaS security posture, checks, alerts, and app inventory |
 | [Spotlight](https://crowdstrike.github.io/falcon-mcp/modules/spotlight/) | Manage and analyze vulnerability data and security assessments |
 
 See the [Module Overview](https://crowdstrike.github.io/falcon-mcp/modules/overview/) for required API scopes, available tools, and FQL resources.
