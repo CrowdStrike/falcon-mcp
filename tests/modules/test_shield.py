@@ -19,7 +19,7 @@ class TestShieldModule(TestModules):
     # --- Registration tests ---
 
     def test_register_tools(self):
-        """Test registering all 14 tools with the server."""
+        """Test registering all 16 tools with the server."""
         expected_tools = [
             "falcon_search_shield_checks",
             "falcon_get_shield_check_affected_entities",
@@ -34,6 +34,8 @@ class TestShieldModule(TestModules):
             "falcon_search_shield_data_shares",
             "falcon_get_shield_integrations",
             "falcon_get_shield_system_users",
+            "falcon_get_shield_supported_saas",
+            "falcon_get_shield_system_logs",
             "falcon_dismiss_shield_check",
         ]
         self.assert_tools_registered(expected_tools)
@@ -100,6 +102,14 @@ class TestShieldModule(TestModules):
     def test_get_shield_system_users_has_read_only_annotations(self):
         self.module.register_tools(self.mock_server)
         self.assert_tool_annotations("falcon_get_shield_system_users", READ_ONLY_ANNOTATIONS)
+
+    def test_get_shield_supported_saas_has_read_only_annotations(self):
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations("falcon_get_shield_supported_saas", READ_ONLY_ANNOTATIONS)
+
+    def test_get_shield_system_logs_has_read_only_annotations(self):
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations("falcon_get_shield_system_logs", READ_ONLY_ANNOTATIONS)
 
     def test_dismiss_shield_check_has_destructive_annotations(self):
         self.module.register_tools(self.mock_server)
@@ -438,6 +448,80 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetSystemUsersV3")
         self.assertEqual(len(result), 1)
+
+    # --- Functional tests: get_shield_supported_saas ---
+
+    def test_get_shield_supported_saas_success(self):
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [{"id": "google", "name": "Google Workspace"}]
+            },
+        }
+
+        result = self.module.get_shield_supported_saas()
+
+        call_args = self.mock_client.command.call_args
+        self.assertEqual(call_args[0][0], "GetSupportedSaasV3")
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["id"], "google")
+
+    def test_get_shield_supported_saas_empty(self):
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+
+        result = self.module.get_shield_supported_saas()
+
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["results"], [])
+
+    # --- Functional tests: get_shield_system_logs ---
+
+    def test_get_shield_system_logs_success(self):
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"timestamp": "2026-04-29T10:00:00Z", "event_type": "integration_created"}
+                ]
+            },
+        }
+
+        result = self.module.get_shield_system_logs(
+            from_date="2026-04-01", to_date="2026-04-30", limit=50
+        )
+
+        call_args = self.mock_client.command.call_args
+        self.assertEqual(call_args[0][0], "GetSystemLogsV3")
+        self.assertEqual(call_args[1]["parameters"]["from_date"], "2026-04-01")
+        self.assertEqual(call_args[1]["parameters"]["to_date"], "2026-04-30")
+        self.assertEqual(call_args[1]["parameters"]["limit"], 50)
+        self.assertEqual(len(result), 1)
+
+    def test_get_shield_system_logs_empty(self):
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+
+        result = self.module.get_shield_system_logs()
+
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["results"], [])
+
+    def test_get_shield_system_logs_api_error(self):
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid date format"}]},
+        }
+
+        result = self.module.get_shield_system_logs(from_date="bad-date")
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result["results"][0])
+        self.assertIn("query_guide", result)
 
     # --- Functional tests: dismiss_shield_check ---
 

@@ -11,7 +11,7 @@ class TestShieldIntegration(BaseIntegrationTest):
     """Integration tests for Shield module with real API calls.
 
     Validates:
-    - Correct FalconPy operation names for all 13 read-only tools
+    - Correct FalconPy operation names for all 15 read-only tools
     - Direct GET endpoints return full entity details (no two-step pattern)
     - Impact string normalization works against real API
     - Dismiss tool (DismissSecurityCheckV3/DismissAffectedEntityV3) is skipped
@@ -213,10 +213,30 @@ class TestShieldIntegration(BaseIntegrationTest):
                 result, min_length=0, context="get_shield_system_users"
             )
 
+    def test_get_shield_supported_saas(self):
+        """Validate GetSupportedSaasV3 operation name and response shape."""
+        result = self.call_method(self.module.get_shield_supported_saas)
+
+        self.assert_no_error(result, context="get_shield_supported_saas")
+        if isinstance(result, list):
+            self.assert_valid_list_response(
+                result, min_length=0, context="get_shield_supported_saas"
+            )
+
+    def test_get_shield_system_logs(self):
+        """Validate GetSystemLogsV3 operation name and response shape."""
+        result = self.call_method(self.module.get_shield_system_logs, limit=5)
+
+        self.assert_no_error(result, context="get_shield_system_logs")
+        if isinstance(result, list):
+            self.assert_valid_list_response(
+                result, min_length=0, context="get_shield_system_logs"
+            )
+
     # --- Cross-tool validation ---
 
     def test_all_read_operation_names_are_correct(self):
-        """Validate all 13 read-only operation names produce no errors.
+        """Validate all 15 read-only operation names produce no errors.
 
         If any operation name is wrong (typo), the FalconPy client.command()
         call will fail with an error response. This test covers both
@@ -263,13 +283,21 @@ class TestShieldIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.get_shield_system_users)
         self.assert_no_error(result, context="GetSystemUsersV3")
 
+        # 11. GetSupportedSaasV3
+        result = self.call_method(self.module.get_shield_supported_saas)
+        self.assert_no_error(result, context="GetSupportedSaasV3")
+
+        # 12. GetSystemLogsV3
+        result = self.call_method(self.module.get_shield_system_logs, limit=1)
+        self.assert_no_error(result, context="GetSystemLogsV3")
+
         # ID-dependent operations — need a real check ID from step 1
         check_id = None
         if isinstance(checks, list) and len(checks) > 0:
             check_id = self.get_first_id(checks, id_field="id")
 
         if check_id:
-            # 11. GetSecurityCheckAffectedV3
+            # 13. GetSecurityCheckAffectedV3
             result = self.call_method(
                 self.module.get_shield_check_affected_entities,
                 id=check_id,
@@ -277,7 +305,7 @@ class TestShieldIntegration(BaseIntegrationTest):
             )
             self.assert_no_error(result, context="GetSecurityCheckAffectedV3")
 
-            # 12. GetSecurityCheckComplianceV3
+            # 14. GetSecurityCheckComplianceV3
             result = self.call_method(
                 self.module.get_shield_check_compliance,
                 id=check_id,
@@ -290,7 +318,7 @@ class TestShieldIntegration(BaseIntegrationTest):
             if isinstance(first_app, dict):
                 app_item_id = first_app.get("item_id") or first_app.get("id")
                 if app_item_id:
-                    # 13. GetAppInventoryUsers
+                    # 15. GetAppInventoryUsers
                     result = self.call_method(
                         self.module.get_shield_app_users,
                         item_id=app_item_id,

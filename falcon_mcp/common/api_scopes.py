@@ -112,6 +112,8 @@ API_SCOPE_REQUIREMENTS = {
     "GetAssetInventoryV3": ["SaaS Security:read"],
     "GetIntegrationsV3": ["SaaS Security:read"],
     "GetSystemUsersV3": ["SaaS Security:read"],
+    "GetSupportedSaasV3": ["SaaS Security:read"],
+    "GetSystemLogsV3": ["SaaS Security:read"],
     "DismissSecurityCheckV3": ["SaaS Security:write"],
     "DismissAffectedEntityV3": ["SaaS Security:write"],
 }

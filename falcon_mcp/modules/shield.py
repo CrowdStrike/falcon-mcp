@@ -130,6 +130,16 @@ class ShieldModule(BaseModule):
         )
         self._add_tool(
             server=server,
+            method=self.get_shield_supported_saas,
+            name="get_shield_supported_saas",
+        )
+        self._add_tool(
+            server=server,
+            method=self.get_shield_system_logs,
+            name="get_shield_system_logs",
+        )
+        self._add_tool(
+            server=server,
             method=self.dismiss_shield_check,
             name="dismiss_shield_check",
             annotations=ToolAnnotations(
@@ -174,7 +184,13 @@ class ShieldModule(BaseModule):
         ),
         compliance: bool | None = Field(
             default=None,
-            description="If true, return only checks mapped to a compliance framework (SOC 2, CIS, etc.).",
+            description=(
+                "If true, return only checks that are defined as part of a compliance framework"
+                " (SOC 2, CIS, NIST, etc.) at the catalog level."
+                " Note: a check can be compliance-mapped yet still return no compliance criteria"
+                " via `get_shield_check_compliance` if the tenant has not followed the relevant"
+                " framework or compliance data has not yet been populated."
+            ),
         ),
         check_type: str | None = Field(
             default=None,
@@ -277,7 +293,10 @@ class ShieldModule(BaseModule):
         ),
         compliance: bool | None = Field(
             default=None,
-            description="If true, return only metrics for checks mapped to a compliance framework.",
+            description=(
+                "If true, return only metrics for checks that are defined as part of a compliance"
+                " framework (SOC 2, CIS, NIST, etc.) at the catalog level."
+            ),
         ),
         check_type: str | None = Field(
             default=None,
@@ -345,7 +364,7 @@ class ShieldModule(BaseModule):
         ),
         type: str | None = Field(
             default=None,
-            description="Filter by type: configuration_drift, check_degraded, integration_failure, Threat.",
+            description="Filter by type: configuration_drift, check_degraded, integration_failure, threat.",
         ),
         integration_id: str | None = Field(
             default=None,
@@ -387,7 +406,7 @@ class ShieldModule(BaseModule):
 
         Alert types: configuration_drift (a previously passing check now fails),
         check_degraded (check status worsened), integration_failure (connectivity issue
-        with a SaaS platform), Threat (active threat indicator).
+        with a SaaS platform), threat (active threat indicator).
 
         Pagination: use last_id from the last result for cursor-based pagination, or
         use offset for offset-based pagination.
@@ -639,8 +658,8 @@ class ShieldModule(BaseModule):
             default=None,
             description=(
                 "Filter by time since the app was last active."
-                " Format: 'was N days' (active within N days) or 'was not N days' (inactive for more than N days)."
-                " Example: 'was not 90 days'."
+                " Format: 'was N' (active within N days) or 'was not N' (inactive for more than N days)."
+                " Example: 'was not 90'."
             ),
         ),
         limit: int = Field(
@@ -747,16 +766,16 @@ class ShieldModule(BaseModule):
             default=None,
             description=(
                 "Filter by time since the resource was last accessed."
-                " Format: 'was N days' (within N days) or 'was not N days' (not accessed in more than N days)."
-                " Example: 'was not 30 days'."
+                " Format: 'was N' (within N days) or 'was not N' (not accessed in more than N days)."
+                " Example: 'was not 30'."
             ),
         ),
         last_modified: str | None = Field(
             default=None,
             description=(
                 "Filter by time since the resource was last modified."
-                " Format: 'was N days' (within N days) or 'was not N days' (not modified in more than N days)."
-                " Example: 'was not 30 days'."
+                " Format: 'was N' (within N days) or 'was not N' (not modified in more than N days)."
+                " Example: 'was not 30'."
             ),
         ),
         unmanaged_domain: str | None = Field(
@@ -839,6 +858,67 @@ class ShieldModule(BaseModule):
             operation="GetSystemUsersV3",
             search_params={},
             error_message="Failed to get Shield system users",
+        )
+
+    def get_shield_supported_saas(self) -> list[dict[str, Any]] | dict[str, Any]:
+        """List SaaS platforms supported by Falcon Shield (SaaS Security) for integration.
+
+        Use this to discover which SaaS applications can be connected to Shield
+        before setting up new integrations.
+
+        Returns supported SaaS platform objects including platform name and ID."""
+        return self._search_with_docs(
+            operation="GetSupportedSaasV3",
+            search_params={},
+            error_message="Failed to get supported SaaS platforms",
+        )
+
+    def get_shield_system_logs(
+        self,
+        from_date: str | None = Field(
+            default=None,
+            description="Start date (YYYY-MM-DD).",
+        ),
+        to_date: str | None = Field(
+            default=None,
+            description="End date (YYYY-MM-DD).",
+        ),
+        limit: int = Field(
+            default=100,
+            ge=1,
+            description="Maximum number of results to return (default: 100).",
+        ),
+        offset: int | None = Field(
+            default=None,
+            description=(
+                "Zero-based offset for pagination. Omit or set to 0 for the first page."
+                " Increment by limit for subsequent pages."
+            ),
+        ),
+        total_count: bool | None = Field(
+            default=None,
+            description="If true, include total count of matching logs in the response metadata.",
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Retrieve Falcon Shield (SaaS Security) system audit logs. Data retained
+        for 90 days.
+
+        Logs include integration creates/updates, check dismissals, and data syncs.
+
+        Use date range filters to narrow results. Without filters, returns the most
+        recent logs up to the limit.
+
+        Returns log objects containing timestamp, event type, actor, and details."""
+        return self._search_with_docs(
+            operation="GetSystemLogsV3",
+            search_params={
+                "from_date": from_date,
+                "to_date": to_date,
+                "limit": limit,
+                "offset": offset,
+                "total_count": total_count,
+            },
+            error_message="Failed to get Shield system logs",
         )
 
     # --- Mutating tools ---

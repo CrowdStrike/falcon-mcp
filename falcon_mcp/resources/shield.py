@@ -26,7 +26,7 @@ SHIELD_COMMON_PARAMS = [
     (
         "compliance",
         "Boolean",
-        "true/false",
+        "true/false (filters on catalog-level framework mapping, not populated compliance data)",
         "shield_checks, shield_posture_metrics",
     ),
 ]
@@ -38,13 +38,20 @@ SHIELD_QUERY_DOCUMENTATION = f"""# Falcon Shield Query Parameter Guide
 {generate_md_table(SHIELD_COMMON_PARAMS)}
 
 ## Alert Types
-configuration_drift, check_degraded, integration_failure, Threat
+configuration_drift, check_degraded, integration_failure, threat
 
 ## App Types
 oauth, sign_in, api_token, App Registration, Connected Apps, browser_extension, Portal, Service Principal
 
 ## App Statuses
 approved, in review, rejected, unclassified
+
+## Time-Based Filters
+Format: 'was N' (within N days) or 'was not N' (not within N days). N is an integer — do NOT append 'days'.
+- last_activity — used by shield_apps
+- last_accessed — used by shield_data_shares
+- last_modified — used by shield_data_shares
+Examples: 'was not 90' (inactive >90 days), 'was 30' (active within 30 days)
 
 ## Activity Monitor Categories
 Events, Threat, IoC
