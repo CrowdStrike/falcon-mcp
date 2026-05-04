@@ -189,6 +189,11 @@ class FalconMCPServer:
 
     def falcon_check_connectivity(self) -> dict[str, bool]:
         """Check connectivity to the Falcon API."""
+        if self.falcon_client.is_authenticated():
+            return {"connected": True}
+        
+        """Attempt to re-authenticate if token is expired or missing."""
+        self.falcon_client.authenticate()
         return {"connected": self.falcon_client.is_authenticated()}
 
     def list_enabled_modules(self) -> dict[str, list[str]]:
