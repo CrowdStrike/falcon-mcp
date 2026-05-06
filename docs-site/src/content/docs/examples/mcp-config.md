@@ -66,7 +66,7 @@ Limit which modules are loaded to reduce tool count:
       "args": [
         "--env-file", "/path/to/.env",
         "falcon-mcp",
-        "--modules", "detections,incidents,intel,hosts"
+        "--modules", "detections,intel,hosts"
       ]
     }
   }

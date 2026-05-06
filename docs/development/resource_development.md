@@ -101,7 +101,7 @@ Examples:
 
 - `falcon://intel/query_actor_entities/fql-guide`
 - `falcon://detections/search/fql-guide`
-- `falcon://incidents/status-codes`
+- `falcon://hosts/search/fql-guide`
 
 ### 4. Resource Types
 
@@ -247,7 +247,7 @@ git commit -m "fix(resources): correct formatting in intel FQL documentation"
 git commit -m "docs(resources): update resource development guide"
 # Examples:
 git commit -m "refactor(resources): improve clarity in detections FQL guide"
-git commit -m "fix(resources): correct syntax examples in incidents resource"
+git commit -m "fix(resources): correct syntax examples in hosts resource"
 ```
 
 **Resource Tests and Infrastructure:**

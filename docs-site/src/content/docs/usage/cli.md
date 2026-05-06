@@ -46,7 +46,7 @@ falcon-mcp --transport streamable-http --api-key your-secret-key
 Enable specific modules by name (comma-separated):
 
 ```bash
-falcon-mcp --modules detections,incidents,intel,spotlight,idp
+falcon-mcp --modules detections,intel,spotlight,idp
 ```
 
 Enable only one module:
@@ -84,7 +84,7 @@ from falcon_mcp.server import FalconMCPServer
 server = FalconMCPServer(
     base_url="https://api.us-2.crowdstrike.com",  # Optional
     debug=True,
-    enabled_modules=["detections", "incidents", "spotlight"],
+    enabled_modules=["detections", "spotlight"],
     api_key="your-api-key"
 )
 
@@ -102,7 +102,7 @@ server = FalconMCPServer(
     client_id="your-client-id",
     client_secret="your-client-secret",
     base_url="https://api.us-2.crowdstrike.com",
-    enabled_modules=["detections", "incidents"]
+    enabled_modules=["detections", "hosts"]
 )
 server.run()
 ```

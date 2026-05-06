@@ -11,7 +11,7 @@ This guide gets you from zero to a working Falcon MCP Server connection in 5 min
 2. Navigate to **Support > API Clients and Keys**
 3. Click **Add new API client** and configure:
    - Give it a name (e.g., "Falcon MCP Server")
-   - Enable at minimum: `Hosts:read`, `Alerts:read`, `Incidents:read`
+   - Enable at minimum: `Hosts:read`, `Alerts:read`
 4. Save your **Client ID**, **Client Secret**, and **Base URL**
 
 ## Step 2: Install

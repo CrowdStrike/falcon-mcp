@@ -45,7 +45,6 @@ body:
       options:
         - Core functionality
         - Detections module
-        - Incidents module
         - Intel module
         - Hosts module
         - Identity Protection module

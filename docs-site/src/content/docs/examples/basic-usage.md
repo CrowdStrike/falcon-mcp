@@ -129,7 +129,7 @@ server = FalconMCPServer(
     client_id="your-client-id",
     client_secret="your-client-secret",
     base_url="https://api.us-2.crowdstrike.com",
-    enabled_modules=["detections", "incidents"]
+    enabled_modules=["detections", "hosts"]
 )
 
 server.run()

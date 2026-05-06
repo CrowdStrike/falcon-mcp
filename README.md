@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://crowdstrike.github.io/falcon-mcp/)
 
-**falcon-mcp** is a Model Context Protocol (MCP) server that connects AI agents with the CrowdStrike Falcon platform, powering intelligent security analysis in your agentic workflows. It delivers programmatic access to essential security capabilities—including detections, incidents, and behaviors—establishing the foundation for advanced security operations and automation.
+**falcon-mcp** is a Model Context Protocol (MCP) server that connects AI agents with the CrowdStrike Falcon platform, powering intelligent security analysis in your agentic workflows. It delivers programmatic access to essential security capabilities—including detections, threat intelligence, and host management—establishing the foundation for advanced security operations and automation.
 
 > [!IMPORTANT]
 > **🚧 Public Preview**: This project is currently in public preview and under active development. Features and functionality may change before the stable 1.0 release. While we encourage exploration and testing, please avoid production deployments. We welcome your feedback through [GitHub Issues](https://github.com/crowdstrike/falcon-mcp/issues) to help shape the final release.
@@ -29,7 +29,6 @@ Full docs are available at **[crowdstrike.github.io/falcon-mcp](https://crowdstr
 | [Firewall Management](https://crowdstrike.github.io/falcon-mcp/modules/firewall/) | Search and manage firewall rules and rule groups |
 | [Hosts](https://crowdstrike.github.io/falcon-mcp/modules/hosts/) | Manage and query host/device information |
 | [Identity Protection](https://crowdstrike.github.io/falcon-mcp/modules/idp/) | Entity investigation and identity protection analysis |
-| [Incidents](https://crowdstrike.github.io/falcon-mcp/modules/incidents/) | Analyze security incidents and coordinated activities |
 | [Intel](https://crowdstrike.github.io/falcon-mcp/modules/intel/) | Research threat actors, IOCs, and intelligence reports |
 | [IOC](https://crowdstrike.github.io/falcon-mcp/modules/ioc/) | Search, create, and remove custom indicators of compromise |
 | [NGSIEM](https://crowdstrike.github.io/falcon-mcp/modules/ngsiem/) | Execute CQL queries against Next-Gen SIEM |
@@ -107,7 +106,7 @@ See the [Getting Started guide](https://crowdstrike.github.io/falcon-mcp/getting
         "/path/to/.env",
         "falcon-mcp",
         "--modules",
-        "detections,incidents,intel"
+        "detections,hosts,intel"
       ]
     }
   }

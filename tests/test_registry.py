@@ -64,7 +64,7 @@ class TestRegistry(unittest.TestCase):
         self.assertGreater(len(module_names), 0)
 
         # Verify that the expected modules are discovered
-        expected_modules = ["detections", "incidents", "intel"]
+        expected_modules = ["detections", "hosts", "intel"]
         for module_name in expected_modules:
             self.assertIn(module_name, module_names)
 
@@ -77,8 +77,7 @@ class TestRegistry(unittest.TestCase):
         registry.discover_modules()
 
         # Get the list of expected module names based on the project structure
-        # This assumes that the project has modules like 'incidents', 'intel'
-        expected_modules = ["incidents", "intel"]
+        expected_modules = ["hosts", "intel"]
 
         # Verify that all expected modules are discovered
         for module_name in expected_modules:

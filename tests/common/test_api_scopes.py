@@ -63,8 +63,6 @@ class TestApiScopes(unittest.TestCase):
         # Test with known operations
         self.assertEqual(get_required_scopes("GetQueriesAlertsV2"), ["Alerts:read"])
         self.assertEqual(get_required_scopes("PostEntitiesAlertsV2"), ["Alerts:read"])
-        self.assertEqual(get_required_scopes("QueryIncidents"), ["Incidents:read"])
-
         # Test with unknown operation
         self.assertEqual(get_required_scopes("UnknownOperation"), [])
 
@@ -147,7 +145,6 @@ class TestApiScopes(unittest.TestCase):
         # Test with multiple known operations to ensure consistency
         test_cases = [
             ("GetQueriesAlertsV2", ["Alerts:read"]),
-            ("QueryIncidents", ["Incidents:read"]),
             ("QueryIntelActorEntities", ["Actors (Falcon Intelligence):read"]),
             ("api_preempt_proxy_post_graphql", [
                 "Identity Protection Entities:read",
@@ -198,7 +195,7 @@ class TestApiScopes(unittest.TestCase):
 
         # Validate that most resources use consistent permission patterns
         read_only_resources = [
-            "Alerts", "Hosts", "Incidents", "Vulnerabilities",
+            "Alerts", "Hosts", "Vulnerabilities",
             "Assets", "Sensor Usage", "Scheduled Reports"
         ]
 
@@ -216,7 +213,6 @@ class TestApiScopes(unittest.TestCase):
         module_patterns = {
             "alerts": ["GetQueriesAlertsV2", "PostEntitiesAlertsV2"],
             "hosts": ["QueryDevicesByFilter", "PostDeviceDetailsV2"],
-            "incidents": ["QueryIncidents", "GetIncidents", "QueryBehaviors", "GetBehaviors", "CrowdScore"],
             "intel": ["QueryIntelActorEntities", "QueryIntelIndicatorEntities", "QueryIntelReportEntities", "GetMitreReport"],
             "spotlight": ["combinedQueryVulnerabilities"],
             "cloud": ["ReadContainerCombined", "ReadContainerCount", "ReadCombinedVulnerabilities"],
@@ -244,10 +240,10 @@ class TestApiScopes(unittest.TestCase):
             f"Expected operations missing from scope mappings: {sorted(missing_operations)}"
         )
 
-        # Should have reasonable coverage (at least 11 different modules)
+        # Should have reasonable coverage (at least 10 different modules)
         self.assertGreaterEqual(
-            len(module_patterns), 11,
-            "Should have scope mappings for at least 11 different functional modules"
+            len(module_patterns), 10,
+            "Should have scope mappings for at least 10 different functional modules"
         )
 
 

@@ -44,7 +44,7 @@ Run with specific modules (stdio transport):
 
 ```bash
 docker run -i --rm --env-file /path/to/.env \
-  quay.io/crowdstrike/falcon-mcp:latest --modules detections,incidents,spotlight,idp
+  quay.io/crowdstrike/falcon-mcp:latest --modules detections,spotlight,idp
 ```
 
 Use a pinned version:

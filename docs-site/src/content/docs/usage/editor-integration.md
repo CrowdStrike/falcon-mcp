@@ -38,7 +38,7 @@ Edit `claude_desktop_config.json`:
         "/path/to/.env",
         "falcon-mcp",
         "--modules",
-        "detections,incidents,intel"
+        "detections,hosts,intel"
       ]
     }
   }

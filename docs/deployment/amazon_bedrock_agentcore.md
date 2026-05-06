@@ -67,7 +67,6 @@ The Falcon MCP Server provides security tools organized into modules. Each modul
 | Discover | Search application inventory across your environment |
 | Hosts | Manage and query host/device information |
 | Identity Protection | Entity investigation and identity protection analysis |
-| Incidents | Analyze security incidents and coordinated activities |
 | Intel | Research threat actors, IOCs, and intelligence reports |
 | IOC Management | Create, search, and delete custom indicators of compromise |
 | Next-Gen SIEM | Execute CQL queries against CrowdStrike LogScale |

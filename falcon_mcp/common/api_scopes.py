@@ -17,12 +17,6 @@ API_SCOPE_REQUIREMENTS = {
     # Hosts operations
     "QueryDevicesByFilter": ["Hosts:read"],
     "PostDeviceDetailsV2": ["Hosts:read"],
-    # Incidents operations
-    "QueryIncidents": ["Incidents:read"],
-    "CrowdScore": ["Incidents:read"],
-    "GetIncidents": ["Incidents:read"],
-    "GetBehaviors": ["Incidents:read"],
-    "QueryBehaviors": ["Incidents:read"],
     # Intel operations
     "QueryIntelActorEntities": ["Actors (Falcon Intelligence):read"],
     "QueryIntelIndicatorEntities": ["Indicators (Falcon Intelligence):read"],

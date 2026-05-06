@@ -70,7 +70,7 @@ body:
         - Python version: 3.11
         - Operating System: macOS 14.1
         - MCP Client: Claude Desktop
-        - Enabled modules: detections,incidents,hosts
+        - Enabled modules: detections,hosts,intel
         - Falcon API region: us-1
       render: text
     validations:

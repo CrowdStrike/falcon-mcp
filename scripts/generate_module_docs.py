@@ -141,23 +141,6 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Investigate user john.doe@company.com and show their risk assessment",
         "Look up entity Administrator in domain CORP.LOCAL",
     ],
-    # Incidents
-    "falcon_search_incidents": [
-        "Find all open high-severity incidents",
-        "Show me incidents from the past week",
-    ],
-    "falcon_get_incident_details": [
-        "Get details for incident inc:abc123",
-    ],
-    "falcon_show_crowd_score": [
-        "Show me the current CrowdScore for my environment",
-    ],
-    "falcon_search_behaviors": [
-        "Find behaviors associated with lateral movement",
-    ],
-    "falcon_get_behavior_details": [
-        "Get details for behavior behav:abc123",
-    ],
     # Intel
     "falcon_search_actors": [
         "Find threat actors targeting financial services",
