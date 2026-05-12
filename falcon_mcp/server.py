@@ -145,23 +145,27 @@ class FalconMCPServer:
         Returns:
             int: Number of tools registered
         """
-        # Register core tools directly
+        # Register core tools directly. structured_output=False matches the
+        # module-level convention in BaseModule._add_tool (see issue #325).
         self.server.add_tool(
             self.falcon_check_connectivity,
             name="falcon_check_connectivity",
             annotations=READ_ONLY_ANNOTATIONS,
+            structured_output=False,
         )
 
         self.server.add_tool(
             self.list_enabled_modules,
             name="falcon_list_enabled_modules",
             annotations=READ_ONLY_ANNOTATIONS,
+            structured_output=False,
         )
 
         self.server.add_tool(
             self.list_modules,
             name="falcon_list_modules",
             annotations=READ_ONLY_ANNOTATIONS,
+            structured_output=False,
         )
 
         tool_count = 3  # the tools added above
