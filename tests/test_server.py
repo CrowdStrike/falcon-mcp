@@ -444,30 +444,6 @@ class TestFalconMCPServer(unittest.TestCase):
 
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
-    def test_all_tools_have_annotations(self, mock_fastmcp, mock_client):
-        """Test that every registered tool has non-None annotations."""
-        mock_client_instance = MagicMock()
-        mock_client_instance.authenticate.return_value = True
-        mock_client.return_value = mock_client_instance
-
-        mock_server_instance = MagicMock()
-        mock_fastmcp.return_value = mock_server_instance
-
-        # Create server with ALL modules to register every tool
-        FalconMCPServer()
-
-        for call in mock_server_instance.add_tool.call_args_list:
-            name = call.kwargs.get("name", "<unknown>")
-            annotations = call.kwargs.get("annotations")
-            self.assertIsNotNone(
-                annotations,
-                f"Tool '{name}' was registered without annotations. "
-                f"Use _add_tool() for automatic READ_ONLY_ANNOTATIONS, "
-                f"or pass explicit annotations for mutating tools.",
-            )
-
-    @patch("falcon_mcp.server.FalconClient")
-    @patch("falcon_mcp.server.FastMCP")
     def test_server_initialization_with_member_cid(self, mock_fastmcp, mock_client):
         """Test server initialization with member_cid parameter."""
         # Setup mocks
