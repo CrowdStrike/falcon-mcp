@@ -9,7 +9,7 @@ The Falcon MCP Server provides the following modules. Each module requires speci
 
 | Module | API Scopes | Description |
 |--------|-------------------|-------------|
-| [Cloud Security](/falcon-mcp/modules/cloud/) | `Cloud Security API Assets:read`, `Falcon Container Image:read` | Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets |
+| [Cloud Security](/falcon-mcp/modules/cloud/) | `CSPM Registration:read`, `Cloud Security API Assets:read`, `Cloud Security API Detections:read`, `Cloud Security Policies:read`, `Falcon Container Image:read`, `Cloud Security Policies:write` | Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets |
 | [Custom IOA](/falcon-mcp/modules/custom-ioa/) | `Custom IOA Rules:read`, `Custom IOA Rules:write` | Searching, creating, updating, and deleting Custom IOA (Indicators of Attack) behavioral rules and rule groups using Falcon Custom IOA Service Collection endpoints |
 | [Detections](/falcon-mcp/modules/detections/) | `Alerts:read` | Accessing and analyzing CrowdStrike Falcon detections |
 | [Discover](/falcon-mcp/modules/discover/) | `Assets:read` | Accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets |
