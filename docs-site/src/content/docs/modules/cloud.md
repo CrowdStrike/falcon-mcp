@@ -55,8 +55,8 @@ with details on failure.
 
 **Example prompts:**
 
-- "Suppress that S3 encryption finding in the dev account as accepted risk"
-- "Create a suppression rule for the IAM password policy finding as false positive"
+- "Create a CSPM suppression rule for the S3 encryption finding in the dev account as accepted risk"
+- "Suppress the IAM password policy IOM finding as a false positive, expiring in 30 days"
 
 ### `falcon_delete_cspm_suppression_rules`
 
@@ -77,8 +77,8 @@ Returns a confirmation response on success, or an error dict on failure.
 
 **Example prompts:**
 
-- "Delete the suppression rule we just created"
-- "Remove suppression rule abc-123"
+- "Delete CSPM suppression rule abc-123"
+- "Remove the CSPM IOM suppression rule for the S3 public access finding"
 
 ### `falcon_search_cspm_assets`
 
@@ -116,8 +116,8 @@ created_at, created_by. Returns an empty list if no rules exist.
 
 **Example prompts:**
 
-- "Show me all CSPM suppression rules"
-- "What findings are being suppressed and why?"
+- "List all CSPM IOM suppression rules and their reasons"
+- "Show me which CSPM findings are being suppressed and why"
 
 ### `falcon_search_images_vulnerabilities`
 
@@ -150,8 +150,8 @@ Requires at least the cloud_provider parameter.
 
 **Example prompts:**
 
-- "Show me IOA events in AWS from the last 24 hours"
-- "Are there any critical IOA detections in Azure?"
+- "Show me CSPM IOA behavior detections in AWS from the last 24 hours"
+- "Are there any critical cloud IOA detections in Azure?"
 
 ### `falcon_search_iom_findings`
 
@@ -174,9 +174,9 @@ Returns a list of IOM finding entities with nested structure:
 
 **Example prompts:**
 
-- "Show me critical open CSPM findings in AWS"
-- "Find misconfiguration findings for S3 buckets"
-- "What IOM findings are suppressed as accepted risk?"
+- "Show me critical open CSPM misconfiguration findings in AWS"
+- "Find IOM findings for S3 buckets with public access"
+- "What CSPM IOM findings are suppressed as accepted risk?"
 
 ### `falcon_search_kubernetes_containers`
 
