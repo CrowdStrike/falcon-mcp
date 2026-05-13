@@ -47,6 +47,16 @@ API_SCOPE_REQUIREMENTS = {
     # CSPM Assets operations
     "cloud_security_assets_queries": ["Cloud Security API Assets:read"],
     "cloud_security_assets_entities_get": ["Cloud Security API Assets:read"],
+    # CSPM IOM Findings operations (CloudSecurityDetections)
+    "cspm_evaluations_iom_queries": ["Cloud Security API Detections:read"],
+    "cspm_evaluations_iom_entities": ["Cloud Security API Detections:read"],
+    # CSPM IOA Behavior Detections (CSPMRegistration)
+    "GetBehaviorDetections": ["CSPM Registration:read"],
+    # CSPM Suppression Rules (override endpoints)
+    "QuerySuppressionRules": ["Cloud Security Policies:read"],
+    "GetSuppressionRules": ["Cloud Security Policies:read"],
+    "CreateSuppressionRule": ["Cloud Security Policies:write"],
+    "DeleteSuppressionRules": ["Cloud Security Policies:write"],
     # Identity Protection operations
     "api_preempt_proxy_post_graphql": [
         "Identity Protection Entities:read",

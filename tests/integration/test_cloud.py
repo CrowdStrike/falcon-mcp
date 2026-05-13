@@ -1,5 +1,7 @@
 """Integration tests for the Cloud module."""
 
+import time
+
 import pytest
 
 from falcon_mcp.modules.cloud import CloudModule
@@ -125,7 +127,21 @@ class TestCloudIntegration(BaseIntegrationTest):
 
         # Test cloud_security_assets_queries and cloud_security_assets_entities_get
         result = self.call_method(self.module.search_cspm_assets, limit=1)
-        self.assert_no_error(result, context="CSPM operation names")
+        self.assert_no_error(result, context="CSPM asset operation names")
+
+        # Test cspm_evaluations_iom_queries and cspm_evaluations_iom_entities
+        result = self.call_method(self.module.search_iom_findings, limit=1)
+        self.assert_no_error(result, context="IOM operation names")
+
+        # Test GetBehaviorDetections
+        result = self.call_method(
+            self.module.search_ioa_findings, cloud_provider="aws", limit=1
+        )
+        self.assert_no_error(result, context="GetBehaviorDetections operation name")
+
+        # Test suppression rules override endpoints
+        result = self.call_method(self.module.search_cspm_suppression_rules, limit=1)
+        self.assert_no_error(result, context="Suppression rules override operation names")
 
     def test_search_cspm_assets_returns_details(self):
         """Test that search_cspm_assets returns full asset details using two-step pattern.
@@ -210,4 +226,177 @@ class TestCloudIntegration(BaseIntegrationTest):
         # If we got >100 results, batching was tested successfully
         if len(result) > 100:
             print(f"✅ Batching tested successfully with {len(result)} assets")
+
+    # --- IOM Findings Integration Tests ---
+
+    def test_search_iom_findings_returns_details(self):
+        """Test that search_iom_findings returns full IOM entity details.
+
+        Validates:
+        - cspm_evaluations_iom_queries operation name is correct
+        - cspm_evaluations_iom_entities operation name is correct
+        - Two-step pattern returns full details, not just IDs
+        """
+        result = self.call_method(self.module.search_iom_findings, limit=5)
+
+        self.assert_no_error(result, context="search_iom_findings")
+        self.assert_valid_list_response(result, min_length=0, context="search_iom_findings")
+
+        if len(result) > 0:
+            self.assert_search_returns_details(
+                result,
+                expected_fields=["id", "cid", "cloud", "evaluation", "resource"],
+                context="search_iom_findings full details",
+            )
+
+    def test_search_iom_findings_with_severity_filter(self):
+        """Test search_iom_findings with severity FQL filter."""
+        result = self.call_method(
+            self.module.search_iom_findings,
+            filter="severity:'critical'",
+            limit=3,
+        )
+
+        # May return list of results or FQL guide dict if no critical findings exist
+        if isinstance(result, list):
+            self.assert_valid_list_response(
+                result, min_length=0, context="search_iom_findings with severity filter"
+            )
+        else:
+            # FQL guide response on empty results is valid
+            assert isinstance(result, dict), "Expected dict or list response"
+
+    def test_search_iom_findings_with_cloud_provider_filter(self):
+        """Test search_iom_findings filtering by cloud provider."""
+        result = self.call_method(
+            self.module.search_iom_findings,
+            filter="cloud_provider:'aws'",
+            limit=3,
+        )
+
+        self.assert_no_error(result, context="search_iom_findings with cloud_provider filter")
+        self.assert_valid_list_response(
+            result, min_length=0, context="search_iom_findings cloud_provider filter"
+        )
+
+    def test_search_iom_findings_with_sort(self):
+        """Test search_iom_findings with sort parameter."""
+        result = self.call_method(
+            self.module.search_iom_findings,
+            sort="severity|desc",
+            limit=3,
+        )
+
+        self.assert_no_error(result, context="search_iom_findings with sort")
+        self.assert_valid_list_response(result, min_length=0, context="search_iom_findings with sort")
+
+    def test_search_iom_findings_batching(self):
+        """Test search_iom_findings with larger limit to verify batching."""
+        result = self.call_method(self.module.search_iom_findings, limit=200)
+
+        self.assert_no_error(result, context="search_iom_findings batching")
+        self.assert_valid_list_response(result, min_length=0, context="search_iom_findings batching")
+
+        if len(result) > 100:
+            print(f"✅ IOM batching tested successfully with {len(result)} findings")
+
+    # --- IOA Findings Integration Tests ---
+
+    def test_search_ioa_findings_aws(self):
+        """Test search_ioa_findings for AWS cloud provider.
+
+        Validates GetBehaviorDetections operation name is correct.
+        IOA results may be empty if no recent events exist.
+        """
+        result = self.call_method(
+            self.module.search_ioa_findings,
+            cloud_provider="aws",
+            since="24h",
+            limit=5,
+        )
+
+        self.assert_no_error(result, context="search_ioa_findings aws")
+        # IOA results may be a list or may come as events dict
+        if isinstance(result, list):
+            self.assert_valid_list_response(result, min_length=0, context="search_ioa_findings aws")
+
+    def test_search_ioa_findings_with_severity(self):
+        """Test search_ioa_findings with severity filter."""
+        result = self.call_method(
+            self.module.search_ioa_findings,
+            cloud_provider="aws",
+            severity="High",
+            since="168h",
+            limit=5,
+        )
+
+        self.assert_no_error(result, context="search_ioa_findings with severity")
+
+    # --- Suppression Rules Integration Tests ---
+
+    def test_search_suppression_rules(self):
+        """Test search_cspm_suppression_rules returns rule details.
+
+        Validates the override endpoint pattern works correctly.
+        May return empty if no suppression rules exist in the environment.
+        """
+        result = self.call_method(self.module.search_cspm_suppression_rules, limit=5)
+
+        self.assert_no_error(result, context="search_cspm_suppression_rules")
+        self.assert_valid_list_response(result, min_length=0, context="search_cspm_suppression_rules")
+
+        if len(result) > 0:
+            first_rule = result[0]
+            assert isinstance(first_rule, dict), "Expected dict items for suppression rules"
+            print(f"✅ Found {len(result)} suppression rule(s). Fields: {list(first_rule.keys())}")
+
+    def test_create_and_delete_suppression_rule_roundtrip(self):
+        """Test creating and deleting a suppression rule (full roundtrip).
+
+        Creates a narrowly-scoped suppression rule with a short expiration,
+        verifies it was created, then deletes it to clean up.
+        """
+        # Create a narrowly-scoped test rule with unique name
+        rule_name = f"falcon-mcp-test-{int(time.time())}"
+        create_result = self.call_method(
+            self.module.create_cspm_suppression_rule,
+            name=rule_name,
+            suppression_reason="false-positive",
+            rule_names=["integration-test-nonexistent-rule"],
+            rule_ids=None,
+            rule_severities=None,
+            cloud_providers=["aws"],
+            account_ids=None,
+            regions=["us-east-1"],
+            resource_ids=None,
+            resource_types=None,
+            expiration_date="2027-01-01T00:00:00Z",
+        )
+
+        self.assert_no_error(create_result, context="create_cspm_suppression_rule")
+
+        # Extract the created rule ID for cleanup
+        # API returns IDs as strings in a list: ["uuid-here"]
+        rule_id = None
+        if isinstance(create_result, list) and len(create_result) > 0:
+            first = create_result[0]
+            if isinstance(first, str):
+                rule_id = first
+            elif isinstance(first, dict):
+                rule_id = first.get("id")
+            print(f"✅ Created suppression rule: {rule_id}")
+        elif isinstance(create_result, dict) and "id" in create_result:
+            rule_id = create_result["id"]
+            print(f"✅ Created suppression rule: {rule_id}")
+
+        # Clean up: delete the rule we just created
+        if rule_id:
+            delete_result = self.call_method(
+                self.module.delete_cspm_suppression_rules,
+                ids=[rule_id],
+            )
+            self.assert_no_error(delete_result, context="delete_cspm_suppression_rules")
+            print(f"✅ Deleted suppression rule: {rule_id}")
+        else:
+            print("⚠️  Could not extract rule ID from create response, skipping delete")
 

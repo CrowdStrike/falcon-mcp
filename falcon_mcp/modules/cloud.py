@@ -12,11 +12,14 @@ from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
 
+from mcp.types import ToolAnnotations
+
 from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.cloud import (
+    CSPM_IOM_FINDINGS_FQL_DOCUMENTATION,
     IMAGES_VULNERABILITIES_FQL_DOCUMENTATION,
     KUBERNETES_CONTAINERS_FQL_DOCUMENTATION,
     SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION,
@@ -60,6 +63,48 @@ class CloudModule(BaseModule):
             name="search_cspm_assets",
         )
 
+        self._add_tool(
+            server=server,
+            method=self.search_iom_findings,
+            name="search_iom_findings",
+        )
+
+        self._add_tool(
+            server=server,
+            method=self.search_ioa_findings,
+            name="search_ioa_findings",
+        )
+
+        self._add_tool(
+            server=server,
+            method=self.search_cspm_suppression_rules,
+            name="search_cspm_suppression_rules",
+        )
+
+        self._add_tool(
+            server=server,
+            method=self.create_cspm_suppression_rule,
+            name="create_cspm_suppression_rule",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
+
+        self._add_tool(
+            server=server,
+            method=self.delete_cspm_suppression_rules,
+            name="delete_cspm_suppression_rules",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=True,
+                openWorldHint=True,
+            ),
+        )
+
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.
         Args:
@@ -79,6 +124,20 @@ class CloudModule(BaseModule):
             text=IMAGES_VULNERABILITIES_FQL_DOCUMENTATION,
         )
 
+        cspm_assets_fql_resource = TextResource(
+            uri=AnyUrl("falcon://cloud/cspm-assets/fql-guide"),
+            name="falcon_search_cspm_assets_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_cspm_assets` tool.",
+            text=SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION,
+        )
+
+        cspm_iom_findings_fql_resource = TextResource(
+            uri=AnyUrl("falcon://cloud/cspm-iom-findings/fql-guide"),
+            name="falcon_search_iom_findings_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_iom_findings` tool.",
+            text=CSPM_IOM_FINDINGS_FQL_DOCUMENTATION,
+        )
+
         self._add_resource(
             server,
             kubernetes_containers_fql_resource,
@@ -88,16 +147,14 @@ class CloudModule(BaseModule):
             images_vulnerabilities_fql_resource,
         )
 
-        cspm_assets_fql_resource = TextResource(
-            uri=AnyUrl("falcon://cloud/cspm-assets/fql-guide"),
-            name="falcon_search_cspm_assets_fql_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_cspm_assets` tool.",
-            text=SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION,
+        self._add_resource(
+            server,
+            cspm_assets_fql_resource,
         )
 
         self._add_resource(
             server,
-            cspm_assets_fql_resource,
+            cspm_iom_findings_fql_resource,
         )
 
     def search_kubernetes_containers(
@@ -392,3 +449,461 @@ class CloudModule(BaseModule):
                 all_assets.extend(result)
 
         return all_assets
+
+    def search_iom_findings(
+        self,
+        filter: str | None = Field(
+            default=None,
+            description=(
+                "FQL Syntax formatted string used to limit the results."
+                " IMPORTANT: use the `falcon://cloud/cspm-iom-findings/fql-guide`"
+                " resource when building this filter parameter."
+            ),
+            examples=["severity:'critical'+status:'open'", "cloud_provider:'aws'+service:'S3'"],
+        ),
+        limit: int = Field(
+            default=100,
+            ge=1,
+            le=1000,
+            description=(
+                "The maximum number of IOM findings to return (default: 100; max: 1000)."
+                " Use with the offset parameter to manage pagination."
+            ),
+        ),
+        offset: int | None = Field(
+            default=None,
+            description="Starting index of overall result set from which to return findings.",
+        ),
+        sort: str | None = Field(
+            default=None,
+            description=dedent(
+                """
+                Sort IOM findings. Use |asc or |desc suffix to specify direction.
+
+                Common sort fields:
+                severity: Finding severity level
+                first_detected: When the finding was first detected
+                last_detected: When the finding was last seen
+                cloud_provider: Cloud provider name
+                service: Cloud service name
+                status: Finding status
+
+                Examples: 'severity|desc', 'last_detected|desc', 'first_detected|asc'
+            """
+            ).strip(),
+            examples=["severity|desc", "last_detected|desc"],
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Search for CSPM Indicators of Misconfiguration (IOM) findings.
+
+        Retrieves cloud security posture findings that identify misconfigurations
+        in your cloud environment (AWS, Azure, GCP). Findings map to compliance
+        frameworks (CIS, NIST, SOC2) and MITRE ATT&CK techniques.
+
+        Supports filtering by suppression state to view which findings have been
+        accepted as risk, marked as false positives, or have compensating controls.
+
+        IMPORTANT: You must use the `falcon://cloud/cspm-iom-findings/fql-guide` resource
+        when you need to use the `filter` parameter.
+
+        Returns a list of IOM finding entities with nested structure:
+        - id: Unique finding identifier
+        - cloud: {account_id, account_name, provider, region}
+        - evaluation: {severity, status, attack_types, rule, created, url}
+        - resource: {resource_id, resource_type, service, service_category}
+
+        Returns FQL syntax guide on error or empty results to help refine queries.
+        """
+        # Step 1: Query for IOM IDs
+        iom_ids = self._base_search_api_call(
+            operation="cspm_evaluations_iom_queries",
+            search_params={
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            },
+            error_message="Failed to query IOM findings",
+        )
+
+        # Handle search error - return with FQL guide
+        if self._is_error(iom_ids):
+            return self._format_fql_error_response(
+                [iom_ids],
+                filter,
+                CSPM_IOM_FINDINGS_FQL_DOCUMENTATION,
+            )
+
+        # Handle empty results - return with FQL guide
+        if not iom_ids:
+            return self._format_fql_error_response(
+                [],
+                filter,
+                CSPM_IOM_FINDINGS_FQL_DOCUMENTATION,
+            )
+
+        # Step 2: Fetch full IOM entity details (GET with query params, max 100 per call)
+        return self._batch_get_iom_entities(iom_ids)
+
+    def _batch_get_iom_entities(self, iom_ids: list[str]) -> list[dict[str, Any]] | dict[str, Any]:
+        """Fetch IOM entity details in batches of 100 (API limit).
+
+        Args:
+            iom_ids: List of IOM finding IDs to fetch
+
+        Returns:
+            List of IOM entity details or error dict
+        """
+        BATCH_SIZE = 100
+        all_entities: list[dict[str, Any]] = []
+
+        for i in range(0, len(iom_ids), BATCH_SIZE):
+            batch = iom_ids[i : i + BATCH_SIZE]
+            result = self._base_get_by_ids(
+                operation="cspm_evaluations_iom_entities",
+                ids=batch,
+                id_key="ids",
+                use_params=True,
+            )
+
+            if self._is_error(result):
+                return result
+
+            if isinstance(result, list):
+                all_entities.extend(result)
+
+        return all_entities
+
+    def search_ioa_findings(
+        self,
+        cloud_provider: str = Field(
+            description=(
+                "Cloud provider to search for IOA events. Required."
+                " Values: 'aws', 'azure', 'gcp'."
+            ),
+            examples=["aws", "azure", "gcp"],
+        ),
+        since: str = Field(
+            default="24h",
+            description=(
+                "Time window for IOA events as a duration string."
+                " Default: '24h'. Examples: '1h', '12h', '24h', '168h' (7 days)."
+            ),
+            examples=["1h", "12h", "24h", "168h"],
+        ),
+        severity: str | None = Field(
+            default=None,
+            description=(
+                "Filter by severity level."
+                " Values: 'Critical', 'High', 'Medium', 'Informational'."
+            ),
+            examples=["Critical", "High", "Medium"],
+        ),
+        state: str | None = Field(
+            default=None,
+            description="Filter by event state. Values: 'open', 'closed'.",
+            examples=["open", "closed"],
+        ),
+        service: str | None = Field(
+            default=None,
+            description=dedent(
+                """
+                Filter by cloud service. Examples: EC2, S3, IAM, Lambda, VPC,
+                KeyVault, Compute Engine, Cloud Storage, BigQuery.
+                See the full list of supported services in CrowdStrike documentation.
+            """
+            ).strip(),
+            examples=["EC2", "S3", "IAM", "Lambda"],
+        ),
+        account_id: str | None = Field(
+            default=None,
+            description=(
+                "Filter by cloud account ID"
+                " (AWS Account ID, Azure Subscription ID, GCP Project ID)."
+            ),
+        ),
+        limit: int = Field(
+            default=100,
+            ge=1,
+            le=500,
+            description="Maximum number of IOA events to return (default: 100; max: 500).",
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Search for CSPM Indicators of Attack (IOA) behavior detections.
+
+        Retrieves cloud security behavior detections that identify active attack
+        patterns in your cloud environment. IOAs detect runtime threats like
+        unauthorized API calls, suspicious credential usage, and lateral movement.
+
+        NOTE: This tool uses direct parameter filtering, NOT FQL. Pass parameters
+        directly rather than building a filter query string.
+
+        Returns a list of IOA event objects with cloud context including event type,
+        severity, cloud provider details, and associated resource information.
+        Returns an empty list if no events match the criteria.
+
+        Requires at least the cloud_provider parameter.
+        """
+        params = prepare_api_parameters(
+            {
+                "cloud_provider": cloud_provider,
+                "since": since,
+                "severity": severity,
+                "state": state,
+                "service": service,
+                "account_id": account_id,
+                "limit": limit,
+            }
+        )
+
+        response = self.client.command("GetBehaviorDetections", parameters=params)
+
+        return handle_api_response(
+            response,
+            operation="GetBehaviorDetections",
+            error_message="Failed to search IOA findings",
+            default_result=[],
+        )
+
+    def search_cspm_suppression_rules(
+        self,
+        limit: int = Field(
+            default=100,
+            ge=1,
+            le=500,
+            description="Maximum number of suppression rules to return (default: 100; max: 500).",
+        ),
+        offset: int | None = Field(
+            default=None,
+            description="Starting index for pagination.",
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Search for CSPM IOM suppression rules.
+
+        Lists suppression rules that control which IOM findings are suppressed.
+        Suppression rules define which rules and assets are excluded from generating
+        active findings, along with the reason and optional expiration date.
+
+        Use this to review existing suppressions before creating new ones.
+
+        Returns a list of suppression rule objects containing: id, name, domain,
+        subdomain, disabled, rule_selection_type, scope_type, suppression_reason,
+        created_at, created_by. Returns an empty list if no rules exist.
+        """
+        # Step 1: Query suppression rule IDs
+        params = prepare_api_parameters({"limit": limit, "offset": offset})
+        query_response = self.client.command(
+            "QuerySuppressionRules",
+            override="GET,/cloud-policies/queries/suppression-rules/v1",
+            parameters=params,
+        )
+
+        query_result = handle_api_response(
+            query_response,
+            operation="QuerySuppressionRules",
+            error_message="Failed to query suppression rules",
+            default_result=[],
+        )
+
+        if self._is_error(query_result):
+            return query_result
+
+        if not query_result:
+            return []
+
+        # Step 2: Fetch suppression rule details
+        detail_params = prepare_api_parameters({"ids": query_result})
+        detail_response = self.client.command(
+            "GetSuppressionRules",
+            override="GET,/cloud-policies/entities/suppression-rules/v1",
+            parameters=detail_params,
+        )
+
+        return handle_api_response(
+            detail_response,
+            operation="GetSuppressionRules",
+            error_message="Failed to get suppression rule details",
+            default_result=[],
+        )
+
+    def create_cspm_suppression_rule(
+        self,
+        name: str = Field(
+            description="Name for the suppression rule. Should be descriptive.",
+            examples=["Suppress S3 public access for dev accounts"],
+        ),
+        suppression_reason: str = Field(
+            description=(
+                "Reason for suppression. Required."
+                " Values: 'accept-risk', 'compensating-control', 'false-positive'."
+            ),
+            examples=["accept-risk", "compensating-control", "false-positive"],
+        ),
+        rule_ids: list[str] | None = Field(
+            default=None,
+            description=(
+                "Specific rule IDs to suppress."
+                " If not provided, use rule_severities or rule_names to scope."
+            ),
+        ),
+        rule_names: list[str] | None = Field(
+            default=None,
+            description="Rule names to suppress (supports wildcards).",
+        ),
+        rule_severities: list[str] | None = Field(
+            default=None,
+            description=(
+                "Rule severities to suppress."
+                " Values: 'critical', 'high', 'medium', 'low', 'informational'."
+            ),
+        ),
+        cloud_providers: list[str] | None = Field(
+            default=None,
+            description=(
+                "Limit suppression to specific cloud providers."
+                " Values: 'aws', 'azure', 'gcp'."
+            ),
+        ),
+        account_ids: list[str] | None = Field(
+            default=None,
+            description="Limit suppression to specific cloud account IDs.",
+        ),
+        regions: list[str] | None = Field(
+            default=None,
+            description=(
+                "Limit suppression to specific cloud regions."
+                " Ex: ['us-east-1', 'eu-west-1']."
+            ),
+        ),
+        resource_ids: list[str] | None = Field(
+            default=None,
+            description="Limit suppression to specific resource IDs.",
+        ),
+        resource_types: list[str] | None = Field(
+            default=None,
+            description=(
+                "Limit suppression to specific resource types."
+                " Ex: ['AWS::S3::Bucket']."
+            ),
+        ),
+        expiration_date: str | None = Field(
+            default=None,
+            description=(
+                "Optional expiration date in RFC 3339 format"
+                " (e.g., '2025-12-31T23:59:59Z')."
+                " WARNING: Omitting this creates a PERMANENT suppression."
+            ),
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Create a CSPM IOM suppression rule to suppress matching findings.
+
+        WARNING: This creates a suppression rule that will hide matching IOM findings
+        from compliance scores and active finding views. Suppressed findings are still
+        assessed but not surfaced. Use carefully and prefer narrow scope.
+
+        A suppression rule defines:
+        - WHICH rules to suppress (by ID, name, or severity)
+        - WHICH assets to suppress them for (by cloud provider, account, region, resource)
+        - WHY (accept-risk, compensating-control, false-positive)
+        - WHEN it expires (strongly recommended)
+
+        Requires the modern 'Cloud Security Posture Rules' mode (not legacy policies).
+
+        Returns the created suppression rule object on success, or an error dict
+        with details on failure.
+        """
+        valid_reasons = {"accept-risk", "compensating-control", "false-positive"}
+        if suppression_reason not in valid_reasons:
+            return {
+                "error": f"Invalid suppression_reason: '{suppression_reason}'",
+                "details": f"Must be one of: {', '.join(sorted(valid_reasons))}",
+            }
+
+        # Build rule selection filter
+        rule_filter: dict[str, Any] = {}
+        if rule_ids:
+            rule_filter["rule_ids"] = rule_ids
+        if rule_names:
+            rule_filter["rule_names"] = rule_names
+        if rule_severities:
+            rule_filter["rule_severities"] = rule_severities
+        if not rule_filter:
+            return {
+                "error": "At least one rule selection parameter is required",
+                "details": "Provide rule_ids, rule_names, or rule_severities to scope the suppression.",
+            }
+
+        # Build asset scope filter
+        asset_filter: dict[str, Any] = {}
+        if cloud_providers:
+            asset_filter["cloud_providers"] = cloud_providers
+        if account_ids:
+            asset_filter["account_ids"] = account_ids
+        if regions:
+            asset_filter["regions"] = regions
+        if resource_ids:
+            asset_filter["resource_ids"] = resource_ids
+        if resource_types:
+            asset_filter["resource_types"] = resource_types
+
+        # Build the flat suppression rule body
+        body: dict[str, Any] = {
+            "name": name,
+            "domain": "CSPM",
+            "subdomain": "IOM",
+            "suppression_reason": suppression_reason,
+            "rule_selection_type": "rule_selection_filter",
+            "rule_selection_filter": rule_filter,
+            "scope_type": "asset_filter" if asset_filter else "all_assets",
+        }
+
+        if asset_filter:
+            body["scope_asset_filter"] = asset_filter
+
+        if expiration_date:
+            body["suppression_expiration_date"] = expiration_date
+
+        response = self.client.command(
+            "CreateSuppressionRule",
+            override="POST,/cloud-policies/entities/suppression-rules/v1",
+            body=body,
+        )
+
+        return handle_api_response(
+            response,
+            operation="CreateSuppressionRule",
+            error_message="Failed to create suppression rule",
+            default_result=[],
+        )
+
+    def delete_cspm_suppression_rules(
+        self,
+        ids: list[str] = Field(
+            description=(
+                "List of suppression rule IDs to delete."
+                " Use falcon_search_cspm_suppression_rules to find rule IDs."
+            ),
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Delete CSPM IOM suppression rules by ID.
+
+        WARNING: Deleting a suppression rule will re-activate all findings that were
+        previously suppressed by that rule. They will appear as open findings again.
+
+        Use falcon_search_cspm_suppression_rules first to identify which rules to delete.
+
+        Returns a confirmation response on success, or an error dict on failure.
+        """
+        params = prepare_api_parameters({"ids": ids})
+        response = self.client.command(
+            "DeleteSuppressionRules",
+            override="DELETE,/cloud-policies/entities/suppression-rules/v1",
+            parameters=params,
+        )
+
+        return handle_api_response(
+            response,
+            operation="DeleteSuppressionRules",
+            error_message="Failed to delete suppression rules",
+            default_result=[],
+        )
