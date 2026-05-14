@@ -10,9 +10,8 @@ from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
-from pydantic import AnyUrl, Field
-
 from mcp.types import ToolAnnotations
+from pydantic import AnyUrl, Field
 
 from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.logging import get_logger
