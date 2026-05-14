@@ -327,6 +327,156 @@ class TestCloudModule(TestModules):
         self.assertIn("parameters", second_call[1])
         self.assertNotIn("body", second_call[1])
 
+    def test_search_cspm_assets_trims_bloated_fields(self):
+        """Test CSPM assets strips large fields to reduce response size."""
+        bloated_asset = {
+            "id": "cid|aws|123|us-east-1|AWS::EC2::Instance|i-abc",
+            "arn": "arn:aws:ec2:us-east-1:123:instance/i-abc",
+            "resource_id": "i-abc",
+            "resource_name": "my-instance",
+            "resource_type": "AWS::EC2::Instance",
+            "resource_type_name": "EC2 Instance",
+            "account_id": "123456789012",
+            "account_name": "production",
+            "region": "us-east-1",
+            "zone": "us-east-1a",
+            "cloud_provider": "aws",
+            "service": "EC2",
+            "service_category": "Compute",
+            "active": True,
+            "first_seen": "2025-01-01T00:00:00Z",
+            "updated_at": "2025-03-01T00:00:00Z",
+            "creation_time": "2025-01-01T00:00:00Z",
+            "tags": {"Environment": "Production"},
+            "resource_url": "https://console.aws.amazon.com/ec2/...",
+            "relationships": [{"type": "vpc", "id": "vpc-123"}],
+            # Fields that should be REMOVED:
+            "gcrn": "cid|aws|123|us-east-1|AWS::EC2::Instance|i-abc",
+            "cid": "5ddb0407bef249c19c7a975f17979a1f",
+            "hash": "a8fc79d611a11b1a01a4e9a235c3834c",
+            "revision": 5,
+            "configuration": '{"instanceId":"i-abc","instanceType":"m5.large"}',
+            "supplementary_configuration": '{"vpcId":"vpc-123","subnetId":"subnet-456"}',
+            "cloud_context": {
+                "cspm_license": "cspm",
+                "publicly_exposed": True,
+                "managed_by": "Sensor",
+                "has_tags": True,
+                "instance_id": "i-abc",
+                "instance_state": "running",
+                "open_cloud_risks": 3,
+                "scan_type": "resource",
+                "data_classifications": {"scanned": True, "found": False},
+                "host": {
+                    "managed_by": "Sensor",
+                    "platform_name": "Linux",
+                    "platform_os_name": "Amazon Linux",
+                    "platform_os_version": "2023",
+                },
+                "detections": {
+                    "iom_counts": 5,
+                    "ioa_counts": 1,
+                    "severities": ["high", "medium"],
+                    "highest_severity": "high",
+                    "resource_url": "https://console.aws.amazon.com/ec2/...",
+                    "compliant": {
+                        "rules": ["rule-1", "rule-2"] * 50,
+                        "controls": [{"benchmark": "CIS", "version": "1.4"}] * 20,
+                        "benchmarkVersions": None,
+                        "legacy_policy_ids": ["pol-1", "pol-2"],
+                    },
+                    "non_compliant": {
+                        "rules": ["rule-x"] * 10,
+                        "controls": [{"benchmark": "NIST", "section": "5.1"}] * 15,
+                        "benchmarkVersions": None,
+                        "legacy_policy_ids": ["pol-3"],
+                    },
+                },
+                "insights": {
+                    "external": [
+                        {"id": "imdsv1Enabled", "ruleId": "r1", "booleanValue": True},
+                        {"id": "hasPublicIp", "ruleId": "r2", "booleanValue": False},
+                    ],
+                    "details": {"verbose": "data" * 100},
+                },
+                "asset_graph": {"id": "graph-123", "res_id": "ec2.Instance"},
+                "legacy_resource_id": "i-abc",
+                "legacy_uuid": "some-long-uuid-string",
+                "legacy_type_id": 1,
+                "account_name": "production",
+            },
+        }
+
+        query_response = {"status_code": 200, "body": {"resources": ["asset_1"]}}
+        get_response = {"status_code": 200, "body": {"resources": [bloated_asset]}}
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_cspm_assets(limit=1)
+
+        self.assertEqual(len(result), 1)
+        asset = result[0]
+
+        # Useful fields preserved
+        self.assertEqual(asset["id"], "cid|aws|123|us-east-1|AWS::EC2::Instance|i-abc")
+        self.assertEqual(asset["resource_type"], "AWS::EC2::Instance")
+        self.assertEqual(asset["account_id"], "123456789012")
+        self.assertEqual(asset["region"], "us-east-1")
+        self.assertEqual(asset["tags"], {"Environment": "Production"})
+        self.assertTrue(asset["active"])
+
+        # Bloated fields removed
+        self.assertNotIn("gcrn", asset)
+        self.assertNotIn("cid", asset)
+        self.assertNotIn("hash", asset)
+        self.assertNotIn("revision", asset)
+        self.assertNotIn("configuration", asset)
+        self.assertNotIn("supplementary_configuration", asset)
+
+        # cloud_context trimmed to security summary
+        cc = asset["cloud_context"]
+        self.assertTrue(cc["publicly_exposed"])
+        self.assertEqual(cc["managed_by"], "Sensor")
+        self.assertEqual(cc["instance_state"], "running")
+        self.assertEqual(cc["open_cloud_risks"], 3)
+        self.assertEqual(cc["host"]["platform_name"], "Linux")
+
+        # Detections: counts kept, rules/controls stripped
+        self.assertEqual(cc["detections"]["iom_counts"], 5)
+        self.assertEqual(cc["detections"]["ioa_counts"], 1)
+        self.assertEqual(cc["detections"]["highest_severity"], "high")
+        self.assertNotIn("compliant", cc["detections"])
+        self.assertNotIn("non_compliant", cc["detections"])
+
+        # Insights: external flags kept, verbose details stripped
+        self.assertEqual(len(cc["insights"]["external"]), 2)
+        self.assertNotIn("details", cc["insights"])
+
+        # Internal fields stripped from cloud_context
+        self.assertNotIn("asset_graph", cc)
+        self.assertNotIn("legacy_resource_id", cc)
+        self.assertNotIn("legacy_uuid", cc)
+
+    def test_search_cspm_assets_trims_handles_missing_cloud_context(self):
+        """Test trimming handles records without cloud_context gracefully."""
+        minimal_asset = {
+            "id": "asset_1",
+            "resource_type": "AWS::S3::Bucket",
+            "cloud_provider": "aws",
+            "region": "us-east-1",
+        }
+
+        query_response = {"status_code": 200, "body": {"resources": ["asset_1"]}}
+        get_response = {"status_code": 200, "body": {"resources": [minimal_asset]}}
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_cspm_assets(limit=1)
+
+        self.assertEqual(len(result), 1)
+        asset = result[0]
+        self.assertEqual(asset["id"], "asset_1")
+        self.assertEqual(asset["resource_type"], "AWS::S3::Bucket")
+        self.assertNotIn("cloud_context", asset)
+
     # --- IOM Findings Tests ---
 
     def test_search_iom_findings_success(self):

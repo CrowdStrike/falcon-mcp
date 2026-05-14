@@ -413,7 +413,7 @@ class CloudModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        return [self._slim_cspm_asset(asset) for asset in details]
 
     def _batch_get_cspm_assets(self, asset_ids: list[str]) -> list[dict[str, Any]] | dict[str, Any]:
         """Fetch CSPM asset details in batches of 100 (API limit).
@@ -449,6 +449,91 @@ class CloudModule(BaseModule):
                 all_assets.extend(result)
 
         return all_assets
+
+    def _slim_cspm_asset(self, asset: dict[str, Any]) -> dict[str, Any]:
+        """Strip bloated fields from a CSPM asset record to reduce response size.
+
+        Raw CSPM asset records can be 100+ KB each due to compliance benchmark
+        details and raw configuration blobs. This keeps actionable fields and
+        security posture data while dropping internal/verbose data.
+        """
+        KEEP_TOP_LEVEL = {
+            "id",
+            "arn",
+            "resource_id",
+            "resource_name",
+            "resource_type",
+            "resource_type_name",
+            "account_id",
+            "account_name",
+            "region",
+            "zone",
+            "cloud_provider",
+            "service",
+            "service_category",
+            "active",
+            "first_seen",
+            "updated_at",
+            "creation_time",
+            "tags",
+            "resource_url",
+            "relationships",
+        }
+
+        slimmed = {k: v for k, v in asset.items() if k in KEEP_TOP_LEVEL}
+
+        cloud_context = asset.get("cloud_context")
+        if isinstance(cloud_context, dict):
+            slimmed["cloud_context"] = self._slim_cloud_context(cloud_context)
+
+        return slimmed
+
+    def _slim_cloud_context(self, ctx: dict[str, Any]) -> dict[str, Any]:
+        """Keep security-relevant summary from cloud_context, strip benchmark bloat."""
+        slimmed: dict[str, Any] = {}
+
+        # Scalar fields worth keeping
+        for key in (
+            "cspm_license",
+            "publicly_exposed",
+            "managed_by",
+            "has_tags",
+            "instance_id",
+            "instance_state",
+            "open_cloud_risks",
+            "scan_type",
+            "data_classifications",
+        ):
+            if key in ctx:
+                slimmed[key] = ctx[key]
+
+        # Host info (platform, OS, state) — small and useful
+        if "host" in ctx:
+            slimmed["host"] = ctx["host"]
+
+        # Detections — keep counts/severity, strip rule IDs and benchmark objects
+        detections = ctx.get("detections")
+        if isinstance(detections, dict):
+            slimmed["detections"] = {
+                k: detections[k]
+                for k in (
+                    "iom_counts",
+                    "ioa_counts",
+                    "severities",
+                    "highest_severity",
+                    "resource_url",
+                )
+                if k in detections
+            }
+
+        # Insights — keep external boolean flags, drop verbose details
+        insights = ctx.get("insights")
+        if isinstance(insights, dict):
+            external = insights.get("external")
+            if external:
+                slimmed["insights"] = {"external": external}
+
+        return slimmed
 
     def search_iom_findings(
         self,
