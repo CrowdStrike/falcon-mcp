@@ -857,10 +857,31 @@ class CloudModule(BaseModule):
             body=body,
         )
 
-        return handle_api_response(
+        create_result = handle_api_response(
             response,
             operation="CreateSuppressionRule",
             error_message="Failed to create suppression rule",
+            default_result=[],
+        )
+
+        if self._is_error(create_result):
+            return create_result
+
+        if not create_result:
+            return []
+
+        # API returns list of created rule IDs — fetch full details
+        detail_params = prepare_api_parameters({"ids": create_result})
+        detail_response = self.client.command(
+            "GetSuppressionRules",
+            override="GET,/cloud-policies/entities/suppression-rules/v1",
+            parameters=detail_params,
+        )
+
+        return handle_api_response(
+            detail_response,
+            operation="GetSuppressionRules",
+            error_message="Failed to get created suppression rule details",
             default_result=[],
         )
 
