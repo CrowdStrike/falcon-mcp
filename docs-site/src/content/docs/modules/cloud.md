@@ -9,7 +9,6 @@ Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Con
 
 ## API Scopes
 
-- `CSPM Registration:read`
 - `Cloud Security API Assets:read`
 - `Cloud Security API Detections:read`
 - `Cloud Security Policies:read`
@@ -128,30 +127,6 @@ Search for images vulnerabilities in your CrowdStrike Image Assessments
 **Example prompts:**
 
 - "Find image vulnerabilities with CVSS score above 7"
-
-### `falcon_search_ioa_findings`
-
-**Required scopes:** `CSPM Registration:read`
-
-Search for CSPM Indicators of Attack (IOA) behavior detections.
-
-Retrieves cloud security behavior detections that identify active attack
-patterns in your cloud environment. IOAs detect runtime threats like
-unauthorized API calls, suspicious credential usage, and lateral movement.
-
-NOTE: This tool uses direct parameter filtering, NOT FQL. Pass parameters
-directly rather than building a filter query string.
-
-Returns a list of IOA event objects with cloud context including event type,
-severity, cloud provider details, and associated resource information.
-Returns an empty list if no events match the criteria.
-
-Requires at least the cloud_provider parameter.
-
-**Example prompts:**
-
-- "Show me CSPM IOA behavior detections in AWS from the last 24 hours"
-- "Are there any critical cloud IOA detections in Azure?"
 
 ### `falcon_search_iom_findings`
 

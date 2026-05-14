@@ -71,12 +71,6 @@ class CloudModule(BaseModule):
 
         self._add_tool(
             server=server,
-            method=self.search_ioa_findings,
-            name="search_ioa_findings",
-        )
-
-        self._add_tool(
-            server=server,
             method=self.search_cspm_suppression_rules,
             name="search_cspm_suppression_rules",
         )
@@ -658,97 +652,6 @@ class CloudModule(BaseModule):
                 all_entities.extend(result)
 
         return all_entities
-
-    def search_ioa_findings(
-        self,
-        cloud_provider: str = Field(
-            description=(
-                "Cloud provider to search for IOA events. Required."
-                " Values: 'aws', 'azure', 'gcp'."
-            ),
-            examples=["aws", "azure", "gcp"],
-        ),
-        since: str = Field(
-            default="24h",
-            description=(
-                "Time window for IOA events as a duration string."
-                " Default: '24h'. Examples: '1h', '12h', '24h', '168h' (7 days)."
-            ),
-            examples=["1h", "12h", "24h", "168h"],
-        ),
-        severity: str | None = Field(
-            default=None,
-            description=(
-                "Filter by severity level."
-                " Values: 'Critical', 'High', 'Medium', 'Informational'."
-            ),
-            examples=["Critical", "High", "Medium"],
-        ),
-        state: str | None = Field(
-            default=None,
-            description="Filter by event state. Values: 'open', 'closed'.",
-            examples=["open", "closed"],
-        ),
-        service: str | None = Field(
-            default=None,
-            description=dedent(
-                """
-                Filter by cloud service. Examples: EC2, S3, IAM, Lambda, VPC,
-                KeyVault, Compute Engine, Cloud Storage, BigQuery.
-                See the full list of supported services in CrowdStrike documentation.
-            """
-            ).strip(),
-            examples=["EC2", "S3", "IAM", "Lambda"],
-        ),
-        account_id: str | None = Field(
-            default=None,
-            description=(
-                "Filter by cloud account ID"
-                " (AWS Account ID, Azure Subscription ID, GCP Project ID)."
-            ),
-        ),
-        limit: int = Field(
-            default=100,
-            ge=1,
-            le=500,
-            description="Maximum number of IOA events to return (default: 100; max: 500).",
-        ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search for CSPM Indicators of Attack (IOA) behavior detections.
-
-        Retrieves cloud security behavior detections that identify active attack
-        patterns in your cloud environment. IOAs detect runtime threats like
-        unauthorized API calls, suspicious credential usage, and lateral movement.
-
-        NOTE: This tool uses direct parameter filtering, NOT FQL. Pass parameters
-        directly rather than building a filter query string.
-
-        Returns a list of IOA event objects with cloud context including event type,
-        severity, cloud provider details, and associated resource information.
-        Returns an empty list if no events match the criteria.
-
-        Requires at least the cloud_provider parameter.
-        """
-        params = prepare_api_parameters(
-            {
-                "cloud_provider": cloud_provider,
-                "since": since,
-                "severity": severity,
-                "state": state,
-                "service": service,
-                "account_id": account_id,
-                "limit": limit,
-            }
-        )
-
-        response = self.client.command("GetBehaviorDetections", parameters=params)
-
-        return handle_api_response(
-            response,
-            operation="GetBehaviorDetections",
-            error_message="Failed to search IOA findings",
-            default_result=[],
-        )
 
     def search_cspm_suppression_rules(
         self,

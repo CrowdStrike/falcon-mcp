@@ -25,7 +25,6 @@ class TestCloudModule(TestModules):
             "falcon_search_images_vulnerabilities",
             "falcon_search_cspm_assets",
             "falcon_search_iom_findings",
-            "falcon_search_ioa_findings",
             "falcon_search_cspm_suppression_rules",
             "falcon_create_cspm_suppression_rule",
             "falcon_delete_cspm_suppression_rules",
@@ -570,39 +569,6 @@ class TestCloudModule(TestModules):
         second_call = self.mock_client.command.call_args_list[1]
         self.assertIn("parameters", second_call[1])
         self.assertNotIn("body", second_call[1])
-
-    # --- IOA Findings Tests ---
-
-    def test_search_ioa_findings_success(self):
-        """Test searching for IOA behavior detections."""
-        mock_response = {
-            "status_code": 200,
-            "body": {"resources": [{"event_id": "ioa_1", "severity": "High"}]},
-        }
-        self.mock_client.command.return_value = mock_response
-
-        self.module.search_ioa_findings(
-            cloud_provider="aws", severity="High", limit=10
-        )
-
-        self.assertEqual(self.mock_client.command.call_count, 1)
-        call = self.mock_client.command.call_args_list[0]
-        self.assertEqual(call[0][0], "GetBehaviorDetections")
-        self.assertEqual(call[1]["parameters"]["cloud_provider"], "aws")
-        self.assertEqual(call[1]["parameters"]["severity"], "High")
-
-    def test_search_ioa_findings_error(self):
-        """Test IOA search error handling."""
-        mock_response = {
-            "status_code": 400,
-            "body": {"errors": [{"message": "cloud_provider is required"}]},
-        }
-        self.mock_client.command.return_value = mock_response
-
-        result = self.module.search_ioa_findings(cloud_provider="invalid")
-
-        self.assertIsInstance(result, dict)
-        self.assertIn("error", result)
 
     # --- Suppression Rules Tests ---
 

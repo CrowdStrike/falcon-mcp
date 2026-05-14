@@ -24,7 +24,7 @@ Full docs are available at **[crowdstrike.github.io/falcon-mcp](https://crowdstr
 | Module | Description |
 |--------|-------------|
 | Core | Basic connectivity and system information |
-| [Cloud Security](https://crowdstrike.github.io/falcon-mcp/modules/cloud/) | Kubernetes containers, image vulnerabilities, CSPM asset inventory, IOM/IOA findings, and suppression rules |
+| [Cloud Security](https://crowdstrike.github.io/falcon-mcp/modules/cloud/) | Kubernetes containers, image vulnerabilities, CSPM asset inventory, IOM findings, and suppression rules |
 | [Custom IOA](https://crowdstrike.github.io/falcon-mcp/modules/custom-ioa/) | Create and manage Custom IOA behavioral detection rules and rule groups |
 | [Detections](https://crowdstrike.github.io/falcon-mcp/modules/detections/) | Find and analyze detections to understand malicious activity |
 | [Discover](https://crowdstrike.github.io/falcon-mcp/modules/discover/) | Search application inventory and discover unmanaged assets |

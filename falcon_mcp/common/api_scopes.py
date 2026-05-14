@@ -50,8 +50,6 @@ API_SCOPE_REQUIREMENTS = {
     # CSPM IOM Findings operations (CloudSecurityDetections)
     "cspm_evaluations_iom_queries": ["Cloud Security API Detections:read"],
     "cspm_evaluations_iom_entities": ["Cloud Security API Detections:read"],
-    # CSPM IOA Behavior Detections (CSPMRegistration)
-    "GetBehaviorDetections": ["CSPM Registration:read"],
     # CSPM Suppression Rules (override endpoints)
     "QuerySuppressionRules": ["Cloud Security Policies:read"],
     "GetSuppressionRules": ["Cloud Security Policies:read"],

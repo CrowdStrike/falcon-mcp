@@ -133,12 +133,6 @@ class TestCloudIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_iom_findings, limit=1)
         self.assert_no_error(result, context="IOM operation names")
 
-        # Test GetBehaviorDetections
-        result = self.call_method(
-            self.module.search_ioa_findings, cloud_provider="aws", limit=1
-        )
-        self.assert_no_error(result, context="GetBehaviorDetections operation name")
-
         # Test suppression rules override endpoints
         result = self.call_method(self.module.search_cspm_suppression_rules, limit=1)
         self.assert_no_error(result, context="Suppression rules override operation names")
@@ -299,38 +293,6 @@ class TestCloudIntegration(BaseIntegrationTest):
 
         if len(result) > 100:
             print(f"✅ IOM batching tested successfully with {len(result)} findings")
-
-    # --- IOA Findings Integration Tests ---
-
-    def test_search_ioa_findings_aws(self):
-        """Test search_ioa_findings for AWS cloud provider.
-
-        Validates GetBehaviorDetections operation name is correct.
-        IOA results may be empty if no recent events exist.
-        """
-        result = self.call_method(
-            self.module.search_ioa_findings,
-            cloud_provider="aws",
-            since="24h",
-            limit=5,
-        )
-
-        self.assert_no_error(result, context="search_ioa_findings aws")
-        # IOA results may be a list or may come as events dict
-        if isinstance(result, list):
-            self.assert_valid_list_response(result, min_length=0, context="search_ioa_findings aws")
-
-    def test_search_ioa_findings_with_severity(self):
-        """Test search_ioa_findings with severity filter."""
-        result = self.call_method(
-            self.module.search_ioa_findings,
-            cloud_provider="aws",
-            severity="High",
-            since="168h",
-            limit=5,
-        )
-
-        self.assert_no_error(result, context="search_ioa_findings with severity")
 
     # --- Suppression Rules Integration Tests ---
 

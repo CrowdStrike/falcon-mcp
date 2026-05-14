@@ -73,10 +73,6 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Find IOM findings for S3 buckets with public access",
         "What CSPM IOM findings are suppressed as accepted risk?",
     ],
-    "falcon_search_ioa_findings": [
-        "Show me CSPM IOA behavior detections in AWS from the last 24 hours",
-        "Are there any critical cloud IOA detections in Azure?",
-    ],
     "falcon_search_cspm_suppression_rules": [
         "List all CSPM IOM suppression rules and their reasons",
         "Show me which CSPM findings are being suppressed and why",
