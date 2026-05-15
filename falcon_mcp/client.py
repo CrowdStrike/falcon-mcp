@@ -78,6 +78,50 @@ class FalconClient:
         if self.member_cid:
             logger.debug("Flight Control member_cid: %s", self.member_cid)
 
+    @property
+    def token_status(self) -> int | None:
+        """HTTP status code from the last authentication attempt."""
+        result: int | None = self.client.token_status
+        return result
+
+    @property
+    def token_fail_reason(self) -> str | None:
+        """Error message from the API when authentication failed."""
+        result: str | None = self.client.token_fail_reason
+        return result
+
+    def auth_failure_message(self) -> str:
+        """Build a diagnostic message after a failed authentication attempt."""
+        parts = ["Failed to authenticate with the Falcon API"]
+        if self.token_status:
+            parts[0] += f" (HTTP {self.token_status})"
+        if self.token_fail_reason:
+            parts.append(self.token_fail_reason)
+
+        if self.token_status == 401:
+            parts.append(
+                "Hint: Verify FALCON_CLIENT_ID and FALCON_CLIENT_SECRET are correct"
+                " and the API key has not been revoked."
+            )
+        elif self.token_status == 403 and self.member_cid:
+            parts.append(
+                f"Hint: A member_cid is configured ({self.member_cid})."
+                " Verify this is a valid child CID managed by your parent tenant,"
+                " not the parent CID itself."
+            )
+        elif self.token_status == 403:
+            parts.append(
+                "Hint: Verify the API client has the required scopes"
+                " and has not been disabled."
+            )
+        else:
+            parts.append(
+                f"Hint: Check network connectivity to {self.base_url}"
+                " and verify FALCON_BASE_URL is correct for your CrowdStrike region."
+            )
+
+        return ". ".join(parts)
+
     def authenticate(self) -> bool:
         """Authenticate with the Falcon API.
 

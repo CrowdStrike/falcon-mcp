@@ -90,8 +90,9 @@ class FalconMCPServer:
 
         # Authenticate with the Falcon API
         if not self.falcon_client.authenticate():
-            logger.error("Failed to authenticate with the Falcon API")
-            raise RuntimeError("Failed to authenticate with the Falcon API")
+            msg = self.falcon_client.auth_failure_message()
+            logger.error(msg)
+            raise RuntimeError(msg)
 
         # Initialize the MCP server
         self.server = FastMCP(

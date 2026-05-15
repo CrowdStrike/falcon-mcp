@@ -85,15 +85,19 @@ class TestFalconMCPServer(unittest.TestCase):
 
     @patch("falcon_mcp.server.FalconClient")
     def test_authentication_failure(self, mock_client):
-        """Test server initialization with authentication failure."""
-        # Setup mock
+        """Test server initialization with authentication failure includes diagnostics."""
         mock_client_instance = MagicMock()
         mock_client_instance.authenticate.return_value = False
+        mock_client_instance.auth_failure_message.return_value = (
+            "Failed to authenticate with the Falcon API (HTTP 401). invalid credentials"
+        )
         mock_client.return_value = mock_client_instance
 
-        # Verify authentication failure raises RuntimeError
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(RuntimeError) as ctx:
             FalconMCPServer()
+
+        self.assertIn("HTTP 401", str(ctx.exception))
+        mock_client_instance.auth_failure_message.assert_called_once()
 
     @patch("falcon_mcp.server.FalconClient")
     def test_falcon_check_connectivity_success(self, mock_client):
