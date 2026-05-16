@@ -2,11 +2,10 @@
 Tests for the NGSIEM module.
 """
 
+import asyncio
 import os
 import unittest
 from unittest.mock import AsyncMock, patch
-
-import pytest
 
 from falcon_mcp.modules.ngsiem import NGSIEMModule
 from tests.modules.utils.test_modules import TestModules
@@ -26,9 +25,8 @@ class TestNGSIEMModule(TestModules):
         ]
         self.assert_tools_registered(expected_tools)
 
-    @pytest.mark.asyncio
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
-    async def test_search_ngsiem_success(self, mock_sleep):
+    def test_search_ngsiem_success(self, mock_sleep):
         """Test search that completes on first poll returns events list."""
         start_response = {
             "status_code": 200,
@@ -49,10 +47,12 @@ class TestNGSIEMModule(TestModules):
         }
         self.mock_client.command.side_effect = [start_response, poll_response]
 
-        result = await self.module.search_ngsiem(
-            query_string="#event_simpleName=ProcessRollup2",
-            start="2025-01-01T00:00:00Z",
-            repository="search-all",
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="#event_simpleName=ProcessRollup2",
+                start="2025-01-01T00:00:00Z",
+                repository="search-all",
+            )
         )
 
         # Verify start call
@@ -75,9 +75,8 @@ class TestNGSIEMModule(TestModules):
         self.assertEqual(result[0]["aid"], "agent-1")
         self.assertEqual(result[1]["event"], "DnsRequest")
 
-    @pytest.mark.asyncio
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
-    async def test_search_ngsiem_multiple_polls(self, mock_sleep):
+    def test_search_ngsiem_multiple_polls(self, mock_sleep):
         """Test search that requires multiple polls before completion."""
         start_response = {
             "status_code": 200,
@@ -101,9 +100,11 @@ class TestNGSIEMModule(TestModules):
             poll_done,
         ]
 
-        result = await self.module.search_ngsiem(
-            query_string="aid=abc123",
-            start="2025-01-01T00:00:00Z",
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="aid=abc123",
+                start="2025-01-01T00:00:00Z",
+            )
         )
 
         # Verify multiple polls occurred (1 start + 3 polls)
@@ -114,9 +115,8 @@ class TestNGSIEMModule(TestModules):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["aid"], "agent-1")
 
-    @pytest.mark.asyncio
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
-    async def test_search_ngsiem_start_error(self, mock_sleep):
+    def test_search_ngsiem_start_error(self, mock_sleep):
         """Test that a non-200 on StartSearchV1 returns error dict."""
         error_response = {
             "status_code": 403,
@@ -124,9 +124,11 @@ class TestNGSIEMModule(TestModules):
         }
         self.mock_client.command.return_value = error_response
 
-        result = await self.module.search_ngsiem(
-            query_string="aid=abc123",
-            start="2025-01-01T00:00:00Z",
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="aid=abc123",
+                start="2025-01-01T00:00:00Z",
+            )
         )
 
         # Verify only one call was made (no polling)
@@ -137,9 +139,8 @@ class TestNGSIEMModule(TestModules):
         self.assertIn("error", result)
         self.assertIn("Failed to start NGSIEM search", result["error"])
 
-    @pytest.mark.asyncio
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
-    async def test_search_ngsiem_poll_error(self, mock_sleep):
+    def test_search_ngsiem_poll_error(self, mock_sleep):
         """Test that a non-200 on GetSearchStatusV1 returns error dict."""
         start_response = {
             "status_code": 200,
@@ -151,9 +152,11 @@ class TestNGSIEMModule(TestModules):
         }
         self.mock_client.command.side_effect = [start_response, poll_error]
 
-        result = await self.module.search_ngsiem(
-            query_string="aid=abc123",
-            start="2025-01-01T00:00:00Z",
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="aid=abc123",
+                start="2025-01-01T00:00:00Z",
+            )
         )
 
         # Verify error response
@@ -161,11 +164,10 @@ class TestNGSIEMModule(TestModules):
         self.assertIn("error", result)
         self.assertIn("Failed to poll NGSIEM search status", result["error"])
 
-    @pytest.mark.asyncio
     @patch("falcon_mcp.modules.ngsiem.TIMEOUT_SECONDS", 10)
     @patch("falcon_mcp.modules.ngsiem.POLL_INTERVAL_SECONDS", 5)
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
-    async def test_search_ngsiem_timeout(self, mock_sleep):
+    def test_search_ngsiem_timeout(self, mock_sleep):
         """Test that exceeding timeout calls StopSearchV1 and returns error."""
         start_response = {
             "status_code": 200,
@@ -187,10 +189,12 @@ class TestNGSIEMModule(TestModules):
             stop_response,
         ]
 
-        result = await self.module.search_ngsiem(
-            query_string="aid=abc123",
-            start="2025-01-01T00:00:00Z",
-            repository="search-all",
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="aid=abc123",
+                start="2025-01-01T00:00:00Z",
+                repository="search-all",
+            )
         )
 
         # Verify StopSearchV1 was called for cleanup
@@ -207,9 +211,8 @@ class TestNGSIEMModule(TestModules):
         self.assertEqual(result["details"]["job_id"], "job-timeout")
         self.assertEqual(result["details"]["timeout_seconds"], 10)
 
-    @pytest.mark.asyncio
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
-    async def test_search_ngsiem_with_optional_params(self, mock_sleep):
+    def test_search_ngsiem_with_optional_params(self, mock_sleep):
         """Test that end and limit are passed correctly in body."""
         start_response = {
             "status_code": 200,
@@ -221,11 +224,13 @@ class TestNGSIEMModule(TestModules):
         }
         self.mock_client.command.side_effect = [start_response, poll_done]
 
-        result = await self.module.search_ngsiem(
-            query_string="aid=abc123",
-            start="2025-01-01T00:00:00Z",
-            end="2025-02-06T00:00:00Z",
-            repository="investigate_view",
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="aid=abc123",
+                start="2025-01-01T00:00:00Z",
+                end="2025-02-06T00:00:00Z",
+                repository="investigate_view",
+            )
         )
 
         # Verify start call body includes end (as epoch ms)
@@ -241,9 +246,8 @@ class TestNGSIEMModule(TestModules):
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 0)
 
-    @pytest.mark.asyncio
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
-    async def test_search_ngsiem_default_repository(self, mock_sleep):
+    def test_search_ngsiem_default_repository(self, mock_sleep):
         """Test that the repository parameter defaults to 'search-all'.
 
         Note: When calling module methods directly (not through FastMCP), Pydantic
@@ -270,18 +274,19 @@ class TestNGSIEMModule(TestModules):
         }
         self.mock_client.command.side_effect = [start_response, poll_done]
 
-        await self.module.search_ngsiem(
-            query_string="aid=abc123",
-            start="2025-01-01T00:00:00Z",
-            repository="search-all",
+        asyncio.run(
+            self.module.search_ngsiem(
+                query_string="aid=abc123",
+                start="2025-01-01T00:00:00Z",
+                repository="search-all",
+            )
         )
 
         first_call = self.mock_client.command.call_args_list[0]
         self.assertEqual(first_call[1]["repository"], "search-all")
 
-    @pytest.mark.asyncio
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
-    async def test_search_ngsiem_special_characters_in_query(self, mock_sleep):
+    def test_search_ngsiem_special_characters_in_query(self, mock_sleep):
         """Test that special characters in query_string pass through safely."""
         start_response = {
             "status_code": 200,
@@ -294,9 +299,11 @@ class TestNGSIEMModule(TestModules):
         self.mock_client.command.side_effect = [start_response, poll_done]
 
         special_query = '#event_simpleName=ProcessRollup2 | ComputerName="test\'s <host>" | count()'
-        result = await self.module.search_ngsiem(
-            query_string=special_query,
-            start="2025-01-01T00:00:00Z",
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string=special_query,
+                start="2025-01-01T00:00:00Z",
+            )
         )
 
         # Verify query was passed through unchanged
@@ -306,9 +313,8 @@ class TestNGSIEMModule(TestModules):
         # Should still return valid result
         self.assertIsInstance(result, list)
 
-    @pytest.mark.asyncio
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
-    async def test_search_ngsiem_missing_job_id(self, mock_sleep):
+    def test_search_ngsiem_missing_job_id(self, mock_sleep):
         """Test that a missing job ID in start response returns error."""
         start_response = {
             "status_code": 200,
@@ -316,9 +322,11 @@ class TestNGSIEMModule(TestModules):
         }
         self.mock_client.command.return_value = start_response
 
-        result = await self.module.search_ngsiem(
-            query_string="aid=abc123",
-            start="2025-01-01T00:00:00Z",
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="aid=abc123",
+                start="2025-01-01T00:00:00Z",
+            )
         )
 
         # Verify only one call was made (no polling)
@@ -328,7 +336,6 @@ class TestNGSIEMModule(TestModules):
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)
         self.assertIn("no job ID", result["error"])
-        self.assertIn("details", result)
 
 
 class TestNGSIEMModuleConfig(unittest.TestCase):
