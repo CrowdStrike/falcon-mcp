@@ -5,7 +5,6 @@ emission inflated per-tool payload and caused context-budget-constrained
 clients (VS Code Copilot) to silently drop tools.
 """
 
-import json
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -66,28 +65,23 @@ class TestToolsListOutputSchema(unittest.IsolatedAsyncioTestCase):
             + "\n".join(f"  - {name}" for name in sorted(missing)),
         )
 
-    async def test_wire_serialization_excludes_output_schema_key(self):
-        """Wire-format check: the JSON payload sent to clients must not
-        contain the `outputSchema` key for any tool.
-
-        Uses the same Pydantic options the MCP session layer uses to
-        serialize JSON-RPC responses (`exclude_none=True`).
-        """
+    async def test_tools_list_payload_within_budget(self):
+        """Guard against tools/list payload exceeding client context budgets."""
         async with create_connected_server_and_client_session(
             self.mcp_server.server
         ) as session:
             tools = (await session.list_tools()).tools
 
-        for tool in tools:
-            payload = json.loads(
-                tool.model_dump_json(by_alias=True, exclude_none=True)
-            )
-            self.assertNotIn(
-                "outputSchema",
-                payload,
-                f"Tool {tool.name!r} wire payload contains outputSchema "
-                "(issue #325): " + json.dumps(payload, sort_keys=True),
-            )
+        total = sum(
+            len(t.model_dump_json(by_alias=True, exclude_none=True))
+            for t in tools
+        )
+        budget = 120_000
+        self.assertLess(
+            total,
+            budget,
+            f"tools/list payload is {total:,} bytes, exceeding {budget:,} byte budget",
+        )
 
 
 if __name__ == "__main__":

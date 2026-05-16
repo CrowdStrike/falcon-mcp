@@ -71,9 +71,6 @@ class BaseModule(ABC):
             annotations: MCP tool annotations. Defaults to READ_ONLY_ANNOTATIONS.
         """
         prefixed_name = f"falcon_{name}"
-        # structured_output=False omits outputSchema from tools/list (issue #325):
-        # the auto-derived schema inflated per-tool payload and caused context-
-        # budget-constrained clients (VS Code Copilot) to silently drop tools.
         server.add_tool(
             method,
             name=prefixed_name,

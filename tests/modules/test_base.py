@@ -703,6 +703,18 @@ class TestBaseModule(TestModules):
         call_kwargs = self.mock_server.add_tool.call_args[1]
         self.assertEqual(call_kwargs["annotations"], custom_annotations)
 
+    def test_add_tool_disables_structured_output(self):
+        """Verify _add_tool passes structured_output=False to prevent outputSchema emission."""
+        self.module._add_tool(
+            server=self.mock_server,
+            method=lambda: None,
+            name="test_tool",
+        )
+
+        self.mock_server.add_tool.assert_called_once()
+        call_kwargs = self.mock_server.add_tool.call_args[1]
+        self.assertFalse(call_kwargs["structured_output"])
+
 
 if __name__ == "__main__":
     unittest.main()
