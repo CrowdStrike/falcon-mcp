@@ -62,7 +62,7 @@ class HostsModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://hosts/search/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://hosts/search/fql-guide` for syntax.",
             examples={"platform_name:'Windows'", "hostname:'PC*'"},
         ),
         limit: int = Field(
@@ -99,8 +99,10 @@ class HostsModule(BaseModule):
     ) -> list[dict[str, Any]]:
         """Search for hosts in your CrowdStrike environment.
 
-        IMPORTANT: You must use the `falcon://hosts/search/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_hosts` tool.
+        Use this to find devices by hostname, platform, IP, sensor version, or other
+        attributes. Consult falcon://hosts/search/fql-guide before constructing filter
+        expressions. Returns full host details including device info, OS, and network
+        context.
         """
         device_ids = self._base_search_api_call(
             operation="QueryDevicesByFilter",
@@ -141,11 +143,11 @@ class HostsModule(BaseModule):
             description="Host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request."
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve detailed information for specified host device IDs.
+        """Retrieve detailed information for one or more host device IDs.
 
-        This tool returns comprehensive host details for one or more device IDs.
-        Use this when you already have specific device IDs and need their full details.
-        For searching/discovering hosts, use the `falcon_search_hosts` tool instead.
+        Use when you already have specific device IDs from search results, the Falcon
+        console, or the Streaming API. For discovering hosts by criteria, use
+        falcon_search_hosts instead. Returns comprehensive host details.
         """
         logger.debug("Getting host details for IDs: %s", ids)
 

@@ -85,13 +85,14 @@ def search_entities(
     self,
     filter: str | None = Field(
         default=None,
-        description="FQL filter. IMPORTANT: use the falcon://your-module/entities/fql-guide resource when building this parameter.",
+        description="FQL filter expression. See `falcon://your-module/entities/fql-guide` for syntax.",
     ),
 ) -> list[dict[str, Any]]:
-    """Search for entities.
+    """Search for entities in your CrowdStrike environment.
 
-    IMPORTANT: Call the FQL guide resource first:
-    falcon://your-module/entities/fql-guide
+    Use this to find entities by name, status, or other attributes. Consult
+    falcon://your-module/entities/fql-guide before constructing filter expressions.
+    Returns full entity details.
     """
 ```
 

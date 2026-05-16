@@ -14,7 +14,6 @@ from pydantic import AnyUrl, Field
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.detections import (
-    EMBEDDED_FQL_SYNTAX,
     SEARCH_DETECTIONS_FQL_DOCUMENTATION,
 )
 
@@ -64,7 +63,7 @@ class DetectionsModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description=EMBEDDED_FQL_SYNTAX,
+            description="FQL filter expression. See `falcon://detections/search/fql-guide` for syntax.",
             examples=["status:'new'+severity_name:'High'", "device.hostname:'DC*'"],
         ),
         limit: int = Field(
@@ -107,11 +106,10 @@ class DetectionsModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Find detections by criteria and return their complete details.
 
-        Use this tool to discover detections - filter by severity, status, hostname,
-        time range, etc. Returns full detection information including behaviors,
-        device context, and threat details.
-
-        Returns FQL syntax guide on error or empty results to help refine queries.
+        Use this to discover detections by severity, status, hostname, time range, or
+        other attributes. Consult falcon://detections/search/fql-guide before constructing
+        filter expressions. Returns full alert records including process context, device
+        info, tactic/technique details, and threat classification.
         """
         detection_ids = self._base_search_api_call(
             operation="GetQueriesAlertsV2",
@@ -160,8 +158,9 @@ class DetectionsModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Retrieve details for detection IDs you already have.
 
-        Use ONLY when you have specific composite detection ID(s). To find detections
-        by criteria (severity, status, hostname, etc.), use `falcon_search_detections`.
+        Use when you have specific composite detection ID(s). For discovering detections
+        by criteria (severity, status, hostname, etc.), use falcon_search_detections
+        instead. Returns full detection records.
         """
         logger.debug("Getting detection details for ID(s): %s", ids)
 

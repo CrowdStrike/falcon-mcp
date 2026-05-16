@@ -4,39 +4,6 @@ Contains RTR (Real Time Response) resources.
 
 from falcon_mcp.common.utils import generate_md_table
 
-# Concise FQL syntax for embedding in tool parameter descriptions
-EMBEDDED_FQL_SYNTAX = """FQL filter string for querying RTR sessions.
-
-SYNTAX:
-- Equals: field:'value'
-- Not equals: field:!'value'
-- Comparison: field:>50, field:>=50, field:<50, field:<=50
-- Contains (case-insensitive): field:~'partial'
-- Wildcard: field:'prefix*', field:'*suffix'
-
-COMBINING:
-- AND (all must match): field1:'value1'+field2:'value2'
-- OR (any can match): field:'value1',field:'value2'
-- Grouping: (field1:'v1',field1:'v2')+field2:'v3'
-
-COMMON FIELDS:
-- aid: Host agent ID
-- hostname: Host name
-- user_id: API user who created the session ('@me' for current user)
-- origin: Session origin label (e.g., 'falcon-mcp')
-- created_at: Session creation timestamp (ISO 8601)
-- updated_at: Last update timestamp (ISO 8601)
-- base_command: RTR command name (e.g., 'ls', 'ps', 'cat')
-- command_string: Full command line executed
-- offline_queued: Whether session was queued offline (true/false)
-
-EXAMPLES:
-- Sessions for a host: hostname:'BRR-WB-LIB-22'
-- Sessions by agent ID: aid:'2c5c4e7738004deaa9dfcdb86f633f3e'
-- Current user sessions: user_id:'@me'
-- Offline-queued sessions: offline_queued:true+hostname:'DC*'
-"""
-
 # List of tuples containing filter options data: (name, type, description)
 SEARCH_RTR_SESSIONS_FQL_FILTERS = [
     (

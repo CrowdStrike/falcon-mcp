@@ -78,7 +78,7 @@ class DiscoverModule(BaseModule):
     def search_applications(
         self,
         filter: str = Field(
-            description="FQL filter expression used to limit the results. IMPORTANT: use the `falcon://discover/applications/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression (required). See `falcon://discover/applications/fql-guide` for syntax.",
             examples={"name:'Chrome'", "vendor:'Microsoft Corporation'"},
         ),
         facet: str | None = Field(
@@ -107,10 +107,11 @@ class DiscoverModule(BaseModule):
             examples={"name.asc", "vendor.desc", "last_updated_timestamp.desc"},
         ),
     ) -> list[dict[str, Any]]:
-        """Search for applications in your CrowdStrike environment.
+        """Search for applications discovered in your CrowdStrike environment.
 
-        IMPORTANT: You must use the `falcon://discover/applications/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_applications` tool.
+        Use this to find applications by name, vendor, or installation details. Consult
+        falcon://discover/applications/fql-guide before constructing filter expressions.
+        Returns application entities with optional host info and usage data (based on facet).
         """
         # Prepare parameters for combined_applications
         params = prepare_api_parameters(
@@ -149,7 +150,7 @@ class DiscoverModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression used to limit the results. IMPORTANT: use the `falcon://discover/hosts/fql-guide` resource when building this filter parameter. Note: entity_type:'unmanaged' is automatically applied.",
+            description="FQL filter expression. See `falcon://discover/hosts/fql-guide` for syntax. Note: entity_type:'unmanaged' is automatically applied.",
             examples={"platform_name:'Windows'", "criticality:'Critical'"},
         ),
         limit: int = Field(
@@ -184,16 +185,12 @@ class DiscoverModule(BaseModule):
             examples={"hostname.asc", "last_seen_timestamp.desc", "criticality.desc"},
         ),
     ) -> list[dict[str, Any]]:
-        """Search for unmanaged assets (hosts) in your CrowdStrike environment.
+        """Search for unmanaged assets (hosts without Falcon sensor) in your environment.
 
-        These are systems that do not have the Falcon sensor installed but have been
-        discovered by systems that do have a Falcon sensor installed.
-
-        IMPORTANT: You must use the `falcon://discover/hosts/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_unmanaged_assets` tool.
-
-        The tool automatically filters for unmanaged assets only by adding entity_type:'unmanaged' to all queries.
-        You do not need to (and cannot) specify entity_type in your filter - it is always set to 'unmanaged'.
+        Finds systems discovered by Falcon-managed hosts that lack a sensor themselves.
+        Consult falcon://discover/hosts/fql-guide before constructing filter expressions.
+        The tool automatically adds entity_type:'unmanaged' to all queries. Returns full
+        asset details including platform, network, and criticality information.
         """
         # Always enforce entity_type:'unmanaged' filter
         base_filter = "entity_type:'unmanaged'"

@@ -56,7 +56,7 @@ class SpotlightModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://spotlight/vulnerabilities/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://spotlight/vulnerabilities/fql-guide` for syntax.",
             examples={"status:'open'", "cve.severity:'HIGH'"},
         ),
         limit: int = Field(
@@ -117,8 +117,10 @@ class SpotlightModule(BaseModule):
     ) -> list[dict[str, Any]]:
         """Search for vulnerabilities in your CrowdStrike environment.
 
-        IMPORTANT: You must use the `falcon://spotlight/vulnerabilities/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_vulnerabilities` tool.
+        Use this to find vulnerabilities by CVE severity, status, host, or remediation
+        state. Consult falcon://spotlight/vulnerabilities/fql-guide before constructing
+        filter expressions. Returns vulnerability details including CVE info, host context,
+        and remediation guidance (based on facet selection).
         """
         vulnerabilities = self._base_search_api_call(
             operation="combinedQueryVulnerabilities",

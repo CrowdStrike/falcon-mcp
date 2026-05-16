@@ -99,7 +99,7 @@ class IntelModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/actors/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://intel/actors/fql-guide` for syntax.",
         ),
         limit: int = Field(
             default=10,
@@ -126,8 +126,9 @@ class IntelModule(BaseModule):
     ) -> list[dict[str, Any]]:
         """Research threat actors and adversary groups tracked by CrowdStrike intelligence.
 
-        IMPORTANT: You must use the `falcon://intel/actors/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_actors` tool.
+        Use this to search actors by name, target countries/industries, or activity dates.
+        Consult falcon://intel/actors/fql-guide before constructing filter expressions.
+        Returns full actor profiles including aliases, motivations, and targeting details.
         """
         api_response = self._base_search_api_call(
             operation="QueryIntelActorEntities",
@@ -150,7 +151,7 @@ class IntelModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/indicators/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://intel/indicators/fql-guide` for syntax.",
         ),
         limit: int = Field(
             default=10,
@@ -180,10 +181,11 @@ class IntelModule(BaseModule):
             description="Flag indicating if related indicators should be returned.",
         ),
     ) -> list[dict[str, Any]]:
-        """Search for threat indicators and indicators of compromise (IOCs) from CrowdStrike intelligence.
+        """Search for threat indicators and IOCs from CrowdStrike intelligence.
 
-        IMPORTANT: You must use the `falcon://intel/indicators/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_indicators` tool.
+        Use this to find indicators by type, publish date, malware family, or threat actor
+        association. Consult falcon://intel/indicators/fql-guide before constructing filter
+        expressions. Returns full indicator details including labels, relations, and kill chain stage.
         """
         api_response = self._base_search_api_call(
             operation="QueryIntelIndicatorEntities",
@@ -208,7 +210,7 @@ class IntelModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL query expression that should be used to limit the results. IMPORTANT: use the `falcon://intel/reports/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://intel/reports/fql-guide` for syntax.",
         ),
         limit: int = Field(
             default=10,
@@ -230,14 +232,11 @@ class IntelModule(BaseModule):
             description="Free text search across all indexed fields.",
         ),
     ) -> list[dict[str, Any]]:
-        """Access CrowdStrike intelligence publications and threat reports.
+        """Search CrowdStrike intelligence publications and threat reports.
 
-        This tool returns comprehensive intelligence report details based on your search criteria.
-        Use this when you need to find CrowdStrike intelligence publications matching specific conditions.
-        For guidance on building FQL filters, use the `falcon://intel/reports/fql-guide` resource.
-
-        IMPORTANT: You must use the `falcon://intel/reports/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_reports` tool.
+        Use this to find reports by name, target industry, threat type, or publication date.
+        Consult falcon://intel/reports/fql-guide before constructing filter expressions.
+        Returns full report metadata including title, description, and target details.
         """
         api_response = self._base_search_api_call(
             operation="QueryIntelReportEntities",
@@ -271,14 +270,11 @@ class IntelModule(BaseModule):
             examples={"json", "csv"},
         ),
     ) -> list[dict[str, Any]] | str:
-        """Generate MITRE ATT&CK report for a given threat actor.
+        """Generate a MITRE ATT&CK report for a given threat actor.
 
-        Provides detailed MITRE ATT&CK tactics, techniques, and procedures (TTPs)
-        report associated with a specific threat actor tracked.
-
-        Args:
-            actor: Pass the actor name (string) or numeric actor ID (string).
-            format: Report format. Accepted options: 'csv' or 'json'. Defaults to 'json'.
+        Accepts an actor name (e.g., 'WARP PANDA') or numeric ID. Returns MITRE ATT&CK
+        tactics, techniques, and procedures (TTPs) for the actor. JSON format returns a
+        decoded string; CSV format returns CSV text.
         """
 
         # Check if the actor parameter looks like an ID (numeric) or a name

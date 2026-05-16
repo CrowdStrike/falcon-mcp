@@ -215,18 +215,9 @@ class ShieldModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search individual Falcon Shield (SaaS Security) posture checks with filtering.
 
-        Use the check id from results to call `get_shield_check_affected_entities` for
-        violating entities, `get_shield_check_compliance` for compliance mappings, or
-        `dismiss_shield_check` to dismiss.
-
-        For an aggregated posture summary (total score, status breakdown), use
-        `get_shield_posture_metrics` instead.
-
-        IMPORTANT: Consult the falcon://shield/search/query-guide resource for valid
-        filter parameter values.
-
-        Returns check records containing id, name, status, impact level, affected entity
-        count, and remediation plan."""
+        Use this to find specific failing checks by status, impact, integration, or type; consult
+        falcon://shield/search/query-guide for valid filter values. Returns check records containing
+        id, name, status, impact level, affected entity count, and remediation plan."""
         return self._search_with_docs(
             operation="GetSecurityChecksV3",
             search_params={
@@ -261,13 +252,10 @@ class ShieldModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve the specific entities (users, apps, or devices) that are violating
-        a given Falcon Shield (SaaS Security) posture check.
+        """Retrieve the specific entities (users, apps, or devices) that are violating a given Falcon Shield posture check.
 
-        Use this after `search_shield_checks` to drill into which entities are failing
-        a specific check.
-
-        Returns entity objects with entity name, type, and relevant security details."""
+        Use this after `search_shield_checks` to drill into which entities are failing a specific check. Returns entity
+        objects with entity name, type, and relevant security details."""
         return self._search_with_docs(
             operation="GetSecurityCheckAffectedV3",
             search_params={"id": id, "limit": limit, "offset": offset},
@@ -315,14 +303,11 @@ class ShieldModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Get aggregated Falcon Shield (SaaS Security) posture metrics.
+        """Get aggregated Falcon Shield (SaaS Security) posture metrics for a dashboard or summary view.
 
-        Use this for a summary/dashboard view of your security posture. To retrieve
-        individual check records with remediation details, use `search_shield_checks`
-        instead.
-
-        Returns total check counts, overall score percentage, and breakdown of checks
-        by status (Passed, Failed, Dismissed, etc.) across connected SaaS applications."""
+        Use this for a high-level overview of your SaaS security posture; for individual check records
+        with remediation details, use `search_shield_checks` instead. Returns total check counts, overall
+        score percentage, and a breakdown of checks by status across connected SaaS applications."""
         return self._search_with_docs(
             operation="GetMetricsV3",
             search_params={
@@ -343,13 +328,11 @@ class ShieldModule(BaseModule):
             description="Security check ID. Obtain from the id field in results returned by `search_shield_checks`.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve the compliance framework mappings for a specific Falcon Shield
-        (SaaS Security) posture check.
+        """Retrieve the compliance framework mappings for a specific Falcon Shield posture check.
 
-        Use this to understand the regulatory impact of a failing check.
-
-        Returns compliance objects identifying the framework (e.g., SOC 2, CIS, NIST,
-        PCI DSS), control ID, and control description that the check satisfies."""
+        Use this after `search_shield_checks` to understand the regulatory impact of a failing check.
+        Returns compliance objects identifying the framework (e.g., SOC 2, CIS, NIST, PCI DSS),
+        control ID, and control description that the check satisfies."""
         return self._search_with_docs(
             operation="GetSecurityCheckComplianceV3",
             search_params={"id": id},
@@ -404,15 +387,9 @@ class ShieldModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search Falcon Shield (SaaS Security) alerts for monitored SaaS applications.
 
-        Alert types: configuration_drift (a previously passing check now fails),
-        check_degraded (check status worsened), integration_failure (connectivity issue
-        with a SaaS platform), threat (active threat indicator).
-
-        Pagination: use last_id from the last result for cursor-based pagination, or
-        use offset for offset-based pagination.
-
-        Returns alert objects containing id, type, integration details, timestamp,
-        and severity."""
+        Use this to find configuration drift, degraded checks, integration failures, or active threats;
+        use last_id from the last result for cursor-based pagination or offset for offset-based pagination.
+        Returns alert objects containing id, type, integration details, timestamp, and severity."""
         return self._search_with_docs(
             operation="GetAlertsV3",
             search_params={
@@ -480,20 +457,12 @@ class ShieldModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Get events from the Falcon Shield (SaaS Security) activity monitor.
-        Data retained for 180 days.
+        """Get events from the Falcon Shield (SaaS Security) activity monitor; data is retained for 180 days.
 
-        Note: When using integration_id, category, or actor filters, the date range
-        (from_date to to_date) must be within 24 hours.
-
-        Pagination: Use meta.pagination.next as to_date and meta.pagination.offset as
-        skip for subsequent pages.
-
-        IMPORTANT: Consult the falcon://shield/search/query-guide resource for valid
-        category, actor, and projection values.
-
-        Returns activity event objects including timestamp, event name, actor identity,
-        integration, category, and location details."""
+        Use this to investigate user activity, threats, or IoC events across connected SaaS platforms;
+        when filtering by integration_id, category, or actor, the date range must be within 24 hours.
+        Returns activity event objects including timestamp, event name, actor identity, integration,
+        category, and location details."""
         return self._search_with_docs(
             operation="GetActivityMonitorV3",
             search_params={
@@ -539,17 +508,12 @@ class ShieldModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """List end-users discovered across Falcon Shield (SaaS Security) connected
-        SaaS applications.
+        """List end-users discovered across Falcon Shield (SaaS Security) connected SaaS applications.
 
-        Use this to audit user access across your SaaS estate or to identify
-        over-privileged or stale accounts.
-
-        To list Shield platform administrators instead of SaaS app end-users, use
-        `get_shield_system_users`.
-
-        Returns user objects containing email, display name, connected application
-        details, privilege status, and exposure metrics."""
+        Use this to audit user access across your SaaS estate or identify over-privileged or stale accounts;
+        for Shield platform administrators instead of SaaS app end-users, use `get_shield_system_users`.
+        Returns user objects containing email, display name, connected application details, privilege status,
+        and exposure metrics."""
         return self._search_with_docs(
             operation="GetUserInventoryV3",
             search_params={
@@ -596,15 +560,11 @@ class ShieldModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """List devices registered to users in Falcon Shield (SaaS Security) connected
-        SaaS applications.
+        """List devices registered to users in Falcon Shield (SaaS Security) connected SaaS applications.
 
-        Note: This returns devices from SaaS provider records, not from the Falcon
-        sensor inventory. To search Falcon-sensor-enrolled hosts, use `search_hosts`
-        instead.
-
-        Returns device objects containing device name, owner email, compliance posture,
-        and management status."""
+        Use this to identify unmanaged or unassociated devices in your SaaS estate; note that this returns
+        devices from SaaS provider records, not Falcon sensor inventory — use `search_hosts` for that.
+        Returns device objects containing device name, owner email, compliance posture, and management status."""
         return self._search_with_docs(
             operation="GetDeviceInventoryV3",
             search_params={
@@ -675,15 +635,12 @@ class ShieldModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """List third-party applications (OAuth apps, API tokens, browser extensions,
-        service principals) with access to Falcon Shield (SaaS Security) monitored
-        platforms.
+        """List third-party applications (OAuth apps, API tokens, browser extensions, service principals)
+        with access to Falcon Shield (SaaS Security) monitored platforms.
 
-        Use the item_id from results with `get_shield_app_users` to retrieve the users
-        of a specific app.
-
-        Returns app objects containing item_id, name, type, status, access_level,
-        granted scopes, and user count."""
+        Use this to audit app access across your SaaS estate; use the item_id from results with
+        `get_shield_app_users` to see who authorized a specific app. Returns app objects containing
+        item_id, name, type, status, access_level, granted scopes, and user count."""
         return self._search_with_docs(
             operation="GetAppInventory",
             search_params={
@@ -710,12 +667,9 @@ class ShieldModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve the users who have authorized or are associated with a specific
-        third-party app in Falcon Shield (SaaS Security).
+        """Retrieve the users who have authorized or are associated with a specific third-party app in Falcon Shield.
 
-        Use this after `search_shield_apps` to drill into a specific app's user
-        population.
-
+        Use this after `search_shield_apps` to drill into a specific app's user population.
         Returns user objects including email, display name, and granted permissions."""
         return self._search_with_docs(
             operation="GetAppInventoryUsers",
@@ -798,14 +752,11 @@ class ShieldModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """List files and resources shared externally across Falcon Shield (SaaS
-        Security) monitored SaaS applications.
+        """List files and resources shared externally across Falcon Shield (SaaS Security) monitored applications.
 
-        Use this to identify overshared or externally exposed files (e.g., Google
-        Drive documents shared outside the organization).
-
-        Returns resource objects containing resource name, type, owner, sharing access
-        level, password protection status, and last access/modification timestamps."""
+        Use this to identify overshared or externally exposed files such as Google Drive documents shared
+        outside the organization. Returns resource objects containing resource name, type, owner, sharing
+        access level, password protection status, and last access/modification timestamps."""
         return self._search_with_docs(
             operation="GetAssetInventoryV3",
             search_params={
@@ -832,15 +783,11 @@ class ShieldModule(BaseModule):
             description="Comma-separated SaaS platform IDs to filter by.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """List all SaaS integrations connected to Falcon Shield (SaaS Security) and
-        their current connection status.
+        """List all SaaS integrations connected to Falcon Shield and their current connection status.
 
-        The integration_id values returned here are used as input to most other Shield
-        tools. Call this tool first when starting a Shield investigation to discover
-        available integrations.
-
-        Returns integration objects containing integration_id, SaaS platform name,
-        connection health, and last sync time."""
+        Call this first when starting a Shield investigation to discover available integration IDs,
+        which are required as input to most other Shield tools. Returns integration objects containing
+        integration_id, SaaS platform name, connection health, and last sync time."""
         return self._search_with_docs(
             operation="GetIntegrationsV3",
             search_params={"saas_id": saas_id},
@@ -850,10 +797,9 @@ class ShieldModule(BaseModule):
     def get_shield_system_users(self) -> list[dict[str, Any]] | dict[str, Any]:
         """List Falcon Shield (SaaS Security) platform administrators.
 
-        These are Shield console administrators, not end-users of connected SaaS
-        applications. For SaaS app end-users, use `search_shield_users`.
-
-        Returns system-level user objects including email, role, and MFA status."""
+        Use this to audit console-level admin accounts; for end-users of connected SaaS applications,
+        use `search_shield_users` instead. Returns system-level user objects including email, role,
+        and MFA status."""
         return self._search_with_docs(
             operation="GetSystemUsersV3",
             search_params={},
@@ -861,11 +807,9 @@ class ShieldModule(BaseModule):
         )
 
     def get_shield_supported_saas(self) -> list[dict[str, Any]] | dict[str, Any]:
-        """List SaaS platforms supported by Falcon Shield (SaaS Security) for integration.
+        """List SaaS platforms supported by Falcon Shield for integration.
 
-        Use this to discover which SaaS applications can be connected to Shield
-        before setting up new integrations.
-
+        Use this to discover which SaaS applications can be connected before setting up new integrations.
         Returns supported SaaS platform objects including platform name and ID."""
         return self._search_with_docs(
             operation="GetSupportedSaasV3",
@@ -900,15 +844,10 @@ class ShieldModule(BaseModule):
             description="If true, include total count of matching logs in the response metadata.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve Falcon Shield (SaaS Security) system audit logs. Data retained
-        for 90 days.
+        """Retrieve Falcon Shield (SaaS Security) system audit logs; data is retained for 90 days.
 
-        Logs include integration creates/updates, check dismissals, and data syncs.
-
-        Use date range filters to narrow results. Without filters, returns the most
-        recent logs up to the limit.
-
-        Returns log objects containing timestamp, event type, actor, and details."""
+        Use date range filters to narrow results, covering events such as integration creates, check
+        dismissals, and data syncs. Returns log objects containing timestamp, event type, actor, and details."""
         return self._search_with_docs(
             operation="GetSystemLogsV3",
             search_params={
@@ -943,15 +882,12 @@ class ShieldModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Dismiss a Falcon Shield (SaaS Security) posture check to suppress it from
-        the failed checks list.
+        """Dismiss a Falcon Shield (SaaS Security) posture check to suppress it from the failed checks list.
 
-        WARNING: This action is permanent and cannot be undone from the API. The
-        dismissal reason is recorded in audit logs.
-
-        When entities is omitted, the entire check is dismissed for all entities.
-        When entities is provided, only the specified entities are dismissed and the
-        check remains active for others."""
+        Use this only when a check is intentionally accepted as a known risk; omit entities to dismiss
+        the entire check for all entities, or provide specific entity names to dismiss only those.
+        This action is permanent and cannot be undone from the API — the dismissal reason is recorded
+        in audit logs."""
         if isinstance(entities, str):
             operation = "DismissAffectedEntityV3"
             body = {

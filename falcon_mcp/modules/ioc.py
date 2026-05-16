@@ -82,7 +82,7 @@ class IOCModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter to limit IOC search results. IMPORTANT: use the `falcon://ioc/search/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://ioc/search/fql-guide` for syntax.",
             examples={"type:'domain'+expired:false", "source:'mcp'"},
         ),
         limit: int = Field(
@@ -120,8 +120,9 @@ class IOCModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search custom IOCs and return full IOC details.
 
-        IMPORTANT: You must use the `falcon://ioc/search/fql-guide` resource
-        when you need to use the `filter` parameter.
+        Use this to find IOCs by type, value, action, severity, or expiration status.
+        Consult falcon://ioc/search/fql-guide before constructing filter expressions.
+        Returns full indicator records including metadata, platforms, and host groups.
         """
         indicator_ids = self._base_search_api_call(
             operation="indicator_search_v1",
@@ -230,7 +231,11 @@ class IOCModule(BaseModule):
             description="Whether to submit IOCs to retrodetect processing.",
         ),
     ) -> list[dict[str, Any]]:
-        """Create one or more custom IOCs."""
+        """Create one or more custom IOCs.
+
+        Provide type/value/action for a single IOC, or pass a bulk indicators array.
+        Returns the created indicator records on success.
+        """
         payload_or_error = self._build_add_ioc_payload(
             type=type,
             value=value,
@@ -288,7 +293,11 @@ class IOCModule(BaseModule):
             description="Limit action to IOCs originating from the MSSP parent.",
         ),
     ) -> list[dict[str, Any]]:
-        """Remove custom IOCs by IDs or FQL filter."""
+        """Remove custom IOCs by IDs or FQL filter.
+
+        Provide either specific IDs or an FQL filter for bulk removal. If both are
+        given, filter takes precedence. Returns an empty list on success.
+        """
         if not ids and not filter:
             return [
                 _format_error_response(

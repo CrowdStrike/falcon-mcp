@@ -201,16 +201,15 @@ def query_actor_entities(
     self,
     filter: str | None = Field(
         default=None,
-        description="FQL query expression that should be used to limit the results. IMPORTANT: use the 'falcon://query_actor_entities_fql_documentation' resource when building this parameter.",
+        description="FQL filter expression. See `falcon://intel/actors/fql-guide` for syntax.",
     ),
     # Other parameters...
 ) -> list[dict[str, Any]]:
-    """Get info about actors that match provided FQL filters.
+    """Research threat actors and adversary groups tracked by CrowdStrike intelligence.
 
-    IMPORTANT: You must call the FQL Guide for Intel Query Actor Entities (falcon://intel/query_actor_entities/fql-guide) resource first
-
-    Returns:
-        Information about actors that match the provided filters.
+    Use this to search actors by name, target countries/industries, or activity dates.
+    Consult falcon://intel/actors/fql-guide before constructing filter expressions.
+    Returns full actor profiles including aliases, motivations, and targeting details.
     """
     # Method implementation...
 ```

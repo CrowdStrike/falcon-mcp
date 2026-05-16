@@ -60,11 +60,16 @@ class YourModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter string.",
+            description="FQL filter expression. See `falcon://your-module/entities/fql-guide` for syntax.",
         ),
         limit: int = Field(default=100, ge=1, le=500),
     ) -> list[dict[str, Any]]:
-        """Search for entities. Tool descriptions come from docstrings."""
+        """Search for entities in your CrowdStrike environment.
+
+        Use this to find entities by name, status, or other attributes. Consult
+        falcon://your-module/entities/fql-guide before constructing filter expressions.
+        Returns full entity details.
+        """
         ids = self._base_search("QueryOperation", filter=filter, limit=limit)
         if self._is_error(ids):
             return [ids]

@@ -16,7 +16,6 @@ from pydantic import AnyUrl, Field
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.rtr import (
-    EMBEDDED_FQL_SYNTAX,
     SEARCH_RTR_SESSIONS_FQL_DOCUMENTATION,
 )
 
@@ -126,7 +125,7 @@ class RTRModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description=EMBEDDED_FQL_SYNTAX,
+            description="FQL filter expression. See `falcon://rtr/sessions/search/fql-guide` for syntax.",
             examples=["hostname:'BRR-WB-LIB-22'", "aid:'2c5c4e7738...'"],
         ),
         limit: int = Field(
@@ -150,10 +149,9 @@ class RTRModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search RTR sessions and return full session details.
 
-        IMPORTANT: You must use the `falcon://rtr/sessions/search/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_rtr_sessions` tool.
-
-        Returns FQL syntax guide on error or empty results to help refine queries.
+        Use this to find sessions by hostname, agent ID, user, or creation time. Consult
+        falcon://rtr/sessions/search/fql-guide before constructing filter expressions.
+        Returns session metadata including host info, commands executed, and status.
         """
         session_ids = self._base_search_api_call(
             operation="RTR_ListAllSessions",
@@ -194,7 +192,12 @@ class RTRModule(BaseModule):
             description="RTR session IDs to retrieve details for.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve detailed metadata for one or more RTR sessions."""
+        """Retrieve detailed metadata for one or more RTR sessions.
+
+        Use when you already have session IDs from search results. For discovering
+        sessions by criteria, use falcon_search_rtr_sessions instead. Returns full
+        session records.
+        """
         logger.debug("Getting RTR session details for IDs: %s", ids)
 
         if not ids:
@@ -231,7 +234,12 @@ class RTRModule(BaseModule):
             description="Alternate duration syntax such as `30s`, `2m`, or `1h`.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Initialize or reuse an RTR session for a single host."""
+        """Initialize or reuse an RTR session for a single host.
+
+        Opens a live connection to the specified device for executing RTR commands.
+        Use queue_offline=True if the host may be offline. Returns session records
+        containing the session_id needed for subsequent commands.
+        """
         return self._base_query_api_call(
             operation="RTR_InitSession",
             query_params={
@@ -260,7 +268,11 @@ class RTRModule(BaseModule):
             description="Queue the pulse if the host is currently offline.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Refresh an RTR session timeout for a single host."""
+        """Refresh an RTR session timeout for a single host.
+
+        Keeps an existing session alive by resetting its inactivity timer. Use this
+        to prevent session expiration during long investigations.
+        """
         return self._base_query_api_call(
             operation="RTR_PulseSession",
             body_params={
@@ -291,9 +303,9 @@ class RTRModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Execute a read-only RTR command on a single host.
 
-        This tool is intentionally limited to the read-only RTR endpoint for
-        hunt and triage workflows. It does not expose admin or remediation
-        command APIs.
+        Limited to read-only commands (ls, ps, cat, filehash, reg) for hunt and triage
+        workflows. Does not expose admin or remediation commands. Returns command records
+        containing a cloud_request_id for polling output via falcon_check_rtr_command_status.
         """
         return self._base_query_api_call(
             operation="RTR_ExecuteCommand",
@@ -317,7 +329,11 @@ class RTRModule(BaseModule):
             description="Sequence chunk to retrieve for command output. Starts at 0.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Get the status and output chunk for an RTR command."""
+        """Get the status and output for an RTR command execution.
+
+        Poll this after falcon_execute_rtr_read_only_command to retrieve command
+        output. Use sequence_id to paginate through large output chunks.
+        """
         return self._base_query_api_call(
             operation="RTR_CheckCommandStatus",
             query_params={
@@ -333,7 +349,11 @@ class RTRModule(BaseModule):
             description="RTR session ID to retrieve extracted session files for.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """List files currently associated with an RTR session."""
+        """List files extracted during an RTR session.
+
+        Returns file metadata for artifacts captured during the session, such as
+        files pulled with the `get` command.
+        """
         return self._base_query_api_call(
             operation="RTR_ListFilesV2",
             query_params={"session_id": session_id},
@@ -346,7 +366,10 @@ class RTRModule(BaseModule):
             description="RTR session ID to close.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Delete an RTR session."""
+        """Close an RTR session and release the host connection.
+
+        Use this when investigation is complete to free up session resources.
+        """
         return self._base_query_api_call(
             operation="RTR_DeleteSession",
             query_params={"session_id": session_id},

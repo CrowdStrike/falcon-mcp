@@ -87,7 +87,7 @@ class FirewallModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter for firewall rule search. IMPORTANT: use the `falcon://firewall/rules/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://firewall/rules/fql-guide` for syntax.",
             examples=["enabled:true", "platform:'windows'+name:'Block*'"],
         ),
         limit: int = Field(
@@ -118,7 +118,12 @@ class FirewallModule(BaseModule):
             description="Pagination token from a previous query response.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search firewall rules and return full rule details."""
+        """Search firewall rules and return full rule details.
+
+        Use this to find firewall rules by name, platform, or enabled state. Consult
+        falcon://firewall/rules/fql-guide before constructing filter expressions.
+        Returns complete rule objects including conditions and actions.
+        """
         rule_ids = self._base_search_api_call(
             operation="query_rules",
             search_params={
@@ -159,7 +164,7 @@ class FirewallModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter for firewall rule group search. IMPORTANT: use the `falcon://firewall/rules/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://firewall/rules/fql-guide` for syntax.",
             examples=["enabled:true", "platform:'windows'+name:'Default*'"],
         ),
         limit: int = Field(
@@ -185,7 +190,12 @@ class FirewallModule(BaseModule):
             description="Pagination token from a previous query response.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search firewall rule groups and return full rule group details."""
+        """Search firewall rule groups and return full rule group details.
+
+        Use this to find rule groups by name, platform, or enabled state. Consult
+        falcon://firewall/rules/fql-guide before constructing filter expressions.
+        Returns rule group objects including their contained rules.
+        """
         rule_group_ids = self._base_search_api_call(
             operation="query_rule_groups",
             search_params={
@@ -229,7 +239,7 @@ class FirewallModule(BaseModule):
         ),
         filter: str | None = Field(
             default=None,
-            description="FQL filter for policy rule search. IMPORTANT: use the `falcon://firewall/rules/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://firewall/rules/fql-guide` for syntax.",
         ),
         limit: int = Field(
             default=10,
@@ -250,7 +260,12 @@ class FirewallModule(BaseModule):
             description="Free-text query string across policy rule fields.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search firewall rules in a specific policy container and return full rule details."""
+        """Search firewall rules within a specific policy container.
+
+        Use this when you need rules scoped to a particular policy. Consult
+        falcon://firewall/rules/fql-guide before constructing filter expressions.
+        Returns full rule details for the specified policy.
+        """
         policy_rule_ids = self._base_search_api_call(
             operation="query_policy_rules",
             search_params={
@@ -326,7 +341,11 @@ class FirewallModule(BaseModule):
             description="Full request body override. If provided, convenience fields are ignored.",
         ),
     ) -> list[dict[str, Any]]:
-        """Create a firewall rule group."""
+        """Create a firewall rule group.
+
+        Provide a name, platform, and either rules or a clone_id. Returns a list
+        containing the created rule group object.
+        """
         request_body = body
         if request_body is None:
             if not name or not platform:
@@ -382,7 +401,11 @@ class FirewallModule(BaseModule):
             description="Audit log comment for this action.",
         ),
     ) -> list[dict[str, Any]]:
-        """Delete firewall rule groups by ID."""
+        """Delete firewall rule groups by ID.
+
+        Permanently removes the specified rule groups and all rules within them.
+        Returns an empty list on success.
+        """
         if not ids:
             return [
                 _format_error_response(

@@ -142,7 +142,7 @@ class CustomIOAModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter to limit rule group search results. IMPORTANT: use the `falcon://custom-ioa/rule-groups/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://custom-ioa/rule-groups/fql-guide` for syntax.",
             examples={"platform:'windows'+enabled:true", "rules.pattern_severity:'high'"},
         ),
         limit: int = Field(
@@ -165,13 +165,11 @@ class CustomIOAModule(BaseModule):
             description="Free-text match query that searches across all filter string fields.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search Custom IOA rule groups and return full rule group details including their rules.
+        """Search Custom IOA rule groups and return full details including their rules.
 
-        IMPORTANT: You must use the `falcon://custom-ioa/rule-groups/fql-guide` resource
-        when you need to use the `filter` parameter.
-
-        Rule groups are containers that hold behavioral detection rules. Each group is
-        associated with a specific platform (windows, mac, or linux).
+        Use this to find rule groups by platform, name, or enabled state. Consult
+        falcon://custom-ioa/rule-groups/fql-guide before constructing filter expressions.
+        Returns rule group objects with their contained behavioral detection rules.
         """
         result = self._base_search_api_call(
             operation="query_rule_groups_full",
@@ -200,8 +198,8 @@ class CustomIOAModule(BaseModule):
     def get_ioa_platforms(self) -> list[dict[str, Any]] | dict[str, Any]:
         """Get all available platforms for Custom IOA rule groups.
 
-        Returns details about each available platform (e.g., windows, mac, linux).
-        Use this to discover valid platform values before creating a rule group.
+        Use this to discover valid platform values (windows, mac, linux) before
+        creating a rule group. Returns platform details.
         """
         platform_ids = self._base_search_api_call(
             operation="query_platformsMixin0",
@@ -241,12 +239,9 @@ class CustomIOAModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Get all available Custom IOA rule types.
 
-        Returns details about each rule type including its name, platform, fields,
-        and supported disposition IDs. Use this to discover valid rule type IDs and
-        required field values before creating a behavioral rule.
-
-        Rule types define the category of behavioral detection (e.g., Process Creation,
-        Network Connection, File Creation).
+        Use this to discover valid rule type IDs, required fields, and disposition IDs
+        before creating a behavioral detection rule. Returns rule type details including
+        platform, fields, and supported actions.
         """
         rule_type_ids = self._base_search_api_call(
             operation="query_rule_types",
@@ -295,11 +290,9 @@ class CustomIOAModule(BaseModule):
     ) -> list[dict[str, Any]]:
         """Create a new Custom IOA rule group.
 
-        Rule groups are containers that hold behavioral detection rules for a specific
-        platform. After creating a group, use `falcon_create_ioa_rule` to add detection
-        rules to it.
-
-        Use `falcon_get_ioa_platforms` to see available platform values.
+        Rule groups are containers for behavioral detection rules scoped to a platform.
+        Use falcon_get_ioa_platforms to see valid platform values. After creating a
+        group, use falcon_create_ioa_rule to add detection rules to it.
         """
         body: dict[str, Any] = {
             "name": name,
@@ -349,11 +342,8 @@ class CustomIOAModule(BaseModule):
     ) -> list[dict[str, Any]]:
         """Update an existing Custom IOA rule group.
 
-        You can modify the name, description, and enabled state of a rule group.
-        The `rulegroup_version` is required for optimistic locking to prevent
-        concurrent modification conflicts.
-
-        Use `falcon_search_ioa_rule_groups` to retrieve the current version number.
+        Modify name, description, or enabled state. Requires rulegroup_version for
+        optimistic locking — get it from falcon_search_ioa_rule_groups.
         """
         body: dict[str, Any] = {
             "id": id,
@@ -392,8 +382,8 @@ class CustomIOAModule(BaseModule):
     ) -> list[dict[str, Any]]:
         """Delete Custom IOA rule groups by ID.
 
-        This permanently removes the rule groups and all rules within them.
-        Use `falcon_search_ioa_rule_groups` to find rule group IDs.
+        Permanently removes the rule groups and all rules within them. Use
+        falcon_search_ioa_rule_groups to find rule group IDs.
         """
         if not ids:
             return [
@@ -459,13 +449,9 @@ class CustomIOAModule(BaseModule):
     ) -> list[dict[str, Any]]:
         """Create a new Custom IOA behavioral detection rule within a rule group.
 
-        Before creating a rule:
-        1. Use `falcon_get_ioa_rule_types` to discover available rule types, their IDs,
-           required fields, and valid disposition IDs.
-        2. Use `falcon_search_ioa_rule_groups` to find the target rule group ID.
-
-        The `field_values` parameter defines the behavioral criteria the rule will match
-        against (e.g., process names, file paths, command line patterns using regex).
+        Use falcon_get_ioa_rule_types first to discover rule type IDs, required fields,
+        and valid disposition IDs. The field_values parameter defines the behavioral
+        criteria the rule matches against (process names, file paths, command line regex).
         """
         body: dict[str, Any] = {
             "rulegroup_id": rulegroup_id,
@@ -534,9 +520,8 @@ class CustomIOAModule(BaseModule):
     ) -> list[dict[str, Any]]:
         """Update an existing Custom IOA behavioral detection rule.
 
-        The `rulegroup_version` is required for optimistic locking to prevent
-        concurrent modification conflicts. Use `falcon_search_ioa_rule_groups` to
-        retrieve the current version and instance ID.
+        Requires rulegroup_version for optimistic locking. Get the current version
+        and instance_id from falcon_search_ioa_rule_groups.
         """
         rule_update: dict[str, Any] = {
             "instance_id": instance_id,
@@ -590,8 +575,8 @@ class CustomIOAModule(BaseModule):
     ) -> list[dict[str, Any]]:
         """Delete Custom IOA behavioral detection rules from a rule group.
 
-        Use `falcon_search_ioa_rule_groups` to find the rule group ID and
-        the individual rule IDs (instance IDs) to delete.
+        Use falcon_search_ioa_rule_groups to find the rule group ID and individual
+        rule instance IDs to delete.
         """
         if not ids:
             return [

@@ -57,7 +57,7 @@ class ServerlessModule(BaseModule):
     def search_serverless_vulnerabilities(
         self,
         filter: str = Field(
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://serverless/vulnerabilities/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression (required). See `falcon://serverless/vulnerabilities/fql-guide` for syntax.",
             examples={"cloud_provider:'aws'", "severity:'HIGH'"},
         ),
         limit: int | None = Field(
@@ -105,16 +105,12 @@ class ServerlessModule(BaseModule):
             },
         ),
     ) -> list[dict[str, Any]]:
-        """Search for vulnerabilities in your serverless functions across all cloud service providers.
+        """Search for vulnerabilities in serverless functions across all cloud providers.
 
-        This endpoint provides security information in SARIF format, including:
-        - CVE IDs for identified vulnerabilities
-        - Severity levels
-        - Vulnerability descriptions
-        - Additional relevant details
-
-        IMPORTANT: You must use the `falcon://serverless/vulnerabilities/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_serverless_vulnerabilities` tool.
+        Use this to find CVEs in Lambda/Cloud Functions/Azure Functions by severity,
+        provider, or runtime. Consult falcon://serverless/vulnerabilities/fql-guide before
+        constructing filter expressions. Returns vulnerability data in SARIF format
+        including CVE IDs, severity levels, and descriptions.
         """
         # Prepare parameters for GetCombinedVulnerabilitiesSARIF
         params = prepare_api_parameters(

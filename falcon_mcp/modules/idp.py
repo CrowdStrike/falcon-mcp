@@ -108,13 +108,13 @@ class IdpModule(BaseModule):
             description="Include open security incidents in results",
         ),
     ) -> dict[str, Any]:
-        """Comprehensive entity investigation tool.
+        """Investigate one or more Identity Protection entities by ID, name, email, IP, or domain.
 
-        This tool provides complete entity investigation capabilities including:
-        - Entity search and details lookup
-        - Activity timeline analysis
-        - Relationship and association mapping
-        - Risk assessment
+        Use this to look up entity details, activity timelines, relationship graphs, and risk
+        assessments; at least one identifier must be supplied, and multiple identifiers are
+        combined with AND logic (email and IP cannot be combined — email takes precedence).
+        Returns a structured response with an investigation_summary, resolved entity IDs,
+        and results keyed by each requested investigation type.
         """
         logger.debug("Starting comprehensive entity investigation")
 

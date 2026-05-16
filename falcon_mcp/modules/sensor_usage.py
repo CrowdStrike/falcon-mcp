@@ -57,14 +57,15 @@ class SensorUsageModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://sensor-usage/weekly/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://sensor-usage/weekly/fql-guide` for syntax.",
             examples={"event_date:'2024-06-11'", "period:'30'"},
         ),
     ) -> list[dict[str, Any]]:
-        """Search for sensor usage data in your CrowdStrike environment.
+        """Search for weekly sensor usage data in your CrowdStrike environment.
 
-        IMPORTANT: You must use the `falcon://sensor-usage/weekly/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for the `falcon_search_sensor_usage` tool.
+        Use this to retrieve sensor billing and usage metrics by date or period. Consult
+        falcon://sensor-usage/weekly/fql-guide before constructing filter expressions.
+        Returns weekly usage records.
         """
         # Prepare parameters for GetSensorUsageWeekly
         params = prepare_api_parameters(

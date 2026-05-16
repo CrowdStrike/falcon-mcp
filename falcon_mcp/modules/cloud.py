@@ -154,7 +154,7 @@ class CloudModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/kubernetes-containers/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://cloud/kubernetes-containers/fql-guide` for syntax.",
             examples={"cloud:'AWS'", "cluster_name:'prod'"},
         ),
         limit: int = Field(
@@ -193,10 +193,11 @@ class CloudModule(BaseModule):
             examples={"container_name.desc", "last_seen.desc"},
         ),
     ) -> list[dict[str, Any]]:
-        """Search for kubernetes containers in your CrowdStrike Kubernetes & Containers Inventory
+        """Search for Kubernetes containers in your CrowdStrike container inventory.
 
-        IMPORTANT: You must use the `falcon://cloud/kubernetes-containers/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_kubernetes_containers` tool.
+        Use this to find containers by cluster, namespace, image, or cloud provider.
+        Consult falcon://cloud/kubernetes-containers/fql-guide before constructing filter
+        expressions. Returns full container details including image, status, and vulnerabilities.
         """
 
         return self._base_search_api_call(
@@ -214,14 +215,15 @@ class CloudModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/kubernetes-containers/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://cloud/kubernetes-containers/fql-guide` for syntax.",
             examples={"cloud:'Azure'", "container_name:'service'"},
         ),
     ) -> int:
-        """Count kubernetes containers in your CrowdStrike Kubernetes & Containers Inventory
+        """Count Kubernetes containers matching filter criteria.
 
-        IMPORTANT: You must use the `falcon://cloud/kubernetes-containers/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for `falcon_count_kubernetes_containers` tool.
+        Use this for aggregate counts without returning full container details. Consult
+        falcon://cloud/kubernetes-containers/fql-guide before constructing filter
+        expressions. Returns the count as a single-element list.
         """
 
         # Prepare parameters
@@ -249,7 +251,7 @@ class CloudModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/images-vulnerabilities/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://cloud/images-vulnerabilities/fql-guide` for syntax.",
             examples={"cve_id:*'*2025*'", "cvss_score:>5"},
         ),
         limit: int = Field(
@@ -282,10 +284,12 @@ class CloudModule(BaseModule):
             examples={"cvss_score.desc", "cps_current_rating.asc"},
         ),
     ) -> list[dict[str, Any]]:
-        """Search for images vulnerabilities in your CrowdStrike Image Assessments
+        """Search for container image vulnerabilities in CrowdStrike Image Assessments.
 
-        IMPORTANT: You must use the `falcon://cloud/images-vulnerabilities/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_images_vulnerabilities` tool.
+        Use this to find CVEs affecting container images by severity, CVSS score, or
+        CVE ID. Consult falcon://cloud/images-vulnerabilities/fql-guide before constructing
+        filter expressions. Returns vulnerability details including CVE IDs, scores, and
+        impacted image counts.
         """
 
         # Prepare parameters
@@ -316,7 +320,7 @@ class CloudModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL Syntax formatted string used to limit the results. IMPORTANT: use the `falcon://cloud/cspm-assets/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://cloud/cspm-assets/fql-guide` for syntax.",
             examples=["cloud_provider:'AWS'", "tag_key:'Environment'+tag_value:'Production'"],
         ),
         limit: int = Field(
@@ -356,20 +360,12 @@ class CloudModule(BaseModule):
             examples=["updated_at.desc", "resource_type.asc"],
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search for cloud assets in your CrowdStrike CSPM Asset Inventory.
+        """Search for cloud assets in your CrowdStrike CSPM inventory.
 
-        This tool queries cloud resources (EC2 instances, VPCs, subnets, load balancers, etc.)
-        managed by CrowdStrike CSPM. Supports comprehensive FQL filtering including:
-        - Cloud provider and resource type filtering
-        - Tag-based filtering (AWS/Azure/GCP tags)
-        - Security posture (publicly exposed, severity, IOM/IOA counts)
-        - Compliance status and benchmarks
-        - Temporal filtering (creation time, last updated)
-
-        IMPORTANT: You must use the `falcon://cloud/cspm-assets/fql-guide` resource when you need to use the `filter` parameter.
-        This resource contains the guide on how to build the FQL `filter` parameter for `falcon_search_cspm_assets` tool.
-
-        Returns FQL syntax guide on error or empty results to help refine queries.
+        Use this to find cloud resources (EC2, VPCs, S3, etc.) by provider, region,
+        resource type, or tags. Consult falcon://cloud/cspm-assets/fql-guide before
+        constructing filter expressions. Returns slimmed asset details with security
+        posture context (IOM/IOA counts, exposure, severity).
         """
         # Step 1: Query for asset IDs
         asset_ids = self._base_search_api_call(
@@ -533,9 +529,8 @@ class CloudModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description=(
-                "FQL Syntax formatted string used to limit the results."
-                " IMPORTANT: use the `falcon://cloud/cspm-iom-findings/fql-guide`"
-                " resource when building this filter parameter."
+                "FQL filter expression."
+                " See `falcon://cloud/cspm-iom-findings/fql-guide` for syntax."
             ),
             examples=["severity:'critical'+status:'open'", "cloud_provider:'aws'+service:'S3'"],
         ),
@@ -574,23 +569,10 @@ class CloudModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for CSPM Indicators of Misconfiguration (IOM) findings.
 
-        Retrieves cloud security posture findings that identify misconfigurations
-        in your cloud environment (AWS, Azure, GCP). Findings map to compliance
-        frameworks (CIS, NIST, SOC2) and MITRE ATT&CK techniques.
-
-        Supports filtering by suppression state to view which findings have been
-        accepted as risk, marked as false positives, or have compensating controls.
-
-        IMPORTANT: You must use the `falcon://cloud/cspm-iom-findings/fql-guide` resource
-        when you need to use the `filter` parameter.
-
-        Returns a list of IOM finding entities with nested structure:
-        - id: Unique finding identifier
-        - cloud: {account_id, account_name, provider, region}
-        - evaluation: {severity, status, attack_types, rule, created, url}
-        - resource: {resource_id, resource_type, service, service_category}
-
-        Returns FQL syntax guide on error or empty results to help refine queries.
+        Use this to find cloud misconfigurations by severity, provider, service, or
+        suppression state. Consult falcon://cloud/cspm-iom-findings/fql-guide before
+        constructing filter expressions. Returns IOM entities with cloud context,
+        evaluation details, and resource information.
         """
         # Step 1: Query for IOM IDs
         iom_ids = self._base_search_api_call(
@@ -667,15 +649,9 @@ class CloudModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for CSPM IOM suppression rules.
 
-        Lists suppression rules that control which IOM findings are suppressed.
-        Suppression rules define which rules and assets are excluded from generating
-        active findings, along with the reason and optional expiration date.
-
-        Use this to review existing suppressions before creating new ones.
-
-        Returns a list of suppression rule objects containing: id, name, domain,
-        subdomain, disabled, rule_selection_type, scope_type, suppression_reason,
-        created_at, created_by. Returns an empty list if no rules exist.
+        Use this to review existing suppressions before creating new ones. Returns
+        suppression rule objects including scope, reason, and expiration details.
+        Returns an empty list if no rules exist.
         """
         # Step 1: Query suppression rule IDs
         params = prepare_api_parameters({"limit": limit, "offset": offset})
@@ -747,8 +723,7 @@ class CloudModule(BaseModule):
         cloud_providers: list[str] | None = Field(
             default=None,
             description=(
-                "Limit suppression to specific cloud providers."
-                " Values: 'aws', 'azure', 'gcp'."
+                "Limit suppression to specific cloud providers. Values: 'aws', 'azure', 'gcp'."
             ),
         ),
         account_ids: list[str] | None = Field(
@@ -758,8 +733,7 @@ class CloudModule(BaseModule):
         regions: list[str] | None = Field(
             default=None,
             description=(
-                "Limit suppression to specific cloud regions."
-                " Ex: ['us-east-1', 'eu-west-1']."
+                "Limit suppression to specific cloud regions. Ex: ['us-east-1', 'eu-west-1']."
             ),
         ),
         resource_ids: list[str] | None = Field(
@@ -768,10 +742,7 @@ class CloudModule(BaseModule):
         ),
         resource_types: list[str] | None = Field(
             default=None,
-            description=(
-                "Limit suppression to specific resource types."
-                " Ex: ['AWS::S3::Bucket']."
-            ),
+            description=("Limit suppression to specific resource types. Ex: ['AWS::S3::Bucket']."),
         ),
         expiration_date: str | None = Field(
             default=None,
@@ -782,22 +753,12 @@ class CloudModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Create a CSPM IOM suppression rule to suppress matching findings.
+        """Create a CSPM IOM suppression rule to hide matching findings.
 
-        WARNING: This creates a suppression rule that will hide matching IOM findings
-        from compliance scores and active finding views. Suppressed findings are still
-        assessed but not surfaced. Use carefully and prefer narrow scope.
-
-        A suppression rule defines:
-        - WHICH rules to suppress (by ID, name, or severity)
-        - WHICH assets to suppress them for (by cloud provider, account, region, resource)
-        - WHY (accept-risk, compensating-control, false-positive)
-        - WHEN it expires (strongly recommended)
-
-        Requires the modern 'Cloud Security Posture Rules' mode (not legacy policies).
-
-        Returns the created suppression rule object on success, or an error dict
-        with details on failure.
+        Suppressed findings are still assessed but not surfaced in compliance scores.
+        Requires at least one rule selection (rule_ids, rule_names, or rule_severities)
+        and a suppression reason. Setting an expiration_date is strongly recommended to
+        avoid permanent suppressions. Returns the created suppression rule object.
         """
         valid_reasons = {"accept-risk", "compensating-control", "false-positive"}
         if suppression_reason not in valid_reasons:
@@ -895,12 +856,9 @@ class CloudModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Delete CSPM IOM suppression rules by ID.
 
-        WARNING: Deleting a suppression rule will re-activate all findings that were
-        previously suppressed by that rule. They will appear as open findings again.
-
-        Use falcon_search_cspm_suppression_rules first to identify which rules to delete.
-
-        Returns a confirmation response on success, or an error dict on failure.
+        Deleting a suppression rule re-activates all findings that were previously
+        suppressed by it. Use falcon_search_cspm_suppression_rules to find rule IDs
+        first. Returns a confirmation response.
         """
         params = prepare_api_parameters({"ids": ids})
         response = self.client.command(
