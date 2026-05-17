@@ -26,4 +26,5 @@ jobs:
         globs: |
           README.md
           docs/**/*.md
+          !docs/changelog.md
           .github/*.md
