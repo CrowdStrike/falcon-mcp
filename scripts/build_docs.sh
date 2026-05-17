@@ -12,7 +12,6 @@ echo "=== Step 2: Copy changelog ==="
 {
   echo '<!-- meta:title Changelog -->'
   echo '<!-- meta:description Release history for the Falcon MCP Server. -->'
-  echo '<!-- meta:link-base /falcon-mcp/ -->'
   echo ''
   cat CHANGELOG.md
 } > docs/changelog.md

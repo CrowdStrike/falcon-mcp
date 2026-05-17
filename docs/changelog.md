@@ -1,6 +1,5 @@
 <!-- meta:title Changelog -->
 <!-- meta:description Release history for the Falcon MCP Server. -->
-<!-- meta:link-base /falcon-mcp/ -->
 
 # Changelog
 
