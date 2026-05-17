@@ -24,7 +24,6 @@ cd falcon-mcp/examples/adk
 Create Python environment and install dependencies:
 
 <!-- component:tabs -->
-<!-- markdownlint-disable MD001 -->
 #### pip
 
 ```bash
