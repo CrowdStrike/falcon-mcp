@@ -688,12 +688,11 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
 
     # Build markdown
     lines = []
-    lines.append("---")
-    lines.append(f"title: {title}")
-    lines.append(f"description: {description}")
-    lines.append("sidebar:")
-    lines.append("  order: 10")
-    lines.append("---")
+    lines.append(f"<!-- meta:title {title} -->")
+    lines.append(f"<!-- meta:description {description} -->")
+    lines.append("<!-- meta:section modules -->")
+    lines.append("<!-- meta:link-base /falcon-mcp/ -->")
+    lines.append("<!-- frontmatter:sidebar order:10 -->")
     lines.append("")
     lines.append(description)
     lines.append("")
@@ -719,14 +718,12 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
 
             # Admonition for mutating/destructive tools
             if destructive:
-                lines.append(":::caution")
-                lines.append("This tool performs destructive operations.")
-                lines.append(":::")
+                lines.append("> [!CAUTION]")
+                lines.append("> This tool performs destructive operations.")
                 lines.append("")
             elif not read_only:
-                lines.append(":::note")
-                lines.append("This tool modifies data.")
-                lines.append(":::")
+                lines.append("> [!NOTE]")
+                lines.append("> This tool modifies data.")
                 lines.append("")
 
             # Per-tool scopes
@@ -764,12 +761,13 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
 def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
     """Generate the modules overview page with summary table."""
     lines = []
-    lines.append("---")
-    lines.append("title: Module Overview")
-    lines.append("description: Overview of all available Falcon MCP modules with API scopes.")
-    lines.append("sidebar:")
-    lines.append("  order: 0")
-    lines.append("---")
+    lines.append("<!-- meta:title Module Overview -->")
+    lines.append(
+        "<!-- meta:description Overview of all available Falcon MCP modules with API scopes. -->"
+    )
+    lines.append("<!-- meta:section modules -->")
+    lines.append("<!-- meta:link-base /falcon-mcp/ -->")
+    lines.append("<!-- frontmatter:sidebar order:0 -->")
     lines.append("")
     lines.append(
         "The Falcon MCP Server provides the following modules. Each module requires specific CrowdStrike API scopes."

@@ -1,9 +1,8 @@
----
-title: Sensor Usage
-description: Accessing CrowdStrike Falcon sensor usage data
-sidebar:
-  order: 10
----
+<!-- meta:title Sensor Usage -->
+<!-- meta:description Accessing CrowdStrike Falcon sensor usage data -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Accessing CrowdStrike Falcon sensor usage data
 

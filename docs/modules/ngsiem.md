@@ -1,9 +1,8 @@
----
-title: NGSIEM
-description: Running search queries against CrowdStrike's Next-Gen SIEM via the asynchronous job-based search API
-sidebar:
-  order: 10
----
+<!-- meta:title NGSIEM -->
+<!-- meta:description Running search queries against CrowdStrike's Next-Gen SIEM via the asynchronous job-based search API -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Running search queries against CrowdStrike's Next-Gen SIEM via the asynchronous job-based search API
 

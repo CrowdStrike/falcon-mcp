@@ -1,7 +1,7 @@
----
-title: Configuration
-description: Configure environment variables and settings for the Falcon MCP Server.
----
+<!-- meta:title Configuration -->
+<!-- meta:description Configure environment variables and settings for the Falcon MCP Server. -->
+<!-- meta:section getting-started -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 ## Environment Variables
 

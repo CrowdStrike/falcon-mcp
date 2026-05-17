@@ -5,12 +5,10 @@ on:
     branches: [ main ]
     paths:
       - '**.md'
-      - '**.mdx'
   pull_request:
     branches: [ main ]
     paths:
       - '**.md'
-      - '**.mdx'
 
 permissions:
   contents: read
@@ -28,5 +26,4 @@ jobs:
         globs: |
           README.md
           docs/**/*.md
-          docs/**/*.mdx
           .github/*.md

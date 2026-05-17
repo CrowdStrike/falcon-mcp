@@ -1,7 +1,7 @@
----
-title: Flight Control (MSSP)
-description: Using the Falcon MCP Server in multi-tenant Flight Control environments.
----
+<!-- meta:title Flight Control (MSSP) -->
+<!-- meta:description Using the Falcon MCP Server in multi-tenant Flight Control environments. -->
+<!-- meta:section usage -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 The Falcon MCP Server supports CrowdStrike Flight Control for MSSP (Managed Security Service Provider) environments. Use parent CID API credentials with the `--member-cid` flag or `FALCON_MEMBER_CID` environment variable to target a specific child CID.
 

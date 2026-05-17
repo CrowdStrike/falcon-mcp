@@ -1,9 +1,8 @@
----
-title: IOC
-description: Searching, creating, and deleting custom IOCs using Falcon IOC Service Collection endpoints
-sidebar:
-  order: 10
----
+<!-- meta:title IOC -->
+<!-- meta:description Searching, creating, and deleting custom IOCs using Falcon IOC Service Collection endpoints -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Searching, creating, and deleting custom IOCs using Falcon IOC Service Collection endpoints
 
@@ -16,9 +15,8 @@ Searching, creating, and deleting custom IOCs using Falcon IOC Service Collectio
 
 ### `falcon_add_ioc`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `IOC Management:write`
 
@@ -34,9 +32,8 @@ Returns the created indicator records on success.
 
 ### `falcon_remove_iocs`
 
-:::caution
-This tool performs destructive operations.
-:::
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `IOC Management:write`
 

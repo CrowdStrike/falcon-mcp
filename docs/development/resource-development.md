@@ -1,7 +1,7 @@
----
-title: Resource Development
-description: How to implement and register MCP resources in the Falcon MCP Server.
----
+<!-- meta:title Resource Development -->
+<!-- meta:description How to implement and register MCP resources in the Falcon MCP Server. -->
+<!-- meta:section development -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 This guide provides instructions for implementing and registering resources for the Falcon MCP server.
 

@@ -1,7 +1,7 @@
----
-title: Transport Methods
-description: The three transport methods supported by the Falcon MCP Server.
----
+<!-- meta:title Transport Methods -->
+<!-- meta:description The three transport methods supported by the Falcon MCP Server. -->
+<!-- meta:section usage -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 The Falcon MCP Server supports three transport methods. Choose based on your deployment scenario.
 
@@ -62,9 +62,8 @@ falcon-mcp --transport streamable-http --stateless-http
 
 **Client compatibility:** Claude Desktop, MCP Inspector.
 
-:::note
-When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
-:::
+> [!NOTE]
+> When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
 
 ## Client Compatibility
 

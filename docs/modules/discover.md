@@ -1,9 +1,8 @@
----
-title: Discover
-description: Accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets
-sidebar:
-  order: 10
----
+<!-- meta:title Discover -->
+<!-- meta:description Accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets
 

@@ -1,9 +1,8 @@
----
-title: Detections
-description: Accessing and analyzing CrowdStrike Falcon detections
-sidebar:
-  order: 10
----
+<!-- meta:title Detections -->
+<!-- meta:description Accessing and analyzing CrowdStrike Falcon detections -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Accessing and analyzing CrowdStrike Falcon detections
 

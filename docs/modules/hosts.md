@@ -1,9 +1,8 @@
----
-title: Hosts
-description: Accessing and managing CrowdStrike Falcon hosts/devices
-sidebar:
-  order: 10
----
+<!-- meta:title Hosts -->
+<!-- meta:description Accessing and managing CrowdStrike Falcon hosts/devices -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Accessing and managing CrowdStrike Falcon hosts/devices
 

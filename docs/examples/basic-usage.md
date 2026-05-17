@@ -1,7 +1,7 @@
----
-title: Basic Usage
-description: Python code examples for using the Falcon MCP Server programmatically.
----
+<!-- meta:title Basic Usage -->
+<!-- meta:description Python code examples for using the Falcon MCP Server programmatically. -->
+<!-- meta:section examples -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 These examples show how to run the Falcon MCP Server programmatically using the Python API.
 

@@ -1,7 +1,7 @@
----
-title: Docker
-description: Deploy the Falcon MCP Server using Docker containers.
----
+<!-- meta:title Docker -->
+<!-- meta:description Deploy the Falcon MCP Server using Docker containers. -->
+<!-- meta:section deployment -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 The Falcon MCP Server is available as a pre-built container image at `quay.io/crowdstrike/falcon-mcp`.
 
@@ -66,11 +66,10 @@ docker run -i --rm \
   quay.io/crowdstrike/falcon-mcp:latest
 ```
 
-:::note
-When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
-
-The `-i` flag is required when using the default stdio transport.
-:::
+> [!NOTE]
+> When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
+>
+> The `-i` flag is required when using the default stdio transport.
 
 ## Building Locally (Development)
 

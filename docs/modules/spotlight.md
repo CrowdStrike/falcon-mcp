@@ -1,9 +1,8 @@
----
-title: Spotlight
-description: Accessing and managing CrowdStrike Falcon Spotlight vulnerabilities
-sidebar:
-  order: 10
----
+<!-- meta:title Spotlight -->
+<!-- meta:description Accessing and managing CrowdStrike Falcon Spotlight vulnerabilities -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Accessing and managing CrowdStrike Falcon Spotlight vulnerabilities
 

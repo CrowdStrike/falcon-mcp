@@ -1,9 +1,7 @@
----
-title: Google Cloud
-description: Deploy the Falcon MCP Server on Google Cloud Run or Vertex AI Agent Engine.
----
-
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+<!-- meta:title Google Cloud -->
+<!-- meta:description Deploy the Falcon MCP Server on Google Cloud Run or Vertex AI Agent Engine. -->
+<!-- meta:section deployment -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 This guide covers deploying the Falcon MCP Server with the prebuilt Google ADK-based agent to Cloud Run or Vertex AI Agent Engine.
 
@@ -25,9 +23,9 @@ cd falcon-mcp/examples/adk
 
 Create Python environment and install dependencies:
 
-<Tabs>
-
-<TabItem label="pip">
+<!-- component:tabs -->
+<!-- markdownlint-disable MD001 -->
+#### pip
 
 ```bash
 python3 -m venv .venv
@@ -35,19 +33,14 @@ python3 -m venv .venv
 pip install -r falcon_agent/requirements.txt
 ```
 
-</TabItem>
-
-<TabItem label="uv">
+#### uv
 
 ```bash
 uv venv
 . .venv/bin/activate
 uv pip install -r falcon_agent/requirements.txt
 ```
-
-</TabItem>
-
-</Tabs>
+<!-- /component:tabs -->
 
 Initialize config:
 
@@ -65,9 +58,8 @@ The script creates a `.env` file in `falcon_agent/`. Update at minimum the `Gene
 
 Access the agent at `http://localhost:8000`.
 
-:::caution
-Do not use curly braces (`{variable}`) in the `FALCON_AGENT_PROMPT` value. Google ADK interprets `{name}` patterns as context variables, which causes `Context variable not found` errors at runtime.
-:::
+> [!CAUTION]
+> Do not use curly braces (`{variable}`) in the `FALCON_AGENT_PROMPT` value. Google ADK interprets `{name}` patterns as context variables, which causes `Context variable not found` errors at runtime.
 
 ## Deploying to Cloud Run
 

@@ -1,9 +1,8 @@
----
-title: Firewall Management
-description: Searching and managing firewall rules and rule groups
-sidebar:
-  order: 10
----
+<!-- meta:title Firewall Management -->
+<!-- meta:description Searching and managing firewall rules and rule groups -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Searching and managing firewall rules and rule groups
 
@@ -16,9 +15,8 @@ Searching and managing firewall rules and rule groups
 
 ### `falcon_create_firewall_rule_group`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Firewall Management:write`
 
@@ -33,9 +31,8 @@ containing the created rule group object.
 
 ### `falcon_delete_firewall_rule_groups`
 
-:::caution
-This tool performs destructive operations.
-:::
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Firewall Management:write`
 

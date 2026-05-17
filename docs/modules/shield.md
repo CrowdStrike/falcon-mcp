@@ -1,9 +1,8 @@
----
-title: Shield
-description: Shield module for CrowdStrike Falcon.
-sidebar:
-  order: 10
----
+<!-- meta:title Shield -->
+<!-- meta:description Shield module for CrowdStrike Falcon. -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Shield module for CrowdStrike Falcon.
 
@@ -16,9 +15,8 @@ Shield module for CrowdStrike Falcon.
 
 ### `falcon_dismiss_shield_check`
 
-:::caution
-This tool performs destructive operations.
-:::
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `SaaS Security:write`
 

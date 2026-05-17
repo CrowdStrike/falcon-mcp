@@ -1,7 +1,7 @@
----
-title: Module Development
-description: Step-by-step guide for implementing new Falcon MCP modules.
----
+<!-- meta:title Module Development -->
+<!-- meta:description Step-by-step guide for implementing new Falcon MCP modules. -->
+<!-- meta:section development -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 This guide provides instructions for implementing new modules for the Falcon MCP server.
 

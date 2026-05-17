@@ -1,7 +1,7 @@
----
-title: Editor Integration
-description: Configure the Falcon MCP Server in popular MCP-compatible editors and assistants.
----
+<!-- meta:title Editor Integration -->
+<!-- meta:description Configure the Falcon MCP Server in popular MCP-compatible editors and assistants. -->
+<!-- meta:section usage -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 The Falcon MCP Server works with any MCP-compatible editor or AI assistant. Below are configuration examples for popular clients.
 
@@ -83,9 +83,8 @@ Edit `claude_desktop_config.json`:
 }
 ```
 
-:::note
-The `-i` flag is required when using the default stdio transport with Docker.
-:::
+> [!NOTE]
+> The `-i` flag is required when using the default stdio transport with Docker.
 
 ## Cline (VS Code)
 

@@ -1,7 +1,7 @@
----
-title: CLI Commands
-description: Command-line options for running the Falcon MCP Server.
----
+<!-- meta:title CLI Commands -->
+<!-- meta:description Command-line options for running the Falcon MCP Server. -->
+<!-- meta:section usage -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 ## Basic Usage
 

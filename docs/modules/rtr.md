@@ -1,9 +1,8 @@
----
-title: Real Time Response
-description: Initiating and inspecting RTR sessions and for executing read-only RTR commands during host investigations
-sidebar:
-  order: 10
----
+<!-- meta:title Real Time Response -->
+<!-- meta:description Initiating and inspecting RTR sessions and for executing read-only RTR commands during host investigations -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Initiating and inspecting RTR sessions and for executing read-only RTR commands during host investigations
 

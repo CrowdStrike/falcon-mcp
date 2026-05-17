@@ -1,11 +1,13 @@
----
-title: Documentation Guide
-description: Architecture and maintenance guide for the Falcon MCP documentation.
----
+<!-- meta:title Documentation Guide -->
+<!-- meta:description Architecture and maintenance guide for the Falcon MCP documentation. -->
+<!-- meta:section development -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 ## Overview
 
-This repository is the single source of truth for Falcon MCP documentation. The `docs/` directory contains Markdown and MDX content files with [Starlight](https://starlight.astro.build/)-compatible frontmatter. An external Astro/Starlight site clones this repository and consumes `docs/` directly to build the published documentation.
+This repository is the single source of truth for Falcon MCP documentation. The `docs/` directory contains standard GitHub-flavored Markdown with HTML comment annotations that an external documentation site uses to build the published pages. The annotations are invisible when rendered on GitHub.
+
+For the full annotation reference, see [Content Tag Guide](/falcon-mcp/development/content-tag-guide/).
 
 ## Directory Structure
 
@@ -22,22 +24,52 @@ docs/
 
 Governance files (`CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`) live in `.github/`, not in `docs/`.
 
-:::caution
-Auto-generated files are overwritten on every build. Do not edit them by hand — your changes will be lost.
-:::
+> [!CAUTION]
+> Auto-generated files are overwritten on every build. Do not edit them by hand — your changes will be lost.
 
-## Frontmatter
+## Page Metadata
 
-All content files require Starlight-compatible frontmatter:
+Every content file starts with HTML comment annotations that the external site uses for page metadata and rendering. These are invisible on GitHub.
 
-```yaml
----
-title: Page Title
-description: A short description of the page.
-sidebar:
-  order: 1  # Optional — controls sidebar ordering
----
+Required tags at the top of every file:
+
+```markdown
+<!-- meta:title Page Title -->
+<!-- meta:description A short description of the page. -->
+<!-- meta:section getting-started -->
+<!-- meta:link-base /falcon-mcp/ -->
 ```
+
+Optional tags:
+
+```markdown
+<!-- frontmatter:sidebar order:10 -->
+```
+
+| Tag | Purpose |
+|-----|---------|
+| `meta:title` | Page title used on the documentation site |
+| `meta:description` | Page description used on the documentation site |
+| `meta:section` | Subdirectory this page belongs to (`getting-started`, `usage`, `modules`, `deployment`, `development`, `examples`) |
+| `meta:link-base` | URL prefix for internal links (typically `/falcon-mcp/`) |
+| `frontmatter:sidebar` | Sidebar ordering (e.g., `order:10`) |
+
+## Admonitions
+
+Use GitHub-flavored admonition syntax:
+
+```markdown
+> [!NOTE]
+> This is a note.
+
+> [!CAUTION]
+> This is a caution.
+
+> [!TIP]
+> This is a tip.
+```
+
+These render natively on GitHub and get converted to Starlight `:::` directives by the external site's build process.
 
 ## Auto-Generated Content
 
@@ -56,7 +88,7 @@ A summary table (`docs/modules/overview.md`) listing all modules with their API 
 
 ### Changelog
 
-The root `CHANGELOG.md` is copied with Starlight frontmatter prepended. This happens in `scripts/build_docs.sh`.
+The root `CHANGELOG.md` is copied with annotation tags prepended. This happens in `scripts/build_docs.sh`.
 
 ### How Titles and Descriptions Are Derived
 
@@ -95,7 +127,7 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
 
 ## Adding or Editing Content Pages
 
-Content pages live under `docs/`. Each `.md` or `.mdx` file needs Starlight frontmatter (see above). The external site handles sidebar configuration. Use the `sidebar.order` frontmatter field to control page ordering within each section.
+Content pages live under `docs/`. Each `.md` file needs annotation tags at the top (see Page Metadata above). The external site handles sidebar configuration. Use the `frontmatter:sidebar` tag to control page ordering within each section.
 
 The `modules/` directory is auto-generated; pages there don't need manual creation.
 
@@ -110,7 +142,7 @@ bash scripts/build_docs.sh
 This runs:
 
 1. `uv run python scripts/generate_module_docs.py` — regenerates `docs/modules/`
-2. Copies `CHANGELOG.md` with frontmatter to `docs/changelog.md`
+2. Copies `CHANGELOG.md` with annotation tags to `docs/changelog.md`
 3. Runs `markdownlint` on all files under `docs/`
 
 You can also run the generation script directly:

@@ -1,7 +1,7 @@
----
-title: Integration Testing
-description: Running integration tests with real CrowdStrike API calls.
----
+<!-- meta:title Integration Testing -->
+<!-- meta:description Running integration tests with real CrowdStrike API calls. -->
+<!-- meta:section development -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 This document provides guidance on running and understanding the integration tests for the Falcon MCP Server.
 

@@ -1,7 +1,7 @@
----
-title: Installation
-description: Install the Falcon MCP Server using uv or pip.
----
+<!-- meta:title Installation -->
+<!-- meta:description Install the Falcon MCP Server using uv or pip. -->
+<!-- meta:section getting-started -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 ## Prerequisites
 
@@ -21,9 +21,8 @@ uv tool install falcon-mcp
 pip install falcon-mcp
 ```
 
-:::tip
-If `falcon-mcp` isn't found after installation, update your shell `PATH`.
-:::
+> [!TIP]
+> If `falcon-mcp` isn't found after installation, update your shell `PATH`.
 
 ## Run without installing
 
@@ -35,6 +34,5 @@ uvx falcon-mcp
 
 This is the recommended approach for editor integrations.
 
-:::note
-If you just want to interact with falcon-mcp via an agent chat interface rather than running the server yourself, see the [Deployment](/falcon-mcp/deployment/docker/) options.
-:::
+> [!NOTE]
+> If you just want to interact with falcon-mcp via an agent chat interface rather than running the server yourself, see the [Deployment](/falcon-mcp/deployment/docker/) options.

@@ -1,7 +1,7 @@
----
-title: Amazon Bedrock
-description: Deploy the Falcon MCP Server to Amazon Bedrock AgentCore.
----
+<!-- meta:title Amazon Bedrock -->
+<!-- meta:description Deploy the Falcon MCP Server to Amazon Bedrock AgentCore. -->
+<!-- meta:section deployment -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 The Falcon MCP Server is available on the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-afoqfhvuepgne) for streamlined deployment to Amazon Bedrock AgentCore.
 
@@ -45,9 +45,8 @@ The MCP Server requires internet connectivity to communicate with CrowdStrike's 
 | `FALCON_MCP_STATELESS_HTTP` | `true` | **Required** for AgentCore |
 | `FALCON_MCP_API_KEY` | *(optional)* | API key to secure the MCP endpoint |
 
-:::caution
-`FALCON_MCP_STATELESS_HTTP` must be set to `true` for proper operation in AgentCore's stateless container environment.
-:::
+> [!CAUTION]
+> `FALCON_MCP_STATELESS_HTTP` must be set to `true` for proper operation in AgentCore's stateless container environment.
 
 ## Verify Deployment
 

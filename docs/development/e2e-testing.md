@@ -1,15 +1,14 @@
----
-title: E2E Testing
-description: Running end-to-end tests with a real LLM agent against the Falcon MCP Server.
----
+<!-- meta:title E2E Testing -->
+<!-- meta:description Running end-to-end tests with a real LLM agent against the Falcon MCP Server. -->
+<!-- meta:section development -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 End-to-end tests run a real LLM agent connected to the Falcon MCP Server to validate full tool-call workflows from natural language prompts.
 
 ## Configuration
 
-:::note
-Requires valid CrowdStrike API credentials and OpenAI API key:
-:::
+> [!NOTE]
+> Requires valid CrowdStrike API credentials and OpenAI API key:
 
 Copy the development example file:
 
@@ -49,9 +48,8 @@ uv run pytest --run-e2e tests/e2e/
 uv run pytest --run-e2e tests/e2e/test_mcp_server.py::TestFalconMCPServerE2E::test_get_top_3_high_severity_detections
 ```
 
-:::caution
-The `-s` flag is **required** to see any meaningful output from E2E tests. Without it, pytest captures all stdout/stderr.
-:::
+> [!CAUTION]
+> The `-s` flag is **required** to see any meaningful output from E2E tests. Without it, pytest captures all stdout/stderr.
 
 ## Verbosity Levels
 

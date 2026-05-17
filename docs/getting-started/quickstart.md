@@ -1,7 +1,7 @@
----
-title: Quick Start
-description: Get up and running with the Falcon MCP Server in 5 minutes.
----
+<!-- meta:title Quick Start -->
+<!-- meta:description Get up and running with the Falcon MCP Server in 5 minutes. -->
+<!-- meta:section getting-started -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 This guide gets you from zero to a working Falcon MCP Server connection in 5 minutes.
 

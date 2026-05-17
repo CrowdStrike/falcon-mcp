@@ -1,9 +1,8 @@
----
-title: Intel
-description: Accessing and analyzing CrowdStrike Falcon intelligence data
-sidebar:
-  order: 10
----
+<!-- meta:title Intel -->
+<!-- meta:description Accessing and analyzing CrowdStrike Falcon intelligence data -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Accessing and analyzing CrowdStrike Falcon intelligence data
 

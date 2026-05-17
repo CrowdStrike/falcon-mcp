@@ -1,7 +1,7 @@
----
-title: MCP Config
-description: MCP configuration file examples for connecting to the Falcon MCP Server.
----
+<!-- meta:title MCP Config -->
+<!-- meta:description MCP configuration file examples for connecting to the Falcon MCP Server. -->
+<!-- meta:section examples -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 The `examples/mcp_config.json` file shows all three transport configurations in a single file.
 

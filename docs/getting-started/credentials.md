@@ -1,7 +1,7 @@
----
-title: API Credentials
-description: Create and configure CrowdStrike API credentials for the Falcon MCP Server.
----
+<!-- meta:title API Credentials -->
+<!-- meta:description Create and configure CrowdStrike API credentials for the Falcon MCP Server. -->
+<!-- meta:section getting-started -->
+<!-- meta:link-base /falcon-mcp/ -->
 
 Before using the Falcon MCP Server, you need to create API credentials in your CrowdStrike console.
 
@@ -15,9 +15,8 @@ Before using the Falcon MCP Server, you need to create API credentials in your C
    - **Description**: Optional description for your records
    - **API Scopes**: Select the scopes based on which modules you plan to use
 
-:::caution
-Ensure your API client has the necessary scopes for the modules you plan to use. You can always update scopes later in the CrowdStrike console.
-:::
+> [!CAUTION]
+> Ensure your API client has the necessary scopes for the modules you plan to use. You can always update scopes later in the CrowdStrike console.
 
 ## API Scopes by Module
 
