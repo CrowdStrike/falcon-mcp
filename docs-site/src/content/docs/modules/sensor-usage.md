@@ -17,7 +17,11 @@ Accessing CrowdStrike Falcon sensor usage data
 
 **Required scopes:** `Sensor Usage:read`
 
-Search for sensor usage data in your CrowdStrike environment.
+Search for weekly sensor usage data in your CrowdStrike environment.
+
+Use this to retrieve sensor billing and usage metrics by date or period. Consult
+falcon://sensor-usage/weekly/fql-guide before constructing filter expressions.
+Returns weekly usage records.
 
 **Example prompts:**
 

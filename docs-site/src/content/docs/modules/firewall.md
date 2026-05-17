@@ -24,6 +24,9 @@ This tool modifies data.
 
 Create a firewall rule group.
 
+Provide a name, platform, and either rules or a clone_id. Returns a list
+containing the created rule group object.
+
 **Example prompts:**
 
 - "Create a Windows firewall rule group named 'Prod Outbound'"
@@ -38,6 +41,9 @@ This tool performs destructive operations.
 
 Delete firewall rule groups by ID.
 
+Permanently removes the specified rule groups and all rules within them.
+Returns an empty list on success.
+
 **Example prompts:**
 
 - "Delete firewall rule group abc123"
@@ -46,7 +52,11 @@ Delete firewall rule groups by ID.
 
 **Required scopes:** `Firewall Management:read`
 
-Search firewall rules in a specific policy container and return full rule details.
+Search firewall rules within a specific policy container.
+
+Use this when you need rules scoped to a particular policy. Consult
+falcon://firewall/rules/fql-guide before constructing filter expressions.
+Returns full rule details for the specified policy.
 
 **Example prompts:**
 
@@ -58,6 +68,10 @@ Search firewall rules in a specific policy container and return full rule detail
 
 Search firewall rule groups and return full rule group details.
 
+Use this to find rule groups by name, platform, or enabled state. Consult
+falcon://firewall/rules/fql-guide before constructing filter expressions.
+Returns rule group objects including their contained rules.
+
 **Example prompts:**
 
 - "Find all enabled firewall rule groups for Windows"
@@ -67,6 +81,10 @@ Search firewall rule groups and return full rule group details.
 **Required scopes:** `Firewall Management:read`
 
 Search firewall rules and return full rule details.
+
+Use this to find firewall rules by name, platform, or enabled state. Consult
+falcon://firewall/rules/fql-guide before constructing filter expressions.
+Returns complete rule objects including conditions and actions.
 
 **Example prompts:**
 

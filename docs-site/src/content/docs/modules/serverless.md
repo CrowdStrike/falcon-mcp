@@ -17,13 +17,12 @@ Accessing and managing CrowdStrike Falcon Serverless Vulnerabilities
 
 **Required scopes:** `Falcon Container Image:read`
 
-Search for vulnerabilities in your serverless functions across all cloud service providers.
+Search for vulnerabilities in serverless functions across all cloud providers.
 
-This endpoint provides security information in SARIF format, including:
-- CVE IDs for identified vulnerabilities
-- Severity levels
-- Vulnerability descriptions
-- Additional relevant details
+Use this to find CVEs in Lambda/Cloud Functions/Azure Functions by severity,
+provider, or runtime. Consult falcon://serverless/vulnerabilities/fql-guide before
+constructing filter expressions. Returns vulnerability data in SARIF format
+including CVE IDs, severity levels, and descriptions.
 
 **Example prompts:**
 

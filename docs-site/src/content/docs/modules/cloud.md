@@ -21,7 +21,11 @@ Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Con
 
 **Required scopes:** `Falcon Container Image:read`
 
-Count kubernetes containers in your CrowdStrike Kubernetes & Containers Inventory
+Count Kubernetes containers matching filter criteria.
+
+Use this for aggregate counts without returning full container details. Consult
+falcon://cloud/kubernetes-containers/fql-guide before constructing filter
+expressions. Returns the count as a single-element list.
 
 **Example prompts:**
 
@@ -33,24 +37,14 @@ Count kubernetes containers in your CrowdStrike Kubernetes & Containers Inventor
 This tool performs destructive operations.
 :::
 
-**Required scopes:** `Cloud Security Policies:write`
+**Required scopes:** `Cloud Security Policies:read`, `Cloud Security Policies:write`
 
-Create a CSPM IOM suppression rule to suppress matching findings.
+Create a CSPM IOM suppression rule to hide matching findings.
 
-WARNING: This creates a suppression rule that will hide matching IOM findings
-from compliance scores and active finding views. Suppressed findings are still
-assessed but not surfaced. Use carefully and prefer narrow scope.
-
-A suppression rule defines:
-- WHICH rules to suppress (by ID, name, or severity)
-- WHICH assets to suppress them for (by cloud provider, account, region, resource)
-- WHY (accept-risk, compensating-control, false-positive)
-- WHEN it expires (strongly recommended)
-
-Requires the modern 'Cloud Security Posture Rules' mode (not legacy policies).
-
-Returns the created suppression rule object on success, or an error dict
-with details on failure.
+Suppressed findings are still assessed but not surfaced in compliance scores.
+Requires at least one rule selection (rule_ids, rule_names, or rule_severities)
+and a suppression reason. Setting an expiration_date is strongly recommended to
+avoid permanent suppressions. Returns the created suppression rule object.
 
 **Example prompts:**
 
@@ -67,12 +61,9 @@ This tool performs destructive operations.
 
 Delete CSPM IOM suppression rules by ID.
 
-WARNING: Deleting a suppression rule will re-activate all findings that were
-previously suppressed by that rule. They will appear as open findings again.
-
-Use falcon_search_cspm_suppression_rules first to identify which rules to delete.
-
-Returns a confirmation response on success, or an error dict on failure.
+Deleting a suppression rule re-activates all findings that were previously
+suppressed by it. Use falcon_search_cspm_suppression_rules to find rule IDs
+first. Returns a confirmation response.
 
 **Example prompts:**
 
@@ -83,15 +74,12 @@ Returns a confirmation response on success, or an error dict on failure.
 
 **Required scopes:** `Cloud Security API Assets:read`
 
-Search for cloud assets in your CrowdStrike CSPM Asset Inventory.
+Search for cloud assets in your CrowdStrike CSPM inventory.
 
-This tool queries cloud resources (EC2 instances, VPCs, subnets, load balancers, etc.)
-managed by CrowdStrike CSPM. Supports comprehensive FQL filtering including:
-- Cloud provider and resource type filtering
-- Tag-based filtering (AWS/Azure/GCP tags)
-- Security posture (publicly exposed, severity, IOM/IOA counts)
-- Compliance status and benchmarks
-- Temporal filtering (creation time, last updated)
+Use this to find cloud resources (EC2, VPCs, S3, etc.) by provider, region,
+resource type, or tags. Consult falcon://cloud/cspm-assets/fql-guide before
+constructing filter expressions. Returns slimmed asset details with security
+posture context (IOM/IOA counts, exposure, severity).
 
 **Example prompts:**
 
@@ -103,15 +91,9 @@ managed by CrowdStrike CSPM. Supports comprehensive FQL filtering including:
 
 Search for CSPM IOM suppression rules.
 
-Lists suppression rules that control which IOM findings are suppressed.
-Suppression rules define which rules and assets are excluded from generating
-active findings, along with the reason and optional expiration date.
-
-Use this to review existing suppressions before creating new ones.
-
-Returns a list of suppression rule objects containing: id, name, domain,
-subdomain, disabled, rule_selection_type, scope_type, suppression_reason,
-created_at, created_by. Returns an empty list if no rules exist.
+Use this to review existing suppressions before creating new ones. Returns
+suppression rule objects including scope, reason, and expiration details.
+Returns an empty list if no rules exist.
 
 **Example prompts:**
 
@@ -122,7 +104,12 @@ created_at, created_by. Returns an empty list if no rules exist.
 
 **Required scopes:** `Falcon Container Image:read`
 
-Search for images vulnerabilities in your CrowdStrike Image Assessments
+Search for container image vulnerabilities in CrowdStrike Image Assessments.
+
+Use this to find CVEs affecting container images by severity, CVSS score, or
+CVE ID. Consult falcon://cloud/images-vulnerabilities/fql-guide before constructing
+filter expressions. Returns vulnerability details including CVE IDs, scores, and
+impacted image counts.
 
 **Example prompts:**
 
@@ -134,18 +121,10 @@ Search for images vulnerabilities in your CrowdStrike Image Assessments
 
 Search for CSPM Indicators of Misconfiguration (IOM) findings.
 
-Retrieves cloud security posture findings that identify misconfigurations
-in your cloud environment (AWS, Azure, GCP). Findings map to compliance
-frameworks (CIS, NIST, SOC2) and MITRE ATT&CK techniques.
-
-Supports filtering by suppression state to view which findings have been
-accepted as risk, marked as false positives, or have compensating controls.
-
-Returns a list of IOM finding entities with nested structure:
-- id: Unique finding identifier
-- cloud: {account_id, account_name, provider, region}
-- evaluation: {severity, status, attack_types, rule, created, url}
-- resource: {resource_id, resource_type, service, service_category}
+Use this to find cloud misconfigurations by severity, provider, service, or
+suppression state. Consult falcon://cloud/cspm-iom-findings/fql-guide before
+constructing filter expressions. Returns IOM entities with cloud context,
+evaluation details, and resource information.
 
 **Example prompts:**
 
@@ -157,7 +136,11 @@ Returns a list of IOM finding entities with nested structure:
 
 **Required scopes:** `Falcon Container Image:read`
 
-Search for kubernetes containers in your CrowdStrike Kubernetes & Containers Inventory
+Search for Kubernetes containers in your CrowdStrike container inventory.
+
+Use this to find containers by cluster, namespace, image, or cloud provider.
+Consult falcon://cloud/kubernetes-containers/fql-guide before constructing filter
+expressions. Returns full container details including image, status, and vulnerabilities.
 
 **Example prompts:**
 

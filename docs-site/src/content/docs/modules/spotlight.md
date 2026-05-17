@@ -19,6 +19,11 @@ Accessing and managing CrowdStrike Falcon Spotlight vulnerabilities
 
 Search for vulnerabilities in your CrowdStrike environment.
 
+Use this to find vulnerabilities by CVE severity, status, host, or remediation
+state. Consult falcon://spotlight/vulnerabilities/fql-guide before constructing
+filter expressions. Returns vulnerability details including CVE info, host context,
+and remediation guidance (based on facet selection).
+
 **Example prompts:**
 
 - "Show me open HIGH severity vulnerabilities"

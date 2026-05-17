@@ -19,8 +19,9 @@ Accessing and analyzing CrowdStrike Falcon detections
 
 Retrieve details for detection IDs you already have.
 
-Use ONLY when you have specific composite detection ID(s). To find detections
-by criteria (severity, status, hostname, etc.), use `falcon_search_detections`.
+Use when you have specific composite detection ID(s). For discovering detections
+by criteria (severity, status, hostname, etc.), use falcon_search_detections
+instead. Returns full detection records.
 
 **Example prompts:**
 
@@ -32,9 +33,10 @@ by criteria (severity, status, hostname, etc.), use `falcon_search_detections`.
 
 Find detections by criteria and return their complete details.
 
-Use this tool to discover detections - filter by severity, status, hostname,
-time range, etc. Returns full detection information including behaviors,
-device context, and threat details.
+Use this to discover detections by severity, status, hostname, time range, or
+other attributes. Consult falcon://detections/search/fql-guide before constructing
+filter expressions. Returns full alert records including process context, device
+info, tactic/technique details, and threat classification.
 
 **Example prompts:**
 

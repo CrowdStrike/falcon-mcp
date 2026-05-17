@@ -24,6 +24,9 @@ This tool modifies data.
 
 Create one or more custom IOCs.
 
+Provide type/value/action for a single IOC, or pass a bulk indicators array.
+Returns the created indicator records on success.
+
 **Example prompts:**
 
 - "Block the domain evil.example.com"
@@ -39,6 +42,9 @@ This tool performs destructive operations.
 
 Remove custom IOCs by IDs or FQL filter.
 
+Provide either specific IDs or an FQL filter for bulk removal. If both are
+given, filter takes precedence. Returns an empty list on success.
+
 **Example prompts:**
 
 - "Delete IOC with ID abc123"
@@ -49,6 +55,10 @@ Remove custom IOCs by IDs or FQL filter.
 **Required scopes:** `IOC Management:read`
 
 Search custom IOCs and return full IOC details.
+
+Use this to find IOCs by type, value, action, severity, or expiration status.
+Consult falcon://ioc/search/fql-guide before constructing filter expressions.
+Returns full indicator records including metadata, platforms, and host groups.
 
 **Example prompts:**
 

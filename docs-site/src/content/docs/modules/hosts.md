@@ -17,11 +17,11 @@ Accessing and managing CrowdStrike Falcon hosts/devices
 
 **Required scopes:** `Hosts:read`
 
-Retrieve detailed information for specified host device IDs.
+Retrieve detailed information for one or more host device IDs.
 
-This tool returns comprehensive host details for one or more device IDs.
-Use this when you already have specific device IDs and need their full details.
-For searching/discovering hosts, use the `falcon_search_hosts` tool instead.
+Use when you already have specific device IDs from search results, the Falcon
+console, or the Streaming API. For discovering hosts by criteria, use
+falcon_search_hosts instead. Returns comprehensive host details.
 
 **Example prompts:**
 
@@ -32,6 +32,11 @@ For searching/discovering hosts, use the `falcon_search_hosts` tool instead.
 **Required scopes:** `Hosts:read`
 
 Search for hosts in your CrowdStrike environment.
+
+Use this to find devices by hostname, platform, IP, sensor version, or other
+attributes. Consult falcon://hosts/search/fql-guide before constructing filter
+expressions. Returns full host details including device info, OS, and network
+context.
 
 **Example prompts:**
 

@@ -118,6 +118,18 @@ API_SCOPE_REQUIREMENTS = {
     "GetSystemLogsV3": ["SaaS Security:read"],
     "DismissSecurityCheckV3": ["SaaS Security:write"],
     "DismissAffectedEntityV3": ["SaaS Security:write"],
+    # Case Management operations
+    "queries_cases_get_v1": ["Cases:read"],
+    "entities_cases_post_v2": ["Cases:read"],
+    "entities_cases_put_v2": ["Cases:write"],
+    "entities_cases_patch_v2": ["Cases:write"],
+    "entities_alert_evidence_post_v1": ["Cases:write"],
+    "entities_event_evidence_post_v1": ["Cases:write"],
+    "entities_case_tags_post_v1": ["Cases:write"],
+    "entities_case_tags_delete_v1": ["Cases:write"],
+    # Case Templates operations
+    "queries_templates_get_v1": ["Case Templates:read"],
+    "entities_templates_get_v1": ["Case Templates:read"],
 }
 
 

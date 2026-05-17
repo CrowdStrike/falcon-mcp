@@ -17,7 +17,11 @@ Accessing and managing CrowdStrike Falcon Discover applications and unmanaged as
 
 **Required scopes:** `Assets:read`
 
-Search for applications in your CrowdStrike environment.
+Search for applications discovered in your CrowdStrike environment.
+
+Use this to find applications by name, vendor, or installation details. Consult
+falcon://discover/applications/fql-guide before constructing filter expressions.
+Returns application entities with optional host info and usage data (based on facet).
 
 **Example prompts:**
 
@@ -27,13 +31,12 @@ Search for applications in your CrowdStrike environment.
 
 **Required scopes:** `Assets:read`
 
-Search for unmanaged assets (hosts) in your CrowdStrike environment.
+Search for unmanaged assets (hosts without Falcon sensor) in your environment.
 
-These are systems that do not have the Falcon sensor installed but have been
-discovered by systems that do have a Falcon sensor installed.
-
-The tool automatically filters for unmanaged assets only by adding entity_type:'unmanaged' to all queries.
-You do not need to (and cannot) specify entity_type in your filter - it is always set to 'unmanaged'.
+Finds systems discovered by Falcon-managed hosts that lack a sensor themselves.
+Consult falcon://discover/hosts/fql-guide before constructing filter expressions.
+The tool automatically adds entity_type:'unmanaged' to all queries. Returns full
+asset details including platform, network, and criticality information.
 
 **Example prompts:**
 

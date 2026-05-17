@@ -19,14 +19,11 @@ Accessing and analyzing CrowdStrike Falcon intelligence data
 
 **Required scopes:** `Actors (Falcon Intelligence):read`
 
-Generate MITRE ATT&CK report for a given threat actor.
+Generate a MITRE ATT&CK report for a given threat actor.
 
-Provides detailed MITRE ATT&CK tactics, techniques, and procedures (TTPs)
-report associated with a specific threat actor tracked.
-
-Args:
-    actor: Pass the actor name (string) or numeric actor ID (string).
-    format: Report format. Accepted options: 'csv' or 'json'. Defaults to 'json'.
+Accepts an actor name (e.g., 'WARP PANDA') or numeric ID. Returns MITRE ATT&CK
+tactics, techniques, and procedures (TTPs) for the actor. JSON format returns a
+decoded string; CSV format returns CSV text.
 
 **Example prompts:**
 
@@ -38,21 +35,29 @@ Args:
 
 Research threat actors and adversary groups tracked by CrowdStrike intelligence.
 
+Use this to search actors by name, target countries/industries, or activity dates.
+Consult falcon://intel/actors/fql-guide before constructing filter expressions.
+Returns full actor profiles including aliases, motivations, and targeting details.
+
 ### `falcon_query_indicator_entities`
 
 **Required scopes:** `Indicators (Falcon Intelligence):read`
 
-Search for threat indicators and indicators of compromise (IOCs) from CrowdStrike intelligence.
+Search for threat indicators and IOCs from CrowdStrike intelligence.
+
+Use this to find indicators by type, publish date, malware family, or threat actor
+association. Consult falcon://intel/indicators/fql-guide before constructing filter
+expressions. Returns full indicator details including labels, relations, and kill chain stage.
 
 ### `falcon_query_report_entities`
 
 **Required scopes:** `Reports (Falcon Intelligence):read`
 
-Access CrowdStrike intelligence publications and threat reports.
+Search CrowdStrike intelligence publications and threat reports.
 
-This tool returns comprehensive intelligence report details based on your search criteria.
-Use this when you need to find CrowdStrike intelligence publications matching specific conditions.
-For guidance on building FQL filters, use the `falcon://intel/reports/fql-guide` resource.
+Use this to find reports by name, target industry, threat type, or publication date.
+Consult falcon://intel/reports/fql-guide before constructing filter expressions.
+Returns full report metadata including title, description, and target details.
 
 ## Resources
 
