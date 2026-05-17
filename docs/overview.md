@@ -8,7 +8,7 @@ The Falcon MCP connects AI assistants to the CrowdStrike Falcon platform through
 
 This gives tools like Claude Desktop, VS Code, Gemini CLI, and custom agents direct access to your Falcon environment — enabling AI-powered threat investigation, detection triage, and security operations.
 
-## What Can Your AI Do with Falcon?
+## What can your AI do with Falcon?
 
 <!-- component:card-grid -->
 | Title | Description |
