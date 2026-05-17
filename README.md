@@ -175,15 +175,15 @@ uv run pytest
 ```
 
 > [!IMPORTANT]
-> This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated releases. Please follow the commit message format outlined in our [Contributing Guide](docs/CONTRIBUTING.md).
+> This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated releases. Please follow the commit message format outlined in our [Contributing Guide](.github/CONTRIBUTING.md).
 
 ### Developer Documentation
 
-- [Docs Site Guide](docs/development/docs_site.md): Architecture and development guide for the documentation site
-- [Module Development Guide](docs/development/module_development.md): Instructions for implementing new modules
-- [Resource Development Guide](docs/development/resource_development.md): Instructions for implementing resources
-- [End-to-End Testing Guide](docs/development/e2e_testing.md): Guide for running and understanding E2E tests
-- [Integration Testing Guide](docs/development/integration_testing.md): Guide for running integration tests with real API calls
+- [Documentation Guide](docs/development/docs-site.md): Architecture and maintenance guide for the documentation
+- [Module Development Guide](docs/development/module-development.md): Instructions for implementing new modules
+- [Resource Development Guide](docs/development/resource-development.md): Instructions for implementing resources
+- [End-to-End Testing Guide](docs/development/e2e-testing.md): Guide for running and understanding E2E tests
+- [Integration Testing Guide](docs/development/integration-testing.md): Guide for running integration tests with real API calls
 
 ## License
 

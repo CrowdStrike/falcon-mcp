@@ -1,4 +1,7 @@
-# Integration Testing Guide
+---
+title: Integration Testing
+description: Running integration tests with real CrowdStrike API calls.
+---
 
 This document provides guidance on running and understanding the integration tests for the Falcon MCP Server.
 
@@ -33,7 +36,7 @@ cp .env.dev.example .env
 
 ### API Scopes
 
-Your API client must have the appropriate scopes for the modules you're testing. See the main [README.md](../../README.md#api-scopes) for the complete scope mapping.
+Your API client must have the appropriate scopes for the modules you're testing. See the main [README.md](../../README.md#modules) for the complete scope mapping.
 
 ## Running Integration Tests
 
@@ -239,7 +242,7 @@ If tests fail with 403 errors:
 
 1. Check your API client has the required scopes
 2. Some endpoints require additional permissions (e.g., write access)
-3. See [API Scopes](../../README.md#api-scopes) for requirements
+3. See [API Scopes](../../README.md#modules) for requirements
 
 ## Adding New Integration Tests
 

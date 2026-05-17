@@ -1,4 +1,7 @@
-# Falcon MCP Server Resource Development Guide
+---
+title: Resource Development
+description: How to implement and register MCP resources in the Falcon MCP Server.
+---
 
 This guide provides instructions for implementing and registering resources for the Falcon MCP server.
 
@@ -103,7 +106,21 @@ Examples:
 - `falcon://detections/search/fql-guide`
 - `falcon://hosts/search/fql-guide`
 
-### 4. Resource Types
+### 4. FQL Table Format
+
+For FQL filter documentation, use `generate_md_table` from `falcon_mcp/common/utils.py` for consistent formatting:
+
+```python
+from falcon_mcp.common.utils import generate_md_table
+
+SEARCH_ENTITIES_FQL_FILTERS = [
+    ("field_name", "String", "Description with examples. Ex: example_value"),
+]
+
+DOCUMENTATION = """Guide content""" + generate_md_table(SEARCH_ENTITIES_FQL_FILTERS) + """More content"""
+```
+
+### 5. Resource Types
 
 The MCP server supports several resource types:
 
@@ -256,7 +273,7 @@ git commit -m "test(resources): add validation tests for resource content"
 git commit -m "chore(resources): update resource registration patterns"
 ```
 
-See the main [CONTRIBUTING.md](CONTRIBUTING.md) guide for complete conventional commits guidelines.
+See the main [CONTRIBUTING.md](../../.github/CONTRIBUTING.md) guide for complete conventional commits guidelines.
 
 ## Conclusion
 

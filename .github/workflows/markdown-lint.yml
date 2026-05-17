@@ -5,10 +5,12 @@ on:
     branches: [ main ]
     paths:
       - '**.md'
+      - '**.mdx'
   pull_request:
     branches: [ main ]
     paths:
       - '**.md'
+      - '**.mdx'
 
 permissions:
   contents: read
@@ -20,9 +22,11 @@ jobs:
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
     - name: Lint Markdown files
-      uses: DavidAnson/markdownlint-cli2-action@ded1f9488f68a970bc66ea5619e13e9b52e601cd
+      uses: DavidAnson/markdownlint-cli2-action@ded1f9488f68a970bc66ea5619e13e9b52e601cd # v23.2.0
       with:
         config: '.markdownlint.json'
         globs: |
           README.md
           docs/**/*.md
+          docs/**/*.mdx
+          .github/*.md

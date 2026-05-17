@@ -1,7 +1,7 @@
 """Generate Starlight documentation pages from falcon_mcp module source code.
 
 Introspects module classes, tool methods, and resource definitions to produce
-markdown files for docs-site/src/content/docs/modules/.
+markdown files for docs/modules/.
 
 Usage:
     uv run python scripts/generate_module_docs.py
@@ -21,9 +21,10 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from falcon_mcp.common.api_scopes import API_SCOPE_REQUIREMENTS  # noqa: E402
+from falcon_mcp.common.api_scopes import API_SCOPE_REQUIREMENTS
 
-OUTPUT_DIR = PROJECT_ROOT / "docs-site" / "src" / "content" / "docs" / "modules"
+OUTPUT_DIR = PROJECT_ROOT / "docs" / "modules"
+SITE_BASE_PATH = "/falcon-mcp"
 
 # Module display metadata — overrides only.
 # Titles and descriptions are auto-derived from module docstrings.
@@ -786,7 +787,7 @@ def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
         scopes = ", ".join(f"`{s}`" for s in scopes_list)
         fallback_desc = modules[key]["auto_description"] or f"{title} module for CrowdStrike Falcon."
         desc = meta.get("description", fallback_desc)
-        lines.append(f"| [{title}](/falcon-mcp/modules/{slug}/) | {scopes} | {desc} |")
+        lines.append(f"| [{title}]({SITE_BASE_PATH}/modules/{slug}/) | {scopes} | {desc} |")
 
     lines.append("")
     return "\n".join(lines)

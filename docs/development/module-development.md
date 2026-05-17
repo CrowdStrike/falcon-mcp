@@ -1,4 +1,7 @@
-# Falcon MCP Server Module Development Guide
+---
+title: Module Development
+description: Step-by-step guide for implementing new Falcon MCP modules.
+---
 
 This guide provides instructions for implementing new modules for the Falcon MCP server.
 
@@ -230,6 +233,16 @@ The `TestModules` base class provides:
 
 This approach simplifies test code and ensures consistency across all module tests.
 
+### 5. Regenerate Module Documentation
+
+After adding or modifying a module, regenerate the auto-generated module documentation:
+
+```bash
+uv run python scripts/generate_module_docs.py
+```
+
+Commit the updated `docs/modules/` files alongside your code changes. CI will verify that the committed docs match the generated output.
+
 ## Contributing Module Changes
 
 When contributing new modules or changes to existing modules, please follow these guidelines:
@@ -284,7 +297,7 @@ git commit -m "test(modules): add comprehensive tests for [module-name] module"
 git commit -m "docs(modules): update [module-name] module documentation"
 ```
 
-See the main [CONTRIBUTING.md](CONTRIBUTING.md) guide for complete conventional commits guidelines.
+See the main [CONTRIBUTING.md](../../.github/CONTRIBUTING.md) guide for complete conventional commits guidelines.
 
 ## Best Practices
 

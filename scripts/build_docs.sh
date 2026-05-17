@@ -16,17 +16,9 @@ echo "=== Step 2: Copy changelog ==="
   echo '---'
   echo ''
   cat CHANGELOG.md
-} > docs-site/src/content/docs/changelog.md
+} > docs/changelog.md
 
 echo "=== Step 3: Lint markdown ==="
-npx markdownlint-cli --fix 'docs-site/src/content/docs/**/*.md' \
-  'docs-site/src/content/docs/**/*.mdx' \
-  --ignore 'docs-site/src/content/docs/changelog.md'
-
-echo "=== Step 4: Build Starlight site ==="
-cd "$PROJECT_ROOT/docs-site"
-pnpm install --frozen-lockfile
-pnpm run build
+npx markdownlint-cli2@0.18.0 --fix 'docs/**/*.md' 'docs/**/*.mdx' '#docs/changelog.md'
 
 echo "=== Done ==="
-echo "Output: docs-site/dist/"

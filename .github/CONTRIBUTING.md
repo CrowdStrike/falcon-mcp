@@ -21,14 +21,20 @@ Never made an open source contribution before? Wondering how contributions work 
 
     ``git checkout -b BRANCH-NAME-HERE``
 
+1. **Install dependencies:**
+
+    ```bash
+    uv sync --all-extras
+    ```
+
 1. Make the appropriate changes for the issue you are trying to address or the feature you would like to add.
 
 1. Follow [this guide](https://google.github.io/styleguide/pyguide.html#docstrings) for docstrings.
 
 1. Run [`ruff`](https://docs.astral.sh/ruff/) to format your code and check for linting issues. This helps maintain consistent code style across the project.
 
-    ``ruff check . --select I``
-    ``ruff check .``
+    ``uv run ruff check . --select I``
+    ``uv run ruff check .``
 
 1. Add the file contents of the changed files to the "snapshot" git uses to manage the state of the project (also known as the index). Here is the git command that will add your changes:
 
@@ -133,6 +139,21 @@ Never made an open source contribution before? Wondering how contributions work 
 1. Once submitted, a maintainer will review your pull request. They may ask for additional changes, or clarification, so keep an eye out for communication! GitHub automatically sends an email to your email address whenever someone comments on your pull request.
 
 1. While not all pull requests may be merged, celebrate your contribution whether or not your pull request is merged! All changes move the project forward, and we thank you for helping the community!
+
+### Running Tests
+
+Before submitting your pull request, verify your changes pass the test suite:
+
+```bash
+# Unit tests
+uv run pytest
+
+# Integration tests (requires API credentials)
+uv run pytest --run-integration tests/integration/
+
+# E2E tests (requires API credentials + OpenAI key)
+uv run pytest --run-e2e tests/e2e/
+```
 
 ### Rebase Early, Rebase Often
 
