@@ -1,9 +1,8 @@
----
-title: Case Management
-description: Managing CrowdStrike cases, including searching, creating, updating, and managing evidence and tags
-sidebar:
-  order: 10
----
+<!-- meta:title Case Management -->
+<!-- meta:description Managing CrowdStrike cases, including searching, creating, updating, and managing evidence and tags -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Managing CrowdStrike cases, including searching, creating, updating, and managing evidence and tags
 
@@ -17,9 +16,8 @@ Managing CrowdStrike cases, including searching, creating, updating, and managin
 
 ### `falcon_add_case_alert_evidence`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Cases:write`
 
@@ -35,9 +33,8 @@ evidence items. Returns the updated case record.
 
 ### `falcon_add_case_event_evidence`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Cases:write`
 
@@ -53,9 +50,8 @@ Returns the updated case record.
 
 ### `falcon_create_case`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Cases:write`
 
@@ -100,9 +96,8 @@ configuration.
 
 ### `falcon_manage_case_tags`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Cases:write`
 
@@ -134,9 +129,8 @@ status, severity, evidence, assigned user, and analysis results.
 
 ### `falcon_update_case`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Cases:write`
 

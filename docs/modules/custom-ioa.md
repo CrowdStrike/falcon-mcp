@@ -1,9 +1,8 @@
----
-title: Custom IOA
-description: Searching, creating, updating, and deleting Custom IOA (Indicators of Attack) behavioral rules and rule groups using Falcon Custom IOA Service Collection endpoints
-sidebar:
-  order: 10
----
+<!-- meta:title Custom IOA -->
+<!-- meta:description Searching, creating, updating, and deleting Custom IOA (Indicators of Attack) behavioral rules and rule groups using Falcon Custom IOA Service Collection endpoints -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Searching, creating, updating, and deleting Custom IOA (Indicators of Attack) behavioral rules and rule groups using Falcon Custom IOA Service Collection endpoints
 
@@ -16,9 +15,8 @@ Searching, creating, updating, and deleting Custom IOA (Indicators of Attack) be
 
 ### `falcon_create_ioa_rule`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Custom IOA Rules:write`
 
@@ -34,9 +32,8 @@ criteria the rule matches against (process names, file paths, command line regex
 
 ### `falcon_create_ioa_rule_group`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Custom IOA Rules:write`
 
@@ -52,9 +49,8 @@ group, use falcon_create_ioa_rule to add detection rules to it.
 
 ### `falcon_delete_ioa_rule_groups`
 
-:::caution
-This tool performs destructive operations.
-:::
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Custom IOA Rules:write`
 
@@ -69,9 +65,8 @@ falcon_search_ioa_rule_groups to find rule group IDs.
 
 ### `falcon_delete_ioa_rules`
 
-:::caution
-This tool performs destructive operations.
-:::
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Custom IOA Rules:write`
 
@@ -127,9 +122,8 @@ Returns rule group objects with their contained behavioral detection rules.
 
 ### `falcon_update_ioa_rule`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Custom IOA Rules:write`
 
@@ -144,9 +138,8 @@ and instance_id from falcon_search_ioa_rule_groups.
 
 ### `falcon_update_ioa_rule_group`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Custom IOA Rules:write`
 

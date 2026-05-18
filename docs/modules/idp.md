@@ -1,9 +1,8 @@
----
-title: Identity Protection
-description: Accessing and managing CrowdStrike Falcon Identity Protection capabilities
-sidebar:
-  order: 10
----
+<!-- meta:title Identity Protection -->
+<!-- meta:description Accessing and managing CrowdStrike Falcon Identity Protection capabilities -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Accessing and managing CrowdStrike Falcon Identity Protection capabilities
 

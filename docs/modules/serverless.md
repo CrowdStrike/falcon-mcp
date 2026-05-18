@@ -1,9 +1,8 @@
----
-title: Serverless
-description: Accessing and managing CrowdStrike Falcon Serverless Vulnerabilities
-sidebar:
-  order: 10
----
+<!-- meta:title Serverless -->
+<!-- meta:description Accessing and managing CrowdStrike Falcon Serverless Vulnerabilities -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Accessing and managing CrowdStrike Falcon Serverless Vulnerabilities
 

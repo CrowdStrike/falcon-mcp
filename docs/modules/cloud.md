@@ -1,9 +1,8 @@
----
-title: Cloud Security
-description: Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets
-sidebar:
-  order: 10
----
+<!-- meta:title Cloud Security -->
+<!-- meta:description Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets
 
@@ -33,9 +32,8 @@ expressions. Returns the matching container count as an integer.
 
 ### `falcon_create_cspm_suppression_rule`
 
-:::caution
-This tool performs destructive operations.
-:::
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Cloud Security Policies:read`, `Cloud Security Policies:write`
 
@@ -53,9 +51,8 @@ avoid permanent suppressions. Returns the created suppression rule object.
 
 ### `falcon_delete_cspm_suppression_rules`
 
-:::caution
-This tool performs destructive operations.
-:::
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Cloud Security Policies:write`
 

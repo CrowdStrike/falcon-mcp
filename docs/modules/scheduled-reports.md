@@ -1,9 +1,8 @@
----
-title: Scheduled Reports
-description: Accessing and managing CrowdStrike Falcon scheduled reports and scheduled searches
-sidebar:
-  order: 10
----
+<!-- meta:title Scheduled Reports -->
+<!-- meta:description Accessing and managing CrowdStrike Falcon scheduled reports and scheduled searches -->
+<!-- meta:section modules -->
+<!-- meta:link-base /falcon-mcp/ -->
+<!-- frontmatter:sidebar order:10 -->
 
 Accessing and managing CrowdStrike Falcon scheduled reports and scheduled searches
 
@@ -29,9 +28,8 @@ on the report's configured format. PDF format is not supported.
 
 ### `falcon_launch_scheduled_report`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Scheduled Reports:read`
 

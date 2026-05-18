@@ -3,6 +3,30 @@
 
 # Changelog
 
+## [0.10.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.9.0...v0.10.0) (2026-05-18)
+
+
+### Features
+
+* **modules/cases:** add Case Management module ([#388](https://github.com/CrowdStrike/falcon-mcp/issues/388)) ([58d8460](https://github.com/CrowdStrike/falcon-mcp/commit/58d84606368fdff82eb5415388c45c56e654c35d))
+* **modules/cloud:** add CSPM findings query and suppression tools ([#378](https://github.com/CrowdStrike/falcon-mcp/issues/378)) ([c76dce5](https://github.com/CrowdStrike/falcon-mcp/commit/c76dce55ef634a5cf33cb56d084546aaf99d4887))
+* **modules/shield:** add Falcon Shield (SaaS Security) module ([#355](https://github.com/CrowdStrike/falcon-mcp/issues/355)) ([3218176](https://github.com/CrowdStrike/falcon-mcp/commit/3218176eb356f3dc6d4125f467d8b1b376b36051))
+* **modules:** remove deprecated incidents module ([#368](https://github.com/CrowdStrike/falcon-mcp/issues/368)) ([54c4948](https://github.com/CrowdStrike/falcon-mcp/commit/54c494838106e93691c4b1c22c85fc7a2a92de79)), closes [#330](https://github.com/CrowdStrike/falcon-mcp/issues/330)
+* publish falcon mcp to the mcp registry ([#357](https://github.com/CrowdStrike/falcon-mcp/issues/357)) ([47acb05](https://github.com/CrowdStrike/falcon-mcp/commit/47acb0503f3ad875ea7076cd4f393dcdefb16b5c))
+
+
+### Bug Fixes
+
+* **server:** falcon_check_connectivity will try auth once before reporting no connectivity to Falcon API ([#363](https://github.com/CrowdStrike/falcon-mcp/issues/363)) ([cea77ef](https://github.com/CrowdStrike/falcon-mcp/commit/cea77ef2f30f9f3339337df8fe69535868c99368))
+* **server:** surface diagnostic details on auth failure at startup ([#379](https://github.com/CrowdStrike/falcon-mcp/issues/379)) ([50a8c95](https://github.com/CrowdStrike/falcon-mcp/commit/50a8c95a1dc67e1ef78dfb9cb8f67a151a23686c)), closes [#351](https://github.com/CrowdStrike/falcon-mcp/issues/351)
+* **tests:** make NGSIEM async tests actually execute ([#381](https://github.com/CrowdStrike/falcon-mcp/issues/381)) ([64ecd27](https://github.com/CrowdStrike/falcon-mcp/commit/64ecd27e4a8359da2f2dcd93619d86d56dba2343)), closes [#375](https://github.com/CrowdStrike/falcon-mcp/issues/375)
+* **tools:** omit outputSchema from tools/list to fit client context budgets ([#376](https://github.com/CrowdStrike/falcon-mcp/issues/376)) ([943fe55](https://github.com/CrowdStrike/falcon-mcp/commit/943fe55952fa023a017ec769d237989d957f5740))
+
+
+### Refactoring
+
+* **modules:** standardize tool descriptions across all modules ([#385](https://github.com/CrowdStrike/falcon-mcp/issues/385)) ([939d62e](https://github.com/CrowdStrike/falcon-mcp/commit/939d62e4beaa8226d2b3e0ddcf4e8444b65abbab)), closes [#380](https://github.com/CrowdStrike/falcon-mcp/issues/380)
+
 ## [0.9.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.8.0...v0.9.0) (2026-04-10)
 
 
