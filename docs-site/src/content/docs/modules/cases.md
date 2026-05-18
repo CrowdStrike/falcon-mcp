@@ -31,7 +31,7 @@ evidence items. Returns the updated case record.
 
 **Example prompts:**
 
-- "Attach these detection alerts to the open case"
+- "Attach these detection alerts to the case"
 
 ### `falcon_add_case_event_evidence`
 
@@ -67,8 +67,8 @@ created case record.
 
 **Example prompts:**
 
-- "Create a high-severity case for the suspicious lateral movement investigation"
-- "Open a new case and attach these alert IDs as evidence"
+- "Create a critical case called 'Suspicious lateral movement from WORKSTATION-42'"
+- "Open a high-severity case for the credential theft alerts and attach them as evidence"
 
 ### `falcon_get_cases`
 
@@ -82,7 +82,7 @@ instead. Returns full case records.
 
 **Example prompts:**
 
-- "Get details for this case ID"
+- "Pull up the full details on that case"
 
 ### `falcon_list_case_templates`
 
@@ -96,7 +96,7 @@ configuration.
 
 **Example prompts:**
 
-- "Show me the available case templates"
+- "What case templates are available?"
 
 ### `falcon_manage_case_tags`
 
@@ -113,8 +113,8 @@ tags. Returns the updated case record.
 
 **Example prompts:**
 
-- "Tag this case with 'ransomware' and 'priority'"
-- "Remove the 'false-positive' tag from this case"
+- "Tag that case with 'ransomware' and 'escalated'"
+- "Remove the 'escalated' tag from that case"
 
 ### `falcon_search_cases`
 
@@ -129,8 +129,8 @@ status, severity, evidence, assigned user, and analysis results.
 
 **Example prompts:**
 
-- "Show me all open high-severity cases"
-- "Find cases assigned to me that are in progress"
+- "Show me any open cases with high severity or above"
+- "What cases have been created in the last 24 hours?"
 
 ### `falcon_update_case`
 
@@ -148,8 +148,8 @@ updated case record with incremented version.
 
 **Example prompts:**
 
-- "Close case ABC-1234"
-- "Assign this case to the SOC analyst and set severity to critical"
+- "Set that case to in_progress and assign it to the analyst"
+- "Close the case — investigation is complete"
 
 ## Resources
 
