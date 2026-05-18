@@ -24,57 +24,6 @@ This gives tools like Claude Desktop, VS Code, Gemini CLI, and custom agents dir
 | [Audit Firewall Rules](/falcon-mcp/modules/firewall/) | Search and manage Falcon firewall rule groups. |
 <!-- /component:card-grid -->
 
-## Quick Start
+Plus Real Time Response, Scheduled Reports, Shield, and more — [see all 16 modules](/falcon-mcp/modules/overview/).
 
-Install and run in under 5 minutes:
-
-```bash
-uv tool install falcon-mcp
-```
-
-Or run without installing:
-
-```bash
-uvx falcon-mcp
-```
-
-Connect to Claude Desktop, VS Code, or any MCP-compatible client:
-
-```json
-{
-  "mcpServers": {
-    "falcon-mcp": {
-      "command": "uvx",
-      "args": ["--env-file", "/path/to/.env", "falcon-mcp"]
-    }
-  }
-}
-```
-
-You'll need a `.env` file with your CrowdStrike API credentials:
-
-```bash
-FALCON_CLIENT_ID=your-client-id
-FALCON_CLIENT_SECRET=your-client-secret
-FALCON_BASE_URL=https://api.crowdstrike.com
-```
-
-## Deploy Anywhere
-
-- **Local** — run as a CLI tool via stdio, SSE, or streamable HTTP
-- **Docker** — pre-built image at `quay.io/crowdstrike/falcon-mcp`
-- **AWS Bedrock AgentCore** — available on the AWS Marketplace
-- **Google Cloud** — deploy to Cloud Run or Vertex AI Agent Engine
-
-<!-- layout:accent-image src:"/images/adversaries/spectral-kitten.png" class:"sdk-accent" -->
-
-## Go Deeper
-
-- [Installation](/falcon-mcp/getting-started/installation/)
-- [API Credentials](/falcon-mcp/getting-started/credentials/)
-- [Configuration](/falcon-mcp/getting-started/configuration/)
-- [All Modules](/falcon-mcp/modules/overview/)
-- [Transport Methods](/falcon-mcp/usage/transports/)
-- [Editor Integration](/falcon-mcp/usage/editor-integration/)
-- [Flight Control (MSSP)](/falcon-mcp/usage/flight-control/)
-- [View on GitHub](https://github.com/CrowdStrike/falcon-mcp)
+Ready to get started? Follow the [quickstart guide](/falcon-mcp/getting-started/quickstart/) to connect your first AI assistant in under 5 minutes.
