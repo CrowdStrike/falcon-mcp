@@ -24,6 +24,6 @@ This gives tools like Claude Desktop, VS Code, Gemini CLI, and custom agents dir
 | [Audit Firewall Rules](/falcon-mcp/modules/firewall/) | Search and manage Falcon firewall rule groups. |
 <!-- /component:card-grid -->
 
-Plus Real Time Response, Scheduled Reports, Shield, and more — [see all 16 modules](/falcon-mcp/modules/overview/).
+Plus Real Time Response, Scheduled Reports, Shield, and more — [see all modules](/falcon-mcp/modules/overview/).
 
 Ready to get started? Follow the [quickstart guide](/falcon-mcp/getting-started/quickstart/) to connect your first AI assistant in under 5 minutes.
