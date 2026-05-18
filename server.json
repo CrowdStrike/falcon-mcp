@@ -8,12 +8,12 @@
     "source": "github",
     "id": "999737146"
   },
-  "version": "0.9.0",
+  "version": "0.10.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "falcon-mcp",
-      "version": "0.9.0",
+      "version": "0.10.0",
       "runtimeHint": "uvx",
       "transport": {
         "type": "stdio"
@@ -62,7 +62,11 @@
           "description": "Transport protocol to use",
           "format": "string",
           "default": "stdio",
-          "choices": ["stdio", "sse", "streamable-http"],
+          "choices": [
+            "stdio",
+            "sse",
+            "streamable-http"
+          ],
           "isRequired": false,
           "isSecret": false
         },
