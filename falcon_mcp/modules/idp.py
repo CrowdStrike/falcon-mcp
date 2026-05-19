@@ -118,6 +118,25 @@ class IdpModule(BaseModule):
         """
         logger.debug("Starting comprehensive entity investigation")
 
+        # Resolve unset Pydantic Field defaults to avoid leaking FieldInfo objects (issue #384)
+        def _unwrap(value):
+            return value.default if hasattr(value, "default") else value
+
+        entity_ids = _unwrap(entity_ids)
+        entity_names = _unwrap(entity_names)
+        email_addresses = _unwrap(email_addresses)
+        ip_addresses = _unwrap(ip_addresses)
+        domain_names = _unwrap(domain_names)
+        investigation_types = _unwrap(investigation_types)
+        timeline_start_time = _unwrap(timeline_start_time)
+        timeline_end_time = _unwrap(timeline_end_time)
+        timeline_event_types = _unwrap(timeline_event_types)
+        relationship_depth = _unwrap(relationship_depth)
+        limit = _unwrap(limit)
+        include_associations = _unwrap(include_associations)
+        include_accounts = _unwrap(include_accounts)
+        include_incidents = _unwrap(include_incidents)
+
         # Step 1: Validate inputs
         validation_error = self._validate_entity_identifiers(
             entity_ids,

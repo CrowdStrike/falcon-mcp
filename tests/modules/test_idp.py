@@ -242,6 +242,30 @@ class TestIdpModule(TestModules):
         self.assertEqual(result["investigation_summary"]["entity_count"], 0)
         self.assertIn("search_criteria", result)
 
+    def test_investigate_entity_error_response_has_no_fieldinfo(self):
+        """Error responses must not leak raw Pydantic FieldInfo objects (issue #384)."""
+        from pydantic.fields import FieldInfo
+
+        # Empty entity resolution so the error path builds search_criteria
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"data": {"entities": {"nodes": []}}},
+        }
+        result = self.module.investigate_entity(entity_names=["NonExistent User"])
+
+        def assert_no_fieldinfo(obj):
+            if isinstance(obj, dict):
+                for value in obj.values():
+                    assert_no_fieldinfo(value)
+            elif isinstance(obj, list):
+                for value in obj:
+                    assert_no_fieldinfo(value)
+            else:
+                self.assertNotIsInstance(obj, FieldInfo)
+
+        assert_no_fieldinfo(result)
+        self.assertEqual(result["search_criteria"]["entity_ids"], None)
+        self.assertEqual(result["search_criteria"]["entity_names"], ["NonExistent User"])
 
     def test_investigate_entity_with_geographic_location_data(self):
         """Test entity investigation includes geographic location data in timeline analysis."""
