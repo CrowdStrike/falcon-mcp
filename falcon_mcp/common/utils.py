@@ -13,6 +13,11 @@ from .logging import get_logger
 logger = get_logger(__name__)
 
 
+def unwrap_field_default(value: Any) -> Any:
+    """Resolve a Pydantic FieldInfo object to its actual default value."""
+    return value.default if hasattr(value, "default") else value
+
+
 def filter_none_values(data: dict[str, Any]) -> dict[str, Any]:
     """Remove None values from a dictionary.
 

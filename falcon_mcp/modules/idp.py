@@ -14,7 +14,7 @@ from mcp.server import FastMCP
 from pydantic import Field
 
 from falcon_mcp.common.logging import get_logger
-from falcon_mcp.common.utils import sanitize_input
+from falcon_mcp.common.utils import sanitize_input, unwrap_field_default
 from falcon_mcp.modules.base import BaseModule
 
 logger = get_logger(__name__)
@@ -119,23 +119,20 @@ class IdpModule(BaseModule):
         logger.debug("Starting comprehensive entity investigation")
 
         # Resolve unset Pydantic Field defaults to avoid leaking FieldInfo objects (issue #384)
-        def _unwrap(value):
-            return value.default if hasattr(value, "default") else value
-
-        entity_ids = _unwrap(entity_ids)
-        entity_names = _unwrap(entity_names)
-        email_addresses = _unwrap(email_addresses)
-        ip_addresses = _unwrap(ip_addresses)
-        domain_names = _unwrap(domain_names)
-        investigation_types = _unwrap(investigation_types)
-        timeline_start_time = _unwrap(timeline_start_time)
-        timeline_end_time = _unwrap(timeline_end_time)
-        timeline_event_types = _unwrap(timeline_event_types)
-        relationship_depth = _unwrap(relationship_depth)
-        limit = _unwrap(limit)
-        include_associations = _unwrap(include_associations)
-        include_accounts = _unwrap(include_accounts)
-        include_incidents = _unwrap(include_incidents)
+        entity_ids = unwrap_field_default(entity_ids)
+        entity_names = unwrap_field_default(entity_names)
+        email_addresses = unwrap_field_default(email_addresses)
+        ip_addresses = unwrap_field_default(ip_addresses)
+        domain_names = unwrap_field_default(domain_names)
+        investigation_types = unwrap_field_default(investigation_types)
+        timeline_start_time = unwrap_field_default(timeline_start_time)
+        timeline_end_time = unwrap_field_default(timeline_end_time)
+        timeline_event_types = unwrap_field_default(timeline_event_types)
+        relationship_depth = unwrap_field_default(relationship_depth)
+        limit = unwrap_field_default(limit)
+        include_associations = unwrap_field_default(include_associations)
+        include_accounts = unwrap_field_default(include_accounts)
+        include_incidents = unwrap_field_default(include_incidents)
 
         # Step 1: Validate inputs
         validation_error = self._validate_entity_identifiers(
@@ -1045,10 +1042,7 @@ class IdpModule(BaseModule):
         relationship_results = []
 
         for entity_id in entity_ids:
-            # Handle FieldInfo objects - extract the actual value
-            relationship_depth = options.get("relationship_depth", 2)
-            if hasattr(relationship_depth, "default"):
-                relationship_depth = relationship_depth.default
+            relationship_depth = unwrap_field_default(options.get("relationship_depth", 2))
 
             graphql_query = self._build_relationship_analysis_query(
                 entity_id=entity_id,

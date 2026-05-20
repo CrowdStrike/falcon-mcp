@@ -4,6 +4,8 @@ Tests for the IDP (Identity Protection) module.
 
 import unittest
 
+from pydantic.fields import FieldInfo
+
 from falcon_mcp.modules.idp import IdpModule
 from tests.modules.utils.test_modules import TestModules
 
@@ -244,8 +246,6 @@ class TestIdpModule(TestModules):
 
     def test_investigate_entity_error_response_has_no_fieldinfo(self):
         """Error responses must not leak raw Pydantic FieldInfo objects (issue #384)."""
-        from pydantic.fields import FieldInfo
-
         # Empty entity resolution so the error path builds search_criteria
         self.mock_client.command.return_value = {
             "status_code": 200,
@@ -266,6 +266,34 @@ class TestIdpModule(TestModules):
         assert_no_fieldinfo(result)
         self.assertEqual(result["search_criteria"]["entity_ids"], None)
         self.assertEqual(result["search_criteria"]["entity_names"], ["NonExistent User"])
+
+    def test_investigate_entity_zero_args_no_fieldinfo_leak(self):
+        """Zero-argument call must not leak FieldInfo objects in the error response."""
+        result = self.module.investigate_entity()
+
+        # Verify validation error returned
+        self.assertIn("error", result)
+        self.assertIn("investigation_summary", result)
+        self.assertEqual(result["investigation_summary"]["status"], "failed")
+
+        # Verify investigation_types resolved to actual default, not FieldInfo
+        self.assertEqual(
+            result["investigation_summary"]["investigation_types"],
+            ["entity_details"],
+        )
+
+        # Recursive check: no FieldInfo objects anywhere in the response
+        def assert_no_fieldinfo(obj):
+            if isinstance(obj, dict):
+                for value in obj.values():
+                    assert_no_fieldinfo(value)
+            elif isinstance(obj, list):
+                for value in obj:
+                    assert_no_fieldinfo(value)
+            else:
+                self.assertNotIsInstance(obj, FieldInfo)
+
+        assert_no_fieldinfo(result)
 
     def test_investigate_entity_with_geographic_location_data(self):
         """Test entity investigation includes geographic location data in timeline analysis."""
