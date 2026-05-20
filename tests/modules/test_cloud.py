@@ -98,7 +98,7 @@ class TestCloudModule(TestModules):
         }
         self.mock_client.command.return_value = mock_response
 
-        result = self.module.search_kubernetes_containers(filter="invalid_filter")
+        result = self.module.count_kubernetes_containers(filter="invalid_filter")
 
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)

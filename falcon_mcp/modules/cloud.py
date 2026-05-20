@@ -243,13 +243,12 @@ class CloudModule(BaseModule):
         result = handle_api_response(
             response,
             operation=operation,
-            error_message="Failed to perform operation",
-            default_result=[],
+            error_message="Failed to count Kubernetes containers",
+            default_result=0,
         )
 
-        # ReadContainerCount returns [{"count": N}]; extract the count to match the -> int contract
         if isinstance(result, list) and result and isinstance(result[0], dict):
-            return result[0].get("count", 0)
+            return result[0].get("count") or 0
         return result
 
     def search_images_vulnerabilities(
