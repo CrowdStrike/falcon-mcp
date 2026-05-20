@@ -1,9 +1,4 @@
-"""
-Correlation Rules module for Falcon MCP Server.
-
-This module provides tools for searching, creating, updating, publishing, and deleting
-NG-SIEM Correlation Rules using the CrowdStrike Correlation Rules API.
-"""
+"""Correlation Rules module for Falcon MCP Server."""
 
 from typing import Any
 
@@ -12,7 +7,7 @@ from mcp.server.fastmcp.resources import TextResource
 from mcp.types import ToolAnnotations
 from pydantic import AnyUrl, Field
 
-from falcon_mcp.common.errors import _format_error_response
+from falcon_mcp.common.errors import _format_error_response, handle_api_response
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.correlation_rules import SEARCH_CORRELATION_RULES_FQL_DOCUMENTATION
@@ -24,21 +19,10 @@ class CorrelationRulesModule(BaseModule):
     """Module for managing NG-SIEM Correlation Rules."""
 
     def register_tools(self, server: FastMCP) -> None:
-        """Register tools with the MCP server.
-
-        Args:
-            server: MCP server instance
-        """
         self._add_tool(
             server=server,
             method=self.search_correlation_rules,
             name="search_correlation_rules",
-        )
-
-        self._add_tool(
-            server=server,
-            method=self.get_correlation_rules,
-            name="get_correlation_rules",
         )
 
         self._add_tool(
@@ -77,44 +61,9 @@ class CorrelationRulesModule(BaseModule):
             ),
         )
 
-        self._add_tool(
-            server=server,
-            method=self.publish_correlation_rule,
-            name="publish_correlation_rule",
-            annotations=ToolAnnotations(
-                readOnlyHint=False,
-                destructiveHint=False,
-                idempotentHint=True,
-                openWorldHint=True,
-            ),
-        )
-
-        self._add_tool(
-            server=server,
-            method=self.export_correlation_rules,
-            name="export_correlation_rules",
-        )
-
-        self._add_tool(
-            server=server,
-            method=self.import_correlation_rule,
-            name="import_correlation_rule",
-            annotations=ToolAnnotations(
-                readOnlyHint=False,
-                destructiveHint=False,
-                idempotentHint=False,
-                openWorldHint=True,
-            ),
-        )
-
     def register_resources(self, server: FastMCP) -> None:
-        """Register resources with the MCP server.
-
-        Args:
-            server: MCP server instance
-        """
         fql_resource = TextResource(
-            uri=AnyUrl("falcon://correlation-rules/fql-guide"),
+            uri=AnyUrl("falcon://correlation-rules/search/fql-guide"),
             name="falcon_search_correlation_rules_fql_guide",
             description="Contains the guide for the `filter` param of the `falcon_search_correlation_rules` tool.",
             text=SEARCH_CORRELATION_RULES_FQL_DOCUMENTATION,
@@ -125,8 +74,8 @@ class CorrelationRulesModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression. See `falcon://correlation-rules/fql-guide` for syntax.",
-            examples={"status:'enabled'+severity:>50", "tactic:'Execution'"},
+            description="FQL filter expression. See `falcon://correlation-rules/search/fql-guide` for syntax.",
+            examples={"status:'active'+severity:>50", "tactic:'TA0001'"},
         ),
         limit: int = Field(
             default=20,
@@ -141,18 +90,15 @@ class CorrelationRulesModule(BaseModule):
         sort: str | None = Field(
             default=None,
             description="Sort rules using FQL sort syntax. Example: 'last_updated_on.desc'",
-            examples={"last_updated_on.desc", "name.asc", "severity.desc"},
-        ),
-        q: str | None = Field(
-            default=None,
-            description="Free-text match query that searches across all string fields.",
+            examples={"last_updated_on.desc", "created_on.asc"},
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search NG-SIEM Correlation Rules and return full rule details.
 
         Use this to find detection rules by name, status, severity, or MITRE tactic/technique.
-        Consult falcon://correlation-rules/fql-guide before constructing filter expressions.
-        Returns full rule objects including search logic, notifications, and versioning info.
+        Consult falcon://correlation-rules/search/fql-guide before constructing filter expressions.
+        Returns full rule objects including all versions; filter with state:'published' to get
+        one result per rule. Returns search logic, schedule, and versioning info.
         """
         result = self._base_search_api_call(
             operation="combined_rules_get_v2",
@@ -161,7 +107,6 @@ class CorrelationRulesModule(BaseModule):
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
-                "q": q,
             },
             error_message="Failed to search Correlation Rules",
         )
@@ -178,76 +123,49 @@ class CorrelationRulesModule(BaseModule):
 
         return result
 
-    def get_correlation_rules(
-        self,
-        ids: list[str] = Field(
-            description="Rule IDs to retrieve. Use `falcon_search_correlation_rules` to find IDs.",
-        ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve NG-SIEM Correlation Rules by ID.
-
-        Use this when you already have rule IDs and need full details. For discovery by name,
-        status, or severity use falcon_search_correlation_rules instead.
-        Returns full rule objects including search logic, notifications, and version history.
-        """
-        if not ids:
-            return [
-                _format_error_response(
-                    "`ids` must be provided to retrieve Correlation Rules.",
-                    operation="entities_rules_get_v2",
-                )
-            ]
-
-        result = self._base_get_by_ids(
-            operation="entities_rules_get_v2",
-            ids=ids,
-            use_params=True,
-        )
-
-        if self._is_error(result):
-            return [result]
-
-        return result
-
     def create_correlation_rule(
         self,
+        customer_id: str = Field(
+            description="CID of the tenant to create the rule in.",
+        ),
         name: str = Field(
             description="Name for the new detection rule.",
             examples={"Suspicious PowerShell Encoding", "Lateral Movement via WMI"},
         ),
-        filter: str = Field(
+        search_filter: str = Field(
             description=(
-                "CQL (LogScale) query that defines the detection logic. "
-                "This is the search expression evaluated against NG-SIEM events. "
+                "CQL query that defines the detection logic evaluated against NG-SIEM events. "
                 "Example: '#event_simpleName=ProcessRollup2 | CommandLine=*-EncodedCommand*'"
             ),
         ),
         severity: int = Field(
-            ge=0,
-            le=100,
-            description="Severity score for alerts generated by this rule (0-100). Higher is more severe.",
-            examples={25, 50, 75, 100},
+            description="Severity score for alerts generated by this rule. Must be one of: 10, 30, 50, 70, 90.",
+            examples={10, 30, 50, 70, 90},
         ),
-        status: str = Field(
-            default="enabled",
-            description="Initial rule status. Allowed values: enabled, disabled.",
-            examples={"enabled", "disabled"},
+        search_outcome: str = Field(
+            default="detection",
+            description="Outcome type for rule matches.",
+            examples={"detection", "case"},
         ),
         lookback: str = Field(
-            default="1h",
-            description=(
-                "Lookback window for event aggregation. "
-                "Examples: '15m', '1h', '24h', '7d'."
-            ),
-            examples={"15m", "1h", "6h", "24h"},
+            default="1h0m",
+            description="Lookback window for event aggregation. Example: '1h0m', '24h0m'.",
+            examples={"1h0m", "24h0m", "7d0h0m"},
+        ),
+        schedule: str = Field(
+            default="@every 1h0m",
+            description="Schedule definition for rule evaluation (minimum: @every 0h5m). Example: '@every 1h0m'.",
+            examples={"@every 1h0m", "@every 0h5m", "@every 24h0m"},
+        ),
+        status: str = Field(
+            default="active",
+            description="Initial rule status.",
+            examples={"active", "inactive"},
         ),
         trigger_mode: str = Field(
-            default="match_all",
-            description=(
-                "When to trigger an alert. Allowed values: match_all (trigger on every match), "
-                "threshold (trigger when match count exceeds a threshold)."
-            ),
-            examples={"match_all", "threshold"},
+            default="summary",
+            description="How alerts are triggered per evaluation window.",
+            examples={"summary", "per_event"},
         ),
         description: str | None = Field(
             default=None,
@@ -255,8 +173,8 @@ class CorrelationRulesModule(BaseModule):
         ),
         tactic: str | None = Field(
             default=None,
-            description="MITRE ATT&CK tactic name. Example: 'Execution'",
-            examples={"Execution", "Persistence", "Lateral Movement", "Exfiltration"},
+            description="MITRE ATT&CK tactic ID. Example: 'TA0001'",
+            examples={"TA0001", "TA0002", "TA0008"},
         ),
         technique: str | None = Field(
             default=None,
@@ -270,20 +188,28 @@ class CorrelationRulesModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Create a new NG-SIEM Correlation Rule.
 
-        Defines a CQL-based detection rule that runs continuously against NG-SIEM event data.
-        The filter field contains the LogScale/CQL query — consult NG-SIEM query syntax before
-        submitting. After creation, use falcon_publish_correlation_rule to make it active.
+        Wraps a user-provided CQL query as a scheduled detection rule. The caller must
+        supply the CQL query — use falcon_search_ngsiem to test queries before creating rules.
+        Returns the created rule record on success.
         """
         body: dict[str, Any] = {
+            "customer_id": customer_id,
             "name": name,
+            "severity": severity,
+            "status": status,
             "search": {
-                "filter": filter,
+                "filter": search_filter,
+                "outcome": search_outcome,
                 "lookback": lookback,
                 "trigger_mode": trigger_mode,
             },
-            "severity": severity,
-            "status": status,
+            "operation": {
+                "schedule": {
+                    "definition": schedule,
+                }
+            },
         }
+
         if description is not None:
             body["description"] = description
         if tactic is not None:
@@ -307,8 +233,8 @@ class CorrelationRulesModule(BaseModule):
 
     def update_correlation_rule(
         self,
-        id: str = Field(
-            description="ID of the rule to update. Retrieve from `falcon_search_correlation_rules`.",
+        rule_id: str = Field(
+            description="Rule ID to update. Retrieve from `falcon_search_correlation_rules`.",
         ),
         name: str | None = Field(
             default=None,
@@ -320,30 +246,33 @@ class CorrelationRulesModule(BaseModule):
         ),
         status: str | None = Field(
             default=None,
-            description="New status. Allowed values: enabled, disabled.",
-            examples={"enabled", "disabled"},
+            description="New status.",
+            examples={"active", "inactive"},
         ),
         severity: int | None = Field(
             default=None,
-            ge=0,
-            le=100,
-            description="New severity score (0-100).",
+            description="New severity score. Must be one of: 10, 30, 50, 70, 90.",
         ),
-        filter: str | None = Field(
+        search_filter: str | None = Field(
             default=None,
             description="Updated CQL query for the detection logic.",
         ),
         lookback: str | None = Field(
             default=None,
-            description="Updated lookback window. Examples: '1h', '24h'.",
+            description="Updated lookback window. Example: '1h0m', '24h0m'.",
+        ),
+        trigger_mode: str | None = Field(
+            default=None,
+            description="Updated trigger mode.",
+            examples={"summary", "per_event"},
         ),
         tactic: str | None = Field(
             default=None,
-            description="Updated MITRE ATT&CK tactic name.",
+            description="Updated MITRE ATT&CK tactic ID. Example: 'TA0001'",
         ),
         technique: str | None = Field(
             default=None,
-            description="Updated MITRE ATT&CK technique ID.",
+            description="Updated MITRE ATT&CK technique ID. Example: 'T1059'",
         ),
         comment: str | None = Field(
             default=None,
@@ -352,11 +281,12 @@ class CorrelationRulesModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Update an existing NG-SIEM Correlation Rule.
 
-        Modify rule properties such as name, severity, status, or detection logic.
-        Only fields provided are updated; omitted fields retain their current values.
-        Use falcon_search_correlation_rules to retrieve the rule ID.
+        Modifies fields on the rule and auto-publishes a new version — no separate publish
+        step needed. To enable/disable a rule, set status to 'active' or 'inactive'.
+        Only provided fields are changed; omitted fields retain current values.
         """
-        body: dict[str, Any] = {"id": id}
+        # PATCH API takes rule_id in the "id" body field
+        body: dict[str, Any] = {"id": rule_id}
 
         if name is not None:
             body["name"] = name
@@ -373,17 +303,22 @@ class CorrelationRulesModule(BaseModule):
         if technique is not None:
             body["technique"] = technique
 
-        if filter is not None or lookback is not None:
+        if search_filter is not None or lookback is not None or trigger_mode is not None:
             search: dict[str, Any] = {}
-            if filter is not None:
-                search["filter"] = filter
+            if search_filter is not None:
+                search["filter"] = search_filter
             if lookback is not None:
                 search["lookback"] = lookback
+            if trigger_mode is not None:
+                search["trigger_mode"] = trigger_mode
             body["search"] = search
 
-        result = self._base_query_api_call(
+        # PATCH endpoint requires body as a list of rule dicts
+        response = self.client.command("entities_rules_patch_v1", body=[body])
+
+        result = handle_api_response(
+            response,
             operation="entities_rules_patch_v1",
-            body_params=body,
             error_message="Failed to update Correlation Rule",
             default_result=[],
         )
@@ -396,17 +331,18 @@ class CorrelationRulesModule(BaseModule):
     def delete_correlation_rules(
         self,
         ids: list[str] = Field(
-            description="IDs of the rules to delete. Retrieve from `falcon_search_correlation_rules`.",
+            description="Rule IDs to delete. Retrieve from `falcon_search_correlation_rules`.",
         ),
         comment: str | None = Field(
             default=None,
             description="Audit comment explaining why the rules are being deleted.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Delete NG-SIEM Correlation Rules by ID.
+        """Permanently delete NG-SIEM Correlation Rules by rule ID.
 
-        Permanently removes the specified rules. Use falcon_search_correlation_rules to find
-        rule IDs before deleting. This action cannot be undone.
+        Removes the specified rules and all their versions. This action cannot be undone —
+        use falcon_search_correlation_rules to confirm IDs before deleting. Returns an
+        empty list on success.
         """
         if not ids:
             return [
@@ -416,108 +352,10 @@ class CorrelationRulesModule(BaseModule):
                 )
             ]
 
-        query_params: dict[str, Any] = {"ids": ids}
-        if comment is not None:
-            query_params["comment"] = comment
-
         result = self._base_query_api_call(
             operation="entities_rules_delete_v1",
-            query_params=query_params,
+            query_params={"ids": ids, "comment": comment},
             error_message="Failed to delete Correlation Rules",
-            default_result=[],
-        )
-
-        if self._is_error(result):
-            return [result]
-
-        return result
-
-    def publish_correlation_rule(
-        self,
-        id: str = Field(
-            description=(
-                "Version ID of the rule to publish. "
-                "Retrieve the version ID from `falcon_search_correlation_rules` or `falcon_get_correlation_rules`."
-            ),
-        ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Publish an NG-SIEM Correlation Rule version to make it active.
-
-        Promotes a draft or updated rule version so it begins evaluating live event data.
-        Use falcon_search_correlation_rules to find the rule version ID to publish.
-        """
-        result = self._base_query_api_call(
-            operation="entities_rule_versions_publish_patch_v1",
-            body_params={"id": id},
-            error_message="Failed to publish Correlation Rule version",
-            default_result=[],
-        )
-
-        if self._is_error(result):
-            return [result]
-
-        return result
-
-    def export_correlation_rules(
-        self,
-        filter: str | None = Field(
-            default=None,
-            description="FQL filter to select which rules to export. Exports all rules if omitted.",
-            examples={"status:'enabled'", "tactic:'Execution'"},
-        ),
-        get_latest: bool = Field(
-            default=True,
-            description="Export only the latest version of each rule.",
-        ),
-        report_format: str = Field(
-            default="json",
-            description="Export format. Allowed values: json, yaml.",
-            examples={"json", "yaml"},
-        ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Export NG-SIEM Correlation Rules in JSON or YAML format.
-
-        Use this to back up rules, migrate them between environments, or review rule
-        logic in bulk. Returns the exported rule data as structured content.
-        """
-        body: dict[str, Any] = {
-            "get_latest": get_latest,
-            "report_format": report_format,
-        }
-        if filter is not None:
-            body["filter"] = filter
-
-        result = self._base_query_api_call(
-            operation="entities_rule_versions_export_post_v1",
-            body_params=body,
-            error_message="Failed to export Correlation Rules",
-            default_result=[],
-        )
-
-        if self._is_error(result):
-            return [result]
-
-        return result
-
-    def import_correlation_rule(
-        self,
-        rule: dict[str, Any] = Field(
-            description=(
-                "Rule definition to import. Must be a valid Correlation Rule object, "
-                "such as one produced by `falcon_export_correlation_rules`."
-            ),
-        ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Import an NG-SIEM Correlation Rule from a rule definition object.
-
-        Use this to restore a previously exported rule or migrate a rule from another
-        environment. The rule object should match the format produced by
-        falcon_export_correlation_rules.
-        """
-        result = self._base_query_api_call(
-            operation="entities_rule_versions_import_post_v1",
-            body_params=rule,
-            error_message="Failed to import Correlation Rule",
             default_result=[],
         )
 

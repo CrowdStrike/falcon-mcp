@@ -87,6 +87,21 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_list_case_templates": [
         "What case templates are available?",
     ],
+    # Correlation Rules
+    "falcon_search_correlation_rules": [
+        "Show me all active high-severity correlation rules",
+        "Find correlation rules covering lateral movement tactics",
+    ],
+    "falcon_create_correlation_rule": [
+        "Create a correlation rule using this CQL query: #event_simpleName=ProcessRollup2 | CommandLine=*-EncodedCommand*",
+    ],
+    "falcon_update_correlation_rule": [
+        "Disable the correlation rule — set its status to inactive",
+        "Update the rule severity to critical (90)",
+    ],
+    "falcon_delete_correlation_rules": [
+        "Delete the test correlation rule we created",
+    ],
     # Cloud
     "falcon_search_kubernetes_containers": [
         "Find all containers running in AWS clusters",

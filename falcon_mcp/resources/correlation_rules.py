@@ -4,122 +4,216 @@ Contains Correlation Rules resources.
 
 from falcon_mcp.common.utils import generate_md_table
 
+# List of tuples containing filter options data: (name, type, description)
 SEARCH_CORRELATION_RULES_FQL_FILTERS = [
     (
-        "Field",
+        "Name",
         "Type",
         "Description",
     ),
     (
         "name",
         "String",
-        "Name of the rule. Example: name:'Suspicious PowerShell'",
+        """
+        Rule name. Supports exact and wildcard match.
+        Ex: name:'Suspicious PowerShell', name:~'PowerShell'
+        """
     ),
     (
         "status",
         "String",
-        "Rule status. Allowed values: enabled, disabled. Example: status:'enabled'",
+        """
+        Rule execution status. Possible values:
+        - active: Rule is enabled and running
+        - inactive: Rule is disabled
+        Ex: status:'active'
+        """
+    ),
+    (
+        "state",
+        "String",
+        """
+        Version state of the rule. Possible values:
+        - published: Rule is live and active
+        - unpublished: Rule exists but is not published
+        - draft: Rule is in draft and not yet published
+        Ex: state:'published'
+        """
     ),
     (
         "severity",
         "Integer",
-        "Rule severity (0-100). Example: severity:>50",
+        """
+        Severity score of the rule. Valid values:
+        10 (Informational), 30 (Low), 50 (Medium), 70 (High), 90 (Critical).
+        Supports range operators.
+        Ex: severity:>50, severity:>=70
+        """
+    ),
+    (
+        "type",
+        "String",
+        """
+        Rule type. Possible values:
+        - correlation: Standard correlation rule
+        - behavioral: Behavioral detection rule
+        Ex: type:'correlation'
+        """
     ),
     (
         "tactic",
         "String",
-        "MITRE ATT&CK tactic. Example: tactic:'Execution'",
+        """
+        MITRE ATT&CK tactic ID. Uses ATT&CK tactic IDs,
+        not names.
+        Ex: tactic:'TA0001', tactic:'TA0002'
+        """
     ),
     (
         "technique",
         "String",
-        "MITRE ATT&CK technique. Example: technique:'T1059'",
+        """
+        MITRE ATT&CK technique ID.
+        Ex: technique:'T1059', technique:'T1003'
+        """
     ),
     (
-        "created_on",
-        "Timestamp",
-        "Creation timestamp. Example: created_on:>'2024-01-01T00:00:00Z'",
-    ),
-    (
-        "last_updated_on",
-        "Timestamp",
-        "Last modification timestamp. Example: last_updated_on:>'2024-06-01T00:00:00Z'",
-    ),
-    (
-        "customer_id",
+        "description",
         "String",
-        "CID of the tenant. Example: customer_id:'abc123'",
+        """
+        Rule description text. Supports wildcard match.
+        Ex: description:~'lateral movement'
+        """
+    ),
+    (
+        "version",
+        "Integer",
+        """
+        Rule version number. Supports range operators.
+        Ex: version:>1
+        """
     ),
     (
         "user_id",
         "String",
-        "ID of the user who created or owns the rule.",
+        """
+        ID of the user who created or owns the rule.
+        Ex: user_id:'api_client'
+        """
     ),
     (
-        "user_uuid",
-        "String",
-        "UUID of the user who created or owns the rule.",
+        "created_on",
+        "Timestamp",
+        """
+        Creation timestamp. Supports range operators.
+        Ex: created_on:>'2025-01-01'
+        """
+    ),
+    (
+        "last_updated_on",
+        "Timestamp",
+        """
+        Last modification timestamp. Supports range operators.
+        Ex: last_updated_on:>'2025-06-01'
+        """
     ),
 ]
 
-_SORT_FIELDS = """
-**Sort fields:** name, status, severity, created_on, last_updated_on
+SEARCH_CORRELATION_RULES_FQL_DOCUMENTATION = r"""Falcon Query Language (FQL) - Search Correlation Rules Guide
 
-**Sort formats:** `field.asc`, `field.desc`, `field|asc`, `field|desc`
+=== BASIC SYNTAX ===
+field_name:[operator]'value'
 
-**Example:** `last_updated_on.desc`
-"""
+=== OPERATORS ===
+• = (default): field_name:'value'
+• ~: field_name:~'partial' (contains match, case insensitive)
+• >, >=, <, <=: field_name:>50 (comparison for numbers/timestamps)
+• !: field_name:!'value' (not equal)
 
-_FQL_OPERATORS = """
-**FQL Operators:**
-- Equality: `field:'value'`
-- Wildcard: `field:*'partial*'`
-- Range: `field:>'value'`, `field:<'value'`
-- Integer range: `field:>50`
-- Boolean: `field:true` or `field:false`
-- AND: `+` (e.g., `status:'enabled'+severity:>50`)
-- OR: `,` (e.g., `tactic:'Execution',tactic:'Persistence'`)
-"""
+=== DATA TYPES ===
+• String: 'value'
+• Integer: 50 (no quotes)
+• Timestamp: 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM:SSZ'
 
-SEARCH_CORRELATION_RULES_FQL_DOCUMENTATION = f"""
-# NG-SIEM Correlation Rules FQL Filter Guide
+=== COMBINING ===
+• + = AND: status:'active'+severity:>50
+• , = OR: tactic:'TA0001',tactic:'TA0002'
 
-Use FQL (Falcon Query Language) to filter rules returned by `falcon_search_correlation_rules`.
+=== SORT OPTIONS ===
+Sort fields: created_on, last_updated_on, name, severity, status
+Sort formats: 'field.asc', 'field.desc', 'field|asc', 'field|desc'
+Example: 'last_updated_on.desc'
 
-## Filter Fields
+=== SEVERITY SCORES ===
+• 10 = Informational
+• 30 = Low
+• 50 = Medium
+• 70 = High
+• 90 = Critical
 
-{generate_md_table(SEARCH_CORRELATION_RULES_FQL_FILTERS)}
+Use range operators for severity:
+• High and above: severity:>=70
+• Medium and above: severity:>=50
+• Critical only: severity:>=90
 
-## Operators & Syntax
-{_FQL_OPERATORS}
+=== STATUS vs STATE ===
+These are distinct fields:
+• status: execution state — 'active' or 'inactive'
+• state: version lifecycle — 'published', 'unpublished', or 'draft'
 
-## Sort Options
-{_SORT_FIELDS}
+A rule can be active but unpublished, or published but inactive.
 
-## Examples
+=== TACTIC FORMAT ===
+Tactic field uses MITRE ATT&CK tactic IDs (TA####), not names.
+• ✅ Correct: tactic:'TA0001'
+• ❌ Wrong: tactic:'Execution'
 
-Search for enabled rules:
-```
-status:'enabled'
-```
+Common tactic IDs:
+• TA0001: Initial Access
+• TA0002: Execution
+• TA0003: Persistence
+• TA0004: Privilege Escalation
+• TA0005: Defense Evasion
+• TA0006: Credential Access
+• TA0007: Discovery
+• TA0008: Lateral Movement
+• TA0009: Collection
+• TA0010: Exfiltration
+• TA0011: Command and Control
 
-Search for high-severity rules with a MITRE tactic:
-```
-severity:>75+tactic:'Execution'
-```
+=== falcon_search_correlation_rules FQL filter available fields ===
 
-Search for rules updated recently:
-```
-last_updated_on:>'2024-01-01T00:00:00Z'
-```
+""" + generate_md_table(SEARCH_CORRELATION_RULES_FQL_FILTERS) + """
 
-Search for rules by name pattern:
-```
-name:*'PowerShell*'
-```
+=== FILTER EXAMPLES ===
 
-Search for rules covering a specific technique:
-```
+# Active high-severity rules
+status:'active'+severity:>=70
+
+# Published rules covering a MITRE tactic
+state:'published'+tactic:'TA0001'
+
+# Recently updated published rules
+state:'published'+last_updated_on:>'2025-01-01'
+
+# Rules by name (wildcard)
+name:~'PowerShell'
+
+# Critical active rules
+status:'active'+severity:>=90
+
+# Rules for a specific technique
 technique:'T1059'
-```
+
+# Active rules covering lateral movement or credential access
+status:'active'+(tactic:'TA0008',tactic:'TA0006')
+
+# High-severity active rules updated recently
+status:'active'+severity:>=70+last_updated_on:>'2025-01-01'
+
+# Draft rules (in progress, not yet published)
+state:'draft'
+
+# Only correlation type rules (exclude behavioral)
+type:'correlation'+status:'active'
 """
