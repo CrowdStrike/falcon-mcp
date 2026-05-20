@@ -223,7 +223,7 @@ class CloudModule(BaseModule):
 
         Use this for aggregate counts without returning full container details. Consult
         falcon://cloud/kubernetes-containers/fql-guide before constructing filter
-        expressions.
+        expressions. Returns the matching container count as an integer.
         """
 
         # Prepare parameters
