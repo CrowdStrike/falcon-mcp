@@ -76,7 +76,7 @@ class TestCloudModule(TestModules):
         self.assertIn("details", result)
 
     def test_count_kubernetes_containers(self):
-        """Test count for kubernetes containers returns an int (issue #382)."""
+        """Test count for kubernetes containers returns an int."""
         mock_response = {"status_code": 200, "body": {"resources": [{"count": 500}]}}
         self.mock_client.command.return_value = mock_response
 
