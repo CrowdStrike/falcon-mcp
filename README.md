@@ -39,6 +39,7 @@ Full docs are available at **[crowdstrike.github.io/falcon-mcp](https://crowdstr
 | [NGSIEM](https://crowdstrike.github.io/falcon-mcp/modules/ngsiem/) | Execute CQL queries against Next-Gen SIEM |
 | [Quarantine](https://crowdstrike.github.io/falcon-mcp/modules/quarantine/) | Search quarantine records, preview action counts, and release, unrelease, or delete quarantined files |
 | [Real Time Response](https://crowdstrike.github.io/falcon-mcp/modules/rtr/) | Audit, summarize, and run read-only RTR triage workflows |
+| [Real Time Response Admin](https://crowdstrike.github.io/falcon-mcp/modules/rtr-admin/) | Inspect RTR Admin assets, classify command risk, preview payloads, and execute approved admin workflows |
 | [Scheduled Reports](https://crowdstrike.github.io/falcon-mcp/modules/scheduled-reports/) | Manage scheduled reports and download report files |
 | [Sensor Usage](https://crowdstrike.github.io/falcon-mcp/modules/sensor-usage/) | Access and analyze sensor usage data |
 | [Serverless](https://crowdstrike.github.io/falcon-mcp/modules/serverless/) | Search for vulnerabilities in serverless functions |

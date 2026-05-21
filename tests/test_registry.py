@@ -87,6 +87,13 @@ class TestRegistry(unittest.TestCase):
         for module_class in registry.AVAILABLE_MODULES.values():
             self.assertTrue(issubclass(module_class, BaseModule))
 
+    def test_module_name_override(self):
+        """Test modules can override the discovered registry key."""
+        registry.discover_modules()
+
+        self.assertIn("rtr_admin", registry.AVAILABLE_MODULES)
+        self.assertNotIn("rtradmin", registry.AVAILABLE_MODULES)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -90,6 +90,15 @@ API_SCOPE_REQUIREMENTS = {
     "RTR_ListFilesV2": ["Real time response:write"],
     "RTRAuditSessions": ["real-time-response-audit:read"],
     "RTR_AggregateSessions": ["Real time response:read"],
+    # Real Time Response Admin operations
+    "RTR_ListScripts": ["Real time response (admin):write"],
+    "RTR_GetScriptsV2": ["Real time response (admin):write"],
+    "RTR_ListFalconScripts": ["Real time response (admin):write"],
+    "RTR_GetFalconScripts": ["Real time response (admin):write"],
+    "RTR_ListPut_Files": ["Real time response (admin):write"],
+    "RTR_GetPut_FilesV2": ["Real time response (admin):write"],
+    "RTR_CheckAdminCommandStatus": ["Real time response (admin):write"],
+    "RTR_ExecuteAdminCommand": ["Real time response (admin):write"],
     # Quarantine operations
     "QueryQuarantineFiles": ["Quarantined Files:read"],
     "GetQuarantineFiles": ["Quarantined Files:read"],

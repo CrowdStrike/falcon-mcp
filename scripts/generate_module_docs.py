@@ -45,6 +45,11 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     "idp": {
         "title": "Identity Protection",
     },
+    "rtr_admin": {
+        "title": "Real Time Response Admin",
+        "slug": "rtr-admin",
+        "description": "Inspect RTR Admin assets, classify command risk, preview payloads, and execute approved single-host admin workflows.",
+    },
     "scheduledreports": {
         "slug": "scheduled-reports",
     },
@@ -389,6 +394,38 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_delete_rtr_session": [
         "End the RTR session abc123",
     ],
+    # Real Time Response Admin
+    "falcon_search_rtr_admin_scripts": [
+        "Find Windows RTR Admin scripts with triage in the name",
+        "Show me private custom RTR scripts I could review for this host",
+    ],
+    "falcon_get_rtr_admin_script_details": [
+        "Pull the details for that RTR Admin script ID",
+    ],
+    "falcon_search_rtr_falcon_scripts": [
+        "Find CrowdStrike-provided Falcon scripts for Windows collection",
+    ],
+    "falcon_get_rtr_falcon_script_details": [
+        "Show me the details for that Falcon script",
+    ],
+    "falcon_search_rtr_put_files": [
+        "Search RTR put-files with collector in the name",
+    ],
+    "falcon_get_rtr_put_file_details": [
+        "Get metadata for this RTR put-file ID",
+    ],
+    "falcon_check_rtr_admin_command_status": [
+        "Check the output for this RTR Admin cloud request ID",
+    ],
+    "falcon_classify_rtr_admin_command": [
+        "Classify this RTR Admin command before I decide whether to run it",
+    ],
+    "falcon_preview_rtr_admin_command": [
+        "Preview the exact RTR Admin payload for this command before running it",
+    ],
+    "falcon_execute_rtr_admin_command": [
+        "Run this approved RTR Admin command against the existing RTR session",
+    ],
 }
 
 # Lines matching these patterns are stripped from docstrings
@@ -471,7 +508,11 @@ def discover_module_classes() -> dict[str, dict[str, Any]]:
         for attr_name in dir(mod):
             if attr_name.endswith("Module") and attr_name != "BaseModule":
                 cls = getattr(mod, attr_name)
-                module_key = attr_name.lower().replace("module", "")
+                module_key = getattr(
+                    cls,
+                    "MODULE_NAME",
+                    attr_name.lower().replace("module", ""),
+                )
                 result[module_key] = {
                     "cls": cls,
                     "auto_title": auto_title or module_key.title(),

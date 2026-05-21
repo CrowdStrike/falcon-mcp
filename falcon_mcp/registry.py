@@ -39,8 +39,13 @@ def discover_modules() -> None:
                 if attr_name.endswith("Module") and attr_name != "BaseModule":
                     # Get the class
                     module_class = getattr(module, attr_name)
-                    # Register it
-                    module_name = attr_name.lower().replace("module", "")
+                    # Register it. Modules may override the discovered name when
+                    # CamelCase would produce an awkward CLI/module key.
+                    module_name = getattr(
+                        module_class,
+                        "MODULE_NAME",
+                        attr_name.lower().replace("module", ""),
+                    )
                     AVAILABLE_MODULES[module_name] = module_class
                     logger.debug("Discovered module: %s", module_name)
 
