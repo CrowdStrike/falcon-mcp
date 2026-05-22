@@ -143,7 +143,14 @@ class TestDynamicToolCatalog(unittest.TestCase):
 
     def test_filter_hints_registry_covers_search_tools(self):
         """Verify that all tools with FQL filter params have hints registered."""
-        catalog = DynamicToolCatalog(self.modules)
+        from falcon_mcp.client import FalconClient
+
+        mock_client = MagicMock(spec=FalconClient)
+        all_modules = {
+            name: cls(mock_client)
+            for name, cls in registry.get_available_modules().items()
+        }
+        catalog = DynamicToolCatalog(all_modules)
         for name, entry in catalog.entries.items():
             properties = entry.tool.parameters.get("properties", {})
             filter_schema = properties.get("filter", {})

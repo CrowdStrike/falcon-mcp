@@ -86,8 +86,17 @@ FILTER_HINTS: dict[str, str] = {
         "Common fields: platform (windows|mac|linux), name, "
         "enabled (true|false), created_on (UTC datetime)."
     ),
+    "falcon_search_firewall_policy_rules": (
+        "Common fields: platform (windows|mac|linux), name, "
+        "enabled (true|false), created_on (UTC datetime)."
+    ),
     # === Intel: Actors ===
     "falcon_query_actor_entities": (
+        "Common fields: name, actor_type, known_as, "
+        "motivations.value (Criminal|Destruction|Espionage|Hacktivism), "
+        "target_countries, target_industries, last_activity_date (UTC datetime)."
+    ),
+    "falcon_search_actors": (
         "Common fields: name, actor_type, known_as, "
         "motivations.value (Criminal|Destruction|Espionage|Hacktivism), "
         "target_countries, target_industries, last_activity_date (UTC datetime)."
@@ -98,8 +107,18 @@ FILTER_HINTS: dict[str, str] = {
         "malicious_confidence (high|medium|low|unverified), "
         "malware_families, threat_types, kill_chains, published_date (UTC datetime)."
     ),
+    "falcon_search_indicators": (
+        "Common fields: type (hash_md5|hash_sha256|domain|ip_address|url|email_address), "
+        "malicious_confidence (high|medium|low|unverified), "
+        "malware_families, threat_types, kill_chains, published_date (UTC datetime)."
+    ),
     # === Intel: Reports ===
     "falcon_query_report_entities": (
+        "Common fields: name, type, sub_type, actors, "
+        "target_countries, target_industries, tags, "
+        "created_date (UTC datetime), last_modified_date (UTC datetime)."
+    ),
+    "falcon_search_reports": (
         "Common fields: name, type, sub_type, actors, "
         "target_countries, target_industries, tags, "
         "created_date (UTC datetime), last_modified_date (UTC datetime)."
@@ -113,6 +132,11 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === RTR Sessions ===
     "falcon_search_sessions": (
+        "Common fields: hostname, user_id, origin, "
+        "created_at (UTC datetime), offline_queued (true|false), "
+        "base_command."
+    ),
+    "falcon_search_rtr_sessions": (
         "Common fields: hostname, user_id, origin, "
         "created_at (UTC datetime), offline_queued (true|false), "
         "base_command."
