@@ -171,14 +171,22 @@ class DynamicMode:
             le=100,
             description="Maximum number of results to return (default: 20).",
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Discover available Falcon tools by keyword search.
 
         Use this to find tools by name, description, module, or parameter keywords.
         Returns tool schemas with parameter details so you can call falcon_execute_tool.
         Consult this before executing any tool to understand its parameters.
         """
-        return self.catalog.search(query=query, module=module, limit=limit)
+        results = self.catalog.search(query=query, module=module, limit=limit)
+        if not results:
+            available_modules = sorted({e.module for e in self.catalog.entries.values()})
+            return {
+                "results": [],
+                "hint": f"No tools found matching your query. Available modules: {', '.join(available_modules)}. "
+                "Try a broader search or check falcon_list_enabled_modules.",
+            }
+        return results
 
     async def _execute_tool(
         self,

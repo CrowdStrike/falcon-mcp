@@ -263,6 +263,27 @@ class TestExecuteFalconTool(unittest.TestCase):
         )
         self.assertEqual(result, small_result)
 
+    def test_search_tools_no_results_returns_hint_with_available_modules(self):
+        result = run_async(
+            self.dynamic._search_tools(
+                query="hosts nonexistent", module=None, limit=20
+            )
+        )
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["results"], [])
+        self.assertIn("hint", result)
+        self.assertIn("detections", result["hint"])
+        self.assertIn("No tools found", result["hint"])
+
+    def test_search_tools_with_results_returns_list(self):
+        result = run_async(
+            self.dynamic._search_tools(
+                query="search_detections", module=None, limit=20
+            )
+        )
+        self.assertIsInstance(result, list)
+        self.assertGreater(len(result), 0)
+
 
 class TestDynamicServerIntegration(unittest.TestCase):
     """Test cases for dynamic mode server integration."""
