@@ -48,6 +48,7 @@ class FalconMCPServer:
         port: int = 8000,
         member_cid: str | None = None,
         proxy: str | None = None,
+        dynamic: bool = False,
     ):
         """Initialize the Falcon MCP server.
 
@@ -73,6 +74,7 @@ class FalconMCPServer:
         self.api_key = api_key
         self.host = host
         self.port = port
+        self.dynamic = dynamic
 
         self.enabled_modules = enabled_modules or set(registry.get_module_names())
 
@@ -132,7 +134,7 @@ class FalconMCPServer:
         module_word = "module" if module_count == 1 else "modules"
 
         logger.info(
-            "Falcon MCP v%s — %d %s, %d %s, %d %s",
+            "Falcon MCP v%s — %d %s, %d %s, %d %s%s",
             get_version(),
             module_count,
             module_word,
@@ -140,6 +142,7 @@ class FalconMCPServer:
             tool_word,
             resource_count,
             resource_word,
+            " (dynamic mode)" if self.dynamic else "",
         )
 
     def _register_tools(self) -> int:
@@ -172,11 +175,18 @@ class FalconMCPServer:
 
         tool_count = 3  # the tools added above
 
-        # Register tools from modules
-        for module in self.modules.values():
-            module.register_tools(self.server)
+        if self.dynamic:
+            from falcon_mcp.dynamic import DynamicMode
 
-        tool_count += sum(len(getattr(m, "tools", [])) for m in self.modules.values())
+            dynamic_mode = DynamicMode(self.modules, self.server)
+            dynamic_mode.register()
+            tool_count += 2
+        else:
+            # Register tools from modules
+            for module in self.modules.values():
+                module.register_tools(self.server)
+
+            tool_count += sum(len(getattr(m, "tools", [])) for m in self.modules.values())
 
         return tool_count
 
@@ -385,6 +395,15 @@ def parse_args() -> argparse.Namespace:
         "Example: http://proxy.corp.example.com:8080",
     )
 
+    # Dynamic mode
+    parser.add_argument(
+        "--dynamic",
+        action="store_true",
+        default=os.environ.get("FALCON_MCP_DYNAMIC", "").lower() == "true",
+        help="Enable dynamic mode: exposes 2 meta-tools (search + execute) instead of "
+        "all module tools (env: FALCON_MCP_DYNAMIC)",
+    )
+
     return parser.parse_args()
 
 
@@ -409,6 +428,7 @@ def main() -> None:
             port=args.port,
             member_cid=args.member_cid,
             proxy=args.proxy,
+            dynamic=args.dynamic,
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport)
