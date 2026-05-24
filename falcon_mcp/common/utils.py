@@ -30,6 +30,39 @@ def filter_none_values(data: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in data.items() if v is not None}
 
 
+def filter_fields(record: dict[str, Any], fields: list[str]) -> dict[str, Any]:
+    """Keep only listed fields from a record.
+    Supports dot notation for nested extraction:
+    'device.hostname' extracts {"device": {"hostname": value}}.
+    Unknown fields are silently ignored.
+    """
+    result: dict[str, Any] = {}
+    for field in fields:
+        parts = field.split(".")
+        source = record
+        valid = True
+        for part in parts:
+            if isinstance(source, dict) and part in source:
+                source = source[part]
+            else:
+                valid = False
+                break
+        if not valid:
+            continue
+        target = result
+        for part in parts[:-1]:
+            if part not in target:
+                target[part] = {}
+            target = target[part]
+        target[parts[-1]] = source
+    return result
+
+
+def filter_records(records: list[dict[str, Any]], fields: list[str]) -> list[dict[str, Any]]:
+    """Apply filter_fields to each record in a list."""
+    return [filter_fields(record, fields) for record in records]
+
+
 def prepare_api_parameters(params: dict[str, Any]) -> dict[str, Any]:
     """Prepare parameters for Falcon API requests.
 
