@@ -38,7 +38,10 @@ class TestHostTriageContext(unittest.TestCase):
         }
         alerts_response = {
             "status_code": 200,
-            "body": {"resources": ["alert1", "alert2", "alert3"]},
+            "body": {
+                "resources": ["alert1"],
+                "meta": {"pagination": {"total": 3}},
+            },
         }
         self.mock_client.command.side_effect = [query_response, details_response, alerts_response]
 
@@ -76,7 +79,10 @@ class TestHostTriageContext(unittest.TestCase):
         }
         alerts_response = {
             "status_code": 200,
-            "body": {"resources": []},
+            "body": {
+                "resources": [],
+                "meta": {"pagination": {"total": 0}},
+            },
         }
         self.mock_client.command.side_effect = [details_response, alerts_response]
 

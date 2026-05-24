@@ -113,14 +113,16 @@ class TriageModule(BaseModule):
             "GetQueriesAlertsV2",
             parameters=prepare_api_parameters({
                 "filter": f"device.device_id:'{device_id}'+created_timestamp:>='now-7d'",
-                "limit": 0,
+                "limit": 1,
             }),
         )
 
-        recent_count = 0
-        if detection_result.get("status_code") == 200:
-            resources = detection_result.get("body", {}).get("resources", [])
-            recent_count = len(resources) if resources else 0
+        recent_count = (
+            detection_result.get("body", {})
+            .get("meta", {})
+            .get("pagination", {})
+            .get("total", 0)
+        )
 
         filtered_host["recent_detection_count"] = recent_count
 
