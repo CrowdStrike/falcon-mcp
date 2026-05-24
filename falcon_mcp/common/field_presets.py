@@ -60,3 +60,48 @@ PE_METADATA_FIELDS: list[str] = [
     "FixedFileVersion", "SHA256HashData", "MD5HashData", "AuthenticodeHashData",
     "SignInfoFlags", "LanguageId",
 ]
+
+ENTRA_SIGNIN_FIELDS: list[str] = [
+    "@timestamp", "user.email", "Vendor.appDisplayName", "Vendor.resourceDisplayName",
+    "Vendor.clientAppUsed", "Vendor.isInteractive", "source.ip",
+    "Vendor.location.city", "Vendor.location.countryOrRegion",
+    "#event.outcome", "Vendor.status.errorCode", "Vendor.status.additionalDetails",
+    "Vendor.conditionalAccessStatus", "Vendor.appliedConditionalAccessPolicies",
+    "Vendor.riskState", "Vendor.riskLevelDuringSignIn",
+    "Vendor.deviceDetail.displayName", "Vendor.deviceDetail.isManaged",
+    "Vendor.deviceDetail.isCompliant", "Vendor.correlationId",
+]
+
+ZSCALER_ZIA_FIELDS: list[str] = [
+    "@timestamp", "Vendor.user", "Vendor.department", "Vendor.locationname",
+    "Vendor.devicehostname", "Vendor.deviceowner", "Vendor.tuntype",
+    "Vendor.csip", "Vendor.ssip", "Vendor.tsip",
+    "destination.ip", "destination.port", "network.protocol", "network.application",
+    "Vendor.nwsvc", "Vendor.action", "Vendor.rulelabel",
+    "Vendor.ipcat", "Vendor.threatcat", "Vendor.threatname",
+]
+
+AWS_CLOUDTRAIL_FIELDS: list[str] = [
+    "@timestamp", "event.provider", "event.action", "event.outcome",
+    "cloud.account.id", "cloud.region", "user.name",
+    "aws.userIdentity.type", "aws.userIdentity.arn",
+    "aws.userIdentity.sessionContext.sessionIssuer.arn",
+    "source.ip", "user_agent.original",
+    "aws.requestParameters.roleName", "aws.requestParameters.policyDocument",
+    "aws.errorCode", "aws.errorMessage", "event.id", "@ingesttimestamp",
+]
+
+AWS_GUARDDUTY_FIELDS: list[str] = [
+    "@timestamp", "cloud.account.id", "cloud.region",
+    "Vendor.findingType", "Vendor.severity", "Vendor.title",
+    "Vendor.resource.accessKeyDetails.userName",
+    "Vendor.resource.accessKeyDetails.principalId",
+    "Vendor.service.action.actionType",
+    "Vendor.service.action.awsApiCallAction.api",
+    "Vendor.service.action.awsApiCallAction.serviceName",
+    "Vendor.service.action.awsApiCallAction.remoteIpDetails.ipAddressV4",
+    "Vendor.service.action.awsApiCallAction.remoteIpDetails.organization.asn",
+    "Vendor.service.action.awsApiCallAction.remoteIpDetails.organization.org",
+    "Vendor.service.eventFirstSeen", "Vendor.service.eventLastSeen",
+    "Vendor.service.count", "Vendor.id",
+]
