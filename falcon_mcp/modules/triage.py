@@ -61,7 +61,7 @@ class TriageModule(BaseModule):
             default="json",
             description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
         ),
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | str:
         """Get host context plus recent detection count in a single call.
 
         Resolves hostname to device_id if needed, fetches host details filtered to
@@ -137,7 +137,7 @@ class TriageModule(BaseModule):
             default="json",
             description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
         ),
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | str:
         """Get a single detection filtered to investigation-essential fields.
 
         Fetches the detection by composite ID and returns only the fields needed
@@ -191,7 +191,7 @@ class TriageModule(BaseModule):
             default="json",
             description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
         ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
+    ) -> list[dict[str, Any]] | dict[str, Any] | str:
         """Search ProcessRollup2 telemetry for a specific process on a device.
 
         Queries NGSIEM for process execution events matching the given device and

@@ -108,7 +108,7 @@ class NGSIEMModule(BaseModule):
             ge=1,
             description="Maximum events to return. Override for larger result sets.",
         ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
+    ) -> list[dict[str, Any]] | dict[str, Any] | str:
         """Execute a CQL query against CrowdStrike Next-Gen SIEM.
 
         Use this to search security events, logs, and telemetry; callers must supply

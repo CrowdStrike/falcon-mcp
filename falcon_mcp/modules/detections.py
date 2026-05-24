@@ -118,7 +118,7 @@ class DetectionsModule(BaseModule):
             default="json",
             description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
         ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
+    ) -> list[dict[str, Any]] | dict[str, Any] | str:
         """Find detections by criteria and return their complete details.
 
         Use this to discover detections by severity, status, hostname, time range, or
@@ -197,7 +197,7 @@ class DetectionsModule(BaseModule):
             default="json",
             description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
         ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
+    ) -> list[dict[str, Any]] | dict[str, Any] | str:
         """Retrieve details for detection IDs you already have.
 
         Use when you have specific composite detection ID(s). For discovering detections

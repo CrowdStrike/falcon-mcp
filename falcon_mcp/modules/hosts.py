@@ -111,7 +111,7 @@ class HostsModule(BaseModule):
             default="json",
             description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | str:
         """Search for hosts in your CrowdStrike environment.
 
         Use this to find devices by hostname, platform, IP, sensor version, or other
@@ -182,7 +182,7 @@ class HostsModule(BaseModule):
             default="json",
             description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
         ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
+    ) -> list[dict[str, Any]] | dict[str, Any] | str:
         """Retrieve detailed information for one or more host device IDs.
 
         Use when you already have specific device IDs from search results, the Falcon
