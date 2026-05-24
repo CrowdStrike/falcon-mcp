@@ -50,7 +50,7 @@ class TestIdpModule(TestModules):
 
         # Call investigate_entity with basic parameters
         result = self.module.investigate_entity(
-            entity_names=["Test User"],
+            entity_names="Test User",
             investigation_types=["entity_details"],
             limit=10,
         )
@@ -63,6 +63,73 @@ class TestIdpModule(TestModules):
         self.assertIn("entity_details", result)
         self.assertEqual(result["investigation_summary"]["status"], "completed")
         self.assertGreater(result["investigation_summary"]["entity_count"], 0)
+
+    def test_investigate_entity_uses_primary_display_name_pattern(self):
+        """Entity name resolution should use wildcard-capable GraphQL patterns."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"data": {"entities": {"nodes": []}}},
+        }
+
+        self.module.investigate_entity(entity_names="Admin*")
+
+        query = self.mock_client.command.call_args.kwargs["body"]["query"]
+        self.assertIn('primaryDisplayNamePattern: "Admin*"', query)
+        self.assertNotIn("primaryDisplayNames:", query)
+
+    def test_investigate_entity_uses_email_address_pattern(self):
+        """Email resolution should use wildcard-capable email address patterns."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"data": {"entities": {"nodes": []}}},
+        }
+
+        self.module.investigate_entity(email_addresses="*@example.com")
+
+        query = self.mock_client.command.call_args.kwargs["body"]["query"]
+        self.assertIn('secondaryDisplayNamePattern: "*@example.com"', query)
+        self.assertIn("types: [USER]", query)
+        self.assertNotIn("secondaryDisplayNames:", query)
+
+    def test_investigate_entity_uses_domain_filter(self):
+        """Domain resolution should use list-based GraphQL domain filters."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"data": {"entities": {"nodes": []}}},
+        }
+
+        self.module.investigate_entity(domain_names=["CORP.LOCAL"])
+
+        query = self.mock_client.command.call_args.kwargs["body"]["query"]
+        self.assertIn('domains: ["CORP.LOCAL"]', query)
+        self.assertNotIn("domainPattern:", query)
+
+    def test_investigate_entity_exact_name_uses_pattern_argument(self):
+        """Exact-looking entity names should still use the pattern argument."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"data": {"entities": {"nodes": []}}},
+        }
+
+        self.module.investigate_entity(entity_names="Administrator")
+
+        query = self.mock_client.command.call_args.kwargs["body"]["query"]
+        self.assertIn('primaryDisplayNamePattern: "Administrator"', query)
+        self.assertNotIn("primaryDisplayNames:", query)
+
+    def test_investigate_entity_combines_name_pattern_and_domain_filter(self):
+        """Name patterns and domain filters should still combine with AND logic."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"data": {"entities": {"nodes": []}}},
+        }
+
+        self.module.investigate_entity(entity_names="Admin*", domain_names=["CORP.LOCAL"])
+
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        query = self.mock_client.command.call_args.kwargs["body"]["query"]
+        self.assertIn('primaryDisplayNamePattern: "Admin*"', query)
+        self.assertIn('domains: ["CORP.LOCAL"]', query)
 
     def test_investigate_entity_with_multiple_investigation_types(self):
         """Test entity investigation with multiple investigation types."""
@@ -183,7 +250,7 @@ class TestIdpModule(TestModules):
 
         # Call investigate_entity with multiple investigation types
         result = self.module.investigate_entity(
-            email_addresses=["admin@example.com"],
+            email_addresses="admin@example.com",
             investigation_types=[
                 "entity_details",
                 "timeline_analysis",
@@ -235,7 +302,7 @@ class TestIdpModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call investigate_entity
-        result = self.module.investigate_entity(entity_names=["NonExistent User"])
+        result = self.module.investigate_entity(entity_names="NonExistent User")
 
         # Verify result indicates no entities found
         self.assertIn("error", result)
@@ -251,7 +318,7 @@ class TestIdpModule(TestModules):
             "status_code": 200,
             "body": {"data": {"entities": {"nodes": []}}},
         }
-        result = self.module.investigate_entity(entity_names=["NonExistent User"])
+        result = self.module.investigate_entity(entity_names="NonExistent User")
 
         def assert_no_fieldinfo(obj):
             if isinstance(obj, dict):
@@ -265,7 +332,7 @@ class TestIdpModule(TestModules):
 
         assert_no_fieldinfo(result)
         self.assertEqual(result["search_criteria"]["entity_ids"], None)
-        self.assertEqual(result["search_criteria"]["entity_names"], ["NonExistent User"])
+        self.assertEqual(result["search_criteria"]["entity_names"], "NonExistent User")
 
     def test_investigate_entity_zero_args_no_fieldinfo_leak(self):
         """Zero-argument call must not leak FieldInfo objects in the error response."""
@@ -386,7 +453,7 @@ class TestIdpModule(TestModules):
 
         # Call investigate_entity with timeline analysis to get geographic data
         result = self.module.investigate_entity(
-            entity_names=["Global User"],
+            entity_names="Global User",
             investigation_types=["timeline_analysis"],
             timeline_start_time="2024-01-01T00:00:00Z",
             timeline_end_time="2024-01-02T23:59:59Z",
@@ -499,7 +566,7 @@ class TestIdpModule(TestModules):
 
         # Call investigate_entity with entity details to get geographic associations
         result = self.module.investigate_entity(
-            entity_names=["Travel User"],
+            entity_names="Travel User",
             investigation_types=["entity_details"],
             include_associations=True,
             limit=50,
@@ -624,7 +691,7 @@ class TestIdpModule(TestModules):
 
         # Call investigate_entity with timeline analysis
         result = self.module.investigate_entity(
-            entity_names=["Global Executive"],
+            entity_names="Global Executive",
             investigation_types=["timeline_analysis"],
             timeline_start_time="2024-01-01T00:00:00Z",
             timeline_end_time="2024-01-04T23:59:59Z",
@@ -716,7 +783,7 @@ class TestIdpModule(TestModules):
 
         # Call investigate_entity with timeline analysis
         result = self.module.investigate_entity(
-            entity_names=["File User"],
+            entity_names="File User",
             investigation_types=["timeline_analysis"],
             limit=50,
         )
