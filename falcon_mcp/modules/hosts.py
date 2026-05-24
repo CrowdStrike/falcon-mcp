@@ -5,13 +5,16 @@ This module provides tools for accessing and managing CrowdStrike Falcon hosts/d
 """
 
 from textwrap import dedent
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
+from pydantic.fields import FieldInfo
 
+from falcon_mcp.common.field_presets import HOST_SUMMARY_FIELDS
 from falcon_mcp.common.logging import get_logger
+from falcon_mcp.common.utils import filter_records, format_response
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.hosts import SEARCH_HOSTS_FQL_DOCUMENTATION
 
@@ -96,6 +99,18 @@ class HostsModule(BaseModule):
             """).strip(),
             examples={"hostname.asc", "last_seen.desc"},
         ),
+        view: Literal["summary", "full"] = Field(
+            default="summary",
+            description="'summary' returns investigation-essential fields only (default). 'full' returns the complete API response.",
+        ),
+        fields: list[str] | None = Field(
+            default=None,
+            description="Override: explicit list of fields to return. Takes precedence over view.",
+        ),
+        format: Literal["json", "toon"] = Field(
+            default="json",
+            description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
+        ),
     ) -> list[dict[str, Any]]:
         """Search for hosts in your CrowdStrike environment.
 
@@ -104,6 +119,14 @@ class HostsModule(BaseModule):
         expressions. Returns full host details including device info, OS, and network
         context.
         """
+        # Resolve FieldInfo defaults for direct calls (e.g., from tests)
+        if isinstance(view, FieldInfo):
+            view = view.default
+        if isinstance(fields, FieldInfo):
+            fields = fields.default
+        if isinstance(format, FieldInfo):
+            format = format.default
+
         device_ids = self._base_search_api_call(
             operation="QueryDevicesByFilter",
             search_params={
@@ -133,7 +156,12 @@ class HostsModule(BaseModule):
             if self._is_error(details):
                 return [details]
 
-            return details
+            if fields:
+                details = filter_records(details, fields)
+            elif view == "summary":
+                details = filter_records(details, HOST_SUMMARY_FIELDS)
+
+            return format_response(details, format)
 
         return []
 
@@ -142,6 +170,18 @@ class HostsModule(BaseModule):
         ids: list[str] = Field(
             description="Host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request."
         ),
+        view: Literal["summary", "full"] = Field(
+            default="summary",
+            description="'summary' returns investigation-essential fields only (default). 'full' returns the complete API response.",
+        ),
+        fields: list[str] | None = Field(
+            default=None,
+            description="Override: explicit list of fields to return. Takes precedence over view.",
+        ),
+        format: Literal["json", "toon"] = Field(
+            default="json",
+            description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
+        ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Retrieve detailed information for one or more host device IDs.
 
@@ -149,14 +189,34 @@ class HostsModule(BaseModule):
         console, or the Streaming API. For discovering hosts by criteria, use
         falcon_search_hosts instead. Returns comprehensive host details.
         """
+        # Resolve FieldInfo defaults for direct calls (e.g., from tests)
+        if isinstance(view, FieldInfo):
+            view = view.default
+        if isinstance(fields, FieldInfo):
+            fields = fields.default
+        if isinstance(format, FieldInfo):
+            format = format.default
+
         logger.debug("Getting host details for IDs: %s", ids)
 
         # Handle empty list case - return empty list without making API call
         if not ids:
             return []
 
-        return self._base_get_by_ids(
+        result = self._base_get_by_ids(
             operation="PostDeviceDetailsV2",
             ids=ids,
             id_key="ids",
         )
+
+        if self._is_error(result):
+            return result
+
+        if isinstance(result, list):
+            if fields:
+                result = filter_records(result, fields)
+            elif view == "summary":
+                result = filter_records(result, HOST_SUMMARY_FIELDS)
+            return format_response(result, format)
+
+        return result
