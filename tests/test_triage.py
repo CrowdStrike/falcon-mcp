@@ -1,5 +1,6 @@
 """Tests for the Triage module."""
 
+import asyncio
 import unittest
 from unittest.mock import MagicMock
 
@@ -143,6 +144,101 @@ class TestDetectionTriage(unittest.TestCase):
         self.assertNotIn("behaviors_processed", result)
         self.assertNotIn("internal_tracking_id", result)
         self.assertNotIn("raw_event_data", result)
+
+
+class TestProcessVerdictContext(unittest.TestCase):
+    """Test cases for get_process_verdict_context."""
+
+    def setUp(self):
+        self.mock_client = MagicMock(spec=FalconClient)
+        self.module = TriageModule(self.mock_client)
+
+    def test_process_verdict_by_name(self):
+        """Search for process by name and verify filtering to PROCESS_TELEMETRY_FIELDS."""
+        start_response = {
+            "status_code": 200,
+            "body": {"id": "job-abc-123"},
+        }
+        poll_response = {
+            "status_code": 200,
+            "body": {
+                "done": True,
+                "events": [{
+                    "@timestamp": "2025-05-20T10:00:00Z",
+                    "ComputerName": "WKS-01",
+                    "aid": "device-001",
+                    "TargetProcessId": "1234",
+                    "FileName": "suspicious.exe",
+                    "FilePath": "\\Device\\HarddiskVolume3\\Users\\jdoe\\Downloads\\",
+                    "CommandLine": "suspicious.exe --flag",
+                    "SHA256HashData": "abc123def456",
+                    "ParentBaseFileName": "explorer.exe",
+                    "UserName": "jdoe",
+                    # Fields that should be filtered out
+                    "extra_ngsiem_field": "should_go",
+                    "aip": "10.0.0.1",
+                    "cid": "customer-id-123",
+                }],
+            },
+        }
+        self.mock_client.command.side_effect = [start_response, poll_response]
+
+        loop = asyncio.new_event_loop()
+        try:
+            result = loop.run_until_complete(
+                self.module.get_process_verdict_context(
+                    device_id="device-001",
+                    process_name="suspicious.exe",
+                    start="2025-05-20T00:00:00Z",
+                )
+            )
+        finally:
+            loop.close()
+
+        # Result should be a list of filtered events
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        event = result[0]
+        self.assertEqual(event["FileName"], "suspicious.exe")
+        self.assertEqual(event["SHA256HashData"], "abc123def456")
+        self.assertEqual(event["ParentBaseFileName"], "explorer.exe")
+
+        # Verify extra fields are filtered out
+        self.assertNotIn("extra_ngsiem_field", event)
+        self.assertNotIn("aip", event)
+        self.assertNotIn("cid", event)
+
+    def test_process_verdict_requires_device_id(self):
+        """Calling without device_id returns an error."""
+        loop = asyncio.new_event_loop()
+        try:
+            result = loop.run_until_complete(
+                self.module.get_process_verdict_context(
+                    device_id="",
+                    process_name="test.exe",
+                    start="2025-05-20T00:00:00Z",
+                )
+            )
+        finally:
+            loop.close()
+
+        self.assertIn("error", result)
+
+    def test_process_verdict_requires_process_identifier(self):
+        """Calling without process_name or pid returns an error."""
+        loop = asyncio.new_event_loop()
+        try:
+            result = loop.run_until_complete(
+                self.module.get_process_verdict_context(
+                    device_id="device-001",
+                    start="2025-05-20T00:00:00Z",
+                )
+            )
+        finally:
+            loop.close()
+
+        self.assertIn("error", result)
+        self.assertIn("at least one", result["error"].lower())
 
 
 if __name__ == "__main__":
