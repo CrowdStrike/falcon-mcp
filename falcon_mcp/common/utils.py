@@ -63,6 +63,22 @@ def filter_records(records: list[dict[str, Any]], fields: list[str]) -> list[dic
     return [filter_fields(record, fields) for record in records]
 
 
+def truncate_string_fields(record: dict[str, Any], max_length: int) -> dict[str, Any]:
+    """Truncate string values exceeding max_length, preserving non-string types.
+    Appends ' [truncated, full_len=N]' marker to truncated values.
+    Recurses into nested dicts.
+    """
+    result: dict[str, Any] = {}
+    for key, value in record.items():
+        if isinstance(value, str) and len(value) > max_length:
+            result[key] = value[:max_length] + f" [truncated, full_len={len(value)}]"
+        elif isinstance(value, dict):
+            result[key] = truncate_string_fields(value, max_length)
+        else:
+            result[key] = value
+    return result
+
+
 def prepare_api_parameters(params: dict[str, Any]) -> dict[str, Any]:
     """Prepare parameters for Falcon API requests.
 

@@ -1,5 +1,5 @@
 """Tests for field filtering and truncation utilities."""
-from falcon_mcp.common.utils import filter_fields, filter_records
+from falcon_mcp.common.utils import filter_fields, filter_records, truncate_string_fields
 
 class TestFilterFields:
     def test_top_level_fields(self):
@@ -52,3 +52,34 @@ class TestFilterRecords:
 
     def test_empty_list(self):
         assert filter_records([], ["hostname"]) == []
+
+
+class TestTruncateStringFields:
+    def test_truncates_long_string(self):
+        record = {"cmd": "a" * 100}
+        result = truncate_string_fields(record, max_length=50)
+        assert result["cmd"] == "a" * 50 + " [truncated, full_len=100]"
+
+    def test_preserves_short_string(self):
+        record = {"cmd": "short"}
+        result = truncate_string_fields(record, max_length=50)
+        assert result["cmd"] == "short"
+
+    def test_exact_boundary_not_truncated(self):
+        record = {"cmd": "a" * 50}
+        result = truncate_string_fields(record, max_length=50)
+        assert result["cmd"] == "a" * 50
+
+    def test_non_string_values_unchanged(self):
+        record = {"count": 42, "active": True, "tags": ["a", "b"], "meta": None}
+        result = truncate_string_fields(record, max_length=10)
+        assert result == record
+
+    def test_nested_dict_truncation(self):
+        record = {"outer": {"cmd": "a" * 100, "ok": "short"}}
+        result = truncate_string_fields(record, max_length=50)
+        assert result["outer"]["cmd"] == "a" * 50 + " [truncated, full_len=100]"
+        assert result["outer"]["ok"] == "short"
+
+    def test_empty_record(self):
+        assert truncate_string_fields({}, max_length=50) == {}
