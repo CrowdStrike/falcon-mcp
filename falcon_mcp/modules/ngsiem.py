@@ -8,13 +8,15 @@ Next-Gen SIEM via the asynchronous job-based search API.
 import asyncio
 import os
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server import FastMCP
 from pydantic import Field
+from pydantic.fields import FieldInfo
 
 from falcon_mcp.common.errors import _format_error_response, handle_api_response
 from falcon_mcp.common.logging import get_logger
+from falcon_mcp.common.utils import filter_records, format_response, truncate_string_fields
 from falcon_mcp.modules.base import BaseModule
 
 logger = get_logger(__name__)
@@ -89,6 +91,23 @@ class NGSIEMModule(BaseModule):
             ),
             examples={"2025-01-01T00:00:00Z"},
         ),
+        fields: list[str] | None = Field(
+            default=None,
+            description="Post-filter: keep only these fields from each event. Prefer CQL select() for query-level projection when possible.",
+        ),
+        max_field_length: int = Field(
+            default=2048,
+            description="Auto-truncate string fields longer than this value. Truncated fields show '[truncated, full_len=N]' marker.",
+        ),
+        format: Literal["json", "toon"] = Field(
+            default="json",
+            description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
+        ),
+        limit: int = Field(
+            default=25,
+            ge=1,
+            description="Maximum events to return. Override for larger result sets.",
+        ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Execute a CQL query against CrowdStrike Next-Gen SIEM.
 
@@ -96,7 +115,25 @@ class NGSIEMModule(BaseModule):
         a complete, valid CQL query — this tool does not assist with query construction.
         Returns matching event records, or an error dict if the job fails or times out.
         Search times out after FALCON_MCP_NGSIEM_TIMEOUT seconds (default: 300).
+
+        Token optimization tips:
+        - Use CQL select() for query-level field projection:
+          #event_simpleName="ProcessRollup2" | select([@timestamp, FileName, CommandLine])
+        - Use count by for frequency analysis instead of raw rows:
+          #event_simpleName="ProcessRollup2" | count by FileName
+        - Use the fields parameter for server-side post-filtering when CQL projection
+          is not feasible.
         """
+        # Resolve FieldInfo defaults for direct calls (e.g., from tests)
+        if isinstance(fields, FieldInfo):
+            fields = fields.default
+        if isinstance(max_field_length, FieldInfo):
+            max_field_length = max_field_length.default
+        if isinstance(format, FieldInfo):
+            format = format.default
+        if isinstance(limit, FieldInfo):
+            limit = limit.default
+
         # Step 1: Start the search job
         # Note: FalconPy uber class passes body unchanged; API expects camelCase keys
         body_params: dict[str, Any] = {
@@ -157,7 +194,12 @@ class NGSIEMModule(BaseModule):
             body = poll_response.get("body", {})
             if body.get("done"):
                 logger.debug("NGSIEM search job completed: %s", job_id)
-                return body.get("events", [])
+                events = body.get("events", [])
+                events = events[:limit]
+                events = [truncate_string_fields(e, max_field_length) for e in events]
+                if fields:
+                    events = filter_records(events, fields)
+                return format_response(events, format)
 
         # Step 3: Timeout — attempt cleanup
         logger.warning("NGSIEM search job timed out: %s", job_id)
