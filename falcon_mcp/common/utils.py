@@ -79,6 +79,19 @@ def truncate_string_fields(record: dict[str, Any], max_length: int) -> dict[str,
     return result
 
 
+def format_response(
+    results: list[dict[str, Any]] | dict[str, Any], fmt: str
+) -> list[dict[str, Any]] | dict[str, Any] | str:
+    """Apply output format to results.
+    Returns original data for 'json'. For 'toon', converts lists with 2+ records
+    to TOON encoding; single records and non-lists pass through unchanged.
+    """
+    if fmt == "toon" and isinstance(results, list) and len(results) > 1:
+        from toon_format import encode
+        return encode(results)
+    return results
+
+
 def prepare_api_parameters(params: dict[str, Any]) -> dict[str, Any]:
     """Prepare parameters for Falcon API requests.
 
