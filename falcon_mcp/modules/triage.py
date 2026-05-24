@@ -12,7 +12,7 @@ from pydantic import Field
 from pydantic.fields import FieldInfo
 
 from falcon_mcp.common.errors import _format_error_response
-from falcon_mcp.common.field_presets import HOST_SUMMARY_FIELDS
+from falcon_mcp.common.field_presets import DETECTION_SUMMARY_FIELDS, HOST_SUMMARY_FIELDS
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import (
     filter_fields,
@@ -30,6 +30,7 @@ class TriageModule(BaseModule):
     def register_tools(self, server: FastMCP) -> None:
         """Register triage tools with the MCP server."""
         self._add_tool(server, self.get_host_triage_context, "get_host_triage_context")
+        self._add_tool(server, self.get_detection_triage, "get_detection_triage")
 
     def get_host_triage_context(
         self,
@@ -109,3 +110,38 @@ class TriageModule(BaseModule):
         filtered_host["recent_detection_count"] = recent_count
 
         return format_response(filtered_host, format)
+
+    def get_detection_triage(
+        self,
+        detection_id: str = Field(
+            description="Composite detection ID to retrieve triage details for.",
+        ),
+        format: Literal["json", "toon"] = Field(
+            default="json",
+            description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
+        ),
+    ) -> dict[str, Any]:
+        """Get a single detection filtered to investigation-essential fields.
+
+        Fetches the detection by composite ID and returns only the fields needed
+        for triage decisions: severity, confidence, MITRE mapping, process chain,
+        and device context.
+        """
+        # Resolve FieldInfo defaults for direct calls (e.g., from tests)
+        if isinstance(format, FieldInfo):
+            format = format.default
+
+        result = self._base_get_by_ids(
+            operation="PostEntitiesAlertsV2",
+            ids=[detection_id],
+            id_key="composite_ids",
+            include_hidden=True,
+        )
+
+        if self._is_error(result):
+            return result
+
+        detection = result[0] if isinstance(result, list) and result else result
+        filtered = filter_fields(detection, DETECTION_SUMMARY_FIELDS)
+
+        return format_response(filtered, format)

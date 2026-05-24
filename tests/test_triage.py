@@ -91,5 +91,59 @@ class TestHostTriageContext(unittest.TestCase):
         self.assertEqual(result["recent_detection_count"], 0)
 
 
+class TestDetectionTriage(unittest.TestCase):
+    """Test cases for get_detection_triage."""
+
+    def setUp(self):
+        self.mock_client = MagicMock(spec=FalconClient)
+        self.module = TriageModule(self.mock_client)
+
+    def test_detection_triage_filters_to_summary(self):
+        """Fetch detection and verify it is filtered to DETECTION_SUMMARY_FIELDS."""
+        detection_data = {
+            "status_code": 200,
+            "body": {"resources": [{
+                "timestamp": "2025-05-20T12:00:00Z",
+                "created_timestamp": "2025-05-20T12:00:01Z",
+                "status": "new",
+                "severity_name": "High",
+                "confidence": 90,
+                "display_name": "Suspicious PowerShell",
+                "description": "PowerShell with encoded command",
+                "device": {
+                    "device_id": "dev-001",
+                    "hostname": "WKS-01",
+                    "local_ip": "10.0.0.1",
+                    "external_ip": "1.2.3.4",
+                    "os_version": "Windows 11",
+                    "tags": ["critical"],
+                },
+                "user_name": "jdoe",
+                "filename": "powershell.exe",
+                "cmdline": "powershell -enc ...",
+                "parent_details": {"filename": "cmd.exe", "cmdline": "cmd /c ..."},
+                "pattern_disposition_description": "Process killed",
+                # Fields that should be filtered out
+                "behaviors_processed": ["b1"],
+                "internal_tracking_id": "track-999",
+                "raw_event_data": {"huge": "blob"},
+            }]},
+        }
+        self.mock_client.command.return_value = detection_data
+
+        result = self.module.get_detection_triage(detection_id="ldt:dev-001:12345")
+
+        # Verify expected fields are present
+        self.assertEqual(result["status"], "new")
+        self.assertEqual(result["severity_name"], "High")
+        self.assertEqual(result["device"]["hostname"], "WKS-01")
+        self.assertEqual(result["parent_details"]["filename"], "cmd.exe")
+
+        # Verify extra fields are filtered out
+        self.assertNotIn("behaviors_processed", result)
+        self.assertNotIn("internal_tracking_id", result)
+        self.assertNotIn("raw_event_data", result)
+
+
 if __name__ == "__main__":
     unittest.main()
