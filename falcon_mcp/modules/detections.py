@@ -5,13 +5,16 @@ This module provides tools for accessing and analyzing CrowdStrike Falcon detect
 """
 
 from textwrap import dedent
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
+from pydantic.fields import FieldInfo
 
+from falcon_mcp.common.field_presets import DETECTION_SUMMARY_FIELDS
 from falcon_mcp.common.logging import get_logger
+from falcon_mcp.common.utils import filter_records, format_response
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.detections import (
     SEARCH_DETECTIONS_FQL_DOCUMENTATION,
@@ -103,6 +106,18 @@ class DetectionsModule(BaseModule):
             examples=["severity.desc", "timestamp.desc"],
         ),
         include_hidden: bool = Field(default=True),
+        view: Literal["summary", "full"] = Field(
+            default="summary",
+            description="'summary' returns investigation-essential fields only (default). 'full' returns the complete API response.",
+        ),
+        fields: list[str] | None = Field(
+            default=None,
+            description="Override: explicit list of fields to return. Takes precedence over view.",
+        ),
+        format: Literal["json", "toon"] = Field(
+            default="json",
+            description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
+        ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Find detections by criteria and return their complete details.
 
@@ -111,6 +126,14 @@ class DetectionsModule(BaseModule):
         filter expressions. Returns full alert records including process context, device
         info, tactic/technique details, and threat classification.
         """
+        # Resolve FieldInfo defaults for direct calls (e.g., from tests)
+        if isinstance(view, FieldInfo):
+            view = view.default
+        if isinstance(fields, FieldInfo):
+            fields = fields.default
+        if isinstance(format, FieldInfo):
+            format = format.default
+
         detection_ids = self._base_search_api_call(
             operation="GetQueriesAlertsV2",
             search_params={
@@ -144,6 +167,13 @@ class DetectionsModule(BaseModule):
         if self._is_error(details):
             return [details]
 
+        if isinstance(details, list):
+            if fields:
+                details = filter_records(details, fields)
+            elif view == "summary":
+                details = filter_records(details, DETECTION_SUMMARY_FIELDS)
+            return format_response(details, format)
+
         return details
 
     def get_detection_details(
@@ -155,6 +185,18 @@ class DetectionsModule(BaseModule):
             default=True,
             description="Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility.",
         ),
+        view: Literal["summary", "full"] = Field(
+            default="summary",
+            description="'summary' returns investigation-essential fields only (default). 'full' returns the complete API response.",
+        ),
+        fields: list[str] | None = Field(
+            default=None,
+            description="Override: explicit list of fields to return. Takes precedence over view.",
+        ),
+        format: Literal["json", "toon"] = Field(
+            default="json",
+            description="Response format. 'toon' uses compact tabular encoding for token efficiency.",
+        ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Retrieve details for detection IDs you already have.
 
@@ -162,11 +204,31 @@ class DetectionsModule(BaseModule):
         by criteria (severity, status, hostname, etc.), use falcon_search_detections
         instead. Returns full detection records.
         """
+        # Resolve FieldInfo defaults for direct calls (e.g., from tests)
+        if isinstance(view, FieldInfo):
+            view = view.default
+        if isinstance(fields, FieldInfo):
+            fields = fields.default
+        if isinstance(format, FieldInfo):
+            format = format.default
+
         logger.debug("Getting detection details for ID(s): %s", ids)
 
-        return self._base_get_by_ids(
+        result = self._base_get_by_ids(
             operation="PostEntitiesAlertsV2",
             ids=ids,
             id_key="composite_ids",
             include_hidden=include_hidden,
         )
+
+        if self._is_error(result):
+            return result
+
+        if isinstance(result, list):
+            if fields:
+                result = filter_records(result, fields)
+            elif view == "summary":
+                result = filter_records(result, DETECTION_SUMMARY_FIELDS)
+            return format_response(result, format)
+
+        return result

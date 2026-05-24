@@ -87,7 +87,7 @@ class TestDetectionsModule(TestModules):
 
         # Call search_detections
         result = self.module.search_detections(
-            filter="test query", limit=10, include_hidden=True
+            filter="test query", limit=10, include_hidden=True, view="full"
         )
 
         # Verify client commands were called correctly
@@ -140,7 +140,7 @@ class TestDetectionsModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call get_detection_details
-        result = self.module.get_detection_details(["detection1"], include_hidden=True)
+        result = self.module.get_detection_details(["detection1"], include_hidden=True, view="full")
 
         # Verify client command was called correctly
         self.mock_client.command.assert_called_once_with(
@@ -180,7 +180,7 @@ class TestDetectionsModule(TestModules):
 
         # Call search_detections with include_hidden=False
         result = self.module.search_detections(
-            filter="test query", include_hidden=False
+            filter="test query", include_hidden=False, view="full"
         )
 
         # Verify client commands were called correctly
@@ -210,7 +210,7 @@ class TestDetectionsModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call get_detection_details with include_hidden=False
-        result = self.module.get_detection_details(["detection1"], include_hidden=False)
+        result = self.module.get_detection_details(["detection1"], include_hidden=False, view="full")
 
         # Verify client command was called correctly with include_hidden=False
         self.mock_client.command.assert_called_once_with(
