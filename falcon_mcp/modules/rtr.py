@@ -659,7 +659,8 @@ class RTRModule(BaseModule):
                     timed_out=True,
                 )
 
-            sequence_id += 1
+            if status_chunks:
+                sequence_id = status_chunks[-1].get("sequence_id", sequence_id)
             time.sleep(poll_interval_seconds)
 
     def list_session_files(

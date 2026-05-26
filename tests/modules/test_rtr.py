@@ -393,14 +393,14 @@ class TestRTRModule(TestModules):
         self.assertEqual(result["stdout"], "ok")
 
     def test_run_read_only_command_and_wait_advances_sequence_chunks(self):
-        """Test command-and-wait polls the next sequence chunk until complete."""
+        """Test command-and-wait reads sequence_id from response for next poll."""
         execute_response = {
             "status_code": 200,
             "body": {"resources": [{"cloud_request_id": "req-123", "session_id": "session-1"}]},
         }
         first_chunk_response = {
             "status_code": 200,
-            "body": {"resources": [{"complete": False, "stdout": "part1"}]},
+            "body": {"resources": [{"complete": False, "stdout": "part1", "sequence_id": 3}]},
         }
         second_chunk_response = {
             "status_code": 200,
@@ -427,7 +427,7 @@ class TestRTRModule(TestModules):
         )
         self.mock_client.command.assert_any_call(
             "RTR_CheckCommandStatus",
-            parameters={"cloud_request_id": "req-123", "sequence_id": 1},
+            parameters={"cloud_request_id": "req-123", "sequence_id": 3},
         )
         self.assertEqual(result["stdout"], "part1part2")
         self.assertTrue(result["complete"])
