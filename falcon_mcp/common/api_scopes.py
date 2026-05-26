@@ -88,6 +88,8 @@ API_SCOPE_REQUIREMENTS = {
     "RTR_CheckCommandStatus": ["Real time response:read"],
     "RTR_ExecuteCommand": ["Real time response:read"],
     "RTR_ListFilesV2": ["Real time response:write"],
+    "RTRAuditSessions": ["real-time-response-audit:read"],
+    "RTR_AggregateSessions": ["Real time response:read"],
     # Custom IOA operations
     "query_rule_groups_full": ["Custom IOA Rules:read"],
     "query_platformsMixin0": ["Custom IOA Rules:read"],
