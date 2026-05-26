@@ -73,6 +73,7 @@ falcon-mcp --help
 | `--api-key` | `FALCON_MCP_API_KEY` | — | API key for HTTP transport auth |
 | `--stateless-http` | `FALCON_MCP_STATELESS_HTTP` | `false` | Stateless mode for scalable deployments |
 | `--member-cid` | `FALCON_MEMBER_CID` | — | Flight Control child CID |
+| `--proxy` | `FALCON_PROXY_URL` | — | HTTP/HTTPS proxy for outbound API connections |
 
 ## Using as a Library
 
@@ -102,7 +103,8 @@ server = FalconMCPServer(
     client_id="your-client-id",
     client_secret="your-client-secret",
     base_url="https://api.us-2.crowdstrike.com",
-    enabled_modules=["detections", "hosts"]
+    enabled_modules=["detections", "hosts"],
+    proxy="http://proxy.corp.example.com:8080",
 )
 server.run()
 ```

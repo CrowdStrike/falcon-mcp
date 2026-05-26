@@ -488,6 +488,36 @@ class TestFalconMCPServer(unittest.TestCase):
         self.assertIsNone(call_args["member_cid"])
 
 
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_server_initialization_with_proxy(self, mock_fastmcp, mock_client):
+        """Test server initialization with proxy parameter is forwarded to FalconClient."""
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+        mock_fastmcp.return_value = MagicMock()
+
+        _server = FalconMCPServer(proxy="http://proxy.corp.example.com:8080")
+
+        mock_client.assert_called_once()
+        call_args = mock_client.call_args[1]
+        self.assertEqual(call_args["proxy"], "http://proxy.corp.example.com:8080")
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_server_initialization_without_proxy(self, mock_fastmcp, mock_client):
+        """Test server initialization without proxy passes None to FalconClient."""
+        mock_client_instance = MagicMock()
+        mock_client_instance.authenticate.return_value = True
+        mock_client.return_value = mock_client_instance
+        mock_fastmcp.return_value = MagicMock()
+
+        _server = FalconMCPServer()
+
+        mock_client.assert_called_once()
+        call_args = mock_client.call_args[1]
+        self.assertIsNone(call_args["proxy"])
+
     @patch("falcon_mcp.server.get_version", return_value="1.2.3")
     def test_version_flag(self, _mock_version):
         """Test --version flag prints version and exits."""
