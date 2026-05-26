@@ -75,7 +75,7 @@ class CorrelationRulesModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description="FQL filter expression. See `falcon://correlation-rules/search/fql-guide` for syntax.",
-            examples={"status:'active'+severity:>50", "tactic:'TA0001'"},
+            examples={"status:'active'+severity:>50", "mitre_attack.tactic_id:'TA0001'"},
         ),
         limit: int = Field(
             default=20,
@@ -97,8 +97,8 @@ class CorrelationRulesModule(BaseModule):
 
         Use this to find detection rules by name, status, severity, or MITRE tactic/technique.
         Consult falcon://correlation-rules/search/fql-guide before constructing filter expressions.
-        Returns full rule objects including all versions; filter with state:'published' to get
-        one result per rule. Returns search logic, schedule, and versioning info.
+        Returns full rule objects; use the `rule_id` field when passing results to update or
+        delete tools. Filter with state:'published' to get one result per rule.
         """
         result = self._base_search_api_call(
             operation="combined_rules_get_v2",
@@ -165,21 +165,22 @@ class CorrelationRulesModule(BaseModule):
         trigger_mode: str = Field(
             default="summary",
             description="How alerts are triggered per evaluation window.",
-            examples={"summary", "per_event"},
+            examples={"summary", "verbose"},
+        ),
+        use_ingest_time: bool = Field(
+            default=False,
+            description="Use event ingest time instead of event timestamp for the lookback window.",
         ),
         description: str | None = Field(
             default=None,
             description="Optional description explaining what the rule detects and why.",
         ),
-        tactic: str | None = Field(
+        mitre_attack: list[dict[str, str]] | None = Field(
             default=None,
-            description="MITRE ATT&CK tactic ID. Example: 'TA0001'",
-            examples={"TA0001", "TA0002", "TA0008"},
-        ),
-        technique: str | None = Field(
-            default=None,
-            description="MITRE ATT&CK technique ID. Example: 'T1059'",
-            examples={"T1059", "T1078", "T1021"},
+            description=(
+                "MITRE ATT&CK mapping as a list of objects with tactic_id and technique_id. "
+                "Example: [{'tactic_id': 'TA0002', 'technique_id': 'T1059'}]"
+            ),
         ),
         comment: str | None = Field(
             default=None,
@@ -202,6 +203,7 @@ class CorrelationRulesModule(BaseModule):
                 "outcome": search_outcome,
                 "lookback": lookback,
                 "trigger_mode": trigger_mode,
+                "use_ingest_time": use_ingest_time,
             },
             "operation": {
                 "schedule": {
@@ -212,10 +214,8 @@ class CorrelationRulesModule(BaseModule):
 
         if description is not None:
             body["description"] = description
-        if tactic is not None:
-            body["tactic"] = tactic
-        if technique is not None:
-            body["technique"] = technique
+        if mitre_attack is not None:
+            body["mitre_attack"] = mitre_attack
         if comment is not None:
             body["comment"] = comment
 
@@ -234,7 +234,7 @@ class CorrelationRulesModule(BaseModule):
     def update_correlation_rule(
         self,
         rule_id: str = Field(
-            description="Rule ID to update. Retrieve from `falcon_search_correlation_rules`.",
+            description="Rule ID to update. Use the `rule_id` field from `falcon_search_correlation_rules` results.",
         ),
         name: str | None = Field(
             default=None,
@@ -264,15 +264,18 @@ class CorrelationRulesModule(BaseModule):
         trigger_mode: str | None = Field(
             default=None,
             description="Updated trigger mode.",
-            examples={"summary", "per_event"},
+            examples={"summary", "verbose"},
         ),
-        tactic: str | None = Field(
+        use_ingest_time: bool | None = Field(
             default=None,
-            description="Updated MITRE ATT&CK tactic ID. Example: 'TA0001'",
+            description="Use event ingest time instead of event timestamp for the lookback window.",
         ),
-        technique: str | None = Field(
+        mitre_attack: list[dict[str, str]] | None = Field(
             default=None,
-            description="Updated MITRE ATT&CK technique ID. Example: 'T1059'",
+            description=(
+                "Updated MITRE ATT&CK mapping as a list of objects with tactic_id and technique_id. "
+                "Example: [{'tactic_id': 'TA0002', 'technique_id': 'T1059'}]"
+            ),
         ),
         comment: str | None = Field(
             default=None,
@@ -285,7 +288,6 @@ class CorrelationRulesModule(BaseModule):
         step needed. To enable/disable a rule, set status to 'active' or 'inactive'.
         Only provided fields are changed; omitted fields retain current values.
         """
-        # PATCH API takes rule_id in the "id" body field
         body: dict[str, Any] = {"id": rule_id}
 
         if name is not None:
@@ -298,12 +300,16 @@ class CorrelationRulesModule(BaseModule):
             body["severity"] = severity
         if comment is not None:
             body["comment"] = comment
-        if tactic is not None:
-            body["tactic"] = tactic
-        if technique is not None:
-            body["technique"] = technique
+        if mitre_attack is not None:
+            body["mitre_attack"] = mitre_attack
 
-        if search_filter is not None or lookback is not None or trigger_mode is not None:
+        search_fields_set = (
+            search_filter is not None
+            or lookback is not None
+            or trigger_mode is not None
+            or use_ingest_time is not None
+        )
+        if search_fields_set:
             search: dict[str, Any] = {}
             if search_filter is not None:
                 search["filter"] = search_filter
@@ -311,6 +317,8 @@ class CorrelationRulesModule(BaseModule):
                 search["lookback"] = lookback
             if trigger_mode is not None:
                 search["trigger_mode"] = trigger_mode
+            if use_ingest_time is not None:
+                search["use_ingest_time"] = use_ingest_time
             body["search"] = search
 
         # PATCH endpoint requires body as a list of rule dicts
@@ -331,7 +339,7 @@ class CorrelationRulesModule(BaseModule):
     def delete_correlation_rules(
         self,
         ids: list[str] = Field(
-            description="Rule IDs to delete. Retrieve from `falcon_search_correlation_rules`.",
+            description="Rule IDs to delete. Use the `rule_id` field from `falcon_search_correlation_rules` results.",
         ),
         comment: str | None = Field(
             default=None,

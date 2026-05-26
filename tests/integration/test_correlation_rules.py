@@ -1,5 +1,6 @@
 """Integration tests for the Correlation Rules module."""
 
+import time
 import warnings
 
 import pytest
@@ -253,7 +254,8 @@ class TestCorrelationRulesIntegration(BaseIntegrationTest):
             f"Expected rule_id '{rule_id}', got '{updated.get('rule_id')}'"
         )
 
-        # Restore original description — warn if cleanup fails
+        # Restore original description — wait for version transition to settle
+        time.sleep(3)
         restore_result = self.call_method(
             self.module.update_correlation_rule,
             rule_id=rule_id,
