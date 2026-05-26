@@ -132,10 +132,10 @@ class TestCorrelationRulesModule(TestModules):
             ]},
         }
 
-        self.module.search_correlation_rules(filter="tactic:'TA0001'")
+        self.module.search_correlation_rules(filter="mitre_attack.tactic_id:'TA0001'")
 
         call_args = self.mock_client.command.call_args
-        self.assertEqual(call_args[1]["parameters"]["filter"], "tactic:'TA0001'")
+        self.assertEqual(call_args[1]["parameters"]["filter"], "mitre_attack.tactic_id:'TA0001'")
 
     def test_search_empty_results_returns_fql_guide(self):
         """Test that empty resources return a dict with fql_guide key."""
@@ -189,6 +189,7 @@ class TestCorrelationRulesModule(TestModules):
             schedule="@every 1h0m",
             status="active",
             trigger_mode="summary",
+            use_ingest_time=False,
         )
 
         call_args = self.mock_client.command.call_args
@@ -203,15 +204,14 @@ class TestCorrelationRulesModule(TestModules):
         self.assertEqual(body["search"]["outcome"], "detection")
         self.assertEqual(body["search"]["lookback"], "1h0m")
         self.assertEqual(body["search"]["trigger_mode"], "summary")
-        self.assertNotIn("execution_mode", body["search"])
-        self.assertNotIn("use_ingest_time", body["search"])
+        self.assertEqual(body["search"]["use_ingest_time"], False)
         self.assertEqual(body["operation"]["schedule"]["definition"], "@every 1h0m")
 
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 1)
 
     def test_create_with_optional_params(self):
-        """Test that description, tactic, technique, and comment appear in the body."""
+        """Test that description, mitre_attack, and comment appear in the body."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": [{"id": "v1", "rule_id": "r1", "name": "Rule"}]},
@@ -223,19 +223,20 @@ class TestCorrelationRulesModule(TestModules):
             search_filter="#event=ProcessRollup2",
             severity=50,
             description="Detects suspicious activity",
-            tactic="TA0001",
-            technique="T1059",
+            mitre_attack=[{"tactic_id": "TA0001", "technique_id": "T1059"}],
             comment="Creating for audit trail",
         )
 
         body = self.mock_client.command.call_args[1]["body"]
         self.assertEqual(body["description"], "Detects suspicious activity")
-        self.assertEqual(body["tactic"], "TA0001")
-        self.assertEqual(body["technique"], "T1059")
+        self.assertEqual(
+            body["mitre_attack"],
+            [{"tactic_id": "TA0001", "technique_id": "T1059"}],
+        )
         self.assertEqual(body["comment"], "Creating for audit trail")
 
     def test_create_custom_defaults(self):
-        """Test overriding search_outcome, lookback, schedule, status, and trigger_mode."""
+        """Test overriding search_outcome, lookback, schedule, status, trigger_mode, and use_ingest_time."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": [{"id": "v1", "rule_id": "r1", "name": "Rule"}]},
@@ -250,14 +251,16 @@ class TestCorrelationRulesModule(TestModules):
             lookback="24h0m",
             schedule="@every 24h0m",
             status="inactive",
-            trigger_mode="per_event",
+            trigger_mode="verbose",
+            use_ingest_time=True,
         )
 
         body = self.mock_client.command.call_args[1]["body"]
         self.assertEqual(body["status"], "inactive")
         self.assertEqual(body["search"]["outcome"], "case")
         self.assertEqual(body["search"]["lookback"], "24h0m")
-        self.assertEqual(body["search"]["trigger_mode"], "per_event")
+        self.assertEqual(body["search"]["trigger_mode"], "verbose")
+        self.assertEqual(body["search"]["use_ingest_time"], True)
         self.assertEqual(body["operation"]["schedule"]["definition"], "@every 24h0m")
 
     def test_create_error_returns_error_list(self):
@@ -323,8 +326,8 @@ class TestCorrelationRulesModule(TestModules):
             search_filter=None,
             lookback=None,
             trigger_mode=None,
-            tactic=None,
-            technique=None,
+            use_ingest_time=None,
+            mitre_attack=None,
             comment=None,
         )
 
@@ -336,7 +339,7 @@ class TestCorrelationRulesModule(TestModules):
         self.assertNotIn("status", body)
 
     def test_update_search_fields_nested(self):
-        """Test that search_filter, lookback, and trigger_mode go into body['search']."""
+        """Test that search_filter, lookback, trigger_mode, and use_ingest_time go into body['search']."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": [{"id": "v2", "rule_id": "r1"}]},
@@ -346,14 +349,16 @@ class TestCorrelationRulesModule(TestModules):
             rule_id="r1",
             search_filter="#event=NetworkConnect",
             lookback="24h0m",
-            trigger_mode="per_event",
+            trigger_mode="verbose",
+            use_ingest_time=True,
         )
 
         body = self.mock_client.command.call_args[1]["body"][0]
         self.assertIn("search", body)
         self.assertEqual(body["search"]["filter"], "#event=NetworkConnect")
         self.assertEqual(body["search"]["lookback"], "24h0m")
-        self.assertEqual(body["search"]["trigger_mode"], "per_event")
+        self.assertEqual(body["search"]["trigger_mode"], "verbose")
+        self.assertEqual(body["search"]["use_ingest_time"], True)
 
     def test_update_error_returns_error_list(self):
         """Test that an update API error is returned wrapped in a list."""

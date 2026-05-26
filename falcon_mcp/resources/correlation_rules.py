@@ -61,20 +61,20 @@ SEARCH_CORRELATION_RULES_FQL_FILTERS = [
         """
     ),
     (
-        "tactic",
+        "mitre_attack.tactic_id",
         "String",
         """
-        MITRE ATT&CK tactic ID. Uses ATT&CK tactic IDs,
-        not names.
-        Ex: tactic:'TA0001', tactic:'TA0002'
+        MITRE ATT&CK tactic ID from the mitre_attack mapping.
+        Uses ATT&CK tactic IDs, not names.
+        Ex: mitre_attack.tactic_id:'TA0001'
         """
     ),
     (
-        "technique",
+        "mitre_attack.technique_id",
         "String",
         """
-        MITRE ATT&CK technique ID.
-        Ex: technique:'T1059', technique:'T1003'
+        MITRE ATT&CK technique ID from the mitre_attack mapping.
+        Ex: mitre_attack.technique_id:'T1059'
         """
     ),
     (
@@ -137,7 +137,7 @@ field_name:[operator]'value'
 
 === COMBINING ===
 • + = AND: status:'active'+severity:>50
-• , = OR: tactic:'TA0001',tactic:'TA0002'
+• , = OR: mitre_attack.tactic_id:'TA0001',mitre_attack.tactic_id:'TA0002'
 
 === SORT OPTIONS ===
 Sort fields: created_on, last_updated_on, name, severity, status
@@ -163,10 +163,11 @@ These are distinct fields:
 
 A rule can be active but unpublished, or published but inactive.
 
-=== TACTIC FORMAT ===
-Tactic field uses MITRE ATT&CK tactic IDs (TA####), not names.
-• ✅ Correct: tactic:'TA0001'
-• ❌ Wrong: tactic:'Execution'
+=== MITRE ATT&CK MAPPING ===
+The mitre_attack field uses ATT&CK tactic IDs (TA####) and technique IDs (T####).
+Filter on nested fields:
+• ✅ Correct: mitre_attack.tactic_id:'TA0001'
+• ❌ Wrong: mitre_attack.tactic_id:'Execution'
 
 Common tactic IDs:
 • TA0001: Initial Access
@@ -191,7 +192,7 @@ Common tactic IDs:
 status:'active'+severity:>=70
 
 # Published rules covering a MITRE tactic
-state:'published'+tactic:'TA0001'
+state:'published'+mitre_attack.tactic_id:'TA0001'
 
 # Recently updated published rules
 state:'published'+last_updated_on:>'2025-01-01'
@@ -203,10 +204,10 @@ name:~'PowerShell'
 status:'active'+severity:>=90
 
 # Rules for a specific technique
-technique:'T1059'
+mitre_attack.technique_id:'T1059'
 
 # Active rules covering lateral movement or credential access
-status:'active'+(tactic:'TA0008',tactic:'TA0006')
+status:'active'+(mitre_attack.tactic_id:'TA0008',mitre_attack.tactic_id:'TA0006')
 
 # High-severity active rules updated recently
 status:'active'+severity:>=70+last_updated_on:>'2025-01-01'
