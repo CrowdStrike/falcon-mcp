@@ -58,8 +58,8 @@ Search NG-SIEM Correlation Rules and return full rule details.
 
 Use this to find detection rules by name, status, severity, or MITRE tactic/technique.
 Consult falcon://correlation-rules/search/fql-guide before constructing filter expressions.
-Returns full rule objects including all versions; filter with state:'published' to get
-one result per rule. Returns search logic, schedule, and versioning info.
+Returns full rule objects; use the `rule_id` field when passing results to update or
+delete tools. Filter with state:'published' to get one result per rule.
 
 **Example prompts:**
 

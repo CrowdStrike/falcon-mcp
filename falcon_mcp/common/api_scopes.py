@@ -90,6 +90,12 @@ API_SCOPE_REQUIREMENTS = {
     "RTR_ListFilesV2": ["Real time response:write"],
     "RTRAuditSessions": ["real-time-response-audit:read"],
     "RTR_AggregateSessions": ["Real time response:read"],
+    # Quarantine operations
+    "QueryQuarantineFiles": ["Quarantined Files:read"],
+    "GetQuarantineFiles": ["Quarantined Files:read"],
+    "ActionUpdateCount": ["Quarantined Files:read"],
+    "UpdateQuarantinedDetectsByIds": ["Quarantined Files:write"],
+    "UpdateQfByQuery": ["Quarantined Files:write"],
     # Custom IOA operations
     "query_rule_groups_full": ["Custom IOA Rules:read"],
     "query_platformsMixin0": ["Custom IOA Rules:read"],

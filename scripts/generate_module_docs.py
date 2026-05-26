@@ -238,6 +238,24 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Run this CQL query for the last 24 hours: #event_simpleName=ProcessRollup2",
         "Search NGSIEM for DNS events from January 2025",
     ],
+    # Quarantine
+    "falcon_search_quarantined_files": [
+        "Show me quarantined files on host SE-DAO-WIN10-CO",
+        "Find quarantined files for user badguy updated in the last 7 days",
+        "Search for quarantined files with SHA256 starting with 3dd9",
+    ],
+    "falcon_preview_quarantine_actions": [
+        "Preview how many quarantined files can be released vs deleted",
+        "Preview quarantine action impact for state quarantined on host SE-DAO-WIN10-CO",
+    ],
+    "falcon_update_quarantined_files": [
+        "Release quarantine record abc123",
+        "Release all quarantined files for user badguy",
+    ],
+    "falcon_delete_quarantined_files": [
+        "Delete quarantine records for host SE-DAO-WIN10-CO",
+        "Delete quarantine record abc123",
+    ],
     # Scheduled Reports
     "falcon_search_scheduled_reports": [
         "Show me all active scheduled reports",
