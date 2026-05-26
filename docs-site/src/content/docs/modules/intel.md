@@ -29,7 +29,7 @@ decoded string; CSV format returns CSV text.
 
 - "Generate MITRE ATT&CK report for FANCY BEAR"
 
-### `falcon_query_actor_entities`
+### `falcon_search_actors`
 
 **Required scopes:** `Actors (Falcon Intelligence):read`
 
@@ -39,7 +39,12 @@ Use this to search actors by name, target countries/industries, or activity date
 Consult falcon://intel/actors/fql-guide before constructing filter expressions.
 Returns full actor profiles including aliases, motivations, and targeting details.
 
-### `falcon_query_indicator_entities`
+**Example prompts:**
+
+- "Find threat actors targeting financial services"
+- "Search for BEAR adversary groups"
+
+### `falcon_search_indicators`
 
 **Required scopes:** `Indicators (Falcon Intelligence):read`
 
@@ -49,7 +54,11 @@ Use this to find indicators by type, publish date, malware family, or threat act
 association. Consult falcon://intel/indicators/fql-guide before constructing filter
 expressions. Returns full indicator details including labels, relations, and kill chain stage.
 
-### `falcon_query_report_entities`
+**Example prompts:**
+
+- "Find intelligence IOCs of type domain published this year"
+
+### `falcon_search_reports`
 
 **Required scopes:** `Reports (Falcon Intelligence):read`
 
@@ -58,6 +67,10 @@ Search CrowdStrike intelligence publications and threat reports.
 Use this to find reports by name, target industry, threat type, or publication date.
 Consult falcon://intel/reports/fql-guide before constructing filter expressions.
 Returns full report metadata including title, description, and target details.
+
+**Example prompts:**
+
+- "Find intelligence reports published in the last 30 days"
 
 ## Resources
 
