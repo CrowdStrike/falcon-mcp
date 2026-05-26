@@ -29,6 +29,7 @@ class FalconClient:
         client_id: str | None = None,
         client_secret: str | None = None,
         member_cid: str | None = None,
+        proxy: str | None = None,
     ):
         """Initialize the Falcon client.
 
@@ -39,6 +40,8 @@ class FalconClient:
             client_id: Falcon API Client ID (defaults to FALCON_CLIENT_ID env var)
             client_secret: Falcon API Client Secret (defaults to FALCON_CLIENT_SECRET env var)
             member_cid: Child CID for Flight Control (MSSP) support (defaults to FALCON_MEMBER_CID env var)
+            proxy: HTTP/HTTPS proxy URL for outbound Falcon API connections (defaults to FALCON_PROXY_URL env var).
+                   Example: "http://proxy.corp.example.com:8080"
         """
         # Get credentials from parameters or environment variables (parameters take precedence)
         self.client_id = client_id or os.environ.get("FALCON_CLIENT_ID")
@@ -51,6 +54,7 @@ class FalconClient:
             "FALCON_MCP_USER_AGENT_COMMENT"
         )
         self.member_cid = member_cid or os.environ.get("FALCON_MEMBER_CID")
+        self.proxy = proxy or os.environ.get("FALCON_PROXY_URL")
 
         if not self.client_id or not self.client_secret:
             raise ValueError(
@@ -70,6 +74,10 @@ class FalconClient:
         # Only include member_cid if it's provided
         if self.member_cid:
             api_params["member_cid"] = self.member_cid
+
+        # Only include proxy if configured; APIHarnessV2 expects {"https": url}
+        if self.proxy:
+            api_params["proxy"] = {"https": self.proxy}
 
         # Initialize the Falcon API client using APIHarnessV2
         self.client = APIHarnessV2(**api_params)

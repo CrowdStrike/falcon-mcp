@@ -47,6 +47,7 @@ class FalconMCPServer:
         host: str = "127.0.0.1",
         port: int = 8000,
         member_cid: str | None = None,
+        proxy: str | None = None,
     ):
         """Initialize the Falcon MCP server.
 
@@ -62,6 +63,7 @@ class FalconMCPServer:
             host: Host to bind to for HTTP transports (default: 127.0.0.1)
             port: Port to listen on for HTTP transports (default: 8000)
             member_cid: Child CID for Flight Control (MSSP) support (defaults to FALCON_MEMBER_CID env var)
+            proxy: HTTP/HTTPS proxy URL for outbound Falcon API connections (defaults to FALCON_PROXY_URL env var)
         """
         # Store configuration
         self.base_url = base_url
@@ -86,6 +88,7 @@ class FalconMCPServer:
             client_id=client_id,
             client_secret=client_secret,
             member_cid=member_cid,
+            proxy=proxy,
         )
 
         # Authenticate with the Falcon API
@@ -374,6 +377,14 @@ def parse_args() -> argparse.Namespace:
         help="Child CID for Flight Control (MSSP) support (env: FALCON_MEMBER_CID)",
     )
 
+    # Proxy configuration
+    parser.add_argument(
+        "--proxy",
+        default=os.environ.get("FALCON_PROXY_URL"),
+        help="HTTP/HTTPS proxy URL for outbound Falcon API connections (env: FALCON_PROXY_URL). "
+        "Example: http://proxy.corp.example.com:8080",
+    )
+
     return parser.parse_args()
 
 
@@ -397,6 +408,7 @@ def main() -> None:
             host=args.host,
             port=args.port,
             member_cid=args.member_cid,
+            proxy=args.proxy,
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport)

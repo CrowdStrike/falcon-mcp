@@ -400,6 +400,72 @@ class TestFalconClient(unittest.TestCase):
 
     @patch("falcon_mcp.client.os.environ.get")
     @patch("falcon_mcp.client.APIHarnessV2")
+    def test_client_initialization_with_proxy(self, mock_apiharness, mock_environ_get):
+        """Test that proxy parameter is forwarded to APIHarnessV2."""
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret",
+        }.get(key, default)
+        mock_apiharness.return_value = MagicMock()
+
+        _client = FalconClient(proxy="http://proxy.corp.example.com:8080")
+
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["proxy"], {"https": "http://proxy.corp.example.com:8080"})
+
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
+    def test_client_proxy_from_env_var(self, mock_apiharness, mock_environ_get):
+        """Test that FALCON_PROXY_URL env var is used when no proxy param is passed."""
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret",
+            "FALCON_PROXY_URL": "http://proxy.env.example.com:3128",
+        }.get(key, default)
+        mock_apiharness.return_value = MagicMock()
+
+        _client = FalconClient()
+
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["proxy"], {"https": "http://proxy.env.example.com:3128"})
+
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
+    def test_client_proxy_param_overrides_env_var(self, mock_apiharness, mock_environ_get):
+        """Test that explicit proxy param takes precedence over FALCON_PROXY_URL env var."""
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret",
+            "FALCON_PROXY_URL": "http://proxy.env.example.com:3128",
+        }.get(key, default)
+        mock_apiharness.return_value = MagicMock()
+
+        _client = FalconClient(proxy="http://proxy.param.example.com:8080")
+
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertEqual(call_args["proxy"], {"https": "http://proxy.param.example.com:8080"})
+
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
+    def test_client_initialization_without_proxy(self, mock_apiharness, mock_environ_get):
+        """Test that proxy key is absent from APIHarnessV2 call when no proxy is configured."""
+        mock_environ_get.side_effect = lambda key, default=None: {
+            "FALCON_CLIENT_ID": "test-client-id",
+            "FALCON_CLIENT_SECRET": "test-client-secret",
+        }.get(key, default)
+        mock_apiharness.return_value = MagicMock()
+
+        _client = FalconClient()
+
+        mock_apiharness.assert_called_once()
+        call_args = mock_apiharness.call_args[1]
+        self.assertNotIn("proxy", call_args)
+
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
     def test_auth_failure_message_401(self, mock_apiharness, mock_environ_get):
         """Test auth failure message for invalid credentials (HTTP 401)."""
         mock_environ_get.side_effect = lambda key, default=None: {
