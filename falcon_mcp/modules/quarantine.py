@@ -14,28 +14,10 @@ from pydantic import AnyUrl, Field
 
 from falcon_mcp.common.errors import _format_error_response
 from falcon_mcp.common.logging import get_logger
-from falcon_mcp.common.utils import unwrap_field_default
 from falcon_mcp.modules.base import BaseModule
-from falcon_mcp.resources.quarantine import (
-    EMBEDDED_FQL_SYNTAX,
-    SEARCH_QUARANTINED_FILES_FQL_DOCUMENTATION,
-)
+from falcon_mcp.resources.quarantine import SEARCH_QUARANTINED_FILES_FQL_DOCUMENTATION
 
 logger = get_logger(__name__)
-
-REVERSIBLE_ACTION_ANNOTATIONS = ToolAnnotations(
-    readOnlyHint=False,
-    destructiveHint=False,
-    idempotentHint=False,
-    openWorldHint=True,
-)
-
-DESTRUCTIVE_ACTION_ANNOTATIONS = ToolAnnotations(
-    readOnlyHint=False,
-    destructiveHint=True,
-    idempotentHint=False,
-    openWorldHint=True,
-)
 
 VALID_RESTORE_ACTIONS = {"release", "unrelease"}
 
@@ -56,37 +38,30 @@ class QuarantineModule(BaseModule):
         )
         self._add_tool(
             server=server,
-            method=self.get_quarantined_file_details,
-            name="get_quarantined_file_details",
+            method=self.preview_quarantine_actions,
+            name="preview_quarantine_actions",
         )
         self._add_tool(
             server=server,
-            method=self.preview_quarantine_action_counts,
-            name="preview_quarantine_action_counts",
+            method=self.update_quarantined_files,
+            name="update_quarantined_files",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
         )
         self._add_tool(
             server=server,
-            method=self.update_quarantined_files_by_ids,
-            name="update_quarantined_files_by_ids",
-            annotations=REVERSIBLE_ACTION_ANNOTATIONS,
-        )
-        self._add_tool(
-            server=server,
-            method=self.update_quarantined_files_by_filter,
-            name="update_quarantined_files_by_filter",
-            annotations=REVERSIBLE_ACTION_ANNOTATIONS,
-        )
-        self._add_tool(
-            server=server,
-            method=self.delete_quarantined_files_by_ids,
-            name="delete_quarantined_files_by_ids",
-            annotations=DESTRUCTIVE_ACTION_ANNOTATIONS,
-        )
-        self._add_tool(
-            server=server,
-            method=self.delete_quarantined_files_by_filter,
-            name="delete_quarantined_files_by_filter",
-            annotations=DESTRUCTIVE_ACTION_ANNOTATIONS,
+            method=self.delete_quarantined_files,
+            name="delete_quarantined_files",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=True,
+                openWorldHint=True,
+            ),
         )
 
     def register_resources(self, server: FastMCP) -> None:
@@ -111,11 +86,7 @@ class QuarantineModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description=EMBEDDED_FQL_SYNTAX,
-        ),
-        q: str | None = Field(
-            default=None,
-            description="Free-text search across common quarantine fields such as sha256, hostname, username, and paths.path.",
+            description="FQL filter expression. See `falcon://quarantine/files/search/fql-guide` for syntax.",
         ),
         limit: int = Field(
             default=10,
@@ -123,6 +94,7 @@ class QuarantineModule(BaseModule):
             le=500,
             description="Maximum number of quarantine file IDs to return. Max: 500.",
         ),
+        # API spec declares offset as string type (unlike most other Falcon endpoints)
         offset: str | None = Field(
             default=None,
             description="Starting index of overall result set from which to return IDs.",
@@ -134,19 +106,15 @@ class QuarantineModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search quarantined files and return full quarantine metadata.
 
-        IMPORTANT: You must use the `falcon://quarantine/files/search/fql-guide`
-        resource when building the `filter` parameter for this tool.
-
-        Use this tool to discover quarantine records by host, hash, user, or
-        status. If matching record IDs are found, the tool retrieves the full
-        quarantine details before returning them. Empty results and filter errors
-        include the FQL guide to help refine the query.
+        Use this to discover quarantine records by host, hash, user, or state.
+        Consult falcon://quarantine/files/search/fql-guide before constructing
+        filter expressions. Returns full quarantine details including hostname,
+        sha256, paths, state, and associated alert and detection IDs.
         """
         file_ids = self._base_search_api_call(
             operation="QueryQuarantineFiles",
             search_params={
                 "filter": filter,
-                "q": q,
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
@@ -175,45 +143,30 @@ class QuarantineModule(BaseModule):
 
         return details
 
-    def get_quarantined_file_details(
-        self,
-        ids: list[str] = Field(description="Quarantine file ID(s) to retrieve."),
-    ) -> list[dict[str, Any]]:
-        """Retrieve quarantine record details for IDs you already know.
-
-        Use this tool only when you already have specific quarantine file IDs.
-        To discover records by host, hash, user, or status, use
-        `falcon_search_quarantined_files`.
-        """
-        if not ids:
-            return []
-
-        details = self._base_get_by_ids(
-            operation="GetQuarantineFiles",
-            ids=ids,
-        )
-
-        if self._is_error(details):
-            return [details]
-
-        return details
-
-    def preview_quarantine_action_counts(
+    def preview_quarantine_actions(
         self,
         filter: str = Field(
-            description="FQL filter used to estimate how many quarantined files would be affected by each action. Use `*` for all files. IMPORTANT: use the `falcon://quarantine/files/search/fql-guide` resource when building this filter parameter.",
+            description="FQL filter expression. See `falcon://quarantine/files/search/fql-guide` for syntax.",
         ),
     ) -> list[dict[str, Any]]:
-        """Estimate how many quarantine records each action would affect.
+        """Estimate how many quarantine records each action would affect for a given filter.
 
-        Use this read-only tool before calling a mutating quarantine action when
-        you want to understand the blast radius of a `release`, `unrelease`, or
-        `delete` request.
+        Use this read-only tool before calling a mutating quarantine action to
+        understand the blast radius of a release, unrelease, or delete request.
+        Consult falcon://quarantine/files/search/fql-guide before constructing
+        filter expressions. Returns a list of action counts keyed by action name.
         """
+        if not filter:
+            return [
+                _format_error_response(
+                    "Provide a non-empty FQL `filter` for preview_quarantine_actions."
+                )
+            ]
+
         result = self._base_query_api_call(
             operation="ActionUpdateCount",
             query_params={"filter": filter},
-            error_message="Failed to preview quarantine action counts",
+            error_message="Failed to count quarantine actions",
         )
 
         if self._is_error(result):
@@ -221,117 +174,97 @@ class QuarantineModule(BaseModule):
 
         return result
 
-    def update_quarantined_files_by_ids(
+    def update_quarantined_files(
         self,
-        ids: list[str] = Field(description="Quarantine file ID(s) to update."),
         action: str = Field(
             description="Reversible action to apply. Supported values are `release` and `unrelease`.",
         ),
-        comment: str | None = Field(
+        ids: list[str] | None = Field(
             default=None,
-            description="Optional audit comment describing why the action is being taken.",
-        ),
-    ) -> list[dict[str, Any]]:
-        """Apply a quarantine action to specific records by ID.
-
-        Use this tool when you already know the quarantine file IDs to update.
-        The `action` value is case-insensitive and must be either `release` or
-        `unrelease`. Use `falcon_delete_quarantined_files_by_ids` for
-        destructive removal.
-        """
-        action = self._normalize_restore_action(action)
-        if self._is_error(action):
-            return [action]
-
-        return self._apply_action_by_ids(
-            ids=ids,
-            action=action,
-            comment=comment,
-            error_message="Failed to update quarantined files by IDs",
-        )
-
-    def update_quarantined_files_by_filter(
-        self,
-        action: str = Field(
-            description="Reversible action to apply. Supported values are `release` and `unrelease`.",
+            description="Quarantine file ID(s) to update. Provide `ids` OR `filter` (not both).",
         ),
         filter: str | None = Field(
             default=None,
-            description="FQL filter used to select quarantined files. IMPORTANT: use the `falcon://quarantine/files/search/fql-guide` resource when building this filter parameter.",
-        ),
-        q: str | None = Field(
-            default=None,
-            description="Optional free-text search used to further narrow the update target set.",
+            description="FQL filter expression. See `falcon://quarantine/files/search/fql-guide` for syntax.",
         ),
         comment: str | None = Field(
             default=None,
             description="Optional audit comment describing why the action is being taken.",
         ),
     ) -> list[dict[str, Any]]:
-        """Apply a quarantine action to records selected by query.
+        """Apply a reversible quarantine action to records selected by IDs or filter.
 
-        Use this tool when you want Falcon to select the target quarantine
-        records using `filter` or `q` instead of explicit IDs. The `action`
-        value is case-insensitive and must be either `release` or `unrelease`.
-        Use `falcon_delete_quarantined_files_by_filter` for destructive
-        removal.
+        Use this to release or unrelease quarantined files. Provide `ids` for
+        specific records, or `filter` to select by query. Consult
+        falcon://quarantine/files/search/fql-guide before constructing filter
+        expressions. Returns an empty list on success.
         """
-        action = self._normalize_restore_action(action)
-        if self._is_error(action):
-            return [action]
+        normalized = self._normalize_restore_action(action)
+        if self._is_error(normalized):
+            return [normalized]
+
+        if not ids and not filter:
+            return [
+                _format_error_response(
+                    "Provide either `ids` or `filter` when updating quarantined files."
+                )
+            ]
+
+        if ids:
+            return self._apply_action_by_ids(
+                ids=ids,
+                action=normalized,
+                comment=comment,
+                error_message="Failed to update quarantined files by IDs",
+            )
 
         return self._apply_action_by_query(
-            action=action,
+            action=normalized,
             filter=filter,
-            q=q,
             comment=comment,
             error_message="Failed to update quarantined files by query",
         )
 
-    def delete_quarantined_files_by_ids(
+    def delete_quarantined_files(
         self,
-        ids: list[str] = Field(description="Quarantine file ID(s) to delete."),
-        comment: str | None = Field(
+        ids: list[str] | None = Field(
             default=None,
-            description="Optional audit comment describing why the delete is being taken.",
+            description="Quarantine file ID(s) to delete. Provide `ids` OR `filter` (not both).",
         ),
-    ) -> list[dict[str, Any]]:
-        """Delete specific quarantine records by ID.
-
-        This tool is destructive and should be used only when the quarantine
-        records should be removed rather than released or unreleased.
-        """
-        return self._apply_action_by_ids(
-            ids=ids,
-            action="delete",
-            comment=comment,
-            error_message="Failed to delete quarantined files by IDs",
-        )
-
-    def delete_quarantined_files_by_filter(
-        self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter used to select quarantined files to delete. IMPORTANT: use the `falcon://quarantine/files/search/fql-guide` resource when building this filter parameter.",
-        ),
-        q: str | None = Field(
-            default=None,
-            description="Optional free-text search used to further narrow the delete target set.",
+            description="FQL filter expression. See `falcon://quarantine/files/search/fql-guide` for syntax.",
         ),
         comment: str | None = Field(
             default=None,
-            description="Optional audit comment describing why the delete is being taken.",
+            description="Optional audit comment describing why the records are being deleted.",
         ),
     ) -> list[dict[str, Any]]:
-        """Delete quarantine records selected by query.
+        """Delete quarantine records selected by IDs or filter.
 
-        This tool is destructive. Provide `filter`, `q`, or both to choose the
-        records Falcon should remove.
+        This tool is destructive and should be used only when quarantine records
+        should be removed rather than released. Provide `ids` for specific records,
+        or `filter` to select by query. Consult falcon://quarantine/files/search/fql-guide
+        before constructing filter expressions. Returns an empty list on success.
         """
+        if not ids and not filter:
+            return [
+                _format_error_response(
+                    "Provide either `ids` or `filter` when deleting quarantined files."
+                )
+            ]
+
+        if ids:
+            return self._apply_action_by_ids(
+                ids=ids,
+                action="delete",
+                comment=comment,
+                error_message="Failed to delete quarantined files by IDs",
+            )
+
         return self._apply_action_by_query(
             action="delete",
             filter=filter,
-            q=q,
             comment=comment,
             error_message="Failed to delete quarantined files by query",
         )
@@ -362,33 +295,16 @@ class QuarantineModule(BaseModule):
     def _apply_action_by_query(
         self,
         action: str,
-        filter: str | None,
-        q: str | None,
+        filter: str,
         comment: str | None,
         error_message: str,
     ) -> list[dict[str, Any]]:
-        """Apply a quarantine action to records selected by filter or query."""
-        filter = unwrap_field_default(filter)
-        q = unwrap_field_default(q)
-
-        if not filter and not q:
-            operation_label = (
-                "deleting quarantined files by query"
-                if action == "delete"
-                else "updating quarantined files by query"
-            )
-            return [
-                _format_error_response(
-                    f"Provide at least one of `filter` or `q` when {operation_label}."
-                )
-            ]
-
+        """Apply a quarantine action to records selected by filter."""
         result = self._base_query_api_call(
             operation="UpdateQfByQuery",
             body_params={
                 "action": action,
                 "filter": filter,
-                "q": q,
                 "comment": comment,
             },
             error_message=error_message,
@@ -401,13 +317,12 @@ class QuarantineModule(BaseModule):
 
     def _normalize_restore_action(self, action: str | None) -> str | dict[str, Any]:
         """Normalize and validate reversible quarantine action names."""
-        normalized = unwrap_field_default(action)
-        if not isinstance(normalized, str):
+        if not isinstance(action, str):
             return _format_error_response(
                 "Provide a quarantine `action` value of `release` or `unrelease`."
             )
 
-        lowered = normalized.strip().lower()
+        lowered = action.strip().lower()
         if lowered not in VALID_RESTORE_ACTIONS:
             return _format_error_response(
                 "Unsupported quarantine `action`. Use `release` or `unrelease`."

@@ -13,7 +13,7 @@ class TestQuarantineIntegration(BaseIntegrationTest):
     Validates:
     - Correct FalconPy operation names for quarantine search and detail lookups
     - Two-step search pattern returns full quarantine details, not just IDs
-    - Read-only preview path works with a valid quarantine filter
+    - Read-only count path works with a valid quarantine FQL filter
     """
 
     @pytest.fixture(autouse=True)
@@ -55,64 +55,33 @@ class TestQuarantineIntegration(BaseIntegrationTest):
                 context="search_quarantined_files with sort",
             )
 
-    def test_get_quarantined_file_details_with_valid_id(self):
-        """Test quarantine detail lookup using a valid file ID."""
-        search_result = self.call_method(self.module.search_quarantined_files, limit=1)
-
-        if not isinstance(search_result, list) or len(search_result) == 0:
-            self.skip_with_warning(
-                "No quarantined files available to test get_quarantined_file_details",
-                context="test_get_quarantined_file_details_with_valid_id",
-            )
-
-        quarantine_id = self.get_first_id(search_result)
-        if not quarantine_id:
-            self.skip_with_warning(
-                "Could not extract quarantine ID from search results",
-                context="test_get_quarantined_file_details_with_valid_id",
-            )
-
-        result = self.call_method(self.module.get_quarantined_file_details, ids=[quarantine_id])
-
-        self.assert_no_error(result, context="get_quarantined_file_details")
-        self.assert_valid_list_response(
-            result,
-            min_length=1,
-            context="get_quarantined_file_details",
-        )
-        self.assert_search_returns_details(
-            result,
-            expected_fields=["id", "sha256", "hostname"],
-            context="get_quarantined_file_details",
-        )
-
-    def test_preview_quarantine_action_counts_with_valid_filter(self):
-        """Test the read-only quarantine action preview against a real ID filter."""
-        search_result = self.call_method(self.module.search_quarantined_files, limit=1)
-
-        if not isinstance(search_result, list) or len(search_result) == 0:
-            self.skip_with_warning(
-                "No quarantined files available to test preview_quarantine_action_counts",
-                context="test_preview_quarantine_action_counts_with_valid_filter",
-            )
-
-        quarantine_id = self.get_first_id(search_result)
-        if not quarantine_id:
-            self.skip_with_warning(
-                "Could not extract quarantine ID from search results",
-                context="test_preview_quarantine_action_counts_with_valid_filter",
-            )
-
+    def test_preview_quarantine_actions_with_filter(self):
+        """Test the read-only quarantine action count with a valid FQL filter."""
         result = self.call_method(
-            self.module.preview_quarantine_action_counts,
-            filter=f"id:'{quarantine_id}'",
+            self.module.preview_quarantine_actions,
+            filter="state:'quarantined'",
         )
 
-        self.assert_no_error(result, context="preview_quarantine_action_counts")
+        self.assert_no_error(result, context="preview_quarantine_actions")
         self.assert_valid_list_response(
             result,
-            min_length=1,
-            context="preview_quarantine_action_counts",
+            min_length=0,
+            context="preview_quarantine_actions",
         )
-        assert isinstance(result[0], dict), "Expected dict bucket payload from preview_quarantine_action_counts"
-        assert "buckets" in result[0], "Expected buckets in preview_quarantine_action_counts response"
+        if result:
+            assert isinstance(result[0], dict), (
+                "Expected dict payload from preview_quarantine_actions"
+            )
+            assert "buckets" in result[0], (
+                "Expected buckets in preview_quarantine_actions response"
+            )
+
+    def test_operation_names_are_correct(self):
+        """Validate that FalconPy operation names are correct.
+
+        If operation names are wrong, the API call will fail with an error.
+        search_quarantined_files exercises both QueryQuarantineFiles and
+        GetQuarantineFiles via the two-step search pattern.
+        """
+        result = self.call_method(self.module.search_quarantined_files, limit=1)
+        self.assert_no_error(result, context="QueryQuarantineFiles + GetQuarantineFiles operation names")

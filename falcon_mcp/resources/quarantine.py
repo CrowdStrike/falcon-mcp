@@ -4,35 +4,6 @@ Contains Quarantine resources.
 
 from falcon_mcp.common.utils import generate_md_table
 
-EMBEDDED_FQL_SYNTAX = """FQL filter string for querying quarantined files.
-
-SYNTAX:
-- Equals: field:'value'
-- Not equals: field:!'value'
-- Comparison: field:>50, field:>=50, field:<50, field:<=50
-- Contains (case-insensitive): field:~'partial'
-- Wildcard: field:'prefix*', field:'*suffix'
-
-COMBINING:
-- AND (all must match): field1:'value1'+field2:'value2'
-- OR (any can match): field:'value1',field:'value2'
-- Grouping: (status:'released',status:'quarantined')+device.hostname:'DC*'
-
-COMMON FIELDS:
-- id: Quarantine record ID
-- status: Quarantine state
-- sha256: File SHA256
-- date_updated: Record update timestamp
-- device.hostname: Host name
-- device.device_id: Host agent ID
-- behaviors.username: User tied to the quarantined behavior
-
-EXAMPLES:
-- Files quarantined on a host: device.hostname:'BRR-WB-LIB-22'
-- Recently updated records: date_updated:>'2026-03-01T00:00:00Z'
-- Files for a user: behaviors.username:'alice'
-"""
-
 SEARCH_QUARANTINED_FILES_FQL_FILTERS = [
     (
         "Field",
@@ -45,9 +16,9 @@ SEARCH_QUARANTINED_FILES_FQL_FILTERS = [
         "Quarantine file record ID. Example: id:'1234567890abcdef'",
     ),
     (
-        "status",
+        "state",
         "String",
-        "Quarantine state such as quarantined or released. Example: status:'quarantined'",
+        "Quarantine state (response field). Also queryable as `status` in FQL. Example: state:'quarantined' or status:'released'",
     ),
     (
         "sha256",
@@ -60,14 +31,9 @@ SEARCH_QUARANTINED_FILES_FQL_FILTERS = [
         "Last update timestamp. Example: date_updated:>'2026-03-01T00:00:00Z'",
     ),
     (
-        "device.hostname",
+        "hostname",
         "String",
-        "Host name tied to the quarantine event. Example: device.hostname:'BRR-WB-LIB-22'",
-    ),
-    (
-        "device.device_id",
-        "String",
-        "Falcon device ID for the affected host. Example: device.device_id:'aid-123'",
+        "Host name tied to the quarantine event (top-level field). Example: hostname:'BRR-WB-LIB-22'",
     ),
     (
         "behaviors.username",
@@ -84,8 +50,8 @@ SEARCH_QUARANTINED_FILES_FQL_FILTERS = [
 SEARCH_QUARANTINED_FILES_FQL_DOCUMENTATION = f"""Quarantine Files FQL Filter Guide
 
 Use this guide when building the `filter` parameter for `falcon_search_quarantined_files`,
-`falcon_preview_quarantine_action_counts`, `falcon_update_quarantined_files_by_filter`,
-or `falcon_delete_quarantined_files_by_filter`.
+`falcon_count_quarantine_actions`, `falcon_update_quarantined_files`,
+or `falcon_delete_quarantined_files`.
 
 === BASIC SYNTAX ===
 field_name:[operator]'value'
@@ -107,10 +73,15 @@ field_name:[operator]'value'
 
 {generate_md_table(SEARCH_QUARANTINED_FILES_FQL_FILTERS)}
 
+=== NOTES ===
+
+• The response entity uses `state` for the quarantine status field.
+• Both `state` and `status` work as FQL filter fields.
+
 === EXAMPLES ===
 
 # Quarantined files for a host
-device.hostname:'BRR-WB-LIB-22'
+hostname:'BRR-WB-LIB-22'
 
 # Records updated recently
 date_updated:>'2026-03-01T00:00:00Z'
@@ -119,5 +90,5 @@ date_updated:>'2026-03-01T00:00:00Z'
 status:'released'+behaviors.username:'alice'
 
 # File hash on a specific host
-sha256:'a1b2c3*'+device.hostname:'DC*'
+sha256:'a1b2c3*'+hostname:'DC*'
 """

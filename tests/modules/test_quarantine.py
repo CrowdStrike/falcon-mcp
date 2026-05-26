@@ -2,6 +2,8 @@
 Tests for the Quarantine module.
 """
 
+import unittest
+
 from mcp.types import ToolAnnotations
 
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
@@ -20,12 +22,9 @@ class TestQuarantineModule(TestModules):
         """Test registering tools with the server."""
         expected_tools = [
             "falcon_search_quarantined_files",
-            "falcon_get_quarantined_file_details",
-            "falcon_preview_quarantine_action_counts",
-            "falcon_update_quarantined_files_by_ids",
-            "falcon_update_quarantined_files_by_filter",
-            "falcon_delete_quarantined_files_by_ids",
-            "falcon_delete_quarantined_files_by_filter",
+            "falcon_preview_quarantine_actions",
+            "falcon_update_quarantined_files",
+            "falcon_delete_quarantined_files",
         ]
         self.assert_tools_registered(expected_tools)
 
@@ -41,16 +40,9 @@ class TestQuarantineModule(TestModules):
         self.module.register_tools(self.mock_server)
 
         self.assert_tool_annotations("falcon_search_quarantined_files", READ_ONLY_ANNOTATIONS)
+        self.assert_tool_annotations("falcon_preview_quarantine_actions", READ_ONLY_ANNOTATIONS)
         self.assert_tool_annotations(
-            "falcon_get_quarantined_file_details",
-            READ_ONLY_ANNOTATIONS,
-        )
-        self.assert_tool_annotations(
-            "falcon_preview_quarantine_action_counts",
-            READ_ONLY_ANNOTATIONS,
-        )
-        self.assert_tool_annotations(
-            "falcon_update_quarantined_files_by_ids",
+            "falcon_update_quarantined_files",
             ToolAnnotations(
                 readOnlyHint=False,
                 destructiveHint=False,
@@ -59,29 +51,11 @@ class TestQuarantineModule(TestModules):
             ),
         )
         self.assert_tool_annotations(
-            "falcon_update_quarantined_files_by_filter",
-            ToolAnnotations(
-                readOnlyHint=False,
-                destructiveHint=False,
-                idempotentHint=False,
-                openWorldHint=True,
-            ),
-        )
-        self.assert_tool_annotations(
-            "falcon_delete_quarantined_files_by_ids",
+            "falcon_delete_quarantined_files",
             ToolAnnotations(
                 readOnlyHint=False,
                 destructiveHint=True,
-                idempotentHint=False,
-                openWorldHint=True,
-            ),
-        )
-        self.assert_tool_annotations(
-            "falcon_delete_quarantined_files_by_filter",
-            ToolAnnotations(
-                readOnlyHint=False,
-                destructiveHint=True,
-                idempotentHint=False,
+                idempotentHint=True,
                 openWorldHint=True,
             ),
         )
@@ -104,8 +78,7 @@ class TestQuarantineModule(TestModules):
         self.mock_client.command.side_effect = [query_response, get_response]
 
         result = self.module.search_quarantined_files(
-            filter="device.hostname:'BRR-WB-LIB-22'",
-            q="Shift - Print_d3lsk.exe",
+            filter="hostname:'BRR-WB-LIB-22'",
             limit=25,
             offset="0",
             sort="date_updated|desc",
@@ -119,8 +92,7 @@ class TestQuarantineModule(TestModules):
         self.assertEqual(
             first_call[1]["parameters"],
             {
-                "filter": "device.hostname:'BRR-WB-LIB-22'",
-                "q": "Shift - Print_d3lsk.exe",
+                "filter": "hostname:'BRR-WB-LIB-22'",
                 "limit": 25,
                 "offset": "0",
                 "sort": "date_updated|desc",
@@ -131,36 +103,6 @@ class TestQuarantineModule(TestModules):
         self.assertEqual(second_call[1]["body"], {"ids": ["qf-1", "qf-2"]})
         self.assertEqual(len(result), 2)
         self.assertEqual(result[1]["status"], "quarantined")
-
-    def test_preview_quarantine_action_counts(self):
-        """Test quarantine action count preview."""
-        self.mock_client.command.return_value = {
-            "status_code": 200,
-            "body": {"resources": [{"delete": 1, "release": 2}]},
-        }
-
-        result = self.module.preview_quarantine_action_counts(filter="*")
-
-        self.mock_client.command.assert_called_once_with(
-            "ActionUpdateCount",
-            parameters={"filter": "*"},
-        )
-        self.assertEqual(result[0]["delete"], 1)
-
-    def test_get_quarantined_file_details(self):
-        """Test quarantine detail lookup by ID."""
-        self.mock_client.command.return_value = {
-            "status_code": 200,
-            "body": {"resources": [{"id": "qf-1", "sha256": "abc"}]},
-        }
-
-        result = self.module.get_quarantined_file_details(ids=["qf-1"])
-
-        self.mock_client.command.assert_called_once_with(
-            "GetQuarantineFiles",
-            body={"ids": ["qf-1"]},
-        )
-        self.assertEqual(result[0]["id"], "qf-1")
 
     def test_search_quarantined_files_error_returns_fql_guide(self):
         """Test quarantine search returns FQL guide on filter error."""
@@ -191,16 +133,57 @@ class TestQuarantineModule(TestModules):
         self.assertIn("fql_guide", result)
         self.assertIn("No results matched", result["hint"])
 
+    def test_preview_quarantine_actions(self):
+        """Test quarantine action preview with correct live response shape."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {
+                        "name": "affected_files_by_action",
+                        "buckets": [
+                            {"label": "release", "count": 2},
+                            {"label": "delete", "count": 1},
+                            {"label": "unrelease", "count": 3},
+                        ],
+                    }
+                ]
+            },
+        }
+
+        result = self.module.preview_quarantine_actions(filter="state:'quarantined'")
+
+        self.mock_client.command.assert_called_once_with(
+            "ActionUpdateCount",
+            parameters={"filter": "state:'quarantined'"},
+        )
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["name"], "affected_files_by_action")
+        self.assertIn("buckets", result[0])
+        self.assertEqual(result[0]["buckets"][0]["label"], "release")
+
+    def test_preview_quarantine_actions_error(self):
+        """Test quarantine action count returns error on API failure."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid filter expression"}]},
+        }
+
+        result = self.module.preview_quarantine_actions(filter="invalid::syntax")
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
+
     def test_update_quarantined_files_by_ids(self):
-        """Test updating quarantined files by IDs."""
+        """Test updating quarantined files by IDs uses UpdateQuarantinedDetectsByIds."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": [{"updated": 2}]},
         }
 
-        result = self.module.update_quarantined_files_by_ids(
-            ids=["qf-1", "qf-2"],
+        result = self.module.update_quarantined_files(
             action="release",
+            ids=["qf-1", "qf-2"],
             comment="restore for investigation",
         )
 
@@ -214,14 +197,85 @@ class TestQuarantineModule(TestModules):
         )
         self.assertEqual(result[0]["updated"], 2)
 
+    def test_update_quarantined_files_by_filter(self):
+        """Test updating quarantined files by filter uses UpdateQfByQuery."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"updated": 3}]},
+        }
+
+        result = self.module.update_quarantined_files(
+            action="unrelease",
+            ids=None,
+            filter="status:'quarantined'",
+            comment="restore access",
+        )
+
+        self.mock_client.command.assert_called_once_with(
+            "UpdateQfByQuery",
+            body={
+                "action": "unrelease",
+                "filter": "status:'quarantined'",
+                "comment": "restore access",
+            },
+        )
+        self.assertEqual(result[0]["updated"], 3)
+
+    def test_update_quarantined_files_rejects_invalid_action(self):
+        """Test invalid quarantine actions are rejected before the API call."""
+        result = self.module.update_quarantined_files(
+            action="restore",
+            ids=["qf-1"],
+            filter=None,
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
+        self.mock_client.command.assert_not_called()
+
+    def test_update_quarantined_files_requires_selector(self):
+        """Test updating quarantined files requires at least one of ids/filter."""
+        result = self.module.update_quarantined_files(action="release", ids=None, filter=None)
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
+        self.mock_client.command.assert_not_called()
+
+    def test_update_quarantined_files_empty_ids_guard(self):
+        """Test updating with empty ids list returns error without API call."""
+        result = self.module.update_quarantined_files(action="release", ids=[], filter=None)
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
+        self.mock_client.command.assert_not_called()
+
+    def test_update_quarantined_files_case_insensitive(self):
+        """Test that action names are case-insensitive (RELEASE works like release)."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"updated": 1}]},
+        }
+
+        result = self.module.update_quarantined_files(
+            action="RELEASE",
+            ids=["qf-1"],
+            filter=None,
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertNotIn("error", result[0])
+        self.mock_client.command.assert_called_once()
+        call_body = self.mock_client.command.call_args[1]["body"]
+        self.assertEqual(call_body["action"], "release")
+
     def test_delete_quarantined_files_by_ids(self):
-        """Test deleting quarantined files by IDs uses a destructive action."""
+        """Test deleting quarantined files by IDs hardcodes action=delete."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": [{"updated": 2}]},
         }
 
-        result = self.module.delete_quarantined_files_by_ids(
+        result = self.module.delete_quarantined_files(
             ids=["qf-1", "qf-2"],
             comment="cleanup",
         )
@@ -232,60 +286,16 @@ class TestQuarantineModule(TestModules):
         )
         self.assertEqual(result[0]["updated"], 2)
 
-    def test_update_quarantined_files_by_ids_rejects_invalid_action(self):
-        """Test invalid quarantine actions are rejected before the API call."""
-        result = self.module.update_quarantined_files_by_ids(
-            ids=["qf-1"],
-            action="restore",
-        )
-
-        self.assertEqual(len(result), 1)
-        self.assertIn("error", result[0])
-        self.mock_client.command.assert_not_called()
-
-    def test_update_quarantined_files_by_filter_requires_scope(self):
-        """Test updating by filter requires filter or q."""
-        result = self.module.update_quarantined_files_by_filter(action="release")
-
-        self.assertEqual(len(result), 1)
-        self.assertIn("error", result[0])
-        self.mock_client.command.assert_not_called()
-
-    def test_update_quarantined_files_by_filter(self):
-        """Test updating quarantine records by query."""
-        self.mock_client.command.return_value = {
-            "status_code": 200,
-            "body": {"resources": [{"updated": 3}]},
-        }
-
-        result = self.module.update_quarantined_files_by_filter(
-            action="unrelease",
-            filter="status:'quarantined'",
-            q="sample.exe",
-            comment="restore access",
-        )
-
-        self.mock_client.command.assert_called_once_with(
-            "UpdateQfByQuery",
-            body={
-                "action": "unrelease",
-                "filter": "status:'quarantined'",
-                "q": "sample.exe",
-                "comment": "restore access",
-            },
-        )
-        self.assertEqual(result[0]["updated"], 3)
-
     def test_delete_quarantined_files_by_filter(self):
-        """Test deleting quarantine records by query uses the delete action."""
+        """Test deleting quarantined files by filter uses UpdateQfByQuery with action=delete."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": [{"updated": 3}]},
         }
 
-        result = self.module.delete_quarantined_files_by_filter(
+        result = self.module.delete_quarantined_files(
+            ids=None,
             filter="status:'quarantined'",
-            q="sample.exe",
             comment="cleanup",
         )
 
@@ -294,30 +304,27 @@ class TestQuarantineModule(TestModules):
             body={
                 "action": "delete",
                 "filter": "status:'quarantined'",
-                "q": "sample.exe",
                 "comment": "cleanup",
             },
         )
         self.assertEqual(result[0]["updated"], 3)
 
-    def test_delete_quarantined_files_by_filter_uses_delete_error_message(self):
-        """Test deleting quarantine records by query returns delete-specific API errors."""
-        self.mock_client.command.return_value = {
-            "status_code": 500,
-            "body": {"errors": [{"message": "Server error"}]},
-        }
-
-        result = self.module.delete_quarantined_files_by_filter(
-            filter="status:'quarantined'",
-        )
-
-        self.assertEqual(len(result), 1)
-        self.assertIn("Failed to delete quarantined files by query", result[0]["error"])
-
-    def test_delete_quarantined_files_by_filter_requires_scope(self):
-        """Test deleting by filter requires filter or q."""
-        result = self.module.delete_quarantined_files_by_filter()
+    def test_delete_quarantined_files_requires_selector(self):
+        """Test deleting quarantined files requires at least one of ids/filter."""
+        result = self.module.delete_quarantined_files(ids=None, filter=None)
 
         self.assertEqual(len(result), 1)
         self.assertIn("error", result[0])
         self.mock_client.command.assert_not_called()
+
+    def test_delete_quarantined_files_empty_ids_guard(self):
+        """Test deleting with empty ids list returns error without API call."""
+        result = self.module.delete_quarantined_files(ids=[], filter=None)
+
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
+        self.mock_client.command.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()
