@@ -199,5 +199,5 @@ Returns session metadata including host info, commands executed, and status.
 
 - **`falcon://rtr/sessions/search/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_rtr_sessions` tool.
 - **`falcon://rtr/audit/sessions/search/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_rtr_audit_sessions` tool.
-- **`falcon://rtr/sessions/aggregate/guide`**: Explains how to summarize RTR session activity with the `falcon_aggregate_rtr_sessions` tool.
-- **`falcon://rtr/workflows/read-only-investigation-guide`**: Provides a safe read-only RTR workflow for endpoint investigation tools.
+- **`falcon://rtr/sessions/aggregate-guide`**: Explains how to summarize RTR session activity with the `falcon_aggregate_rtr_sessions` tool.
+- **`falcon://rtr/workflows/investigation-guide`**: Provides a safe read-only RTR workflow for endpoint investigation tools.

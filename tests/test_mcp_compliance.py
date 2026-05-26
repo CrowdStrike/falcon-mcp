@@ -46,6 +46,7 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     "falcon_init_rtr_session",
     "falcon_pulse_rtr_session",
     "falcon_execute_rtr_read_only_command",
+    "falcon_run_rtr_read_only_command_and_wait",
     "falcon_delete_rtr_session",
     # shield module
     "falcon_dismiss_shield_check",

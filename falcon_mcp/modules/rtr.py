@@ -166,7 +166,7 @@ class RTRModule(BaseModule):
         )
 
         aggregate_rtr_sessions_resource = TextResource(
-            uri=AnyUrl("falcon://rtr/sessions/aggregate/guide"),
+            uri=AnyUrl("falcon://rtr/sessions/aggregate-guide"),
             name="falcon_aggregate_rtr_sessions_guide",
             description="Explains how to summarize RTR session activity with the `falcon_aggregate_rtr_sessions` tool.",
             text=AGGREGATE_RTR_SESSIONS_GUIDE,
@@ -178,7 +178,7 @@ class RTRModule(BaseModule):
         )
 
         read_only_rtr_investigation_resource = TextResource(
-            uri=AnyUrl("falcon://rtr/workflows/read-only-investigation-guide"),
+            uri=AnyUrl("falcon://rtr/workflows/investigation-guide"),
             name="falcon_rtr_read_only_investigation_guide",
             description="Provides a safe read-only RTR workflow for endpoint investigation tools.",
             text=READ_ONLY_RTR_INVESTIGATION_GUIDE,
