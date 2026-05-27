@@ -153,6 +153,23 @@ FILTER_HINTS: dict[str, str] = {
         "created_at (UTC datetime), offline_queued (true|false), "
         "base_command."
     ),
+    # === Quarantine ===
+    "falcon_search_quarantined_files": (
+        "Common fields: hostname, sha256, state (quarantined|released), "
+        "date_updated (UTC datetime), paths."
+    ),
+    "falcon_preview_quarantine_actions": (
+        "Common fields: hostname, sha256, state (quarantined|released), "
+        "date_updated (UTC datetime), paths."
+    ),
+    "falcon_update_quarantined_files": (
+        "Common fields: hostname, sha256, state (quarantined|released), "
+        "date_updated (UTC datetime), paths."
+    ),
+    "falcon_delete_quarantined_files": (
+        "Common fields: hostname, sha256, state (quarantined|released), "
+        "date_updated (UTC datetime), paths."
+    ),
     # === Scheduled Reports ===
     "falcon_search_scheduled_reports": (
         "Common fields: name, type, status (Active|Inactive|Expired), "

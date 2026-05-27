@@ -309,9 +309,7 @@ class RTRModule(BaseModule):
             )
 
         if not audit_sessions:
-            return self._format_fql_error_response(
-                [], filter, SEARCH_RTR_AUDIT_SESSIONS_FQL_DOCUMENTATION
-            )
+            return self._format_empty_response(filter)
 
         return audit_sessions
 

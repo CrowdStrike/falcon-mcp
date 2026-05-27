@@ -120,7 +120,7 @@ class TestQuarantineModule(TestModules):
         self.assertIn("Filter error occurred", result["hint"])
 
     def test_search_quarantined_files_empty_returns_fql_guide(self):
-        """Test quarantine search returns FQL guide on empty results."""
+        """Test quarantine search returns clean empty response on empty results."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": []},
@@ -130,8 +130,9 @@ class TestQuarantineModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertIn("fql_guide", result)
-        self.assertIn("No results matched", result["hint"])
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["filter_used"], "status:'nonexistent'")
+        self.assertNotIn("fql_guide", result)
 
     def test_preview_quarantine_actions(self):
         """Test quarantine action preview with correct live response shape."""
