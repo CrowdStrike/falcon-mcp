@@ -2,6 +2,7 @@
 Contains Intel resources.
 """
 
+from falcon_mcp.common.fql import FQL_BASE_OPERATORS
 from falcon_mcp.common.utils import generate_md_table
 
 QUERY_ACTOR_ENTITIES_FQL_FILTERS = [
@@ -275,31 +276,7 @@ QUERY_ACTOR_ENTITIES_FQL_FILTERS = [
 
 QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Actor Entities Guide
 
-=== BASIC SYNTAX ===
-property_name:[operator]'value'
-
-=== AVAILABLE OPERATORS ===
-• No operator = equals (default)
-• ! = not equal to
-• > = greater than
-• >= = greater than or equal
-• < = less than
-• <= = less than or equal
-• ~ = text match (ignores case, spaces, punctuation)
-• !~ = does not text match
-• * = wildcard matching (one or more characters)
-
-=== DATA TYPES & SYNTAX ===
-• Strings: 'value' or ['exact_value'] for exact match
-• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
-• Booleans: true or false (no quotes)
-• Numbers: 123 (no quotes)
-• Wildcards: 'partial*' or '*partial' or '_partial_'
-
-=== COMBINING CONDITIONS ===
-• + = AND condition
-• , = OR condition
-• ( ) = Group expressions
+""" + FQL_BASE_OPERATORS + """
 
 === falcon_search_actors FQL filter options ===
 
@@ -539,31 +516,7 @@ QUERY_INDICATOR_ENTITIES_FQL_FILTERS = [
 
 QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Indicator Entities Guide
 
-=== BASIC SYNTAX ===
-property_name:[operator]'value'
-
-=== AVAILABLE OPERATORS ===
-• No operator = equals (default)
-• ! = not equal to
-• > = greater than
-• >= = greater than or equal
-• < = less than
-• <= = less than or equal
-• ~ = text match (ignores case, spaces, punctuation)
-• !~ = does not text match
-• * = wildcard matching (one or more characters)
-
-=== DATA TYPES & SYNTAX ===
-• Strings: 'value' or ['exact_value'] for exact match
-• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
-• Booleans: true or false (no quotes)
-• Numbers: 123 (no quotes)
-• Wildcards: 'partial*' or '*partial' or '*partial*'
-
-=== COMBINING CONDITIONS ===
-• + = AND condition
-• , = OR condition
-• ( ) = Group expressions
+""" + FQL_BASE_OPERATORS + """
 
 === falcon_search_indicators FQL filter options ===
 
@@ -574,12 +527,15 @@ property_name:[operator]'value'
 • type:'domain'
 • malicious_confidence:'high'
 • type:'hash_md5'+malicious_confidence:'high'
-• created_date:>'2023-01-01T00:00:00Z'
+• malicious_confidence:'high'+published_date:>'now-7d'
+• published_date:>'now-30d'
+
+Relative dates supported: published_date:>'now-7d' | published_date:>'now-30d' (lowercase 'now', quoted)
 
 === IMPORTANT NOTES ===
 • Use single quotes around string values: 'value'
 • Use square brackets for exact matches: ['exact_value']
-• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
+• Date fields accept relative syntax ('now-Nd', 'now-Nh') or Unix epoch integers
 """
 
 
@@ -728,31 +684,7 @@ QUERY_REPORT_ENTITIES_FQL_FILTERS = [
 
 QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel Query Report Entities Guide
 
-=== BASIC SYNTAX ===
-property_name:[operator]'value'
-
-=== AVAILABLE OPERATORS ===
-• No operator = equals (default)
-• ! = not equal to
-• > = greater than
-• >= = greater than or equal
-• < = less than
-• <= = less than or equal
-• ~ = text match (ignores case, spaces, punctuation)
-• !~ = does not text match
-• * = wildcard matching (one or more characters)
-
-=== DATA TYPES & SYNTAX ===
-• Strings: 'value' or ['exact_value'] for exact match
-• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
-• Booleans: true or false (no quotes)
-• Numbers: 123 (no quotes)
-• Wildcards: 'partial*' or '*partial' or '*partial*'
-
-=== COMBINING CONDITIONS ===
-• + = AND condition
-• , = OR condition
-• ( ) = Group expressions
+""" + FQL_BASE_OPERATORS + """
 
 === falcon_search_reports FQL filter options ===
 

@@ -548,7 +548,7 @@ class TestRTRModule(TestModules):
         self.assertIn("Filter error occurred", result["hint"])
 
     def test_search_sessions_empty_returns_fql_guide(self):
-        """Test searching RTR sessions with no results returns FQL guide."""
+        """Test searching RTR sessions with no results returns clean empty response."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": []},
@@ -562,10 +562,10 @@ class TestRTRModule(TestModules):
         )
 
         self.assertIsInstance(result, dict)
-        self.assertIn("results", result)
-        self.assertIn("fql_guide", result)
-        self.assertIn("hint", result)
-        self.assertIn("No results matched", result["hint"])
+        self.assertEqual(result["results"], [])
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["filter_used"], "hostname:'nonexistent'")
+        self.assertNotIn("fql_guide", result)
 
     def test_search_sessions_with_special_characters_in_filter(self):
         """Test that special characters in filter are passed through safely."""

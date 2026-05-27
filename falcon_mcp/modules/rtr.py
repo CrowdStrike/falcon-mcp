@@ -238,9 +238,7 @@ class RTRModule(BaseModule):
             )
 
         if not session_ids:
-            return self._format_fql_error_response(
-                [], filter, SEARCH_RTR_SESSIONS_FQL_DOCUMENTATION
-            )
+            return self._format_empty_response(filter)
 
         details = self._base_get_by_ids(
             operation="RTR_ListSessions",

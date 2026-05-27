@@ -117,7 +117,7 @@ class TestCasesModule(TestModules):
         self.assertEqual(result[1]["id"], "case-id-2")
 
     def test_search_cases_empty_results(self):
-        """Test that empty query results return FQL guide response."""
+        """Test that empty query results return clean empty response."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": []},
@@ -126,11 +126,10 @@ class TestCasesModule(TestModules):
         result = self.module.search_cases(filter="status:'nonexistent'")
 
         self.assertIsInstance(result, dict)
-        self.assertIn("results", result)
         self.assertEqual(result["results"], [])
-        self.assertIn("fql_guide", result)
-        self.assertIn("hint", result)
-        self.assertIn("No results matched", result["hint"])
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["filter_used"], "status:'nonexistent'")
+        self.assertNotIn("fql_guide", result)
 
     def test_search_cases_search_error(self):
         """Test that query API error returns FQL guide response."""

@@ -138,7 +138,7 @@ class TestCorrelationRulesModule(TestModules):
         self.assertEqual(call_args[1]["parameters"]["filter"], "mitre_attack.tactic_id:'TA0001'")
 
     def test_search_empty_results_returns_fql_guide(self):
-        """Test that empty resources return a dict with fql_guide key."""
+        """Test that empty resources return clean empty response."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": []},
@@ -147,9 +147,10 @@ class TestCorrelationRulesModule(TestModules):
         result = self.module.search_correlation_rules(filter="name:'nonexistent'")
 
         self.assertIsInstance(result, dict)
-        self.assertIn("fql_guide", result)
         self.assertEqual(result["results"], [])
-        self.assertIn("No results matched", result["hint"])
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["filter_used"], "name:'nonexistent'")
+        self.assertNotIn("fql_guide", result)
 
     def test_search_error_returns_fql_guide(self):
         """Test that API errors return a dict with fql_guide and error info."""

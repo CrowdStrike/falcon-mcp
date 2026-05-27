@@ -12,6 +12,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.tools import Tool
 from pydantic import Field
 
+from falcon_mcp.common.fql import FQL_FILTER_HINT_SUFFIX
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.filter_hints import FILTER_HINTS
 from falcon_mcp.modules.base import BaseModule, READ_ONLY_ANNOTATIONS
@@ -107,7 +108,14 @@ class DynamicToolCatalog:
 
         hint = FILTER_HINTS.get(entry.tool.name)
         if hint and "filter" in params_summary:
-            params_summary["filter"]["description"] += f" {hint}"
+            desc = params_summary["filter"]["description"]
+            separator = " " if desc.endswith(".") else ". "
+            params_summary["filter"]["description"] = desc + separator + hint
+
+        if "filter" in params_summary:
+            desc = params_summary["filter"]["description"]
+            separator = " " if desc.endswith(".") else ". "
+            params_summary["filter"]["description"] = desc + separator + FQL_FILTER_HINT_SUFFIX
 
         annotations = entry.tool.annotations
         return {

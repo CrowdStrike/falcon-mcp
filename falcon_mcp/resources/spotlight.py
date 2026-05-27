@@ -2,6 +2,7 @@
 Contains Spotlight Vulnerabilities resources.
 """
 
+from falcon_mcp.common.fql import FQL_BASE_OPERATORS
 from falcon_mcp.common.utils import generate_md_table
 
 # List of tuples containing filter options data: (name, type, operators, description)
@@ -433,29 +434,7 @@ SEARCH_VULNERABILITIES_FQL_FILTERS = [
 
 SEARCH_VULNERABILITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Vulnerabilities Guide
 
-=== BASIC SYNTAX ===
-property_name:[operator]'value'
-
-=== AVAILABLE OPERATORS ===
-• No operator = equals (default)
-• ! = not equal to
-• > = greater than
-• >= = greater than or equal
-• < = less than
-• <= = less than or equal
-• ~ = text match (ignores case, spaces, punctuation)
-• !~ = does not text match
-
-=== DATA TYPES & SYNTAX ===
-• Strings: 'value' or ['exact_value'] for exact match
-• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
-• Booleans: true or false (no quotes)
-• Numbers: 123 (no quotes)
-
-=== COMBINING CONDITIONS ===
-• + = AND condition
-• , = OR condition
-• ( ) = Group expressions
+""" + FQL_BASE_OPERATORS + """
 
 === falcon_search_vulnerabilities FQL filter options ===
 

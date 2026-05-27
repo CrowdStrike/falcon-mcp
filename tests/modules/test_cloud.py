@@ -262,18 +262,17 @@ class TestCloudModule(TestModules):
         self.assertIn("tag_key", result["fql_guide"])
 
     def test_search_cspm_assets_empty_returns_fql_guide(self):
-        """Test CSPM assets search returns FQL guide on empty results."""
+        """Test CSPM assets search returns clean empty response on empty results."""
         query_response = {"status_code": 200, "body": {"resources": []}}
         self.mock_client.command.return_value = query_response
 
         result = self.module.search_cspm_assets(filter="cloud_provider:'NonExistent'")
 
         self.assertIsInstance(result, dict)
-        self.assertIn("results", result)
-        self.assertIn("fql_guide", result)
-        self.assertIn("filter_used", result)
         self.assertEqual(result["results"], [])
-        self.assertIn("Cloud Resource Tag Filtering", result["fql_guide"])
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["filter_used"], "cloud_provider:'NonExistent'")
+        self.assertNotIn("fql_guide", result)
 
     def test_search_cspm_assets_batch_error_fails_fast(self):
         """Test CSPM assets batching fails fast on batch error."""
@@ -533,16 +532,17 @@ class TestCloudModule(TestModules):
         self.assertIn("severity", result["fql_guide"])
 
     def test_search_iom_findings_empty_returns_fql_guide(self):
-        """Test IOM search returns FQL guide on empty results."""
+        """Test IOM search returns clean empty response on empty results."""
         query_response = {"status_code": 200, "body": {"resources": []}}
         self.mock_client.command.return_value = query_response
 
         result = self.module.search_iom_findings(filter="severity:'nonexistent'")
 
         self.assertIsInstance(result, dict)
-        self.assertIn("fql_guide", result)
-        self.assertIn("results", result)
         self.assertEqual(result["results"], [])
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["filter_used"], "severity:'nonexistent'")
+        self.assertNotIn("fql_guide", result)
 
     def test_search_iom_findings_batching(self):
         """Test IOM search handles >100 IDs with batching."""

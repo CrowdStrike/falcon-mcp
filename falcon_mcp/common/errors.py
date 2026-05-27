@@ -13,6 +13,7 @@ logger = get_logger(__name__)
 
 # Common error codes and their meanings
 ERROR_CODE_DESCRIPTIONS = {
+    400: "Invalid request. Check your filter syntax — FQL uses + for AND, , for OR, and values must be quoted.",
     403: "Permission denied. The API credentials don't have the required access.",
     401: "Authentication failed. The API credentials are invalid or expired.",
     404: "Resource not found. The requested resource does not exist.",
@@ -121,6 +122,13 @@ def handle_api_response(
         status_message = ERROR_CODE_DESCRIPTIONS.get(
             status_code or 0, f"Request failed with status code {status_code}"
         )
+
+        # Extract API error messages from response body
+        api_errors = response.get("body", {}).get("errors", [])
+        if api_errors:
+            api_messages = [e.get("message", "") for e in api_errors if e.get("message")]
+            if api_messages:
+                status_message += f" API said: {'; '.join(api_messages)}"
 
         # For permission errors, add more context
         if status_code == 403:

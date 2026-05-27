@@ -101,7 +101,7 @@ class TestFirewallModule(TestModules):
         self.assertEqual(len(result), 2)
 
     def test_search_firewall_rules_empty_with_filter(self):
-        """Test rule search empty results with filter returns FQL guide wrapper."""
+        """Test rule search empty results with filter returns clean empty response."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": []},
@@ -118,7 +118,9 @@ class TestFirewallModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertIn("fql_guide", result)
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["filter_used"], "name:'DoesNotExist*'")
+        self.assertNotIn("fql_guide", result)
 
     def test_search_firewall_rule_groups_success(self):
         """Test searching firewall rule groups and fetching full details."""

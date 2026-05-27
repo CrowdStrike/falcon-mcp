@@ -11,15 +11,21 @@ FILTER_HINTS: dict[str, str] = {
     "falcon_search_detections": (
         "Common fields: severity_name (Critical|High|Medium|Low|Informational), "
         "status (new|in_progress|closed|reopened), product (epp|idp|xdr|overwatch), "
-        "device.hostname, tactic, technique_id, timestamp (UTC datetime), "
-        "assigned_to_name, filename, cmdline."
+        "device.hostname, tactic, technique_id, "
+        "assigned_to_name, filename, cmdline. "
+        "Date filters: timestamp:>'now-24h' (relative) or timestamp:>'2026-01-01T00:00:00Z' (absolute). "
+        "Sort by timestamp.desc for latest. "
+        "Ex: status:'new'+severity_name:'Critical'"
     ),
     # === Hosts ===
     "falcon_search_hosts": (
         "Common fields: hostname, platform_name (Windows|Linux|Mac), "
         "status (normal|contained|containment_pending|lift_containment_pending), "
-        "local_ip, external_ip, os_version, last_seen (UTC datetime), "
-        "product_type_desc (Workstation|Server|Domain Controller)."
+        "local_ip, external_ip, os_version, last_seen, "
+        "product_type_desc (Workstation|Server|Domain Controller). "
+        "Date filters: last_seen:>'now-7d' (relative). "
+        "Use status:'contained' to find hosts in network containment. "
+        "Ex: platform_name:'Windows'+status:'contained'"
     ),
     # === Cases ===
     "falcon_search_cases": (
@@ -94,23 +100,29 @@ FILTER_HINTS: dict[str, str] = {
     "falcon_query_actor_entities": (
         "Common fields: name, actor_type, known_as, "
         "motivations.value (Criminal|Destruction|Espionage|Hacktivism), "
-        "target_countries, target_industries, last_activity_date (UTC datetime)."
+        "target_countries, target_industries.value (e.g. 'Financial Services'|'Government'|'Technology'|'Healthcare'|'Energy'), "
+        "last_activity_date. Date filters: last_activity_date:>'now-90d' (relative). "
+        "Use q parameter for free-text keyword search across all fields."
     ),
     "falcon_search_actors": (
         "Common fields: name, actor_type, known_as, "
         "motivations.value (Criminal|Destruction|Espionage|Hacktivism), "
-        "target_countries, target_industries, last_activity_date (UTC datetime)."
+        "target_countries, target_industries.value (e.g. 'Financial Services'|'Government'|'Technology'|'Healthcare'|'Energy'), "
+        "last_activity_date. Date filters: last_activity_date:>'now-90d' (relative). "
+        "Use q parameter for free-text keyword search across all fields."
     ),
     # === Intel: Indicators ===
     "falcon_query_indicator_entities": (
         "Common fields: type (hash_md5|hash_sha256|domain|ip_address|url|email_address), "
         "malicious_confidence (high|medium|low|unverified), "
-        "malware_families, threat_types, kill_chains, published_date (UTC datetime)."
+        "malware_families, threat_types, kill_chains, "
+        "published_date. Date filters: published_date:>'now-7d' (relative)."
     ),
     "falcon_search_indicators": (
         "Common fields: type (hash_md5|hash_sha256|domain|ip_address|url|email_address), "
         "malicious_confidence (high|medium|low|unverified), "
-        "malware_families, threat_types, kill_chains, published_date (UTC datetime)."
+        "malware_families, threat_types, kill_chains, "
+        "published_date. Date filters: published_date:>'now-7d' (relative)."
     ),
     # === Intel: Reports ===
     "falcon_query_report_entities": (

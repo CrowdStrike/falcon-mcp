@@ -2,6 +2,7 @@
 Contains Custom IOA resources.
 """
 
+from falcon_mcp.common.fql import FQL_BASE_OPERATORS
 from falcon_mcp.common.utils import generate_md_table
 
 SEARCH_IOA_RULE_GROUPS_FQL_FILTERS = [
@@ -80,16 +81,6 @@ _SORT_FIELDS = """
 **Example:** `modified_on.desc`
 """
 
-_FQL_OPERATORS = """
-**FQL Operators:**
-- Equality: `field:'value'`
-- Wildcard: `field:*'partial*'`
-- Range: `field:>'value'`, `field:<'value'`
-- Boolean: `field:true` or `field:false`
-- AND: `+` (e.g., `platform:'windows'+enabled:true`)
-- OR: `,` (e.g., `platform:'windows',platform:'mac'`)
-"""
-
 SEARCH_IOA_RULE_GROUPS_FQL_DOCUMENTATION = f"""
 # Custom IOA Rule Groups FQL Filter Guide
 
@@ -100,7 +91,7 @@ Use FQL (Falcon Query Language) to filter rule groups returned by `falcon_search
 {generate_md_table(SEARCH_IOA_RULE_GROUPS_FQL_FILTERS)}
 
 ## Operators & Syntax
-{_FQL_OPERATORS}
+{FQL_BASE_OPERATORS}
 
 ## Sort Options
 {_SORT_FIELDS}

@@ -292,35 +292,44 @@ class BaseModule(ABC):
     def _is_error(self, response: Any) -> bool:
         return isinstance(response, dict) and "error" in response
 
+    def _format_empty_response(
+        self,
+        filter_used: str | None,
+    ) -> dict[str, Any]:
+        """Format response for a successful search that returned zero results.
+
+        Use when the API returned HTTP 200 but zero matching resources.
+        Does NOT include FQL documentation — the filter was accepted by the API.
+        """
+        return {
+            "results": [],
+            "total": 0,
+            "filter_used": filter_used,
+        }
+
     def _format_fql_error_response(
         self,
-        error_or_empty: list[dict[str, Any]],
+        errors: list[dict[str, Any]],
         filter_used: str | None,
         fql_documentation: str,
     ) -> dict[str, Any]:
-        """Format response with FQL guide for search errors or empty results ONLY.
+        """Format response with FQL guide for API errors indicating filter problems.
 
-        Use this helper when the FQL filter itself may be the issue:
-        - Empty results: User may need to refine their filter
-        - Search errors: Likely FQL syntax issues
-
-        Do NOT use for downstream errors (e.g., fetching details after valid IDs)
-        or success cases - those should return results directly.
+        Use ONLY when the API returned an error (400+) that suggests the FQL
+        filter syntax is incorrect. Do NOT use for empty results (200 with 0
+        resources) — use _format_empty_response for that case.
 
         Args:
-            error_or_empty: Empty list or list containing single error dict
+            errors: List containing the error dict from the API
             filter_used: The FQL filter string that was used (can be None)
             fql_documentation: Module-specific FQL documentation constant
 
         Returns:
             Dict with results, filter_used, fql_guide, and contextual hint
         """
-        is_error = error_or_empty and self._is_error(error_or_empty[0])
         return {
-            "results": error_or_empty,
+            "results": errors,
             "filter_used": filter_used,
             "fql_guide": fql_documentation,
-            "hint": "Filter error occurred. Review the FQL guide above to correct your query syntax."
-            if is_error
-            else "No results matched your filter. Review the FQL guide above to refine your query.",
+            "hint": "Filter error occurred. Review the FQL guide above to correct your query syntax.",
         }
