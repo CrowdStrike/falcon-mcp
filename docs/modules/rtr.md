@@ -45,9 +45,8 @@ output. Use sequence_id to paginate through large output chunks.
 
 ### `falcon_delete_rtr_session`
 
-:::caution
-This tool performs destructive operations.
-:::
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Real time response:read`
 
@@ -61,9 +60,8 @@ Use this when investigation is complete to free up session resources.
 
 ### `falcon_execute_rtr_read_only_command`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Real time response:read`
 
@@ -94,9 +92,8 @@ session records.
 
 ### `falcon_init_rtr_session`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Real time response:read`
 
@@ -125,9 +122,8 @@ files pulled with the `get` command.
 
 ### `falcon_pulse_rtr_session`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Real time response:read`
 
@@ -142,9 +138,8 @@ to prevent session expiration during long investigations.
 
 ### `falcon_run_rtr_read_only_command_and_wait`
 
-:::note
-This tool modifies data.
-:::
+> [!NOTE]
+> This tool modifies data.
 
 **Required scopes:** `Real time response:read`
 

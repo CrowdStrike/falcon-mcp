@@ -30,5 +30,5 @@ and results keyed by each requested investigation type.
 
 **Example prompts:**
 
-- "Investigate user john.doe@company.com and show their risk assessment"
+- "Investigate user <john.doe@company.com> and show their risk assessment"
 - "Look up entity Administrator in domain CORP.LOCAL"
