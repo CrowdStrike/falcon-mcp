@@ -33,17 +33,6 @@ updates:
       - "dependencies"
       - "github-actions"
 
-  # Docs site npm dependencies (pnpm lockfile)
-  - package-ecosystem: "npm"
-    directory: "/docs-site"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "deps(docs):"
-    labels:
-      - "dependencies"
-      - "docs"
-
   # Docker configuration
   - package-ecosystem: "docker"
     directory: "/"
