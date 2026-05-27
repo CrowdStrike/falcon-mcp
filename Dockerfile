@@ -1,6 +1,12 @@
-# Use a Python image with uv pre-installed
-# ghcr.io/astral-sh/uv:python3.13-alpine (multi-arch: amd64, arm64)
-FROM ghcr.io/astral-sh/uv@sha256:6bef08ad40f8062d86a6be6b853e85563d6db8885eb2ba853308b4bb07b1270b AS uv
+# Stage 1: uv binary (distroless image, COPY only)
+# ghcr.io/astral-sh/uv:0.11.15 (multi-arch: amd64, arm64)
+FROM ghcr.io/astral-sh/uv@sha256:e590846f4776907b254ac0f44b5b380347af5d90d668138ca7938d1b0c2f98d3 AS uv-bin
+
+# Stage 2: Build dependencies
+# python:3.13-alpine (multi-arch: amd64, arm64)
+FROM python@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc AS builder
+
+COPY --from=uv-bin /uv /usr/local/bin/uv
 
 # Install the project into `/app`
 WORKDIR /app
@@ -33,9 +39,9 @@ RUN find /app/.venv -name '__pycache__' -type d -exec rm -rf {} + && \
     find /app/.venv -name '*.pyo' -delete && \
     echo "Cleaned up .venv"
 
-# Final stage
+# Stage 3: Runtime
 # python:3.13-alpine (multi-arch: amd64, arm64)
-FROM python@sha256:bb1f2fdb1065c85468775c9d680dcd344f6442a2d1181ef7916b60a623f11d40
+FROM python@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc
 
 LABEL io.modelcontextprotocol.server.name="io.github.CrowdStrike/falcon-mcp"
 
@@ -44,7 +50,7 @@ RUN adduser -D -h /home/app -s /bin/sh app
 WORKDIR /app
 USER app
 
-COPY --from=uv --chown=app:app /app/.venv /app/.venv
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
