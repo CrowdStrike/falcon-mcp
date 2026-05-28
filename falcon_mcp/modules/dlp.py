@@ -4,6 +4,10 @@ Data Protection (DLP) module for Falcon MCP Server.
 Provides read-only access to DLP configuration data — classifications,
 policies, and content patterns — so an LLM can reason about why a DLP
 detection fired.
+
+For DLP detections, use falcon_search_detections with product:'data-protection'.
+For EDD scan results, use falcon_search_ngsiem with
+#event_simpleName=Event_DataProtectionClassifiedFileEvent.
 """
 
 from typing import Any
@@ -24,9 +28,7 @@ class DLPModule(BaseModule):
     """CrowdStrike Data Protection (DLP) configuration module.
 
     Read-only access to DLP rule definitions — classifications, policies, and
-    content patterns. For DLP detections, use falcon_search_detections with
-    product:'data-protection'. For EDD scan results, use search_ngsiem with
-    #event_simpleName=Event_DataProtectionClassifiedFileEvent.
+    content patterns.
 
     Required API Scopes:
     - Data Protection:read
