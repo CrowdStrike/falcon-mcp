@@ -22,7 +22,7 @@ Full docs are available at **[crowdstrike.github.io/falcon-mcp](https://crowdstr
 ## Modules
 
 | Module | Description |
-|--------|-------------|
+| ------ | ----------- |
 | Core | Basic connectivity and system information |
 | [Case Management](https://crowdstrike.github.io/falcon-mcp/modules/cases/) | Case lifecycle management, evidence attachment, tagging, and templates |
 | [Cloud Security](https://crowdstrike.github.io/falcon-mcp/modules/cloud/) | Kubernetes containers, image vulnerabilities, CSPM asset inventory, IOM findings, and suppression rules |
