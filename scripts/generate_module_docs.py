@@ -161,6 +161,19 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_delete_ioa_rules": [
         "Delete rules from IOA group abc123",
     ],
+    # Data Protection (DLP)
+    "falcon_search_dlp_classifications": [
+        "What DLP classifications are configured in my environment?",
+        "Show me the classification rules that detect credit card data",
+    ],
+    "falcon_search_dlp_policies": [
+        "List all enabled Windows DLP policies",
+        "Show me the Mac DLP policies and their precedence order",
+    ],
+    "falcon_search_dlp_content_patterns": [
+        "What predefined content patterns are available for DLP?",
+        "Show me custom DLP regex patterns in the Financial category",
+    ],
     # Detections
     "falcon_search_detections": [
         "Show me new high severity detections from the last 7 days",
