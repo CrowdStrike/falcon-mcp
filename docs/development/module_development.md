@@ -339,7 +339,7 @@ Tools are annotated with MCP `ToolAnnotations` to inform clients about tool beha
 The `_add_tool()` helper applies `READ_ONLY_ANNOTATIONS` by default. **Override for any tool that creates, modifies, deletes, or triggers actions.**
 
 | Tool Type | readOnlyHint | destructiveHint | idempotentHint | Example |
-|-----------|:---:|:---:|:---:|---------|
+| --------- | :---: | :---: | :---: | ------- |
 | Search/Get/List | True | False | True | `falcon_search_hosts` |
 | Create/Write | False | False | False | `falcon_add_ioc` |
 | Delete/Remove | False | True | True | `falcon_remove_iocs` |

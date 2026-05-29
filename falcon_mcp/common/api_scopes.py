@@ -143,6 +143,13 @@ API_SCOPE_REQUIREMENTS = {
     "entities_rules_post_v1": ["Correlation Rules:write"],
     "entities_rules_patch_v1": ["Correlation Rules:write"],
     "entities_rules_delete_v1": ["Correlation Rules:write"],
+    # Data Protection operations
+    "queries_classification_get_v2": ["Data Protection:read"],
+    "entities_classification_get_v2": ["Data Protection:read"],
+    "queries_policy_get_v2": ["Data Protection:read"],
+    "entities_policy_get_v2": ["Data Protection:read"],
+    "queries_content_pattern_get_v2": ["Data Protection:read"],
+    "entities_content_pattern_get": ["Data Protection:read"],
 }
 
 

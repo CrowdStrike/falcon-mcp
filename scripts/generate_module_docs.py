@@ -39,6 +39,9 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     "customioa": {
         "slug": "custom-ioa",
     },
+    "dataprotection": {
+        "slug": "data-protection",
+    },
     "idp": {
         "title": "Identity Protection",
     },
@@ -160,6 +163,19 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     ],
     "falcon_delete_ioa_rules": [
         "Delete rules from IOA group abc123",
+    ],
+    # Data Protection
+    "falcon_search_data_protection_classifications": [
+        "What Data Protection classifications are configured in my environment?",
+        "Show me the classification rules that detect credit card data",
+    ],
+    "falcon_search_data_protection_policies": [
+        "List all enabled Windows Data Protection policies",
+        "Show me the Mac Data Protection policies and their precedence order",
+    ],
+    "falcon_search_data_protection_content_patterns": [
+        "What predefined content patterns are available for Data Protection?",
+        "Show me custom Data Protection regex patterns in the Financial category",
     ],
     # Detections
     "falcon_search_detections": [
