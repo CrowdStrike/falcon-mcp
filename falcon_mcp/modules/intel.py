@@ -4,6 +4,7 @@ Intel module for Falcon MCP Server
 This module provides tools for accessing and analyzing CrowdStrike Falcon intelligence data.
 """
 
+import json
 from typing import Any
 
 from mcp.server import FastMCP
@@ -274,7 +275,7 @@ class IntelModule(BaseModule):
 
         Accepts an actor name (e.g., 'WARP PANDA') or numeric ID. Returns MITRE ATT&CK
         tactics, techniques, and procedures (TTPs) for the actor. JSON format returns a
-        decoded string; CSV format returns CSV text.
+        parsed list of dicts; CSV format returns raw CSV text.
         """
 
         # Check if the actor parameter looks like an ID (numeric) or a name
@@ -334,6 +335,16 @@ class IntelModule(BaseModule):
         if self._is_error(api_response):
             logger.debug("API response is an error, wrapping in list")
             return [api_response]
+
+        # Parse JSON format into Python objects; keep CSV as raw string
+        if format.lower() == "json" and isinstance(api_response, str):
+            stripped = api_response.strip()
+            if not stripped or stripped == "null":
+                return []
+            try:
+                return json.loads(stripped)
+            except json.JSONDecodeError as e:
+                return [{"error": "JSON parse failure", "message": str(e)}]
 
         return api_response
 

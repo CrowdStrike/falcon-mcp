@@ -324,13 +324,13 @@ class TestIntelModule(TestModules):
             },
         )
 
-        # Verify result is decoded string content
-        self.assertIsInstance(result, str)
-        self.assertIn("my_id", result)
-        self.assertIn("Fake Tactic", result)
-        self.assertIn("Fake Technique", result)
-        self.assertIn("FAKE001", result)
-        self.assertIn("technique_id2", result)
+        # Verify result is parsed JSON list
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "my_id")
+        self.assertEqual(result[0]["tactic_name"], "Fake Tactic")
+        self.assertEqual(result[1]["id"], "my_id2")
+        self.assertEqual(result[1]["technique_name"], "Another Fake Technique")
 
     def test_get_mitre_report_csv_format(self):
         """Test getting MITRE report with CSV format.
@@ -400,30 +400,42 @@ class TestIntelModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetMitreReport")
 
-        # Verify result is empty string
-        self.assertEqual(result, "")
+        # Verify result is empty list (empty bytes → empty string → empty list)
+        self.assertEqual(result, [])
 
-    def test_get_mitre_report_default_format(self):
-        """Test that default format is JSON when not specified.
+    def test_get_mitre_report_null_response(self):
+        """Test getting MITRE report when API returns null (no MITRE mappings).
 
-        FalconPy returns raw bytes directly for binary endpoints like GetMitreReport.
+        FalconPy returns b'null' for actors with no MITRE ATT&CK mappings.
         """
-        # Setup mock response with binary content
-        fake_json_content = '{"actor_id": "123456", "format": "JSON"}'
-        # FalconPy returns raw bytes directly for binary endpoints
-        self.mock_client.command.return_value = fake_json_content.encode('utf-8')
+        self.mock_client.command.return_value = b"null"
 
-        # Call get_mitre_report without format parameter - should use default json
-        self.module.get_mitre_report(actor="123456", format="json")
+        result = self.module.get_mitre_report(actor="123456", format="json")
 
-        # Verify the API call was made with json as the default format
         self.mock_client.command.assert_called_once_with(
             "GetMitreReport",
             parameters={
                 "actor_id": "123456",
-                "format": "json",  # Should default to json
+                "format": "json",
             },
         )
+
+        # null should return empty list
+        self.assertEqual(result, [])
+
+    def test_get_mitre_report_default_format(self):
+        """Test that the format parameter defaults to 'json'.
+
+        Unit tests call the method directly, which does not resolve Pydantic
+        Field defaults, so the declared default is verified via the signature.
+        """
+        import inspect
+
+        sig = inspect.signature(self.module.get_mitre_report)
+        format_default = sig.parameters["format"].default
+
+        # The declared default should be the FieldInfo carrying default='json'
+        self.assertEqual(format_default.default, "json")
 
     def test_get_mitre_report_by_actor_name(self):
         """Test getting MITRE report using actor name (automatically resolves to ID).
@@ -488,11 +500,12 @@ class TestIntelModule(TestModules):
         self.assertEqual(second_call[1]["parameters"]["actor_id"], "789012")
         self.assertEqual(second_call[1]["parameters"]["format"], "json")
 
-        # Verify result is decoded JSON string content
-        self.assertIsInstance(result, str)
-        self.assertIn("fake_id_1", result)
-        self.assertIn("Fake Tactic", result)
-        self.assertIn("fake_technique_001", result)
+        # Verify result is parsed JSON list
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["id"], "fake_id_1")
+        self.assertEqual(result[0]["tactic_name"], "Fake Tactic")
+        self.assertEqual(result[0]["technique_id"], "fake_technique_001")
 
     def test_get_mitre_report_actor_name_not_found(self):
         """Test getting MITRE report when actor name is not found."""
