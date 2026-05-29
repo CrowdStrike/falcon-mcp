@@ -120,7 +120,7 @@ class TestIntelIntegration(BaseIntegrationTest):
         self.assert_valid_list_response(result, min_length=0, context="query_report_entities with filter")
 
     def test_get_mitre_report_with_actor_name(self):
-        """Test get_mitre_report with an actor name.
+        """Test get_mitre_report JSON format returns parsed list of dicts.
 
         First searches for an actor, then gets their MITRE report.
         Validates both QueryIntelActorEntities and GetMitreReport operations.
@@ -141,10 +141,10 @@ class TestIntelIntegration(BaseIntegrationTest):
                 context="test_get_mitre_report_with_actor_name",
             )
 
-        # Now get MITRE report for that actor
+        # Now get MITRE report for that actor in JSON format
         result = self.call_method(self.module.get_mitre_report, actor=actor_name, format="json")
 
-        # Result can be a list (data) or string (error message)
+        # JSON format must return a list (possibly empty for actors without MITRE mappings)
         if isinstance(result, list) and len(result) > 0:
             first_item = result[0]
             if isinstance(first_item, dict) and "error" in first_item:
@@ -153,6 +153,58 @@ class TestIntelIntegration(BaseIntegrationTest):
                     f"MITRE report not available for actor: {actor_name}",
                     context="test_get_mitre_report_with_actor_name",
                 )
+
+        assert isinstance(result, list), (
+            f"Expected list for JSON format, got {type(result).__name__}: {repr(result)[:200]}"
+        )
+
+        # If we got results, validate the structure
+        if result:
+            assert isinstance(result[0], dict), (
+                f"Expected list of dicts, got list of {type(result[0]).__name__}"
+            )
+            expected_fields = {"id", "tactic_id", "tactic_name", "technique_id", "technique_name"}
+            actual_fields = set(result[0].keys())
+            missing = expected_fields - actual_fields
+            assert not missing, f"Missing expected MITRE fields: {missing}"
+
+    def test_get_mitre_report_csv_format(self):
+        """Test get_mitre_report CSV format returns raw string.
+
+        Validates that CSV format is not parsed and remains a string.
+        """
+        # First, search for an actor to get a valid name
+        search_result = self.call_method(self.module.query_actor_entities, limit=1)
+
+        if not search_result or len(search_result) == 0:
+            self.skip_with_warning(
+                "No actors available to test get_mitre_report CSV",
+                context="test_get_mitre_report_csv_format",
+            )
+
+        actor_name = search_result[0].get("name")
+        if not actor_name:
+            self.skip_with_warning(
+                "Could not extract actor name from search results",
+                context="test_get_mitre_report_csv_format",
+            )
+
+        # Get MITRE report in CSV format
+        result = self.call_method(self.module.get_mitre_report, actor=actor_name, format="csv")
+
+        # Handle error response (actor may not have MITRE data)
+        if isinstance(result, list) and len(result) > 0:
+            first_item = result[0]
+            if isinstance(first_item, dict) and "error" in first_item:
+                self.skip_with_warning(
+                    f"MITRE report not available for actor: {actor_name}",
+                    context="test_get_mitre_report_csv_format",
+                )
+
+        # CSV format must return a string
+        assert isinstance(result, str), (
+            f"Expected str for CSV format, got {type(result).__name__}: {repr(result)[:200]}"
+        )
 
     def test_operation_names_are_correct(self):
         """Validate that FalconPy operation names are correct.
