@@ -1,12 +1,12 @@
 """
-Data Protection (DLP) module for Falcon MCP Server.
+Data Protection module for Falcon MCP Server.
 
-Provides read-only access to DLP configuration data — classifications,
-policies, and content patterns — so an LLM can reason about why a DLP
-detection fired.
+Provides read-only access to Data Protection configuration data —
+classifications, policies, and content patterns — so an LLM can reason about why
+a Data Protection detection fired.
 
-For DLP detections, use falcon_search_detections with product:'data-protection'.
-For EDD scan results, use falcon_search_ngsiem with
+For Data Protection detections, use falcon_search_detections with
+product:'data-protection'. For EDD scan results, use falcon_search_ngsiem with
 #event_simpleName=Event_DataProtectionClassifiedFileEvent.
 """
 
@@ -17,18 +17,18 @@ from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
 
 from falcon_mcp.modules.base import BaseModule
-from falcon_mcp.resources.dlp import (
+from falcon_mcp.resources.data_protection import (
     SEARCH_CLASSIFICATIONS_FQL_DOCUMENTATION,
     SEARCH_CONTENT_PATTERNS_FQL_DOCUMENTATION,
     SEARCH_POLICIES_FQL_DOCUMENTATION,
 )
 
 
-class DLPModule(BaseModule):
-    """CrowdStrike Data Protection (DLP) configuration module.
+class DataProtectionModule(BaseModule):
+    """CrowdStrike Data Protection configuration module.
 
-    Read-only access to DLP rule definitions — classifications, policies, and
-    content patterns.
+    Read-only access to Data Protection rule definitions — classifications,
+    policies, and content patterns.
 
     Required API Scopes:
     - Data Protection:read
@@ -38,38 +38,38 @@ class DLPModule(BaseModule):
         """Register tools with the MCP server."""
         self._add_tool(
             server=server,
-            method=self.search_dlp_classifications,
-            name="search_dlp_classifications",
+            method=self.search_data_protection_classifications,
+            name="search_data_protection_classifications",
         )
         self._add_tool(
             server=server,
-            method=self.search_dlp_policies,
-            name="search_dlp_policies",
+            method=self.search_data_protection_policies,
+            name="search_data_protection_policies",
         )
         self._add_tool(
             server=server,
-            method=self.search_dlp_content_patterns,
-            name="search_dlp_content_patterns",
+            method=self.search_data_protection_content_patterns,
+            name="search_data_protection_content_patterns",
         )
 
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server."""
         classifications_fql_resource = TextResource(
-            uri=AnyUrl("falcon://dlp/classifications/fql-guide"),
-            name="falcon_search_dlp_classifications_fql_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_dlp_classifications` tool.",
+            uri=AnyUrl("falcon://data-protection/classifications/fql-guide"),
+            name="falcon_search_data_protection_classifications_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_data_protection_classifications` tool.",
             text=SEARCH_CLASSIFICATIONS_FQL_DOCUMENTATION,
         )
         policies_fql_resource = TextResource(
-            uri=AnyUrl("falcon://dlp/policies/fql-guide"),
-            name="falcon_search_dlp_policies_fql_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_dlp_policies` tool.",
+            uri=AnyUrl("falcon://data-protection/policies/fql-guide"),
+            name="falcon_search_data_protection_policies_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_data_protection_policies` tool.",
             text=SEARCH_POLICIES_FQL_DOCUMENTATION,
         )
         content_patterns_fql_resource = TextResource(
-            uri=AnyUrl("falcon://dlp/content-patterns/fql-guide"),
-            name="falcon_search_dlp_content_patterns_fql_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_dlp_content_patterns` tool.",
+            uri=AnyUrl("falcon://data-protection/content-patterns/fql-guide"),
+            name="falcon_search_data_protection_content_patterns_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_data_protection_content_patterns` tool.",
             text=SEARCH_CONTENT_PATTERNS_FQL_DOCUMENTATION,
         )
 
@@ -77,11 +77,11 @@ class DLPModule(BaseModule):
         self._add_resource(server, policies_fql_resource)
         self._add_resource(server, content_patterns_fql_resource)
 
-    def search_dlp_classifications(
+    def search_data_protection_classifications(
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression. See `falcon://dlp/classifications/fql-guide` for syntax.",
+            description="FQL filter expression. See `falcon://data-protection/classifications/fql-guide` for syntax.",
         ),
         limit: int = Field(
             default=100,
@@ -99,12 +99,13 @@ class DLPModule(BaseModule):
             description="Sort order. Ex: name.asc, created_at.desc, modified_at.desc",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search for DLP classifications in your CrowdStrike environment.
+        """Search for Data Protection classifications in your CrowdStrike environment.
 
         Use this to find classification rules that define what sensitive data
-        patterns to detect. Consult falcon://dlp/classifications/fql-guide before
-        constructing filter expressions. Returns full classification details
-        including content pattern references and rule configuration.
+        patterns to detect. Consult
+        falcon://data-protection/classifications/fql-guide before constructing
+        filter expressions. Returns full classification details including content
+        pattern references and rule configuration.
         """
         ids = self._base_search_api_call(
             operation="queries_classification_get_v2",
@@ -114,7 +115,7 @@ class DLPModule(BaseModule):
                 "offset": offset,
                 "sort": sort,
             },
-            error_message="Failed to search DLP classifications",
+            error_message="Failed to search Data Protection classifications",
             default_result=[],
         )
 
@@ -132,14 +133,14 @@ class DLPModule(BaseModule):
             "entities_classification_get_v2", ids, use_params=True
         )
 
-    def search_dlp_policies(
+    def search_data_protection_policies(
         self,
         platform_name: str = Field(
             description="Required. Platform to query: 'win' or 'mac'.",
         ),
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression. See `falcon://dlp/policies/fql-guide` for syntax.",
+            description="FQL filter expression. See `falcon://data-protection/policies/fql-guide` for syntax.",
         ),
         limit: int = Field(
             default=100,
@@ -157,13 +158,13 @@ class DLPModule(BaseModule):
             description="Sort order. Ex: name.asc, precedence.asc, created_at.desc",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search for DLP policies in your CrowdStrike environment.
+        """Search for Data Protection policies in your CrowdStrike environment.
 
         Use this to find data protection policies by platform, enablement status,
         or precedence. Requires a platform_name ('win' or 'mac'). Consult
-        falcon://dlp/policies/fql-guide before constructing filter expressions.
-        Returns full policy details including host groups and classification
-        assignments.
+        falcon://data-protection/policies/fql-guide before constructing filter
+        expressions. Returns full policy details including host groups and
+        classification assignments.
         """
         ids = self._base_search_api_call(
             operation="queries_policy_get_v2",
@@ -174,7 +175,7 @@ class DLPModule(BaseModule):
                 "offset": offset,
                 "sort": sort,
             },
-            error_message="Failed to search DLP policies",
+            error_message="Failed to search Data Protection policies",
             default_result=[],
         )
 
@@ -190,11 +191,11 @@ class DLPModule(BaseModule):
 
         return self._base_get_by_ids("entities_policy_get_v2", ids, use_params=True)
 
-    def search_dlp_content_patterns(
+    def search_data_protection_content_patterns(
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression. See `falcon://dlp/content-patterns/fql-guide` for syntax.",
+            description="FQL filter expression. See `falcon://data-protection/content-patterns/fql-guide` for syntax.",
         ),
         limit: int = Field(
             default=100,
@@ -212,12 +213,12 @@ class DLPModule(BaseModule):
             description="Sort order. Ex: name.asc, category.asc, region.asc",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search for DLP content patterns in your CrowdStrike environment.
+        """Search for Data Protection content patterns in your CrowdStrike environment.
 
         Use this to find regex-based content detection patterns by type, category,
-        or region. Consult falcon://dlp/content-patterns/fql-guide before
-        constructing filter expressions. Returns full pattern details including
-        regex definitions and match thresholds.
+        or region. Consult falcon://data-protection/content-patterns/fql-guide
+        before constructing filter expressions. Returns full pattern details
+        including regex definitions and match thresholds.
         """
         ids = self._base_search_api_call(
             operation="queries_content_pattern_get_v2",
@@ -227,7 +228,7 @@ class DLPModule(BaseModule):
                 "offset": offset,
                 "sort": sort,
             },
-            error_message="Failed to search DLP content patterns",
+            error_message="Failed to search Data Protection content patterns",
             default_result=[],
         )
 

@@ -28,7 +28,7 @@ Full docs are available at **[crowdstrike.github.io/falcon-mcp](https://crowdstr
 | [Cloud Security](https://crowdstrike.github.io/falcon-mcp/modules/cloud/) | Kubernetes containers, image vulnerabilities, CSPM asset inventory, IOM findings, and suppression rules |
 | [Correlation Rules](https://crowdstrike.github.io/falcon-mcp/modules/correlationrules/) | Search, create, update, and manage NG-SIEM correlation rules |
 | [Custom IOA](https://crowdstrike.github.io/falcon-mcp/modules/custom-ioa/) | Create and manage Custom IOA behavioral detection rules and rule groups |
-| [Data Protection](https://crowdstrike.github.io/falcon-mcp/modules/dlp/) | Search DLP classifications, policies, and content patterns |
+| [Data Protection](https://crowdstrike.github.io/falcon-mcp/modules/data-protection/) | Search Data Protection classifications, policies, and content patterns |
 | [Detections](https://crowdstrike.github.io/falcon-mcp/modules/detections/) | Find and analyze detections to understand malicious activity |
 | [Discover](https://crowdstrike.github.io/falcon-mcp/modules/discover/) | Search application inventory and discover unmanaged assets |
 | [Firewall Management](https://crowdstrike.github.io/falcon-mcp/modules/firewall/) | Search and manage firewall rules and rule groups |

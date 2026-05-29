@@ -1,41 +1,41 @@
 """
-Tests for the Data Protection (DLP) module.
+Tests for the Data Protection module.
 """
 
 import unittest
 
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
-from falcon_mcp.modules.dlp import DLPModule
+from falcon_mcp.modules.data_protection import DataProtectionModule
 from tests.modules.utils.test_modules import TestModules
 
 
-class TestDLPModule(TestModules):
-    """Test cases for the DLP module."""
+class TestDataProtectionModule(TestModules):
+    """Test cases for the Data Protection module."""
 
     def setUp(self):
         """Set up test fixtures."""
-        self.setup_module(DLPModule)
+        self.setup_module(DataProtectionModule)
 
     def test_register_tools(self):
         """Test registering tools with the server."""
         expected_tools = [
-            "falcon_search_dlp_classifications",
-            "falcon_search_dlp_policies",
-            "falcon_search_dlp_content_patterns",
+            "falcon_search_data_protection_classifications",
+            "falcon_search_data_protection_policies",
+            "falcon_search_data_protection_content_patterns",
         ]
         self.assert_tools_registered(expected_tools)
 
     def test_register_resources(self):
         """Test registering resources with the server."""
         expected_resources = [
-            "falcon_search_dlp_classifications_fql_guide",
-            "falcon_search_dlp_policies_fql_guide",
-            "falcon_search_dlp_content_patterns_fql_guide",
+            "falcon_search_data_protection_classifications_fql_guide",
+            "falcon_search_data_protection_policies_fql_guide",
+            "falcon_search_data_protection_content_patterns_fql_guide",
         ]
         self.assert_resources_registered(expected_resources)
 
     def test_all_tools_are_read_only(self):
-        """Verify all DLP tools have read-only annotations."""
+        """Verify all Data Protection tools have read-only annotations."""
         self.module.register_tools(self.mock_server)
         for call in self.mock_server.add_tool.call_args_list:
             self.assertEqual(
@@ -71,7 +71,7 @@ class TestDLPModule(TestModules):
         }
         self.mock_client.command.side_effect = [query_response, get_response]
 
-        result = self.module.search_dlp_classifications(
+        result = self.module.search_data_protection_classifications(
             filter=None, limit=100, offset=0, sort=None
         )
 
@@ -88,7 +88,7 @@ class TestDLPModule(TestModules):
         }
         self.mock_client.command.side_effect = [query_response]
 
-        result = self.module.search_dlp_classifications(
+        result = self.module.search_data_protection_classifications(
             filter="name:~'nonexistent'", limit=100, offset=0, sort=None
         )
 
@@ -108,7 +108,7 @@ class TestDLPModule(TestModules):
         }
         self.mock_client.command.side_effect = [error_response]
 
-        result = self.module.search_dlp_classifications(
+        result = self.module.search_data_protection_classifications(
             filter="foo:'bar'", limit=100, offset=0, sort=None
         )
 
@@ -130,7 +130,7 @@ class TestDLPModule(TestModules):
                 "resources": [
                     {
                         "id": "pol-id-1",
-                        "name": "Windows DLP Policy",
+                        "name": "Windows Data Protection Policy",
                         "platform_name": "win",
                         "is_enabled": True,
                     }
@@ -139,7 +139,7 @@ class TestDLPModule(TestModules):
         }
         self.mock_client.command.side_effect = [query_response, get_response]
 
-        result = self.module.search_dlp_policies(
+        result = self.module.search_data_protection_policies(
             platform_name="win", filter=None, limit=100, offset=0, sort=None
         )
 
@@ -156,7 +156,7 @@ class TestDLPModule(TestModules):
         }
         self.mock_client.command.side_effect = [query_response]
 
-        self.module.search_dlp_policies(
+        self.module.search_data_protection_policies(
             platform_name="mac", filter=None, limit=100, offset=0, sort=None
         )
 
@@ -172,7 +172,7 @@ class TestDLPModule(TestModules):
         }
         self.mock_client.command.side_effect = [query_response]
 
-        result = self.module.search_dlp_policies(
+        result = self.module.search_data_protection_policies(
             platform_name="win", filter="is_enabled:false", limit=100, offset=0, sort=None
         )
 
@@ -190,7 +190,7 @@ class TestDLPModule(TestModules):
         }
         self.mock_client.command.side_effect = [error_response]
 
-        result = self.module.search_dlp_policies(
+        result = self.module.search_data_protection_policies(
             platform_name="invalid", filter=None, limit=100, offset=0, sort=None
         )
 
@@ -227,7 +227,7 @@ class TestDLPModule(TestModules):
         }
         self.mock_client.command.side_effect = [query_response, get_response]
 
-        result = self.module.search_dlp_content_patterns(
+        result = self.module.search_data_protection_content_patterns(
             filter=None, limit=100, offset=0, sort=None
         )
 
@@ -244,7 +244,7 @@ class TestDLPModule(TestModules):
         }
         self.mock_client.command.side_effect = [query_response]
 
-        result = self.module.search_dlp_content_patterns(
+        result = self.module.search_data_protection_content_patterns(
             filter="type:'nonexistent'", limit=100, offset=0, sort=None
         )
 
@@ -262,7 +262,7 @@ class TestDLPModule(TestModules):
         }
         self.mock_client.command.side_effect = [error_response]
 
-        result = self.module.search_dlp_content_patterns(
+        result = self.module.search_data_protection_content_patterns(
             filter="bad:'val'", limit=100, offset=0, sort=None
         )
 

@@ -1,5 +1,5 @@
 """
-Contains Data Protection (DLP) resources.
+Contains Data Protection resources.
 """
 
 from falcon_mcp.common.utils import generate_md_table
@@ -66,7 +66,7 @@ SEARCH_CLASSIFICATIONS_FQL_FILTERS = [
     ),
 ]
 
-SEARCH_CLASSIFICATIONS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search DLP Classifications Guide
+SEARCH_CLASSIFICATIONS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Data Protection Classifications Guide
 
 === BASIC SYNTAX ===
 property_name:[operator]'value'
@@ -90,7 +90,7 @@ property_name:[operator]'value'
 • + = AND condition
 • , = OR condition
 
-=== falcon_search_dlp_classifications FQL filter options ===
+=== falcon_search_data_protection_classifications FQL filter options ===
 
 """ + generate_md_table(SEARCH_CLASSIFICATIONS_FQL_FILTERS) + """
 
@@ -193,7 +193,7 @@ SEARCH_POLICIES_FQL_FILTERS = [
     ),
 ]
 
-SEARCH_POLICIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search DLP Policies Guide
+SEARCH_POLICIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Data Protection Policies Guide
 
 === BASIC SYNTAX ===
 property_name:[operator]'value'
@@ -219,10 +219,10 @@ property_name:[operator]'value'
 
 === IMPORTANT: platform_name parameter ===
 
-The falcon_search_dlp_policies tool requires a platform_name parameter ('win' or 'mac')
+The falcon_search_data_protection_policies tool requires a platform_name parameter ('win' or 'mac')
 which is separate from the FQL filter. The filter applies within the selected platform.
 
-=== falcon_search_dlp_policies FQL filter options ===
+=== falcon_search_data_protection_policies FQL filter options ===
 
 """ + generate_md_table(SEARCH_POLICIES_FQL_FILTERS) + """
 
@@ -320,7 +320,7 @@ SEARCH_CONTENT_PATTERNS_FQL_FILTERS = [
     ),
 ]
 
-SEARCH_CONTENT_PATTERNS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search DLP Content Patterns Guide
+SEARCH_CONTENT_PATTERNS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Data Protection Content Patterns Guide
 
 === BASIC SYNTAX ===
 property_name:[operator]'value'
@@ -342,7 +342,7 @@ property_name:[operator]'value'
 • + = AND condition
 • , = OR condition
 
-=== falcon_search_dlp_content_patterns FQL filter options ===
+=== falcon_search_data_protection_content_patterns FQL filter options ===
 
 """ + generate_md_table(SEARCH_CONTENT_PATTERNS_FQL_FILTERS) + """
 
