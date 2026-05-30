@@ -810,5 +810,60 @@ class TestIdpModule(TestModules):
         self.assertIn("ipAddress", file_event)
 
 
+    # ==========================================
+    # Bare-wildcard guard tests (Change 2)
+    # ==========================================
+
+    def test_bare_wildcard_entity_names_rejected(self):
+        """entity_names='*' must return an error dict without calling the API."""
+        result = self.module.investigate_entity(entity_names="*")
+
+        self.assertIn("error", result)
+        self.assertIn("investigation_summary", result)
+        self.assertEqual(result["investigation_summary"]["status"], "failed")
+        self.assertFalse(self.mock_client.command.called)
+
+    def test_bare_wildcard_email_addresses_rejected(self):
+        """email_addresses='*' must return an error dict without calling the API."""
+        result = self.module.investigate_entity(email_addresses="*")
+
+        self.assertIn("error", result)
+        self.assertIn("investigation_summary", result)
+        self.assertEqual(result["investigation_summary"]["status"], "failed")
+        self.assertFalse(self.mock_client.command.called)
+
+    def test_bare_wildcard_variants_rejected(self):
+        """'**' and '* ' (all stars/spaces) must be rejected without calling the API."""
+        for bad_value in ["**", "* ", " * "]:
+            with self.subTest(entity_names=bad_value):
+                self.mock_client.command.reset_mock()
+                result = self.module.investigate_entity(entity_names=bad_value)
+                self.assertIn("error", result)
+                self.assertEqual(result["investigation_summary"]["status"], "failed")
+                self.assertFalse(self.mock_client.command.called)
+
+    def test_partial_wildcard_entity_names_accepted(self):
+        """entity_names='Admin*' is a legitimate pattern and must reach the API."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"data": {"entities": {"nodes": []}}},
+        }
+
+        self.module.investigate_entity(entity_names="Admin*")
+
+        self.assertTrue(self.mock_client.command.called)
+
+    def test_partial_wildcard_email_addresses_accepted(self):
+        """email_addresses='*@example.com' is a legitimate pattern and must reach the API."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"data": {"entities": {"nodes": []}}},
+        }
+
+        self.module.investigate_entity(email_addresses="*@example.com")
+
+        self.assertTrue(self.mock_client.command.called)
+
+
 if __name__ == "__main__":
     unittest.main()

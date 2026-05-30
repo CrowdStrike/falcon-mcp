@@ -58,9 +58,10 @@ class IdpModule(BaseModule):
         email_addresses: str | None = Field(
             default=None,
             description=(
-                "SAM account, UPN, or Azure external identity pattern to search for "
-                "(e.g., 'jdoe', 'user@example.com', '*@example.com', "
-                "or 'john.doe_contoso.com#EXT#@tenant.onmicrosoft.com''). Supports '*' wildcards. "
+                "UPN, email address, or Azure external identity pattern to search for "
+                "(e.g., 'user@example.com', '*@example.com', "
+                "or 'john.doe_contoso.com#EXT#@tenant.onmicrosoft.com'). Supports '*' wildcards. "
+                "For AD samAccountName lookups, use domain_names + entity_names together instead. "
                 "When combined with other parameters, uses AND logic."
             ),
         ),
@@ -263,6 +264,25 @@ class IdpModule(BaseModule):
                     "status": "failed",
                 },
             }
+
+        if (entity_names and isinstance(entity_names, str) and entity_names.strip("* ") == "") or (
+            email_addresses
+            and isinstance(email_addresses, str)
+            and email_addresses.strip("* ") == ""
+        ):
+            return {
+                "error": (
+                    "entity_names/email_addresses cannot be a bare wildcard ('*'). "
+                    "Provide a more specific pattern (e.g., 'Admin*') or narrow the search."
+                ),
+                "investigation_summary": {
+                    "entity_count": 0,
+                    "investigation_types": investigation_types,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "status": "failed",
+                },
+            }
+
         return None
 
     def _create_error_response(
