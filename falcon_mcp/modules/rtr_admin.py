@@ -19,9 +19,6 @@ from falcon_mcp.common.errors import _format_error_response
 from falcon_mcp.common.utils import prepare_api_parameters, unwrap_field_default
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.rtr_admin import (
-    EMBEDDED_FALCON_SCRIPT_FQL_SYNTAX,
-    EMBEDDED_PUT_FILE_FQL_SYNTAX,
-    EMBEDDED_SCRIPT_FQL_SYNTAX,
     RTR_ADMIN_RUNSCRIPT_RAW_GUIDE,
     RTR_ADMIN_TOOL_USE_GUIDE,
     SEARCH_RTR_ADMIN_SCRIPTS_FQL_DOCUMENTATION,
@@ -33,24 +30,30 @@ READ_ONLY_ADMIN_COMMANDS = {
     "cat",
     "cd",
     "clear",
+    "csrutil",
     "env",
     "eventlog",
     "filehash",
     "getsid",
     "help",
     "history",
+    "ifconfig",
     "ipconfig",
     "ls",
     "mount",
     "netstat",
     "ps",
+    "pwd",
+    "users",
 }
 
 EVIDENCE_COLLECTION_COMMANDS = {"get"}
 SENSITIVE_COLLECTION_COMMANDS = {"memdump", "xmemdump"}
 BLOCKED_ADMIN_COMMANDS = {
     "cp",
+    "cswindiag",
     "encrypt",
+    "falconscript",
     "kill",
     "map",
     "mkdir",
@@ -59,8 +62,11 @@ BLOCKED_ADMIN_COMMANDS = {
     "put-and-run",
     "restart",
     "rm",
+    "rmdir",
     "run",
     "shutdown",
+    "tar",
+    "umount",
     "unmap",
     "zip",
 }
@@ -73,18 +79,6 @@ RTR_ADMIN_SAFETY_DISCLAIMER = (
     "only a PC chosen by the operator."
 )
 
-RTR_ADMIN_EXECUTION_ANNOTATIONS = ToolAnnotations(
-    readOnlyHint=False,
-    destructiveHint=True,
-    idempotentHint=False,
-    openWorldHint=True,
-)
-
-
-def _normalize_field_value(value: Any) -> Any:
-    """Unwrap direct-call Pydantic Field defaults into plain Python values."""
-    return unwrap_field_default(value)
-
 
 class RTRAdminModule(BaseModule):
     """Module for RTR Admin inventory and pre-execution safety checks."""
@@ -95,52 +89,37 @@ class RTRAdminModule(BaseModule):
         """Register tools with the MCP server."""
         self._add_tool(
             server=server,
-            method=self.search_scripts,
+            method=self.search_rtr_admin_scripts,
             name="search_rtr_admin_scripts",
         )
         self._add_tool(
             server=server,
-            method=self.get_script_details,
-            name="get_rtr_admin_script_details",
-        )
-        self._add_tool(
-            server=server,
-            method=self.search_falcon_scripts,
+            method=self.search_rtr_falcon_scripts,
             name="search_rtr_falcon_scripts",
         )
         self._add_tool(
             server=server,
-            method=self.get_falcon_script_details,
-            name="get_rtr_falcon_script_details",
-        )
-        self._add_tool(
-            server=server,
-            method=self.search_put_files,
+            method=self.search_rtr_put_files,
             name="search_rtr_put_files",
         )
         self._add_tool(
             server=server,
-            method=self.get_put_file_details,
-            name="get_rtr_put_file_details",
-        )
-        self._add_tool(
-            server=server,
-            method=self.check_admin_command_status,
+            method=self.check_rtr_admin_command_status,
             name="check_rtr_admin_command_status",
         )
         self._add_tool(
             server=server,
-            method=self.classify_admin_command,
+            method=self.classify_rtr_admin_command,
             name="classify_rtr_admin_command",
         )
         self._add_tool(
             server=server,
-            method=self.preview_admin_command,
+            method=self.preview_rtr_admin_command,
             name="preview_rtr_admin_command",
         )
         self._add_tool(
             server=server,
-            method=self.execute_admin_command,
+            method=self.execute_rtr_admin_command,
             name="execute_rtr_admin_command",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
@@ -188,11 +167,11 @@ class RTRAdminModule(BaseModule):
         for resource in resources:
             self._add_resource(server, resource)
 
-    def search_scripts(
+    def search_rtr_admin_scripts(
         self,
         filter: str | None = Field(
             default=None,
-            description=EMBEDDED_SCRIPT_FQL_SYNTAX,
+            description="FQL filter expression. See `falcon://rtr-admin/scripts/search/fql-guide` for syntax.",
         ),
         limit: int = Field(
             default=10,
@@ -212,31 +191,48 @@ class RTRAdminModule(BaseModule):
         """Search RTR custom scripts and return full metadata records.
 
         Use this to find reusable custom RTR scripts by name, platform, or
-        permission type. Consult falcon://rtr-admin/scripts/search/fql-guide
-        before constructing filter expressions.
+        permission type, or to look up known script IDs with an `id` filter.
+        Consult falcon://rtr-admin/scripts/search/fql-guide before constructing
+        filter expressions. Returns full script records including name, content,
+        platform, and permission details.
         """
-        return self._search_and_get_details(
-            search_operation="RTR_ListScripts",
-            get_operation="RTR_GetScriptsV2",
-            filter=filter,
-            limit=limit,
-            offset=offset,
-            sort=sort,
-            fql_documentation=SEARCH_RTR_ADMIN_SCRIPTS_FQL_DOCUMENTATION,
+        ids = self._base_search_api_call(
+            operation="RTR_ListScripts",
+            search_params={
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            },
+            error_message="Failed to search RTR Admin scripts",
         )
 
-    def get_script_details(
-        self,
-        ids: list[str] = Field(description="Custom RTR script IDs to retrieve."),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve custom RTR script metadata and content by script ID."""
-        return self._get_details("RTR_GetScriptsV2", ids)
+        if self._is_error(ids):
+            return self._format_fql_error_response(
+                [ids], filter, SEARCH_RTR_ADMIN_SCRIPTS_FQL_DOCUMENTATION
+            )
 
-    def search_falcon_scripts(
+        if not ids:
+            return self._format_fql_error_response(
+                [], filter, SEARCH_RTR_ADMIN_SCRIPTS_FQL_DOCUMENTATION
+            )
+
+        details = self._base_get_by_ids(
+            operation="RTR_GetScriptsV2",
+            ids=ids,
+            use_params=True,
+        )
+
+        if self._is_error(details):
+            return [details]
+
+        return details
+
+    def search_rtr_falcon_scripts(
         self,
         filter: str | None = Field(
             default=None,
-            description=EMBEDDED_FALCON_SCRIPT_FQL_SYNTAX,
+            description="FQL filter expression. See `falcon://rtr-admin/falcon-scripts/search/fql-guide` for syntax.",
         ),
         limit: int = Field(
             default=10,
@@ -255,32 +251,49 @@ class RTRAdminModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search CrowdStrike-provided Falcon scripts and return full records.
 
-        Use this to find CrowdStrike-provided RTR scripts by name or platform.
-        Consult falcon://rtr-admin/falcon-scripts/search/fql-guide before
-        constructing filter expressions.
+        Use this to find CrowdStrike-provided RTR scripts by name or platform,
+        or to look up known script IDs with an `id` filter. Consult
+        falcon://rtr-admin/falcon-scripts/search/fql-guide before constructing
+        filter expressions. Returns full script records including name,
+        description, and platform.
         """
-        return self._search_and_get_details(
-            search_operation="RTR_ListFalconScripts",
-            get_operation="RTR_GetFalconScripts",
-            filter=filter,
-            limit=limit,
-            offset=offset,
-            sort=sort,
-            fql_documentation=SEARCH_RTR_FALCON_SCRIPTS_FQL_DOCUMENTATION,
+        ids = self._base_search_api_call(
+            operation="RTR_ListFalconScripts",
+            search_params={
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            },
+            error_message="Failed to search RTR Falcon scripts",
         )
 
-    def get_falcon_script_details(
-        self,
-        ids: list[str] = Field(description="Falcon script IDs to retrieve."),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve CrowdStrike-provided Falcon script metadata and content by ID."""
-        return self._get_details("RTR_GetFalconScripts", ids)
+        if self._is_error(ids):
+            return self._format_fql_error_response(
+                [ids], filter, SEARCH_RTR_FALCON_SCRIPTS_FQL_DOCUMENTATION
+            )
 
-    def search_put_files(
+        if not ids:
+            return self._format_fql_error_response(
+                [], filter, SEARCH_RTR_FALCON_SCRIPTS_FQL_DOCUMENTATION
+            )
+
+        details = self._base_get_by_ids(
+            operation="RTR_GetFalconScripts",
+            ids=ids,
+            use_params=True,
+        )
+
+        if self._is_error(details):
+            return [details]
+
+        return details
+
+    def search_rtr_put_files(
         self,
         filter: str | None = Field(
             default=None,
-            description=EMBEDDED_PUT_FILE_FQL_SYNTAX,
+            description="FQL filter expression. See `falcon://rtr-admin/put-files/search/fql-guide` for syntax.",
         ),
         limit: int = Field(
             default=10,
@@ -300,32 +313,44 @@ class RTRAdminModule(BaseModule):
         """Search RTR put-files and return full metadata records.
 
         Use this to review put-file inventory before considering an admin
-        command that references staged content. Consult
-        falcon://rtr-admin/put-files/search/fql-guide before constructing
-        filter expressions.
+        command that references staged content, or to look up known put-file IDs
+        with an `id` filter. Consult falcon://rtr-admin/put-files/search/fql-guide
+        before constructing filter expressions. Returns full put-file metadata
+        records.
         """
-        return self._search_and_get_details(
-            search_operation="RTR_ListPut_Files",
-            get_operation="RTR_GetPut_FilesV2",
-            filter=filter,
-            limit=limit,
-            offset=offset,
-            sort=sort,
-            fql_documentation=SEARCH_RTR_PUT_FILES_FQL_DOCUMENTATION,
+        ids = self._base_search_api_call(
+            operation="RTR_ListPut_Files",
+            search_params={
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            },
+            error_message="Failed to search RTR put-files",
         )
 
-    def get_put_file_details(
-        self,
-        ids: list[str] = Field(description="RTR put-file IDs to retrieve."),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve RTR put-file metadata by ID.
+        if self._is_error(ids):
+            return self._format_fql_error_response(
+                [ids], filter, SEARCH_RTR_PUT_FILES_FQL_DOCUMENTATION
+            )
 
-        This tool intentionally returns metadata only. It does not expose
-        put-file content retrieval in the first RTR Admin slice.
-        """
-        return self._get_details("RTR_GetPut_FilesV2", ids)
+        if not ids:
+            return self._format_fql_error_response(
+                [], filter, SEARCH_RTR_PUT_FILES_FQL_DOCUMENTATION
+            )
 
-    def check_admin_command_status(
+        details = self._base_get_by_ids(
+            operation="RTR_GetPut_FilesV2",
+            ids=ids,
+            use_params=True,
+        )
+
+        if self._is_error(details):
+            return [details]
+
+        return details
+
+    def check_rtr_admin_command_status(
         self,
         cloud_request_id: str = Field(
             description="Cloud request ID returned from a prior RTR Admin command.",
@@ -338,10 +363,12 @@ class RTRAdminModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Retrieve status and output for a prior RTR Admin command.
 
-        This is a read-only status lookup. It cannot start a new command.
+        Use this to poll for command completion after execution. This is a
+        read-only status lookup that cannot start a new command. Returns
+        completion status, stdout, stderr, and sequence information.
         """
-        cloud_request_id = _normalize_field_value(cloud_request_id)
-        sequence_id = _normalize_field_value(sequence_id)
+        cloud_request_id = unwrap_field_default(cloud_request_id)
+        sequence_id = unwrap_field_default(sequence_id)
 
         if not isinstance(cloud_request_id, str) or not cloud_request_id.strip():
             return _format_error_response(
@@ -363,7 +390,7 @@ class RTRAdminModule(BaseModule):
             error_message="Failed to check RTR Admin command status",
         )
 
-    def classify_admin_command(
+    def classify_rtr_admin_command(
         self,
         base_command: str = Field(
             description="RTR Admin base command to classify, such as `get`, `runscript`, `rm`, or `reg`.",
@@ -377,9 +404,10 @@ class RTRAdminModule(BaseModule):
 
         Use this before designing or approving any RTR Admin execution flow.
         This policy helper is intentionally local and does not call Falcon.
+        Returns category, risk level, approval requirements, and explanation.
         """
-        base_command = _normalize_field_value(base_command)
-        command_string = _normalize_field_value(command_string)
+        base_command = unwrap_field_default(base_command)
+        command_string = unwrap_field_default(command_string)
 
         if not isinstance(base_command, str) or not base_command.strip():
             return _format_error_response(
@@ -444,9 +472,11 @@ class RTRAdminModule(BaseModule):
             return self._classification(
                 normalized,
                 "evidence_collection",
-                "medium",
-                True,
-                "Command can collect files from a chosen host and needs explicit target review.",
+                "high",
+                False,
+                "File exfiltration command requires explicit operator approval before execution.",
+                requires_approval=True,
+                can_execute_with_approval=True,
             )
 
         if normalized == "runscript":
@@ -490,7 +520,7 @@ class RTRAdminModule(BaseModule):
             "Unknown RTR Admin command. It is blocked until reviewed and explicitly allowlisted.",
         )
 
-    def preview_admin_command(
+    def preview_rtr_admin_command(
         self,
         session_id: str = Field(description="RTR session ID that would receive the command."),
         device_id: str | None = Field(
@@ -531,16 +561,16 @@ class RTRAdminModule(BaseModule):
         execution tool would use, plus local policy classification. It never
         calls Falcon and cannot execute the command.
         """
-        session_id = _normalize_field_value(session_id)
-        device_id = _normalize_field_value(device_id)
-        base_command = _normalize_field_value(base_command)
-        command_string = _normalize_field_value(command_string)
-        command_id = _normalize_field_value(command_id)
-        target_hostname = _normalize_field_value(target_hostname)
-        reason = _normalize_field_value(reason)
-        ticket = _normalize_field_value(ticket)
-        expected_effect = _normalize_field_value(expected_effect)
-        persist = _normalize_field_value(persist)
+        session_id = unwrap_field_default(session_id)
+        device_id = unwrap_field_default(device_id)
+        base_command = unwrap_field_default(base_command)
+        command_string = unwrap_field_default(command_string)
+        command_id = unwrap_field_default(command_id)
+        target_hostname = unwrap_field_default(target_hostname)
+        reason = unwrap_field_default(reason)
+        ticket = unwrap_field_default(ticket)
+        expected_effect = unwrap_field_default(expected_effect)
+        persist = unwrap_field_default(persist)
 
         missing_required = []
         if not isinstance(session_id, str) or not session_id.strip():
@@ -557,7 +587,7 @@ class RTRAdminModule(BaseModule):
                 details={"missing_required": missing_required},
             )
 
-        classification = self.classify_admin_command(base_command, command_string)
+        classification = self.classify_rtr_admin_command(base_command, command_string)
         if self._is_error(classification):
             return classification
 
@@ -618,12 +648,11 @@ class RTRAdminModule(BaseModule):
             "approval_gate": approval_gate,
         }
 
-    def execute_admin_command(
+    def execute_rtr_admin_command(
         self,
         base_command: str = Field(description="RTR Admin base command to execute."),
         command_string: str = Field(description="Full RTR Admin command string to execute."),
-        session_id: str | None = Field(
-            default=None,
+        session_id: str = Field(
             description="RTR session ID to execute the command against.",
         ),
         device_id: str | None = Field(
@@ -666,20 +695,22 @@ class RTRAdminModule(BaseModule):
     ) -> dict[str, Any]:
         """Execute an RTR Admin command on a single host.
 
-        High-impact commands are blocked before the Falcon API call unless the
-        exact operator approval phrase for this payload is supplied.
+        Use after previewing and classifying the command. High-impact commands
+        are blocked unless the exact operator approval phrase is supplied.
+        Returns submission status, cloud_request_id for polling, and
+        classification enforcement details.
         """
-        base_command = _normalize_field_value(base_command)
-        command_string = _normalize_field_value(command_string)
-        session_id = _normalize_field_value(session_id)
-        device_id = _normalize_field_value(device_id)
-        command_id = _normalize_field_value(command_id)
-        persist = _normalize_field_value(persist)
-        target_hostname = _normalize_field_value(target_hostname)
-        reason = _normalize_field_value(reason)
-        ticket = _normalize_field_value(ticket)
-        expected_effect = _normalize_field_value(expected_effect)
-        operator_approval = _normalize_field_value(operator_approval)
+        base_command = unwrap_field_default(base_command)
+        command_string = unwrap_field_default(command_string)
+        session_id = unwrap_field_default(session_id)
+        device_id = unwrap_field_default(device_id)
+        command_id = unwrap_field_default(command_id)
+        persist = unwrap_field_default(persist)
+        target_hostname = unwrap_field_default(target_hostname)
+        reason = unwrap_field_default(reason)
+        ticket = unwrap_field_default(ticket)
+        expected_effect = unwrap_field_default(expected_effect)
+        operator_approval = unwrap_field_default(operator_approval)
 
         missing_required = []
         if not isinstance(base_command, str) or not base_command.strip():
@@ -696,7 +727,7 @@ class RTRAdminModule(BaseModule):
                 details={"missing_required": missing_required},
             )
 
-        classification = self.classify_admin_command(base_command, command_string)
+        classification = self.classify_rtr_admin_command(base_command, command_string)
         if self._is_error(classification):
             return classification
 
@@ -745,63 +776,6 @@ class RTRAdminModule(BaseModule):
             missing_context=self._missing_audit_context(reason, ticket, expected_effect),
             payload=payload,
         )
-
-    def _search_and_get_details(
-        self,
-        search_operation: str,
-        get_operation: str,
-        filter: str | None,
-        limit: int,
-        offset: int | None,
-        sort: str | None,
-        fql_documentation: str,
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        ids = self._base_search_api_call(
-            operation=search_operation,
-            search_params={
-                "filter": filter,
-                "limit": limit,
-                "offset": offset,
-                "sort": sort,
-            },
-            error_message=f"Failed to search RTR Admin resources with {search_operation}",
-        )
-
-        if self._is_error(ids):
-            return self._format_fql_error_response([ids], filter, fql_documentation)
-
-        if not ids:
-            return self._format_fql_error_response([], filter, fql_documentation)
-
-        details = self._base_get_by_ids(
-            operation=get_operation,
-            ids=ids,
-            use_params=True,
-        )
-
-        if self._is_error(details):
-            return [details]
-
-        return details
-
-    def _get_details(
-        self,
-        operation: str,
-        ids: list[str],
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        if not ids:
-            return []
-
-        details = self._base_get_by_ids(
-            operation=operation,
-            ids=ids,
-            use_params=True,
-        )
-
-        if self._is_error(details):
-            return [details]
-
-        return details
 
     def _classification(
         self,
@@ -964,12 +938,15 @@ class RTRAdminModule(BaseModule):
         payload: dict[str, Any],
         target: dict[str, Any],
     ) -> str:
+        hash_target = {
+            k: v for k, v in target.items() if k in ("session_id", "device_id")
+        }
         material = {
             "operation": operation,
             "base_command": classification.get("base_command"),
             "category": classification.get("category"),
             "risk": classification.get("risk"),
-            "target": prepare_api_parameters(target),
+            "target": prepare_api_parameters(hash_target),
             "payload": payload,
         }
         serialized = json.dumps(material, sort_keys=True, separators=(",", ":"))

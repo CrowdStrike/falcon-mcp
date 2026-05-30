@@ -4,9 +4,11 @@ Tests for the RTR Admin module.
 
 import inspect
 
+from mcp.types import ToolAnnotations
+
 from falcon_mcp.common.api_scopes import get_required_scopes
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
-from falcon_mcp.modules.rtr_admin import RTR_ADMIN_EXECUTION_ANNOTATIONS, RTRAdminModule
+from falcon_mcp.modules.rtr_admin import RTRAdminModule
 from tests.modules.utils.test_modules import TestModules
 
 
@@ -21,11 +23,8 @@ class TestRTRAdminModule(TestModules):
         """Test registering tools with the server."""
         expected_tools = [
             "falcon_search_rtr_admin_scripts",
-            "falcon_get_rtr_admin_script_details",
             "falcon_search_rtr_falcon_scripts",
-            "falcon_get_rtr_falcon_script_details",
             "falcon_search_rtr_put_files",
-            "falcon_get_rtr_put_file_details",
             "falcon_check_rtr_admin_command_status",
             "falcon_classify_rtr_admin_command",
             "falcon_preview_rtr_admin_command",
@@ -40,11 +39,8 @@ class TestRTRAdminModule(TestModules):
 
         for tool_name in [
             "falcon_search_rtr_admin_scripts",
-            "falcon_get_rtr_admin_script_details",
             "falcon_search_rtr_falcon_scripts",
-            "falcon_get_rtr_falcon_script_details",
             "falcon_search_rtr_put_files",
-            "falcon_get_rtr_put_file_details",
             "falcon_check_rtr_admin_command_status",
             "falcon_classify_rtr_admin_command",
             "falcon_preview_rtr_admin_command",
@@ -53,7 +49,12 @@ class TestRTRAdminModule(TestModules):
 
         self.assert_tool_annotations(
             "falcon_execute_rtr_admin_command",
-            RTR_ADMIN_EXECUTION_ANNOTATIONS,
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
         )
 
     def test_register_resources(self):
@@ -103,9 +104,9 @@ class TestRTRAdminModule(TestModules):
 
     def test_inventory_limits_match_falconpy_contract(self):
         """Test search tool limits match the pinned FalconPy endpoint metadata."""
-        self.assertEqual(self._limit_le("search_scripts"), 5000)
-        self.assertEqual(self._limit_le("search_falcon_scripts"), 100)
-        self.assertEqual(self._limit_le("search_put_files"), 5000)
+        self.assertEqual(self._limit_le("search_rtr_admin_scripts"), 5000)
+        self.assertEqual(self._limit_le("search_rtr_falcon_scripts"), 100)
+        self.assertEqual(self._limit_le("search_rtr_put_files"), 5000)
 
     def test_search_scripts_returns_full_details(self):
         """Test custom script search fetches details after IDs are returned."""
@@ -122,7 +123,7 @@ class TestRTRAdminModule(TestModules):
             },
         ]
 
-        result = self.module.search_scripts(
+        result = self.module.search_rtr_admin_scripts(
             filter="platform:'windows'",
             limit=25,
             offset=5,
@@ -153,7 +154,7 @@ class TestRTRAdminModule(TestModules):
             },
         ]
 
-        result = self.module.search_falcon_scripts(
+        result = self.module.search_rtr_falcon_scripts(
             filter="name:~'triage'",
             limit=10,
             offset=None,
@@ -180,7 +181,7 @@ class TestRTRAdminModule(TestModules):
             },
         ]
 
-        result = self.module.search_put_files(
+        result = self.module.search_rtr_put_files(
             filter="name:~'collector'",
             limit=50,
             offset=0,
@@ -197,27 +198,32 @@ class TestRTRAdminModule(TestModules):
         self.assertEqual(second_call[1]["parameters"]["ids"], ["file-1"])
         self.assertEqual(result[0]["name"], "collector.exe")
 
-    def test_get_details_empty_ids_return_without_api_call(self):
-        """Test detail helpers return early for empty ID lists."""
-        self.assertEqual(self.module.get_script_details(ids=[]), [])
-        self.assertEqual(self.module.get_falcon_script_details(ids=[]), [])
-        self.assertEqual(self.module.get_put_file_details(ids=[]), [])
-        self.mock_client.command.assert_not_called()
+    def test_search_by_id_filter_round_trips_query_and_get(self):
+        """Test ID lookups go through the search query→get round-trip."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": ["script-1"]}},
+            {
+                "status_code": 200,
+                "body": {"resources": [{"id": "script-1", "name": "collect-a"}]},
+            },
+        ]
 
-    def test_get_script_details_uses_query_parameters(self):
-        """Test custom script details use query parameters for IDs."""
-        self.mock_client.command.return_value = {
-            "status_code": 200,
-            "body": {"resources": [{"id": "script-1"}]},
-        }
-
-        result = self.module.get_script_details(ids=["script-1"])
-
-        self.mock_client.command.assert_called_once_with(
-            "RTR_GetScriptsV2",
-            parameters={"ids": ["script-1"]},
+        result = self.module.search_rtr_admin_scripts(
+            filter="id:'script-1'",
+            limit=10,
+            offset=None,
+            sort=None,
         )
-        self.assertEqual(result[0]["id"], "script-1")
+
+        self.assertEqual(self.mock_client.command.call_count, 2)
+        first_call = self.mock_client.command.call_args_list[0]
+        second_call = self.mock_client.command.call_args_list[1]
+
+        self.assertEqual(first_call[0][0], "RTR_ListScripts")
+        self.assertEqual(first_call[1]["parameters"]["filter"], "id:'script-1'")
+        self.assertEqual(second_call[0][0], "RTR_GetScriptsV2")
+        self.assertEqual(second_call[1]["parameters"]["ids"], ["script-1"])
+        self.assertEqual(result[0]["name"], "collect-a")
 
     def test_search_error_returns_fql_guide(self):
         """Test search errors include the relevant FQL guide."""
@@ -226,7 +232,7 @@ class TestRTRAdminModule(TestModules):
             "body": {"errors": [{"message": "Invalid filter"}]},
         }
 
-        result = self.module.search_scripts(
+        result = self.module.search_rtr_admin_scripts(
             filter="invalid:::filter",
             limit=10,
             offset=None,
@@ -245,7 +251,7 @@ class TestRTRAdminModule(TestModules):
             "body": {"resources": []},
         }
 
-        result = self.module.search_put_files(
+        result = self.module.search_rtr_put_files(
             filter="name:'not-real'",
             limit=10,
             offset=None,
@@ -264,7 +270,7 @@ class TestRTRAdminModule(TestModules):
             "body": {"resources": [{"complete": True, "stdout": "ok"}]},
         }
 
-        result = self.module.check_admin_command_status(
+        result = self.module.check_rtr_admin_command_status(
             cloud_request_id="req-123",
             sequence_id=1,
         )
@@ -277,11 +283,11 @@ class TestRTRAdminModule(TestModules):
 
     def test_check_admin_command_status_validates_required_fields(self):
         """Test command status lookup fails locally for invalid inputs."""
-        missing_request = self.module.check_admin_command_status(
+        missing_request = self.module.check_rtr_admin_command_status(
             cloud_request_id=" ",
             sequence_id=0,
         )
-        invalid_sequence = self.module.check_admin_command_status(
+        invalid_sequence = self.module.check_rtr_admin_command_status(
             cloud_request_id="req-123",
             sequence_id=-1,
         )
@@ -292,7 +298,7 @@ class TestRTRAdminModule(TestModules):
 
     def test_classify_read_only_command(self):
         """Test read-only commands are classified as low risk."""
-        result = self.module.classify_admin_command(base_command="ps")
+        result = self.module.classify_rtr_admin_command(base_command="ps")
 
         self.assertEqual(result["category"], "read_only")
         self.assertEqual(result["risk"], "low")
@@ -303,11 +309,11 @@ class TestRTRAdminModule(TestModules):
 
     def test_classify_registry_query_only(self):
         """Test only read-only registry queries are allowed."""
-        allowed = self.module.classify_admin_command(
+        allowed = self.module.classify_rtr_admin_command(
             base_command="reg",
             command_string=r"reg query HKLM\Software\Microsoft",
         )
-        blocked = self.module.classify_admin_command(
+        blocked = self.module.classify_rtr_admin_command(
             base_command="reg",
             command_string=r"reg delete HKLM\Software\Test",
         )
@@ -327,7 +333,7 @@ class TestRTRAdminModule(TestModules):
             "update query",
         ]:
             with self.subTest(command_string=command_string):
-                result = self.module.classify_admin_command(
+                result = self.module.classify_rtr_admin_command(
                     base_command="update",
                     command_string=command_string,
                 )
@@ -336,7 +342,7 @@ class TestRTRAdminModule(TestModules):
                 self.assertEqual(result["risk"], "low")
                 self.assertTrue(result["allowed_for_execution"])
 
-        install = self.module.classify_admin_command(
+        install = self.module.classify_rtr_admin_command(
             base_command="update",
             command_string="update install",
         )
@@ -347,19 +353,43 @@ class TestRTRAdminModule(TestModules):
 
     def test_classify_unsupported_rtr_commands_as_unknown(self):
         """Test non-documented RTR Admin commands are not treated as low risk."""
-        for base_command in ["csrutil", "ifconfig", "users"]:
+        for base_command in ["totally-fake", "notacommand"]:
             with self.subTest(base_command=base_command):
-                result = self.module.classify_admin_command(base_command=base_command)
+                result = self.module.classify_rtr_admin_command(base_command=base_command)
 
                 self.assertEqual(result["category"], "unknown")
                 self.assertFalse(result["allowed_for_execution"])
                 self.assertFalse(result["requires_approval"])
         self.mock_client.command.assert_not_called()
 
+    def test_classify_newly_added_read_only_commands(self):
+        """Test csrutil, ifconfig, users, pwd are classified as read-only."""
+        for base_command in ["csrutil", "ifconfig", "users", "pwd"]:
+            with self.subTest(base_command=base_command):
+                result = self.module.classify_rtr_admin_command(base_command=base_command)
+
+                self.assertEqual(result["category"], "read_only")
+                self.assertEqual(result["risk"], "low")
+                self.assertTrue(result["allowed_for_execution"])
+        self.mock_client.command.assert_not_called()
+
+    def test_classify_newly_added_blocked_commands(self):
+        """Test tar, umount, rmdir, cswindiag, falconscript are blocked with approval."""
+        for base_command in ["tar", "umount", "rmdir", "cswindiag", "falconscript"]:
+            with self.subTest(base_command=base_command):
+                result = self.module.classify_rtr_admin_command(base_command=base_command)
+
+                self.assertEqual(result["category"], "high_impact")
+                self.assertEqual(result["risk"], "critical")
+                self.assertFalse(result["allowed_for_execution"])
+                self.assertTrue(result["requires_approval"])
+                self.assertTrue(result["can_execute_with_approval"])
+        self.mock_client.command.assert_not_called()
+
     def test_classify_destructive_and_unknown_commands_are_blocked(self):
         """Test destructive and unknown commands are blocked."""
-        destructive = self.module.classify_admin_command(base_command="rm")
-        unknown = self.module.classify_admin_command(base_command="not-a-command")
+        destructive = self.module.classify_rtr_admin_command(base_command="rm")
+        unknown = self.module.classify_rtr_admin_command(base_command="not-a-command")
 
         self.assertEqual(destructive["risk"], "critical")
         self.assertFalse(destructive["allowed_for_execution"])
@@ -372,14 +402,14 @@ class TestRTRAdminModule(TestModules):
 
     def test_classify_empty_base_command_returns_error(self):
         """Test empty base command validation."""
-        result = self.module.classify_admin_command(base_command=" ")
+        result = self.module.classify_rtr_admin_command(base_command=" ")
 
         self.assertIn("error", result)
         self.mock_client.command.assert_not_called()
 
     def test_preview_admin_command_does_not_call_falcon(self):
         """Test command preview returns a payload shape without executing."""
-        result = self.module.preview_admin_command(
+        result = self.module.preview_rtr_admin_command(
             session_id="session-1",
             device_id="aid-1",
             base_command="get",
@@ -394,9 +424,9 @@ class TestRTRAdminModule(TestModules):
 
         self.assertTrue(result["execution_available"])
         self.assertEqual(result["execution_tool"], "falcon_execute_rtr_admin_command")
-        self.assertTrue(result["policy_allows_future_execution"])
+        self.assertFalse(result["policy_allows_future_execution"])
         self.assertTrue(result["classification_enforced"])
-        self.assertFalse(result["approval_gate"]["approval_required"])
+        self.assertTrue(result["approval_gate"]["approval_required"])
         self.assertIn("safety_disclaimer", result)
         self.assertEqual(result["operation"], "RTR_ExecuteAdminCommand")
         self.assertEqual(result["missing_context"], [])
@@ -410,7 +440,7 @@ class TestRTRAdminModule(TestModules):
 
     def test_preview_approval_phrase_matches_execution_payload_with_device_id(self):
         """Test preview and execution approval use the same target and payload material."""
-        preview = self.module.preview_admin_command(
+        preview = self.module.preview_rtr_admin_command(
             session_id="session-1",
             device_id="aid-1",
             base_command="rm",
@@ -428,7 +458,7 @@ class TestRTRAdminModule(TestModules):
             "body": {"resources": [{"cloud_request_id": "req-123"}]},
         }
 
-        result = self.module.execute_admin_command(
+        result = self.module.execute_rtr_admin_command(
             session_id="session-1",
             device_id="aid-1",
             base_command="rm",
@@ -446,9 +476,47 @@ class TestRTRAdminModule(TestModules):
         self.assertTrue(result["approval_gate"]["approved"])
         self.mock_client.command.assert_called_once()
 
+    def test_approval_hash_independent_of_hostname(self):
+        """Test that hostname differences do not break approval phrase matching."""
+        preview = self.module.preview_rtr_admin_command(
+            session_id="session-1",
+            device_id="aid-1",
+            base_command="rm",
+            command_string=r"rm C:\Temp\old.bin",
+            command_id=7,
+            target_hostname="HOST-1",
+            reason="cleanup test file",
+            ticket="INC-123",
+            expected_effect="remove selected file",
+            persist=True,
+        )
+        approval_phrase = preview["approval_gate"]["approval_phrase"]
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"cloud_request_id": "req-123"}]},
+        }
+
+        result = self.module.execute_rtr_admin_command(
+            session_id="session-1",
+            device_id="aid-1",
+            base_command="rm",
+            command_string=r"rm C:\Temp\old.bin",
+            command_id=7,
+            persist=True,
+            target_hostname="DIFFERENT-HOST",
+            reason="cleanup test file",
+            ticket="INC-123",
+            expected_effect="remove selected file",
+            operator_approval=approval_phrase,
+        )
+
+        self.assertTrue(result["submitted"])
+        self.assertTrue(result["approval_gate"]["approved"])
+        self.mock_client.command.assert_called_once()
+
     def test_preview_admin_command_reports_missing_context(self):
         """Test command preview calls out missing audit context."""
-        result = self.module.preview_admin_command(
+        result = self.module.preview_rtr_admin_command(
             session_id="session-1",
             base_command="runscript",
             command_string="runscript -Raw=```Get-Process```",
@@ -471,7 +539,7 @@ class TestRTRAdminModule(TestModules):
 
     def test_preview_admin_command_missing_required_fields_returns_error(self):
         """Test command preview rejects missing required command fields."""
-        result = self.module.preview_admin_command(
+        result = self.module.preview_rtr_admin_command(
             session_id=" ",
             base_command="ps",
             command_string=" ",
@@ -488,7 +556,7 @@ class TestRTRAdminModule(TestModules):
             "body": {"resources": [{"cloud_request_id": "req-123"}]},
         }
 
-        result = self.module.execute_admin_command(
+        result = self.module.execute_rtr_admin_command(
             session_id="session-1",
             device_id="aid-1",
             base_command="ps",
@@ -522,7 +590,7 @@ class TestRTRAdminModule(TestModules):
 
     def test_execute_admin_command_requires_approval_for_high_impact_command(self):
         """Test high-impact single-host execution stops before the Falcon call."""
-        result = self.module.execute_admin_command(
+        result = self.module.execute_rtr_admin_command(
             session_id="session-1",
             device_id=None,
             base_command="rm",
@@ -546,7 +614,7 @@ class TestRTRAdminModule(TestModules):
 
     def test_execute_admin_command_submits_high_impact_after_exact_approval(self):
         """Test high-impact single-host execution submits only after exact approval."""
-        blocked = self.module.execute_admin_command(
+        blocked = self.module.execute_rtr_admin_command(
             session_id="session-1",
             device_id=None,
             base_command="rm",
@@ -565,7 +633,7 @@ class TestRTRAdminModule(TestModules):
             "body": {"resources": [{"cloud_request_id": "req-123"}]},
         }
 
-        result = self.module.execute_admin_command(
+        result = self.module.execute_rtr_admin_command(
             session_id="session-1",
             device_id=None,
             base_command="rm",
@@ -593,7 +661,7 @@ class TestRTRAdminModule(TestModules):
             "body": {"resources": [{"cloud_request_id": "req-raw"}]},
         }
 
-        result = self.module.execute_admin_command(
+        result = self.module.execute_rtr_admin_command(
             session_id="session-1",
             base_command="runscript",
             command_string="runscript -Raw=```Get-Process```",
@@ -621,7 +689,7 @@ class TestRTRAdminModule(TestModules):
 
     def test_execute_admin_command_requires_target_and_command(self):
         """Test single-host RTR Admin execution validates minimum fields locally."""
-        result = self.module.execute_admin_command(
+        result = self.module.execute_rtr_admin_command(
             session_id=None,
             device_id=None,
             base_command=" ",
@@ -637,7 +705,8 @@ class TestRTRAdminModule(TestModules):
 
     def test_execute_admin_command_rejects_device_only_target(self):
         """Test single-host RTR Admin execution requires an existing RTR session."""
-        result = self.module.execute_admin_command(
+        result = self.module.execute_rtr_admin_command(
+            session_id=" ",
             device_id="aid-1",
             base_command="ps",
             command_string="ps",
@@ -654,7 +723,7 @@ class TestRTRAdminModule(TestModules):
             "body": {"errors": [{"message": "Access denied"}]},
         }
 
-        result = self.module.execute_admin_command(
+        result = self.module.execute_rtr_admin_command(
             session_id="session-1",
             device_id="aid-1",
             base_command="ps",

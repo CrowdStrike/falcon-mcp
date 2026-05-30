@@ -4,67 +4,6 @@ Contains RTR Admin resources.
 
 from falcon_mcp.common.utils import generate_md_table
 
-EMBEDDED_SCRIPT_FQL_SYNTAX = """FQL filter string for querying RTR custom scripts.
-
-SYNTAX:
-- Equals: field:'value'
-- Not equals: field:!'value'
-- Contains: field:~'partial'
-- Wildcard: field:'prefix*'
-
-COMMON FIELDS:
-- name: Script name
-- description: Script description
-- platform: Script platform such as windows, mac, or linux
-- permission_type: Script permission level such as private, group, or public
-- created_at: Creation timestamp
-- updated_at: Last update timestamp
-
-EXAMPLES:
-- Windows scripts: platform:'windows'
-- Private scripts: permission_type:'private'
-- Name match: name:~'triage'
-- Sort example: created_at|desc
-"""
-
-EMBEDDED_FALCON_SCRIPT_FQL_SYNTAX = """FQL filter string for querying CrowdStrike Falcon scripts.
-
-SYNTAX:
-- Equals: field:'value'
-- Contains: field:~'partial'
-- Wildcard: field:'prefix*'
-
-COMMON FIELDS:
-- name: Falcon script name
-- description: Falcon script description
-- platform: Script platform such as windows, mac, or linux
-
-EXAMPLES:
-- Windows Falcon scripts: platform:'windows'
-- Name match: name:~'collect'
-- Sort example: name|asc
-"""
-
-EMBEDDED_PUT_FILE_FQL_SYNTAX = """FQL filter string for querying RTR put-files.
-
-SYNTAX:
-- Equals: field:'value'
-- Not equals: field:!'value'
-- Contains: field:~'partial'
-- Wildcard: field:'prefix*'
-
-COMMON FIELDS:
-- name: Put-file name
-- description: Put-file description
-- created_at: Creation timestamp
-- updated_at: Last update timestamp
-
-EXAMPLES:
-- Name match: name:~'collector'
-- Recent files: created_at:>'2026-01-01T00:00:00Z'
-- Sort example: created_at|desc
-"""
-
 SCRIPT_FQL_FILTERS = [
     ("Name", "Type", "Description"),
     ("id", "String", "Script ID."),
@@ -110,6 +49,9 @@ permission_type:'private'
 # Scripts with triage in the name
 name:~'triage'
 
+# Look up known script IDs
+id:['<id1>','<id2>']
+
 === falcon_search_rtr_admin_scripts FQL filter available fields ===
 
 """
@@ -129,6 +71,9 @@ platform:'windows'
 
 # Falcon scripts with collect in the name
 name:~'collect'
+
+# Look up known script IDs
+id:['<id1>','<id2>']
 
 === falcon_search_rtr_falcon_scripts FQL filter available fields ===
 
@@ -150,6 +95,9 @@ name:~'collector'
 # Put-files created after a date
 created_at:>'2026-01-01T00:00:00Z'
 
+# Look up known put-file IDs
+id:['<id1>','<id2>']
+
 === falcon_search_rtr_put_files FQL filter available fields ===
 
 """
@@ -169,7 +117,8 @@ needed.
    - Use `falcon_search_rtr_admin_scripts` for custom cloud scripts.
    - Use `falcon_search_rtr_falcon_scripts` for CrowdStrike-provided scripts.
    - Use `falcon_search_rtr_put_files` for put-file inventory.
-   - Use the matching `get_*_details` tool when you already have IDs.
+   - When you already have IDs, filter the matching search tool with the `id`
+     field, such as `id:['<id1>','<id2>']`.
 
 2. Classify the intended command locally.
    - Use `falcon_classify_rtr_admin_command` before execution planning.

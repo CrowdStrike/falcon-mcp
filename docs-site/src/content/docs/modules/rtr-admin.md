@@ -19,7 +19,9 @@ Inspect RTR Admin assets, classify command risk, preview payloads, and execute a
 
 Retrieve status and output for a prior RTR Admin command.
 
-This is a read-only status lookup. It cannot start a new command.
+Use this to poll for command completion after execution. This is a
+read-only status lookup that cannot start a new command. Returns
+completion status, stdout, stderr, and sequence information.
 
 **Example prompts:**
 
@@ -31,6 +33,7 @@ Classify an RTR Admin command without executing it.
 
 Use this before designing or approving any RTR Admin execution flow.
 This policy helper is intentionally local and does not call Falcon.
+Returns category, risk level, approval requirements, and explanation.
 
 **Example prompts:**
 
@@ -46,45 +49,14 @@ This tool performs destructive operations.
 
 Execute an RTR Admin command on a single host.
 
-High-impact commands are blocked before the Falcon API call unless the
-exact operator approval phrase for this payload is supplied.
+Use after previewing and classifying the command. High-impact commands
+are blocked unless the exact operator approval phrase is supplied.
+Returns submission status, cloud_request_id for polling, and
+classification enforcement details.
 
 **Example prompts:**
 
 - "Run this approved RTR Admin command against the existing RTR session"
-
-### `falcon_get_rtr_falcon_script_details`
-
-**Required scopes:** `Real time response (admin):write`
-
-Retrieve CrowdStrike-provided Falcon script metadata and content by ID.
-
-**Example prompts:**
-
-- "Show me the details for that Falcon script"
-
-### `falcon_get_rtr_put_file_details`
-
-**Required scopes:** `Real time response (admin):write`
-
-Retrieve RTR put-file metadata by ID.
-
-This tool intentionally returns metadata only. It does not expose
-put-file content retrieval in the first RTR Admin slice.
-
-**Example prompts:**
-
-- "Get metadata for this RTR put-file ID"
-
-### `falcon_get_rtr_admin_script_details`
-
-**Required scopes:** `Real time response (admin):write`
-
-Retrieve custom RTR script metadata and content by script ID.
-
-**Example prompts:**
-
-- "Pull the details for that RTR Admin script ID"
 
 ### `falcon_preview_rtr_admin_command`
 
@@ -100,15 +72,34 @@ calls Falcon and cannot execute the command.
 
 - "Preview the exact RTR Admin payload for this command before running it"
 
+### `falcon_search_rtr_admin_scripts`
+
+**Required scopes:** `Real time response (admin):write`
+
+Search RTR custom scripts and return full metadata records.
+
+Use this to find reusable custom RTR scripts by name, platform, or
+permission type, or to look up known script IDs with an `id` filter.
+Consult falcon://rtr-admin/scripts/search/fql-guide before constructing
+filter expressions. Returns full script records including name, content,
+platform, and permission details.
+
+**Example prompts:**
+
+- "Find Windows RTR Admin scripts with triage in the name"
+- "Show me private custom RTR scripts I could review for this host"
+
 ### `falcon_search_rtr_falcon_scripts`
 
 **Required scopes:** `Real time response (admin):write`
 
 Search CrowdStrike-provided Falcon scripts and return full records.
 
-Use this to find CrowdStrike-provided RTR scripts by name or platform.
-Consult falcon://rtr-admin/falcon-scripts/search/fql-guide before
-constructing filter expressions.
+Use this to find CrowdStrike-provided RTR scripts by name or platform,
+or to look up known script IDs with an `id` filter. Consult
+falcon://rtr-admin/falcon-scripts/search/fql-guide before constructing
+filter expressions. Returns full script records including name,
+description, and platform.
 
 **Example prompts:**
 
@@ -121,28 +112,14 @@ constructing filter expressions.
 Search RTR put-files and return full metadata records.
 
 Use this to review put-file inventory before considering an admin
-command that references staged content. Consult
-falcon://rtr-admin/put-files/search/fql-guide before constructing
-filter expressions.
+command that references staged content, or to look up known put-file IDs
+with an `id` filter. Consult falcon://rtr-admin/put-files/search/fql-guide
+before constructing filter expressions. Returns full put-file metadata
+records.
 
 **Example prompts:**
 
 - "Search RTR put-files with collector in the name"
-
-### `falcon_search_rtr_admin_scripts`
-
-**Required scopes:** `Real time response (admin):write`
-
-Search RTR custom scripts and return full metadata records.
-
-Use this to find reusable custom RTR scripts by name, platform, or
-permission type. Consult falcon://rtr-admin/scripts/search/fql-guide
-before constructing filter expressions.
-
-**Example prompts:**
-
-- "Find Windows RTR Admin scripts with triage in the name"
-- "Show me private custom RTR scripts I could review for this host"
 
 ## Resources
 
