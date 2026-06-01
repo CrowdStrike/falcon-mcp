@@ -16,6 +16,7 @@ The Falcon MCP Server provides the following modules. Each module requires speci
 | [Detections](/falcon-mcp/modules/detections/) | `Alerts:read` | Accessing and analyzing CrowdStrike Falcon detections |
 | [Discover](/falcon-mcp/modules/discover/) | `Assets:read` | Accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets |
 | [Firewall Management](/falcon-mcp/modules/firewall/) | `Firewall Management:read`, `Firewall Management:write` | Searching and managing firewall rules and rule groups |
+| [Host Groups](/falcon-mcp/modules/host-groups/) | `Host Groups:read`, `Host Groups:write` | Searching, creating, updating, and deleting CrowdStrike Falcon host groups, as well as managing group membership |
 | [Hosts](/falcon-mcp/modules/hosts/) | `Hosts:read` | Accessing and managing CrowdStrike Falcon hosts/devices |
 | [Identity Protection](/falcon-mcp/modules/idp/) | `Identity Protection Assessment:read`, `Identity Protection Detections:read`, `Identity Protection Entities:read`, `Identity Protection Timeline:read`, `Identity Protection GraphQL:write` | Accessing and managing CrowdStrike Falcon Identity Protection capabilities |
 | [Intel](/falcon-mcp/modules/intel/) | `Actors (Falcon Intelligence):read`, `Indicators (Falcon Intelligence):read`, `Reports (Falcon Intelligence):read` | Accessing and analyzing CrowdStrike Falcon intelligence data |

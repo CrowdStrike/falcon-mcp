@@ -17,6 +17,13 @@ API_SCOPE_REQUIREMENTS = {
     # Hosts operations
     "QueryDevicesByFilter": ["Hosts:read"],
     "PostDeviceDetailsV2": ["Hosts:read"],
+    # Host Groups operations
+    "queryCombinedHostGroups": ["Host Groups:read"],
+    "queryCombinedGroupMembers": ["Host Groups:read"],
+    "createHostGroups": ["Host Groups:write"],
+    "updateHostGroups": ["Host Groups:write"],
+    "deleteHostGroups": ["Host Groups:write"],
+    "performGroupAction": ["Host Groups:write"],
     # Intel operations
     "QueryIntelActorEntities": ["Actors (Falcon Intelligence):read"],
     "QueryIntelIndicatorEntities": ["Indicators (Falcon Intelligence):read"],
