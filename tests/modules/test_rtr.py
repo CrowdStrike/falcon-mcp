@@ -117,7 +117,7 @@ class TestRTRModule(TestModules):
         self.mock_client.command.side_effect = [search_response, details_response]
 
         result = self.module.search_sessions(
-            filter="hostname:'BRR-WB-LIB-22'",
+            filter="hostname:'EXAMPLE-WIN-22'",
             limit=25,
             offset=0,
             sort="created_at.desc",
@@ -128,7 +128,7 @@ class TestRTRModule(TestModules):
         second_call = self.mock_client.command.call_args_list[1]
 
         self.assertEqual(first_call[0][0], "RTR_ListAllSessions")
-        self.assertEqual(first_call[1]["parameters"]["filter"], "hostname:'BRR-WB-LIB-22'")
+        self.assertEqual(first_call[1]["parameters"]["filter"], "hostname:'EXAMPLE-WIN-22'")
         self.assertEqual(first_call[1]["parameters"]["limit"], 25)
         self.assertEqual(first_call[1]["parameters"]["offset"], 0)
         self.assertEqual(first_call[1]["parameters"]["sort"], "created_at.desc")
@@ -147,7 +147,7 @@ class TestRTRModule(TestModules):
                 "resources": [
                     {
                         "id": "audit-session-1",
-                        "hostname": "BRR-WB-LIB-22",
+                        "hostname": "EXAMPLE-WIN-22",
                         "user_id": "user@example.com",
                     }
                 ]

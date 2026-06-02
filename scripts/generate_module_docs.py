@@ -362,7 +362,7 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     ],
     "falcon_search_rtr_audit_sessions": [
         "Show me RTR audit activity from the last 7 days",
-        "Who used RTR against host BRR-WB-LIB-22?",
+        "Who used RTR against host EXAMPLE-WIN-22?",
     ],
     "falcon_aggregate_rtr_sessions": [
         "Summarize RTR sessions by command for the last 30 days",

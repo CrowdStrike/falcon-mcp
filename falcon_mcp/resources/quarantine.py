@@ -33,7 +33,7 @@ SEARCH_QUARANTINED_FILES_FQL_FILTERS = [
     (
         "hostname",
         "String",
-        "Host name tied to the quarantine event (top-level field). Example: hostname:'BRR-WB-LIB-22'",
+        "Host name tied to the quarantine event (top-level field). Example: hostname:'EXAMPLE-WIN-22'",
     ),
     (
         "behaviors.username",
@@ -81,7 +81,7 @@ field_name:[operator]'value'
 === EXAMPLES ===
 
 # Quarantined files for a host
-hostname:'BRR-WB-LIB-22'
+hostname:'EXAMPLE-WIN-22'
 
 # Records updated recently
 date_updated:>'2026-03-01T00:00:00Z'

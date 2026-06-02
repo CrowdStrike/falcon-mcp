@@ -30,8 +30,13 @@ COMMON FIELDS:
 - command_string: Full command line executed
 - offline_queued: Whether session was queued offline (true/false)
 
+LOOKUP NOTES:
+- Direct session id and cloud_request_id filters can be environment/API-shape dependent.
+- For command history, prefer aid or hostname plus a bounded created_at window and optional base_command.
+- Inspect returned session command logs client-side for exact session IDs and cloud request IDs.
+
 EXAMPLES:
-- Sessions for a host: hostname:'BRR-WB-LIB-22'
+- Sessions for a host: hostname:'EXAMPLE-WIN-22'
 - Sessions by agent ID: aid:'2c5c4e7738004deaa9dfcdb86f633f3e'
 - Current user sessions: user_id:'@me'
 - Offline-queued sessions: offline_queued:true+hostname:'DC*'
@@ -50,6 +55,8 @@ COMMON STARTING POINTS:
 - Use created_at or updated_at filters to keep audit searches time-bound.
 - Set with_command_info=true when you need command IDs and command log context.
 - If a field is rejected by Falcon, reduce to a timestamp-bounded search and inspect returned fields.
+- Direct cloud_request_id filters can be environment/API-shape dependent; if they return no rows,
+  search by aid or hostname plus a bounded created_at window and inspect command logs client-side.
 
 EXAMPLES:
 - Recent RTR audit sessions: created_at:>'now-7d'
@@ -68,7 +75,9 @@ SEARCH_RTR_SESSIONS_FQL_FILTERS = [
         "id",
         "String",
         """
-        RTR session ID.
+        RTR session ID. Live testing showed exact ID filtering can be
+        API-shape dependent; if no rows return, fall back to aid/hostname plus
+        bounded created_at and inspect returned session IDs client-side.
         Ex: 9f3c5e7a-1234-5678-abcd-ef0123456789
         """,
     ),
@@ -109,7 +118,7 @@ SEARCH_RTR_SESSIONS_FQL_FILTERS = [
         "String",
         """
         Hostname of the connected host.
-        Ex: BRR-WB-LIB-22
+        Ex: EXAMPLE-WIN-22
         """,
     ),
     (
@@ -133,7 +142,10 @@ SEARCH_RTR_SESSIONS_FQL_FILTERS = [
         "cloud_request_id",
         "String",
         """
-        Cloud request ID associated with a command execution.
+        Cloud request ID associated with a command execution. Live testing
+        showed exact filtering can be API-shape dependent; if no rows return,
+        fall back to aid/hostname plus bounded created_at and inspect returned
+        command logs client-side.
         Ex: a1b2c3d4-5678-90ab-cdef-1234567890ab
         """,
     ),
@@ -159,14 +171,6 @@ SEARCH_RTR_SESSIONS_FQL_FILTERS = [
         "Boolean",
         """
         Whether the session was queued for offline execution.
-        Ex: true
-        """,
-    ),
-    (
-        "commands_queued",
-        "Boolean",
-        """
-        Whether commands are queued in the session.
         Ex: true
         """,
     ),
@@ -216,7 +220,7 @@ SEARCH_RTR_AUDIT_SESSIONS_FQL_FILTERS = [
         "String",
         """
         Hostname associated with the audited RTR activity.
-        Ex: BRR-WB-LIB-22
+        Ex: EXAMPLE-WIN-22
         """,
     ),
     (
@@ -241,7 +245,10 @@ SEARCH_RTR_AUDIT_SESSIONS_FQL_FILTERS = [
         "String",
         """
         Cloud request ID associated with command execution. This is most
-        useful when with_command_info=true is enabled.
+        useful when with_command_info=true is enabled. Live testing showed
+        exact filtering can be API-shape dependent; if no rows return, fall
+        back to aid/hostname plus bounded created_at and inspect returned
+        command logs client-side.
         Ex: a1b2c3d4-5678-90ab-cdef-1234567890ab
         """,
     ),
@@ -250,7 +257,9 @@ SEARCH_RTR_AUDIT_SESSIONS_FQL_FILTERS = [
         "String",
         """
         RTR base command name. This is most useful when with_command_info=true
-        is enabled.
+        is enabled, but exact command filters can be API-shape dependent on the
+        audit endpoint. If no rows return, fall back to aid/hostname plus
+        bounded created_at and inspect returned command logs client-side.
         Ex: ps
         """,
     ),
@@ -259,7 +268,10 @@ SEARCH_RTR_AUDIT_SESSIONS_FQL_FILTERS = [
         "String",
         """
         Full RTR command line string. This is most useful when
-        with_command_info=true is enabled.
+        with_command_info=true is enabled, but exact command filters can be
+        API-shape dependent on the audit endpoint. If no rows return, fall back
+        to aid/hostname plus bounded created_at and inspect returned command
+        logs client-side.
         Ex: cat C:\\Windows\\win.ini
         """,
     ),
@@ -308,7 +320,7 @@ Examples: 'created_at.desc', 'hostname.asc'
 === COMPLEX FILTER EXAMPLES ===
 
 # Sessions for a specific host
-hostname:'BRR-WB-LIB-22'
+hostname:'EXAMPLE-WIN-22'
 
 # Sessions by agent ID
 aid:'2c5c4e7738004deaa9dfcdb86f633f3e'
@@ -331,8 +343,8 @@ origin:'falcon-mcp'+user_id:'@me'
 # Sessions matching multiple commands
 (base_command:'ls',base_command:'cat',base_command:'filehash')+hostname:'WEB*'
 
-# Recent sessions for a host with queued commands
-commands_queued:true+created_at:>'2025-03-10T00:00:00Z'
+# Recent offline-queued sessions
+offline_queued:true+created_at:>'2025-03-10T00:00:00Z'
 
 # Deleted sessions after a timestamp for an agent
 deleted_at:>'2025-03-10T00:00:00Z'+aid:'2c5c4e7738004deaa9dfcdb86f633f3e'
@@ -366,6 +378,9 @@ The RTR audit API uses pipe-style sort examples such as:
 === COMMAND INFO ===
 Set with_command_info=true when the investigation needs cloud request IDs and command log fields.
 Leave it false for lighter timeline searches.
+Direct cloud_request_id filters can be environment/API-shape dependent. If an
+exact lookup returns no rows, search by aid or hostname plus a bounded created_at
+window and inspect returned command logs client-side.
 
 === falcon_search_rtr_audit_sessions FQL filter fields ===
 
@@ -383,10 +398,9 @@ hostname:'DC*'+created_at:>'now-7d'
 user_id:'@me'+created_at:>'now-7d'
 
 # Command-focused audit search
-base_command:'ps'+created_at:>'now-7d'
+aid:'2c5c4e7738004deaa9dfcdb86f633f3e'+created_at:>'now-7d'
 
-# Audit search for a command request
-cloud_request_id:'a1b2c3d4-5678-90ab-cdef-1234567890ab'
+# Then inspect returned command logs for cloud_request_id, base_command, and command_string.
 """
 
 AGGREGATE_RTR_SESSIONS_GUIDE = """RTR Session Aggregation Guide
@@ -407,7 +421,6 @@ Recommended filters:
 - user_id:'@me'
 - hostname:'DC*'
 - offline_queued:true
-- commands_queued:true
 
 Example terms aggregation:
 - aggregate_type: terms

@@ -232,7 +232,7 @@ class TestRTRAdminModule(TestModules):
             filter="platform:'windows'",
             limit=25,
             offset=5,
-            sort="created_at|desc",
+            sort="created_timestamp|desc",
         )
 
         self.assertEqual(self.mock_client.command.call_count, 2)
@@ -243,11 +243,54 @@ class TestRTRAdminModule(TestModules):
         self.assertEqual(first_call[1]["parameters"]["filter"], "platform:'windows'")
         self.assertEqual(first_call[1]["parameters"]["limit"], 25)
         self.assertEqual(first_call[1]["parameters"]["offset"], 5)
-        self.assertEqual(first_call[1]["parameters"]["sort"], "created_at|desc")
+        self.assertEqual(first_call[1]["parameters"]["sort"], "created_timestamp|desc")
 
         self.assertEqual(second_call[0][0], "RTR_GetScriptsV2")
         self.assertEqual(second_call[1]["parameters"]["ids"], ["script-1", "script-2"])
         self.assertEqual(result[0]["name"], "collect-a")
+
+    def test_search_scripts_preserves_query_id_order_after_detail_fetch(self):
+        """Test detail responses are returned in the original search ID order."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": ["script-2", "script-1"]}},
+            {
+                "status_code": 200,
+                "body": {
+                    "resources": [
+                        {"id": "script-1", "name": "older"},
+                        {"id": "script-2", "name": "newer"},
+                    ]
+                },
+            },
+        ]
+
+        result = self.module.search_rtr_admin_scripts(sort="created_timestamp|desc")
+
+        first_call = self.mock_client.command.call_args_list[0]
+        self.assertEqual(
+            first_call[1]["parameters"],
+            {"limit": 10, "sort": "created_timestamp|desc"},
+        )
+        self.assertEqual([item["id"] for item in result], ["script-2", "script-1"])
+
+    def test_search_put_files_defaults_do_not_send_fieldinfo_values(self):
+        """Test omitted optional search params are not sent as FieldInfo objects."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": ["file-1"]}},
+            {
+                "status_code": 200,
+                "body": {"resources": [{"id": "file-1", "name": "collector.exe"}]},
+            },
+        ]
+
+        result = self.module.search_rtr_put_files(sort="created_timestamp|desc")
+
+        first_call = self.mock_client.command.call_args_list[0]
+        self.assertEqual(
+            first_call[1]["parameters"],
+            {"limit": 10, "sort": "created_timestamp|desc"},
+        )
+        self.assertEqual(result[0]["id"], "file-1")
 
     def test_search_falcon_scripts_returns_full_details(self):
         """Test Falcon script search fetches details after IDs are returned."""
@@ -290,7 +333,7 @@ class TestRTRAdminModule(TestModules):
             filter="name:~'collector'",
             limit=50,
             offset=0,
-            sort="created_at|desc",
+            sort="created_timestamp|desc",
         )
 
         first_call = self.mock_client.command.call_args_list[0]
@@ -333,6 +376,28 @@ class TestRTRAdminModule(TestModules):
         )
         self.assertEqual(result["id"], "file-1")
         self.assertEqual(result["body"]["content"], "payload")
+
+    def test_get_put_file_contents_warns_when_binary_metadata_returns_text(self):
+        """Test text retrieval is sensitive even when inventory metadata says binary."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {
+                        "id": "file-1",
+                        "file_type": "binary",
+                        "content_format": "text",
+                        "content": "script payload",
+                    }
+                ]
+            },
+        }
+
+        result = self.module.get_rtr_put_file_contents(file_id="file-1")
+
+        self.assertEqual(result[0]["content_format"], "text")
+        self.assertEqual(result[0]["file_type"], "binary")
+        self.assertIn("sensitivity_warning", result[0])
 
     def test_get_put_file_contents_decodes_text_bytes(self):
         """Test text byte content is decoded into a model-safe response."""
@@ -489,6 +554,10 @@ class TestRTRAdminModule(TestModules):
             base_command="reg",
             command_string=r"reg query HKLM\Software\Microsoft",
         )
+        warned = self.module.classify_rtr_admin_command(
+            base_command="reg",
+            command_string=r"reg query HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion ProductName",
+        )
         blocked = self.module.classify_rtr_admin_command(
             base_command="reg",
             command_string=r"reg delete HKLM\Software\Test",
@@ -496,6 +565,9 @@ class TestRTRAdminModule(TestModules):
 
         self.assertEqual(allowed["category"], "read_only")
         self.assertTrue(allowed["allowed_for_execution"])
+        self.assertEqual(allowed["command_warnings"], [])
+        self.assertEqual(warned["category"], "read_only")
+        self.assertTrue(warned["command_warnings"])
         self.assertEqual(blocked["category"], "high_impact")
         self.assertFalse(blocked["allowed_for_execution"])
         self.assertTrue(blocked["requires_approval"])
@@ -673,6 +745,34 @@ class TestRTRAdminModule(TestModules):
         self.assertTrue(result["approval_gate"]["approved"])
         self.mock_client.command.assert_called_once()
 
+    def test_approval_hash_binds_expected_effect(self):
+        """Test changed audit context changes the high-impact approval phrase."""
+        first = self.module.preview_rtr_admin_command(
+            session_id="session-1",
+            device_id="aid-1",
+            base_command="rm",
+            command_string=r"rm C:\Temp\old.bin",
+            target_hostname="HOST-1",
+            reason="cleanup test file",
+            ticket="INC-123",
+            expected_effect="remove selected file",
+        )
+        second = self.module.preview_rtr_admin_command(
+            session_id="session-1",
+            device_id="aid-1",
+            base_command="rm",
+            command_string=r"rm C:\Temp\old.bin",
+            target_hostname="HOST-1",
+            reason="cleanup test file",
+            ticket="INC-123",
+            expected_effect="remove selected directory",
+        )
+
+        self.assertNotEqual(
+            first["approval_gate"]["approval_phrase"],
+            second["approval_gate"]["approval_phrase"],
+        )
+
     def test_approval_hash_independent_of_hostname(self):
         """Test that hostname differences do not break approval phrase matching."""
         preview = self.module.preview_rtr_admin_command(
@@ -727,7 +827,12 @@ class TestRTRAdminModule(TestModules):
         self.assertTrue(result["execution_available"])
         self.assertEqual(result["missing_context"], ["reason", "ticket", "expected_effect"])
         self.assertTrue(result["approval_gate"]["approval_required"])
-        self.assertRegex(result["approval_gate"]["approval_phrase"], r"^APPROVE_RTR_ADMIN_[0-9A-F]{16}$")
+        self.assertFalse(result["approval_gate"]["approval_ready"])
+        self.assertNotIn("approval_phrase", result["approval_gate"])
+        self.assertEqual(
+            result["approval_gate"]["missing_approval_context"],
+            ["reason", "ticket", "expected_effect", "device_id"],
+        )
         self.assertEqual(
             result["command_guidance"]["resource"],
             "falcon://rtr-admin/commands/runscript-guide",
@@ -802,7 +907,7 @@ class TestRTRAdminModule(TestModules):
         """Test high-impact single-host execution stops before the Falcon call."""
         result = self.module.execute_rtr_admin_command(
             session_id="session-1",
-            device_id=None,
+            device_id="aid-1",
             base_command="rm",
             command_string=r"rm C:\Temp\old.bin",
             command_id=7,
@@ -816,17 +921,43 @@ class TestRTRAdminModule(TestModules):
         self.assertIn("error", result)
         self.assertIn("approval required", result["error"].lower())
         self.assertTrue(result["details"]["approval_gate"]["approval_required"])
+        self.assertTrue(result["details"]["approval_gate"]["approval_ready"])
         self.assertRegex(
             result["details"]["approval_gate"]["approval_phrase"],
             r"^APPROVE_RTR_ADMIN_[0-9A-F]{16}$",
         )
         self.mock_client.command.assert_not_called()
 
+    def test_execute_admin_command_requires_device_id_for_high_impact_approval(self):
+        """Test high-impact approval is not issued without a device ID."""
+        result = self.module.execute_rtr_admin_command(
+            session_id="session-1",
+            device_id=None,
+            base_command="rm",
+            command_string=r"rm C:\Temp\old.bin",
+            command_id=7,
+            persist=True,
+            target_hostname="HOST-1",
+            reason="cleanup test file",
+            ticket="INC-123",
+            expected_effect="remove selected file",
+        )
+
+        self.assertIn("error", result)
+        self.assertIn("approval context is incomplete", result["error"])
+        self.assertFalse(result["details"]["approval_gate"]["approval_ready"])
+        self.assertEqual(
+            result["details"]["approval_gate"]["missing_approval_context"],
+            ["device_id"],
+        )
+        self.assertNotIn("approval_phrase", result["details"]["approval_gate"])
+        self.mock_client.command.assert_not_called()
+
     def test_execute_admin_command_submits_high_impact_after_exact_approval(self):
         """Test high-impact single-host execution submits only after exact approval."""
         blocked = self.module.execute_rtr_admin_command(
             session_id="session-1",
-            device_id=None,
+            device_id="aid-1",
             base_command="rm",
             command_string=r"rm C:\Temp\old.bin",
             command_id=7,
@@ -845,7 +976,7 @@ class TestRTRAdminModule(TestModules):
 
         result = self.module.execute_rtr_admin_command(
             session_id="session-1",
-            device_id=None,
+            device_id="aid-1",
             base_command="rm",
             command_string=r"rm C:\Temp\old.bin",
             command_id=7,
@@ -878,14 +1009,11 @@ class TestRTRAdminModule(TestModules):
         )
 
         self.assertIn("error", result)
-        self.assertIn("approval required", result["error"].lower())
+        self.assertIn("approval context is incomplete", result["error"])
         self.assertTrue(result["details"]["approval_gate"]["approval_required"])
+        self.assertFalse(result["details"]["approval_gate"]["approval_ready"])
         self.mock_client.command.assert_not_called()
-        self.assertTrue(
-            result["details"]["approval_gate"]["approval_phrase"].startswith(
-                "APPROVE_RTR_ADMIN_"
-            )
-        )
+        self.assertNotIn("approval_phrase", result["details"]["approval_gate"])
         self.assertEqual(
             result["details"]["payload_preview"]["body"]["command_string"],
             "runscript -Raw=```Get-Process```",
@@ -1046,6 +1174,8 @@ class TestRTRAdminModule(TestModules):
         )
         self.assertEqual(result["stdout"], "part1part2")
         self.assertTrue(result["complete"])
+        self.assertIn("context_warning", result)
+        self.assertEqual(result["missing_context"], ["reason", "ticket", "expected_effect"])
 
     def test_run_admin_command_and_wait_requires_approval_before_falcon_call(self):
         """Test RTR Admin command-and-wait does not bypass high-impact approval."""

@@ -59,7 +59,7 @@ class TestRTRAdminIntegration(BaseIntegrationTest):
         """Validate custom script search accepts documented pipe sort syntax."""
         result = self.call_method(
             self.module.search_rtr_admin_scripts,
-            sort="created_at|desc",
+            sort="created_timestamp|desc",
             limit=1,
         )
 

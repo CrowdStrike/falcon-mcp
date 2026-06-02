@@ -405,17 +405,22 @@ class RTRAdminModule(BaseModule):
         ),
         sort: str | None = Field(
             default=None,
-            description="Sort custom scripts by a supported field such as `created_at|desc`.",
+            description="Sort custom scripts by a supported field such as `created_timestamp|desc`.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search RTR custom scripts and return full metadata records.
 
         Use this to find reusable custom RTR scripts by name, platform, or
-        permission type, or to look up known script IDs with an `id` filter.
-        Consult falcon://rtr-admin/scripts/search/fql-guide before constructing
-        filter expressions. Returns full script records including name, content,
-        platform, and permission details.
+        permission type. Consult falcon://rtr-admin/scripts/search/fql-guide
+        before constructing filter expressions. Returns full script records,
+        including script content; treat the response as sensitive operational
+        material.
         """
+        filter = unwrap_field_default(filter)
+        limit = unwrap_field_default(limit)
+        offset = unwrap_field_default(offset)
+        sort = unwrap_field_default(sort)
+
         ids = self._base_search_api_call(
             operation="RTR_ListScripts",
             search_params={
@@ -446,7 +451,7 @@ class RTRAdminModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        return self._order_details_by_ids(ids, details)
 
     def search_rtr_falcon_scripts(
         self,
@@ -474,9 +479,14 @@ class RTRAdminModule(BaseModule):
         Use this to find CrowdStrike-provided RTR scripts by name or platform,
         or to look up known script IDs with an `id` filter. Consult
         falcon://rtr-admin/falcon-scripts/search/fql-guide before constructing
-        filter expressions. Returns full script records including name,
-        description, and platform.
+        filter expressions. Returns full script records; treat any returned
+        script content as sensitive operational material.
         """
+        filter = unwrap_field_default(filter)
+        limit = unwrap_field_default(limit)
+        offset = unwrap_field_default(offset)
+        sort = unwrap_field_default(sort)
+
         ids = self._base_search_api_call(
             operation="RTR_ListFalconScripts",
             search_params={
@@ -507,7 +517,7 @@ class RTRAdminModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        return self._order_details_by_ids(ids, details)
 
     def search_rtr_put_files(
         self,
@@ -527,17 +537,21 @@ class RTRAdminModule(BaseModule):
         ),
         sort: str | None = Field(
             default=None,
-            description="Sort put-files by a supported field such as `created_at|desc`.",
+            description="Sort put-files by a supported field such as `created_timestamp|desc`.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search RTR put-files and return full metadata records.
 
         Use this to review put-file inventory before considering an admin
-        command that references staged content, or to look up known put-file IDs
-        with an `id` filter. Consult falcon://rtr-admin/put-files/search/fql-guide
-        before constructing filter expressions. Returns full put-file metadata
-        records.
+        command that references staged content. Consult
+        falcon://rtr-admin/put-files/search/fql-guide before constructing
+        filter expressions. Returns full put-file metadata records.
         """
+        filter = unwrap_field_default(filter)
+        limit = unwrap_field_default(limit)
+        offset = unwrap_field_default(offset)
+        sort = unwrap_field_default(sort)
+
         ids = self._base_search_api_call(
             operation="RTR_ListPut_Files",
             search_params={
@@ -568,7 +582,7 @@ class RTRAdminModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        return self._order_details_by_ids(ids, details)
 
     def get_rtr_put_file_contents(
         self,
@@ -583,7 +597,9 @@ class RTRAdminModule(BaseModule):
         returned content can be sensitive because put-files may contain scripts,
         binaries, or operational payloads staged for RTR `put` workflows.
         Text content is returned for model review; binary content returns size
-        metadata and a safe error instead of raw bytes.
+        metadata and a safe error instead of raw bytes. Treat retrieval results
+        as sensitive regardless of inventory `file_type`; live testing showed
+        binary-tagged inventory can still retrieve text content.
         """
         file_id = unwrap_field_default(file_id)
 
@@ -605,6 +621,7 @@ class RTRAdminModule(BaseModule):
                     "id": file_id,
                     "content": response.decode("utf-8"),
                     "content_format": "text",
+                    "sensitivity_warning": self._put_file_content_warning(),
                 }
             except UnicodeDecodeError:
                 return {
@@ -629,9 +646,17 @@ class RTRAdminModule(BaseModule):
 
             body = response.get("body", {})
             if isinstance(body, dict) and "resources" in body:
-                return body.get("resources", [])
+                resources = body.get("resources", [])
+                if isinstance(resources, list):
+                    return [
+                        self._annotate_put_file_content(resource)
+                        if isinstance(resource, dict)
+                        else resource
+                        for resource in resources
+                    ]
+                return resources
             if body:
-                return {"id": file_id, "body": body}
+                return self._annotate_put_file_content({"id": file_id, "body": body})
             return []
 
         return {"error": f"Unexpected response type: {type(response).__name__}"}
@@ -705,6 +730,7 @@ class RTRAdminModule(BaseModule):
         command_text = command_string.strip() if isinstance(command_string, str) else ""
         command_lower = command_text.lower()
         command_base = command_lower.split(maxsplit=1)[0] if command_lower else None
+        command_warnings = self._command_shape_warnings(normalized, command_text)
 
         if command_base and command_base != normalized:
             return _format_error_response(
@@ -723,6 +749,7 @@ class RTRAdminModule(BaseModule):
                 "low",
                 True,
                 "Command is normally read-only in RTR Admin.",
+                command_warnings=command_warnings,
             )
 
         if normalized == "reg":
@@ -733,6 +760,7 @@ class RTRAdminModule(BaseModule):
                     "low",
                     True,
                     "`reg query` is read-only; other registry subcommands are blocked.",
+                    command_warnings=command_warnings,
                 )
             return self._classification(
                 normalized,
@@ -742,6 +770,7 @@ class RTRAdminModule(BaseModule):
                 "Registry writes, loads, unloads, and deletes require explicit operator approval.",
                 requires_approval=True,
                 can_execute_with_approval=True,
+                command_warnings=command_warnings,
             )
 
         if normalized == "update":
@@ -763,6 +792,7 @@ class RTRAdminModule(BaseModule):
                 "Sensor update install actions require explicit operator approval.",
                 requires_approval=True,
                 can_execute_with_approval=True,
+                command_warnings=command_warnings,
             )
 
         if normalized in EVIDENCE_COLLECTION_COMMANDS:
@@ -774,6 +804,7 @@ class RTRAdminModule(BaseModule):
                 "File exfiltration command requires explicit operator approval before execution.",
                 requires_approval=True,
                 can_execute_with_approval=True,
+                command_warnings=command_warnings,
             )
 
         if normalized == "runscript":
@@ -785,6 +816,7 @@ class RTRAdminModule(BaseModule):
                 "Script execution is high risk and requires explicit operator approval.",
                 requires_approval=True,
                 can_execute_with_approval=True,
+                command_warnings=command_warnings,
             )
 
         if normalized in SENSITIVE_COLLECTION_COMMANDS:
@@ -796,6 +828,7 @@ class RTRAdminModule(BaseModule):
                 "Memory dump commands can collect sensitive data and require explicit operator approval.",
                 requires_approval=True,
                 can_execute_with_approval=True,
+                command_warnings=command_warnings,
             )
 
         if normalized in BLOCKED_ADMIN_COMMANDS:
@@ -815,6 +848,7 @@ class RTRAdminModule(BaseModule):
             "unknown",
             False,
             "Unknown RTR Admin command. It is blocked until reviewed and explicitly allowlisted.",
+            command_warnings=command_warnings,
         )
 
     def preview_rtr_admin_command(
@@ -888,6 +922,9 @@ class RTRAdminModule(BaseModule):
         if self._is_error(classification):
             return classification
 
+        audit_context = self._audit_context(reason, ticket, expected_effect)
+        missing_context = self._missing_audit_context(reason, ticket, expected_effect)
+
         body = self._execute_admin_command_body(
             base_command=base_command,
             command_string=command_string,
@@ -905,14 +942,8 @@ class RTRAdminModule(BaseModule):
                 "device_id": device_id,
                 "hostname": target_hostname,
             },
+            audit_context=audit_context,
         )
-
-        required_context = {
-            "reason": reason,
-            "ticket": ticket,
-            "expected_effect": expected_effect,
-        }
-        missing_context = [key for key, value in required_context.items() if not value]
 
         return {
             "execution_available": True,
@@ -928,7 +959,7 @@ class RTRAdminModule(BaseModule):
             "safety_disclaimer": RTR_ADMIN_SAFETY_DISCLAIMER,
             "command_guidance": self._command_guidance(base_command, command_string),
             "missing_context": missing_context,
-            "required_context": list(required_context.keys()),
+            "required_context": list(audit_context.keys()),
             "target": {
                 "session_id": session_id,
                 "device_id": device_id,
@@ -1042,11 +1073,14 @@ class RTRAdminModule(BaseModule):
             "device_id": device_id,
             "hostname": target_hostname,
         }
+        audit_context = self._audit_context(reason, ticket, expected_effect)
+        missing_context = self._missing_audit_context(reason, ticket, expected_effect)
         approval_gate = self._approval_gate(
             operation="RTR_ExecuteAdminCommand",
             classification=classification,
             payload=payload,
             target=target,
+            audit_context=audit_context,
         )
         policy_error = self._enforce_admin_command_policy(
             classification=classification,
@@ -1070,7 +1104,7 @@ class RTRAdminModule(BaseModule):
             classification=classification,
             approval_gate=approval_gate,
             target=target,
-            missing_context=self._missing_audit_context(reason, ticket, expected_effect),
+            missing_context=missing_context,
             payload=payload,
         )
 
@@ -1263,6 +1297,8 @@ class RTRAdminModule(BaseModule):
                 f"Read-only update subcommands: {', '.join(sorted(READ_ONLY_UPDATE_SUBCOMMANDS))}",
                 "",
                 "`reg query` is read-only; other registry subcommands require approval.",
+                "`reg query` accepts only a small argument shape in Falcon RTR; keep key/value arguments minimal and preview warnings before live use.",
+                "Use `rm <directory> -force` for directory cleanup and verify stderr/stdout before assuming deletion succeeded.",
                 "`runscript` is always high impact and requires approval.",
                 "Unknown commands are blocked until reviewed and explicitly allowlisted.",
                 "For execution, `base_command` must match the first token of `command_string`.",
@@ -1278,6 +1314,7 @@ class RTRAdminModule(BaseModule):
         explanation: str,
         requires_approval: bool = False,
         can_execute_with_approval: bool = False,
+        command_warnings: list[str] | None = None,
     ) -> dict[str, Any]:
         return {
             "base_command": base_command,
@@ -1290,6 +1327,7 @@ class RTRAdminModule(BaseModule):
             "blocked_reason": None if allowed_for_execution else explanation,
             "requires_explicit_target": allowed_for_execution or can_execute_with_approval,
             "safety_disclaimer": RTR_ADMIN_SAFETY_DISCLAIMER,
+            "command_warnings": command_warnings or [],
         }
 
     def _execute_admin_command_body(
@@ -1389,6 +1427,11 @@ class RTRAdminModule(BaseModule):
         if timed_out:
             result["warning"] = "Timed out waiting for RTR Admin command completion."
 
+        if execute_response.get("context_warning"):
+            result["context_warning"] = execute_response["context_warning"]
+        if execute_response.get("missing_context"):
+            result["missing_context"] = execute_response["missing_context"]
+
         return result
 
     def _enforce_admin_command_policy(
@@ -1405,6 +1448,17 @@ class RTRAdminModule(BaseModule):
         if not classification.get("requires_approval"):
             return _format_error_response(
                 "RTR Admin command is blocked by local policy. No Falcon call was made.",
+                details={
+                    "classification": classification,
+                    "target": prepare_api_parameters(target),
+                    "payload_preview": payload,
+                    "approval_gate": approval_gate,
+                },
+            )
+
+        if not approval_gate.get("approval_ready", True):
+            return _format_error_response(
+                "RTR Admin approval context is incomplete. No Falcon call was made.",
                 details={
                     "classification": classification,
                     "target": prepare_api_parameters(target),
@@ -1432,6 +1486,7 @@ class RTRAdminModule(BaseModule):
         classification: dict[str, Any],
         payload: dict[str, Any],
         target: dict[str, Any],
+        audit_context: dict[str, Any],
     ) -> dict[str, Any]:
         if not classification.get("requires_approval"):
             return {
@@ -1440,15 +1495,35 @@ class RTRAdminModule(BaseModule):
                 "reason": "Command classification does not require high-impact approval.",
             }
 
+        missing_approval_context = self._missing_approval_context(
+            audit_context=audit_context,
+            target=target,
+        )
+        if missing_approval_context:
+            return {
+                "approval_required": True,
+                "approved_by_default": False,
+                "approval_ready": False,
+                "missing_approval_context": missing_approval_context,
+                "reason": classification.get("blocked_reason") or classification.get("explanation"),
+                "instruction": (
+                    "Provide device_id, reason, ticket, and expected_effect before "
+                    "requesting high-impact approval. No approval phrase is issued "
+                    "until the approval packet can bind target, payload, and audit context."
+                ),
+            }
+
         approval_hash = self._approval_hash(
             operation=operation,
             classification=classification,
             payload=payload,
             target=target,
+            audit_context=audit_context,
         )
         return {
             "approval_required": True,
             "approved_by_default": False,
+            "approval_ready": True,
             "approval_phrase": f"APPROVE_RTR_ADMIN_{approval_hash}",
             "approval_hash": approval_hash,
             "reason": classification.get("blocked_reason") or classification.get("explanation"),
@@ -1465,6 +1540,7 @@ class RTRAdminModule(BaseModule):
         classification: dict[str, Any],
         payload: dict[str, Any],
         target: dict[str, Any],
+        audit_context: dict[str, Any],
     ) -> str:
         hash_target = {
             k: v for k, v in target.items() if k in ("session_id", "device_id")
@@ -1475,10 +1551,27 @@ class RTRAdminModule(BaseModule):
             "category": classification.get("category"),
             "risk": classification.get("risk"),
             "target": prepare_api_parameters(hash_target),
+            "audit_context": prepare_api_parameters(audit_context),
             "payload": payload,
         }
         serialized = json.dumps(material, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(serialized.encode("utf-8")).hexdigest()[:16].upper()
+
+    def _audit_context(
+        self,
+        reason: str | None,
+        ticket: str | None,
+        expected_effect: str | None,
+    ) -> dict[str, Any]:
+        return {
+            "reason": reason.strip() if isinstance(reason, str) else reason,
+            "ticket": ticket.strip() if isinstance(ticket, str) else ticket,
+            "expected_effect": (
+                expected_effect.strip()
+                if isinstance(expected_effect, str)
+                else expected_effect
+            ),
+        }
 
     def _missing_audit_context(
         self,
@@ -1496,6 +1589,65 @@ class RTRAdminModule(BaseModule):
     def _has_text(self, value: Any) -> bool:
         return isinstance(value, str) and bool(value.strip())
 
+    def _missing_approval_context(
+        self,
+        audit_context: dict[str, Any],
+        target: dict[str, Any],
+    ) -> list[str]:
+        missing = [
+            key for key, value in audit_context.items() if not self._has_text(value)
+        ]
+        if not self._has_text(target.get("device_id")):
+            missing.append("device_id")
+        return missing
+
+    def _put_file_content_warning(self) -> str:
+        return (
+            "RTR put-file content retrieval is sensitive regardless of inventory "
+            "file_type. Live testing showed put-file metadata can say binary while "
+            "retrieval returns text content."
+        )
+
+    def _annotate_put_file_content(self, item: dict[str, Any]) -> dict[str, Any]:
+        content_format = item.get("content_format")
+        has_text_content = "content" in item or (
+            isinstance(item.get("body"), dict) and "content" in item["body"]
+        )
+        if content_format == "binary":
+            return item
+        if has_text_content:
+            return item | {"sensitivity_warning": self._put_file_content_warning()}
+        return item
+
+    def _order_details_by_ids(
+        self,
+        ids: list[str],
+        details: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Preserve query/list result order after Falcon detail lookups."""
+        order = {entity_id: index for index, entity_id in enumerate(ids)}
+        return sorted(
+            details,
+            key=lambda item: order.get(str(item.get("id")), len(order)),
+        )
+
+    def _command_shape_warnings(
+        self,
+        base_command: str,
+        command_string: str,
+    ) -> list[str]:
+        if base_command != "reg":
+            return []
+
+        tokens = command_string.split()
+        if len(tokens) > 3 and [token.lower() for token in tokens[:2]] == ["reg", "query"]:
+            return [
+                "`reg query` reached Falcon with HTTP 400 during live testing when more "
+                "than two arguments followed `reg`. Keep the query shape to "
+                "`reg query <key>` or quote paths with spaces before live use."
+            ]
+        return []
+
     def _command_guidance(
         self,
         base_command: Any,
@@ -1504,7 +1656,18 @@ class RTRAdminModule(BaseModule):
         if not isinstance(base_command, str):
             return None
 
-        if base_command.strip().lower() != "runscript":
+        normalized = base_command.strip().lower()
+        shape_warnings = self._command_shape_warnings(
+            normalized,
+            command_string if isinstance(command_string, str) else "",
+        )
+
+        if normalized == "reg" and shape_warnings:
+            return {
+                "warnings": shape_warnings,
+            }
+
+        if normalized != "runscript":
             return None
 
         warnings = [
@@ -1517,6 +1680,7 @@ class RTRAdminModule(BaseModule):
             warnings.append(
                 "Raw script bodies are quoting-sensitive; avoid unescaped triple backticks."
             )
+        warnings.extend(shape_warnings)
 
         return {
             "resource": "falcon://rtr-admin/commands/runscript-guide",

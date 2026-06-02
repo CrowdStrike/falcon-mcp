@@ -222,7 +222,7 @@ class TestRTRIntegration(BaseIntegrationTest):
 
     def test_fql_boolean_fields_are_accepted(self):
         """Validate that all documented boolean FQL fields are accepted."""
-        boolean_fields = ["offline_queued", "commands_queued"]
+        boolean_fields = ["offline_queued"]
         for field in boolean_fields:
             self._assert_fql_field_accepted(
                 f"{field}:true",

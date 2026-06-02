@@ -69,7 +69,9 @@ falcon_search_rtr_put_files. This is a read-only Falcon call, but the
 returned content can be sensitive because put-files may contain scripts,
 binaries, or operational payloads staged for RTR `put` workflows.
 Text content is returned for model review; binary content returns size
-metadata and a safe error instead of raw bytes.
+metadata and a safe error instead of raw bytes. Treat retrieval results
+as sensitive regardless of inventory `file_type`; live testing showed
+binary-tagged inventory can still retrieve text content.
 
 **Example prompts:**
 
@@ -115,10 +117,10 @@ falcon_check_rtr_admin_command_status with the returned cloud_request_id.
 Search RTR custom scripts and return full metadata records.
 
 Use this to find reusable custom RTR scripts by name, platform, or
-permission type, or to look up known script IDs with an `id` filter.
-Consult falcon://rtr-admin/scripts/search/fql-guide before constructing
-filter expressions. Returns full script records including name, content,
-platform, and permission details.
+permission type. Consult falcon://rtr-admin/scripts/search/fql-guide
+before constructing filter expressions. Returns full script records,
+including script content; treat the response as sensitive operational
+material.
 
 **Example prompts:**
 
@@ -135,8 +137,8 @@ Search CrowdStrike-provided Falcon scripts and return full records.
 Use this to find CrowdStrike-provided RTR scripts by name or platform,
 or to look up known script IDs with an `id` filter. Consult
 falcon://rtr-admin/falcon-scripts/search/fql-guide before constructing
-filter expressions. Returns full script records including name,
-description, and platform.
+filter expressions. Returns full script records; treat any returned
+script content as sensitive operational material.
 
 **Example prompts:**
 
@@ -150,10 +152,9 @@ description, and platform.
 Search RTR put-files and return full metadata records.
 
 Use this to review put-file inventory before considering an admin
-command that references staged content, or to look up known put-file IDs
-with an `id` filter. Consult falcon://rtr-admin/put-files/search/fql-guide
-before constructing filter expressions. Returns full put-file metadata
-records.
+command that references staged content. Consult
+falcon://rtr-admin/put-files/search/fql-guide before constructing
+filter expressions. Returns full put-file metadata records.
 
 **Example prompts:**
 

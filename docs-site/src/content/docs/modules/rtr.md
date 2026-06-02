@@ -178,7 +178,7 @@ constructing filter expressions.
 **Example prompts:**
 
 - "Show me RTR audit activity from the last 7 days"
-- "Who used RTR against host BRR-WB-LIB-22?"
+- "Who used RTR against host EXAMPLE-WIN-22?"
 
 ### `falcon_search_rtr_sessions`
 

@@ -194,7 +194,7 @@ class RTRModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description="FQL filter expression. See `falcon://rtr/sessions/search/fql-guide` for syntax.",
-            examples=["hostname:'BRR-WB-LIB-22'", "aid:'2c5c4e7738...'"],
+            examples=["hostname:'EXAMPLE-WIN-22'", "aid:'2c5c4e7738...'"],
         ),
         limit: int = Field(
             default=10,
@@ -259,7 +259,7 @@ class RTRModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description=AUDIT_RTR_SESSIONS_EMBEDDED_FQL_SYNTAX,
-            examples=["created_at:>'now-7d'", "hostname:'BRR-WB-LIB-22'+created_at:>'now-7d'"],
+            examples=["created_at:>'now-7d'", "hostname:'EXAMPLE-WIN-22'+created_at:>'now-7d'"],
         ),
         limit: int = Field(
             default=10,

@@ -78,7 +78,7 @@ class TestQuarantineModule(TestModules):
         self.mock_client.command.side_effect = [query_response, get_response]
 
         result = self.module.search_quarantined_files(
-            filter="hostname:'BRR-WB-LIB-22'",
+            filter="hostname:'EXAMPLE-WIN-22'",
             limit=25,
             offset="0",
             sort="date_updated|desc",
@@ -92,7 +92,7 @@ class TestQuarantineModule(TestModules):
         self.assertEqual(
             first_call[1]["parameters"],
             {
-                "filter": "hostname:'BRR-WB-LIB-22'",
+                "filter": "hostname:'EXAMPLE-WIN-22'",
                 "limit": 25,
                 "offset": "0",
                 "sort": "date_updated|desc",
