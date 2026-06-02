@@ -97,6 +97,7 @@ API_SCOPE_REQUIREMENTS = {
     "RTR_GetFalconScripts": ["Real time response (admin):write"],
     "RTR_ListPut_Files": ["Real time response (admin):write"],
     "RTR_GetPut_FilesV2": ["Real time response (admin):write"],
+    "RTR_GetPutFileContents": ["Real time response (admin):write"],
     "RTR_CheckAdminCommandStatus": ["Real time response (admin):write"],
     "RTR_ExecuteAdminCommand": ["Real time response (admin):write"],
     # Quarantine operations

@@ -2,7 +2,7 @@
 title: Firewall Management
 description: Searching and managing firewall rules and rule groups
 sidebar:
-  order: 10
+  order: 17
 ---
 
 Searching and managing firewall rules and rule groups

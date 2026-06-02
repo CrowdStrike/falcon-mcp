@@ -2,7 +2,7 @@
 title: Detections
 description: Accessing and analyzing CrowdStrike Falcon detections
 sidebar:
-  order: 10
+  order: 15
 ---
 
 Accessing and analyzing CrowdStrike Falcon detections

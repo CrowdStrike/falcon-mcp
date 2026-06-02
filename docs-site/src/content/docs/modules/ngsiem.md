@@ -2,7 +2,7 @@
 title: NGSIEM
 description: Running search queries against CrowdStrike's Next-Gen SIEM via the asynchronous job-based search API
 sidebar:
-  order: 10
+  order: 22
 ---
 
 Running search queries against CrowdStrike's Next-Gen SIEM via the asynchronous job-based search API

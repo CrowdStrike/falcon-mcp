@@ -2,7 +2,7 @@
 title: Correlation Rules
 description: Correlation Rules module for CrowdStrike Falcon.
 sidebar:
-  order: 10
+  order: 12
 ---
 
 Correlation Rules module for CrowdStrike Falcon.

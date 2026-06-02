@@ -2,7 +2,7 @@
 title: Scheduled Reports
 description: Accessing and managing CrowdStrike Falcon scheduled reports and scheduled searches
 sidebar:
-  order: 10
+  order: 26
 ---
 
 Accessing and managing CrowdStrike Falcon scheduled reports and scheduled searches

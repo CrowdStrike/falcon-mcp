@@ -2,7 +2,7 @@
 title: Sensor Usage
 description: Accessing CrowdStrike Falcon sensor usage data
 sidebar:
-  order: 10
+  order: 27
 ---
 
 Accessing CrowdStrike Falcon sensor usage data

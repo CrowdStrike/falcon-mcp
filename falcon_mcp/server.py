@@ -127,12 +127,15 @@ class FalconMCPServer:
         resource_count = self._register_resources()
         resource_word = "resource" if resource_count == 1 else "resources"
 
+        prompt_count = self._register_prompts()
+        prompt_word = "prompt" if prompt_count == 1 else "prompts"
+
         # Count modules and tools with proper grammar
         module_count = len(self.modules)
         module_word = "module" if module_count == 1 else "modules"
 
         logger.info(
-            "Falcon MCP v%s — %d %s, %d %s, %d %s",
+            "Falcon MCP v%s — %d %s, %d %s, %d %s, %d %s",
             get_version(),
             module_count,
             module_word,
@@ -140,6 +143,8 @@ class FalconMCPServer:
             tool_word,
             resource_count,
             resource_word,
+            prompt_count,
+            prompt_word,
         )
 
     def _register_tools(self) -> int:
@@ -193,6 +198,18 @@ class FalconMCPServer:
                 module.register_resources(self.server)
 
         return sum(len(getattr(m, "resources", [])) for m in self.modules.values())
+
+    def _register_prompts(self) -> int:
+        """Register prompts from all modules.
+
+        Returns:
+            int: Number of prompts registered
+        """
+        for module in self.modules.values():
+            if hasattr(module, "register_prompts") and callable(module.register_prompts):
+                module.register_prompts(self.server)
+
+        return sum(len(getattr(m, "prompts", [])) for m in self.modules.values())
 
     def falcon_check_connectivity(self) -> dict[str, bool]:
         """Check connectivity to the Falcon API."""

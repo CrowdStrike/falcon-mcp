@@ -2,7 +2,7 @@
 title: IOC
 description: Searching, creating, and deleting custom IOCs using Falcon IOC Service Collection endpoints
 sidebar:
-  order: 10
+  order: 21
 ---
 
 Searching, creating, and deleting custom IOCs using Falcon IOC Service Collection endpoints

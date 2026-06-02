@@ -2,7 +2,7 @@
 title: Shield
 description: Shield module for CrowdStrike Falcon.
 sidebar:
-  order: 10
+  order: 29
 ---
 
 Shield module for CrowdStrike Falcon.

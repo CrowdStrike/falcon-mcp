@@ -9,6 +9,7 @@ from typing import Any, Callable
 
 from mcp import Resource
 from mcp.server import FastMCP
+from mcp.server.fastmcp.prompts import Prompt
 from mcp.types import ToolAnnotations
 
 from falcon_mcp.client import FalconClient
@@ -39,6 +40,7 @@ class BaseModule(ABC):
         self.client = client
         self.tools: list[str] = []  # List to track registered tools
         self.resources: list[str] = []  # List to track registered resources
+        self.prompts: list[str] = []  # List to track registered prompts
 
     @abstractmethod
     def register_tools(self, server: FastMCP) -> None:
@@ -50,6 +52,13 @@ class BaseModule(ABC):
 
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP Server.
+
+        Args:
+            server: MCP server instance
+        """
+
+    def register_prompts(self, server: FastMCP) -> None:
+        """Register prompts with the MCP Server.
 
         Args:
             server: MCP server instance
@@ -93,6 +102,34 @@ class BaseModule(ABC):
         resource_uri = resource.uri
         self.resources.append(str(resource_uri))
         logger.debug("Added resource: %s", resource_uri)
+
+    def _add_prompt(
+        self,
+        server: FastMCP,
+        method: Callable[..., Any],
+        name: str,
+        title: str | None = None,
+        description: str | None = None,
+    ) -> None:
+        """Add a prompt to the MCP server and track it.
+
+        Args:
+            server: MCP server instance
+            method: Method to register as a prompt template
+            name: Prompt name
+            title: Optional human-readable prompt title
+            description: Optional prompt description
+        """
+        prefixed_name = f"falcon_{name}"
+        prompt = Prompt.from_function(
+            method,
+            name=prefixed_name,
+            title=title,
+            description=description,
+        )
+        server.add_prompt(prompt)
+        self.prompts.append(prefixed_name)
+        logger.debug("Added prompt: %s", prefixed_name)
 
     def _base_get_by_ids(
         self,

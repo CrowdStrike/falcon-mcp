@@ -2,7 +2,7 @@
 title: Spotlight
 description: Accessing and managing CrowdStrike Falcon Spotlight vulnerabilities
 sidebar:
-  order: 10
+  order: 30
 ---
 
 Accessing and managing CrowdStrike Falcon Spotlight vulnerabilities

@@ -1,7 +1,7 @@
 """
 Real Time Response module for Falcon MCP Server.
 
-This module provides tools for initiating and inspecting RTR sessions and for
+This module provides tools for initiating and inspecting RTR sessions and
 executing read-only RTR commands during host investigations.
 """
 

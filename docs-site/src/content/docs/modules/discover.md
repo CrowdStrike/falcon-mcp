@@ -2,7 +2,7 @@
 title: Discover
 description: Accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets
 sidebar:
-  order: 10
+  order: 16
 ---
 
 Accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets

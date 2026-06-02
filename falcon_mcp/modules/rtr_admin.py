@@ -8,6 +8,7 @@ updates, or deletes.
 
 import hashlib
 import json
+import time
 from typing import Any
 
 from mcp.server import FastMCP
@@ -15,10 +16,11 @@ from mcp.server.fastmcp.resources import TextResource
 from mcp.types import ToolAnnotations
 from pydantic import AnyUrl, Field
 
-from falcon_mcp.common.errors import _format_error_response
+from falcon_mcp.common.errors import _format_error_response, handle_api_response
 from falcon_mcp.common.utils import prepare_api_parameters, unwrap_field_default
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.rtr_admin import (
+    RTR_ADMIN_APPROVAL_PACKET_TEMPLATE,
     RTR_ADMIN_RUNSCRIPT_RAW_GUIDE,
     RTR_ADMIN_TOOL_USE_GUIDE,
     SEARCH_RTR_ADMIN_SCRIPTS_FQL_DOCUMENTATION,
@@ -67,6 +69,7 @@ BLOCKED_ADMIN_COMMANDS = {
     "shutdown",
     "tar",
     "umount",
+    "unmount",
     "unmap",
     "zip",
 }
@@ -104,6 +107,11 @@ class RTRAdminModule(BaseModule):
         )
         self._add_tool(
             server=server,
+            method=self.get_rtr_put_file_contents,
+            name="get_rtr_put_file_contents",
+        )
+        self._add_tool(
+            server=server,
             method=self.check_rtr_admin_command_status,
             name="check_rtr_admin_command_status",
         )
@@ -121,6 +129,17 @@ class RTRAdminModule(BaseModule):
             server=server,
             method=self.execute_rtr_admin_command,
             name="execute_rtr_admin_command",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
+        self._add_tool(
+            server=server,
+            method=self.run_rtr_admin_command_and_wait,
+            name="run_rtr_admin_command_and_wait",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
                 destructiveHint=True,
@@ -162,10 +181,211 @@ class RTRAdminModule(BaseModule):
                 description="Contains RTR Admin runscript raw command construction guidance.",
                 text=RTR_ADMIN_RUNSCRIPT_RAW_GUIDE,
             ),
+            TextResource(
+                uri=AnyUrl("falcon://rtr-admin/policy/command-guide"),
+                name="falcon_rtr_admin_command_policy_guide",
+                description="Contains RTR Admin command classification policy and command categories.",
+                text=self._command_policy_guide(),
+            ),
+            TextResource(
+                uri=AnyUrl("falcon://rtr-admin/approval/packet-guide"),
+                name="falcon_rtr_admin_approval_packet_template",
+                description="Contains the approval packet template for high-impact RTR Admin commands.",
+                text=RTR_ADMIN_APPROVAL_PACKET_TEMPLATE,
+            ),
         ]
 
         for resource in resources:
             self._add_resource(server, resource)
+
+    def register_prompts(self, server: FastMCP) -> None:
+        """Register prompts with the MCP server."""
+        self._add_prompt(
+            server=server,
+            method=self.plan_rtr_admin_action,
+            name="plan_rtr_admin_action",
+            title="Plan RTR Admin Action",
+            description="Plan a safe RTR Admin workflow before using execution tools.",
+        )
+        self._add_prompt(
+            server=server,
+            method=self.build_rtr_admin_approval_packet,
+            name="build_rtr_admin_approval_packet",
+            title="Build RTR Admin Approval Packet",
+            description="Create an operator approval packet for a high-impact RTR Admin command.",
+        )
+        self._add_prompt(
+            server=server,
+            method=self.review_rtr_admin_runscript,
+            name="review_rtr_admin_runscript",
+            title="Review RTR Admin Runscript",
+            description="Review an RTR Admin runscript command string for safety and quoting risks.",
+        )
+        self._add_prompt(
+            server=server,
+            method=self.interpret_rtr_admin_status,
+            name="interpret_rtr_admin_status",
+            title="Interpret RTR Admin Status",
+            description="Interpret RTR Admin command status output and suggest next safe steps.",
+        )
+
+    def plan_rtr_admin_action(
+        self,
+        objective: str = Field(description="Operator objective for the RTR Admin workflow."),
+        target_hostname: str | None = Field(
+            default=None,
+            description="Optional hostname under review.",
+        ),
+        session_id: str | None = Field(
+            default=None,
+            description="Optional RTR session ID if one is already known.",
+        ),
+        device_id: str | None = Field(
+            default=None,
+            description="Optional Falcon device AID if one is already known.",
+        ),
+        ticket: str | None = Field(
+            default=None,
+            description="Optional ticket, case, or incident identifier.",
+        ),
+    ) -> str:
+        """Plan a safe RTR Admin action before calling execution tools."""
+        return "\n".join(
+            [
+                "Plan an RTR Admin action using the existing RTR Admin MCP surface.",
+                "",
+                "Context:",
+                *self._prompt_context_lines(
+                    objective=objective,
+                    target_hostname=target_hostname,
+                    session_id=session_id,
+                    device_id=device_id,
+                    ticket=ticket,
+                ),
+                "",
+                "Workflow:",
+                "1. Use inventory/search tools only if reusable scripts or put-files need review.",
+                "   Use `falcon_get_rtr_put_file_contents` only after selecting a specific put-file ID.",
+                "2. Use `falcon_classify_rtr_admin_command` before any execution planning.",
+                "3. Use `falcon_preview_rtr_admin_command` to inspect payload, target, policy, and approval gate.",
+                "4. For high-impact commands, build an approval packet and wait for explicit operator approval.",
+                "5. Use `falcon_run_rtr_admin_command_and_wait` for focused single-host commands when direct output is needed.",
+                "6. Use `falcon_execute_rtr_admin_command` plus `falcon_check_rtr_admin_command_status` when manual polling is better.",
+                "",
+                "Do not invent new tools, bypass the approval phrase, or place RTR controller actions inside raw scripts.",
+            ]
+        )
+
+    def build_rtr_admin_approval_packet(
+        self,
+        base_command: str = Field(description="RTR Admin base command under review."),
+        command_string: str = Field(description="Exact RTR Admin command string under review."),
+        session_id: str = Field(description="RTR session ID that would receive the command."),
+        device_id: str | None = Field(default=None, description="Optional Falcon device AID."),
+        target_hostname: str | None = Field(default=None, description="Optional hostname."),
+        reason: str | None = Field(default=None, description="Reason for considering the command."),
+        ticket: str | None = Field(default=None, description="Ticket, case, or incident identifier."),
+        expected_effect: str | None = Field(
+            default=None,
+            description="Expected endpoint effect if the command is executed.",
+        ),
+        persist: bool = Field(default=False, description="Whether the command would persist offline."),
+    ) -> str:
+        """Create an approval-packet prompt for a high-impact RTR Admin command."""
+        return "\n".join(
+            [
+                "Build an RTR Admin approval packet for operator review.",
+                "",
+                "Command under review:",
+                f"- base_command: {base_command}",
+                f"- command_string: {command_string}",
+                f"- persist: {bool(persist)}",
+                "",
+                "Target:",
+                *self._prompt_context_lines(
+                    target_hostname=target_hostname,
+                    session_id=session_id,
+                    device_id=device_id,
+                    ticket=ticket,
+                    reason=reason,
+                    expected_effect=expected_effect,
+                ),
+                "",
+                "Required steps:",
+                "1. Confirm `base_command` matches the first token of `command_string`.",
+                "2. Use `falcon_classify_rtr_admin_command` to get category, risk, and approval requirements.",
+                "3. Use `falcon_preview_rtr_admin_command` with reason, ticket, and expected_effect.",
+                "4. Copy the preview `approval_gate.approval_phrase` only after operator approval.",
+                "5. Execute once with `falcon_run_rtr_admin_command_and_wait`, or use `falcon_execute_rtr_admin_command` then poll status.",
+                "",
+                "Approval template resource: falcon://rtr-admin/approval/packet-guide",
+            ]
+        )
+
+    def review_rtr_admin_runscript(
+        self,
+        command_string: str = Field(description="RTR Admin runscript command string to review."),
+        target_platform: str | None = Field(
+            default=None,
+            description="Optional target platform such as windows, linux, or mac.",
+        ),
+        objective: str | None = Field(
+            default=None,
+            description="Optional operator objective for the script.",
+        ),
+    ) -> str:
+        """Review a runscript command string for safety and quoting risks."""
+        return "\n".join(
+            [
+                "Review this RTR Admin runscript command before preview or execution.",
+                "",
+                f"- command_string: {command_string}",
+                f"- target_platform: {target_platform or 'not provided'}",
+                f"- objective: {objective or 'not provided'}",
+                "",
+                "Checklist:",
+                "1. Confirm the command starts with `runscript` and uses the intended `-Raw` or `-CloudFile` shape.",
+                "2. Do not include RTR controller commands such as `get`, `put`, `cd`, or status polling inside raw script bodies.",
+                "3. Check quoting around triple backticks, shell quotes, and command-line arguments.",
+                "4. Prefer approved cloud scripts for reusable or multiline logic.",
+                "5. Use `falcon_preview_rtr_admin_command` before execution and require high-impact approval.",
+                "6. Prefer `falcon_run_rtr_admin_command_and_wait` only for focused commands where immediate output is needed.",
+                "",
+                "Reference resource: falcon://rtr-admin/commands/runscript-guide",
+            ]
+        )
+
+    def interpret_rtr_admin_status(
+        self,
+        command_status: str = Field(
+            description="RTR Admin command status result or summarized stdout/stderr to interpret.",
+        ),
+        base_command: str | None = Field(default=None, description="Optional base command."),
+        expected_effect: str | None = Field(
+            default=None,
+            description="Optional expected endpoint effect that was approved.",
+        ),
+    ) -> str:
+        """Interpret RTR Admin status output and suggest next safe steps."""
+        return "\n".join(
+            [
+                "Interpret RTR Admin command status output.",
+                "",
+                f"- base_command: {base_command or 'not provided'}",
+                f"- expected_effect: {expected_effect or 'not provided'}",
+                "",
+                "Status material:",
+                command_status,
+                "",
+                "Return:",
+                "1. Completion state and whether more `falcon_check_rtr_admin_command_status` polling is needed.",
+                "2. stdout/stderr findings tied to the approved command and expected effect.",
+                "3. Any evidence gaps or follow-up read-only checks.",
+                "4. Any warning that the output suggests unexpected endpoint impact.",
+                "",
+                "Do not suggest a second high-impact action without a fresh preview and approval packet.",
+            ]
+        )
 
     def search_rtr_admin_scripts(
         self,
@@ -350,6 +570,72 @@ class RTRAdminModule(BaseModule):
 
         return details
 
+    def get_rtr_put_file_contents(
+        self,
+        file_id: str = Field(
+            description="RTR put-file ID whose stored contents should be retrieved.",
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Retrieve the stored contents of one RTR put-file by ID.
+
+        Use this only after selecting a specific put-file from
+        falcon_search_rtr_put_files. This is a read-only Falcon call, but the
+        returned content can be sensitive because put-files may contain scripts,
+        binaries, or operational payloads staged for RTR `put` workflows.
+        Text content is returned for model review; binary content returns size
+        metadata and a safe error instead of raw bytes.
+        """
+        file_id = unwrap_field_default(file_id)
+
+        if not isinstance(file_id, str) or not file_id.strip():
+            return _format_error_response(
+                "file_id is required to retrieve RTR put-file contents. "
+                "No Falcon call was made."
+            )
+
+        prepared_params = prepare_api_parameters({"id": file_id})
+        response = self.client.command(
+            "RTR_GetPutFileContents",
+            parameters=prepared_params,
+        )
+
+        if isinstance(response, bytes):
+            try:
+                return {
+                    "id": file_id,
+                    "content": response.decode("utf-8"),
+                    "content_format": "text",
+                }
+            except UnicodeDecodeError:
+                return {
+                    "error": (
+                        "RTR put-file content is binary and cannot be returned "
+                        "as safe text for model consumption."
+                    ),
+                    "id": file_id,
+                    "content_format": "binary",
+                    "size_bytes": len(response),
+                }
+
+        if isinstance(response, dict):
+            status_code = response.get("status_code")
+            if status_code is None or status_code >= 300:
+                return handle_api_response(
+                    response,
+                    operation="RTR_GetPutFileContents",
+                    error_message="Failed to retrieve RTR put-file contents",
+                    default_result=[],
+                )
+
+            body = response.get("body", {})
+            if isinstance(body, dict) and "resources" in body:
+                return body.get("resources", [])
+            if body:
+                return {"id": file_id, "body": body}
+            return []
+
+        return {"error": f"Unexpected response type: {type(response).__name__}"}
+
     def check_rtr_admin_command_status(
         self,
         cloud_request_id: str = Field(
@@ -418,6 +704,17 @@ class RTRAdminModule(BaseModule):
         normalized = base_command.strip().lower()
         command_text = command_string.strip() if isinstance(command_string, str) else ""
         command_lower = command_text.lower()
+        command_base = command_lower.split(maxsplit=1)[0] if command_lower else None
+
+        if command_base and command_base != normalized:
+            return _format_error_response(
+                "base_command must match the first token of command_string. "
+                "No Falcon call was made.",
+                details={
+                    "base_command": normalized,
+                    "command_string_base": command_base,
+                },
+            )
 
         if normalized in READ_ONLY_ADMIN_COMMANDS:
             return self._classification(
@@ -777,6 +1074,201 @@ class RTRAdminModule(BaseModule):
             payload=payload,
         )
 
+    def run_rtr_admin_command_and_wait(
+        self,
+        base_command: str = Field(description="RTR Admin base command to execute."),
+        command_string: str = Field(description="Full RTR Admin command string to execute."),
+        session_id: str = Field(
+            description="RTR session ID to execute the command against.",
+        ),
+        device_id: str | None = Field(
+            default=None,
+            description="Optional device AID for human review. Falcon execution requires session_id.",
+        ),
+        command_id: int | None = Field(
+            default=None,
+            ge=0,
+            description="Optional command sequence ID sent as `id` in the Falcon body.",
+        ),
+        persist: bool = Field(
+            default=False,
+            description="Execute when the host returns to service. Defaults false.",
+        ),
+        target_hostname: str | None = Field(
+            default=None,
+            description="Optional hostname for human review. Not sent to Falcon.",
+        ),
+        reason: str | None = Field(
+            default=None,
+            description="Why this command is being executed.",
+        ),
+        ticket: str | None = Field(
+            default=None,
+            description="Ticket, case, or incident identifier for audit context.",
+        ),
+        expected_effect: str | None = Field(
+            default=None,
+            description="Expected endpoint effect of the command.",
+        ),
+        operator_approval: str | None = Field(
+            default=None,
+            description=(
+                "Exact approval phrase required for high-impact RTR Admin commands. "
+                "Get it from preview or from the approval-required response after "
+                "human review."
+            ),
+        ),
+        timeout_seconds: int = Field(
+            default=60,
+            ge=1,
+            le=600,
+            description="Maximum time to wait for command completion. Max: 600 seconds.",
+        ),
+        poll_interval_seconds: float = Field(
+            default=2.0,
+            ge=0.5,
+            le=30.0,
+            description="Seconds to wait between admin command status checks.",
+        ),
+    ) -> dict[str, Any]:
+        """Execute an RTR Admin command and poll until completion or timeout.
+
+        This is a convenience workflow for single-host admin commands. It uses
+        the same local classification and approval gate as
+        falcon_execute_rtr_admin_command, then polls
+        falcon_check_rtr_admin_command_status with the returned cloud_request_id.
+        """
+        timeout_seconds = unwrap_field_default(timeout_seconds)
+        poll_interval_seconds = unwrap_field_default(poll_interval_seconds)
+
+        execute_response = self.execute_rtr_admin_command(
+            base_command=base_command,
+            command_string=command_string,
+            session_id=session_id,
+            device_id=device_id,
+            command_id=command_id,
+            persist=persist,
+            target_hostname=target_hostname,
+            reason=reason,
+            ticket=ticket,
+            expected_effect=expected_effect,
+            operator_approval=operator_approval,
+        )
+
+        if self._is_error(execute_response):
+            execute_response["phase"] = "execute"
+            return execute_response
+
+        if not execute_response.get("submitted"):
+            execute_response["phase"] = "execute"
+            return execute_response
+
+        execute_result = execute_response.get("result")
+        if not isinstance(execute_result, list) or not execute_result:
+            return {
+                "error": "RTR Admin command execution did not return a command request.",
+                "phase": "execute",
+                "execution_response": execute_response,
+            }
+
+        command_request = execute_result[0]
+        if not isinstance(command_request, dict):
+            return {
+                "error": "RTR Admin command execution returned an unexpected response shape.",
+                "phase": "execute",
+                "execution_response": execute_response,
+            }
+
+        cloud_request_id = command_request.get("cloud_request_id")
+        if not cloud_request_id:
+            return {
+                "error": "RTR Admin command execution did not return a cloud_request_id.",
+                "phase": "execute",
+                "execution_response": execute_response,
+            }
+
+        deadline = time.monotonic() + timeout_seconds
+        status_chunks: list[dict[str, Any]] = []
+        sequence_id = 0
+
+        while True:
+            status_result = self._base_query_api_call(
+                operation="RTR_CheckAdminCommandStatus",
+                query_params={
+                    "cloud_request_id": cloud_request_id,
+                    "sequence_id": sequence_id,
+                },
+                error_message="Failed to check RTR Admin command status",
+            )
+
+            if self._is_error(status_result):
+                status_result["phase"] = "status"
+                status_result["cloud_request_id"] = cloud_request_id
+                status_result["execution_response"] = execute_response
+                return status_result
+
+            if isinstance(status_result, list):
+                status_chunks.extend(
+                    chunk for chunk in status_result if isinstance(chunk, dict)
+                )
+
+            complete = any(chunk.get("complete") is True for chunk in status_chunks)
+            if complete:
+                return self._format_admin_wait_result(
+                    cloud_request_id=cloud_request_id,
+                    command_request=command_request,
+                    execute_response=execute_response,
+                    status_chunks=status_chunks,
+                    complete=True,
+                    timed_out=False,
+                )
+
+            if time.monotonic() >= deadline:
+                return self._format_admin_wait_result(
+                    cloud_request_id=cloud_request_id,
+                    command_request=command_request,
+                    execute_response=execute_response,
+                    status_chunks=status_chunks,
+                    complete=False,
+                    timed_out=True,
+                )
+
+            if status_chunks:
+                sequence_id = status_chunks[-1].get("sequence_id", sequence_id)
+            time.sleep(poll_interval_seconds)
+
+    def _prompt_context_lines(self, **values: Any) -> list[str]:
+        lines = []
+        for key, value in values.items():
+            if isinstance(value, str) and value.strip():
+                lines.append(f"- {key}: {value.strip()}")
+            elif value is not None and not isinstance(value, str):
+                lines.append(f"- {key}: {value}")
+            else:
+                lines.append(f"- {key}: not provided")
+        return lines
+
+    def _command_policy_guide(self) -> str:
+        return "\n".join(
+            [
+                "RTR Admin Command Policy Guide",
+                "",
+                "This resource summarizes local RTR Admin command classification.",
+                "The execution tool enforces this policy before any Falcon call.",
+                "",
+                f"Read-only commands: {', '.join(sorted(READ_ONLY_ADMIN_COMMANDS))}",
+                f"Evidence collection commands: {', '.join(sorted(EVIDENCE_COLLECTION_COMMANDS))}",
+                f"Sensitive collection commands: {', '.join(sorted(SENSITIVE_COLLECTION_COMMANDS))}",
+                f"High-impact commands: {', '.join(sorted(BLOCKED_ADMIN_COMMANDS))}",
+                f"Read-only update subcommands: {', '.join(sorted(READ_ONLY_UPDATE_SUBCOMMANDS))}",
+                "",
+                "`reg query` is read-only; other registry subcommands require approval.",
+                "`runscript` is always high impact and requires approval.",
+                "Unknown commands are blocked until reviewed and explicitly allowlisted.",
+                "For execution, `base_command` must match the first token of `command_string`.",
+            ]
+        )
+
     def _classification(
         self,
         base_command: str,
@@ -796,7 +1288,7 @@ class RTRAdminModule(BaseModule):
             "can_execute_with_approval": can_execute_with_approval,
             "explanation": explanation,
             "blocked_reason": None if allowed_for_execution else explanation,
-            "requires_explicit_target": allowed_for_execution,
+            "requires_explicit_target": allowed_for_execution or can_execute_with_approval,
             "safety_disclaimer": RTR_ADMIN_SAFETY_DISCLAIMER,
         }
 
@@ -862,6 +1354,42 @@ class RTRAdminModule(BaseModule):
             )
 
         return response
+
+    def _format_admin_wait_result(
+        self,
+        cloud_request_id: str,
+        command_request: dict[str, Any],
+        execute_response: dict[str, Any],
+        status_chunks: list[dict[str, Any]],
+        complete: bool,
+        timed_out: bool,
+    ) -> dict[str, Any]:
+        """Format admin command-and-wait output for model-friendly consumption."""
+        stdout = "".join(
+            str(chunk.get("stdout", "")) for chunk in status_chunks if chunk.get("stdout")
+        )
+        stderr = "".join(
+            str(chunk.get("stderr", "")) for chunk in status_chunks if chunk.get("stderr")
+        )
+
+        result: dict[str, Any] = {
+            "cloud_request_id": cloud_request_id,
+            "complete": complete,
+            "timed_out": timed_out,
+            "execution": command_request,
+            "execution_response": execute_response,
+            "status": status_chunks,
+            "stdout": stdout,
+            "stderr": stderr,
+            "classification": execute_response.get("classification"),
+            "approval_gate": execute_response.get("approval_gate"),
+            "safety_disclaimer": RTR_ADMIN_SAFETY_DISCLAIMER,
+        }
+
+        if timed_out:
+            result["warning"] = "Timed out waiting for RTR Admin command completion."
+
+        return result
 
     def _enforce_admin_command_policy(
         self,

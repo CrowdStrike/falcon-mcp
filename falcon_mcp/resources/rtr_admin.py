@@ -117,6 +117,9 @@ needed.
    - Use `falcon_search_rtr_admin_scripts` for custom cloud scripts.
    - Use `falcon_search_rtr_falcon_scripts` for CrowdStrike-provided scripts.
    - Use `falcon_search_rtr_put_files` for put-file inventory.
+   - Use `falcon_get_rtr_put_file_contents` only after selecting a specific
+     put-file ID. Treat returned content as potentially sensitive operational
+     material.
    - When you already have IDs, filter the matching search tool with the `id`
      field, such as `id:['<id1>','<id2>']`.
 
@@ -129,6 +132,8 @@ needed.
 3. Preview the exact payload.
    - Use `falcon_preview_rtr_admin_command` before live execution.
    - Provide `reason`, `ticket`, and `expected_effect` whenever possible.
+   - Confirm `base_command` matches the first token of `command_string`;
+     mismatches are rejected locally before any Falcon call.
    - Review `payload_preview`, `classification`, `missing_context`,
      `approval_gate`, and any command-specific guidance.
    - If `approval_gate.approval_required` is true, ask the operator to approve
@@ -137,6 +142,10 @@ needed.
 
 4. Execute only after target and effect review.
    - Use `falcon_execute_rtr_admin_command` for one host/session.
+   - Use `falcon_run_rtr_admin_command_and_wait` when you want a focused
+     single-host command to submit once and return combined stdout/stderr after
+     polling. It uses the same classification and approval gate as the execution
+     tool.
    - This execution tool is marked destructive because submitted commands can
      change or disrupt endpoints depending on the command string.
    - High-impact commands such as `runscript`, `rm`, `put`, `kill`, restart or
@@ -147,6 +156,9 @@ needed.
 5. Poll output.
    - Use `falcon_check_rtr_admin_command_status` with the returned
      `cloud_request_id`.
+   - The wait helper handles this polling for simple workflows; manual polling
+     remains useful for long-running commands or when the caller needs each
+     status chunk.
    - Start with `sequence_id=0`; if the status response includes a
      `sequence_id`, use that returned sequence_id on the next poll.
 
@@ -162,15 +174,14 @@ needed.
 
 === Boundaries and disclaimers ===
 
-- This module does not upload, update, delete, or retrieve contents for scripts
-  or put-files in the first implementation slice.
+- This module retrieves put-file contents by explicit ID but does not upload,
+  update, or delete script / put-file records.
 - Do not use automated live tests for endpoint-changing commands. Tests should
   stay mocked, smoke-only, or read-only unless the operator chooses a specific
   PC for that run.
 - Keep single-host `persist` false unless the operator explicitly wants offline
   execution when a host returns to service.
-- Batch admin execution is intentionally out of scope for this first module
-  slice.
+- Batch admin execution is intentionally out of scope for this module slice.
 - Do not place RTR controller actions such as status polling, `get`, `put`, or
   session cleanup inside raw script bodies. Use the separate MCP tools for those
   steps.
@@ -179,7 +190,8 @@ needed.
 RTR_ADMIN_RUNSCRIPT_RAW_GUIDE = """RTR Admin runscript raw command guide
 
 Use this guide when building command strings for
-`falcon_execute_rtr_admin_command` with `base_command="runscript"`.
+`falcon_execute_rtr_admin_command` or `falcon_run_rtr_admin_command_and_wait`
+with `base_command="runscript"`.
 
 CORE SHAPE:
 - base_command: runscript
@@ -197,7 +209,9 @@ CLOUD SCRIPT SHAPE:
 IMPORTANT CONTROLLER NOTES:
 - `runscript -Raw` is not an interactive terminal. Each tool call submits one
   RTR Admin command and returns a `cloud_request_id`.
-- Use `falcon_check_rtr_admin_command_status` to poll command output chunks.
+- Use `falcon_check_rtr_admin_command_status` to poll command output chunks, or
+  use `falcon_run_rtr_admin_command_and_wait` for focused commands where direct
+  stdout/stderr output is preferred.
 - Do not put RTR controller commands such as `get`, `put`, `cd`, or status
   polling inside the raw script. Those are RTR commands, not target-side shell
   commands.
@@ -211,4 +225,41 @@ IMPORTANT CONTROLLER NOTES:
 - Prefer `-CloudFile` plus `-CommandLine` for reusable or complex scripts.
 - Keep single-host `persist` false unless the operator explicitly wants offline
   execution when the host returns to service.
+"""
+
+RTR_ADMIN_APPROVAL_PACKET_TEMPLATE = """RTR Admin Approval Packet Template
+
+Use this template before running high-impact RTR Admin commands. The operator
+must review the exact target, command, expected endpoint effect, and approval
+hash before the execution tool is called with `operator_approval`.
+
+=== Target ===
+- Hostname:
+- Device ID:
+- Session ID:
+- Ticket / case:
+
+=== Command ===
+- Base command:
+- Command string:
+- Persist when offline: false
+- Classification:
+- Risk:
+
+=== Rationale ===
+- Reason:
+- Expected endpoint effect:
+- Evidence or inventory reviewed:
+
+=== Approval Gate ===
+- Approval required:
+- Approval hash:
+- Exact approval phrase:
+
+=== Execution and Follow-up ===
+- Execution tool: falcon_execute_rtr_admin_command
+- Wait helper: falcon_run_rtr_admin_command_and_wait
+- Status tool: falcon_check_rtr_admin_command_status
+- Cloud request ID:
+- Completion / stdout / stderr summary:
 """

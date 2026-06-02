@@ -2,7 +2,7 @@
 title: Data Protection
 description: Provides read-only access to Data Protection configuration data — classifications, policies, and content patterns — so an LLM can reason about why a Data Protection detection fired
 sidebar:
-  order: 10
+  order: 14
 ---
 
 Provides read-only access to Data Protection configuration data — classifications, policies, and content patterns — so an LLM can reason about why a Data Protection detection fired

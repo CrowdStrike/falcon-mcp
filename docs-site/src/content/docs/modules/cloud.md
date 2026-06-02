@@ -2,7 +2,7 @@
 title: Cloud Security
 description: Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets
 sidebar:
-  order: 10
+  order: 11
 ---
 
 Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets

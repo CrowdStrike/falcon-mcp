@@ -2,7 +2,7 @@
 title: Intel
 description: Accessing and analyzing CrowdStrike Falcon intelligence data
 sidebar:
-  order: 10
+  order: 20
 ---
 
 Accessing and analyzing CrowdStrike Falcon intelligence data
@@ -23,7 +23,7 @@ Generate a MITRE ATT&CK report for a given threat actor.
 
 Accepts an actor name (e.g., 'WARP PANDA') or numeric ID. Returns MITRE ATT&CK
 tactics, techniques, and procedures (TTPs) for the actor. JSON format returns a
-decoded string; CSV format returns CSV text.
+parsed list of dicts; CSV format returns raw CSV text.
 
 **Example prompts:**
 

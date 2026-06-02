@@ -1,11 +1,11 @@
 ---
 title: Real Time Response
-description: Initiating and inspecting RTR sessions and for executing read-only RTR commands during host investigations
+description: Initiating and inspecting RTR sessions and executing read-only RTR commands during host investigations
 sidebar:
-  order: 10
+  order: 24
 ---
 
-Initiating and inspecting RTR sessions and for executing read-only RTR commands during host investigations
+Initiating and inspecting RTR sessions and executing read-only RTR commands during host investigations
 
 ## API Scopes
 

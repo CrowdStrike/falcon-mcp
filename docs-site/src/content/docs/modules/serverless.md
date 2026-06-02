@@ -2,7 +2,7 @@
 title: Serverless
 description: Accessing and managing CrowdStrike Falcon Serverless Vulnerabilities
 sidebar:
-  order: 10
+  order: 28
 ---
 
 Accessing and managing CrowdStrike Falcon Serverless Vulnerabilities

@@ -2,7 +2,7 @@
 title: Identity Protection
 description: Accessing and managing CrowdStrike Falcon Identity Protection capabilities
 sidebar:
-  order: 10
+  order: 19
 ---
 
 Accessing and managing CrowdStrike Falcon Identity Protection capabilities

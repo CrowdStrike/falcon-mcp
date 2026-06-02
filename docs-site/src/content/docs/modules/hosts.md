@@ -2,7 +2,7 @@
 title: Hosts
 description: Accessing and managing CrowdStrike Falcon hosts/devices
 sidebar:
-  order: 10
+  order: 18
 ---
 
 Accessing and managing CrowdStrike Falcon hosts/devices

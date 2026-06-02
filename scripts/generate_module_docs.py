@@ -398,21 +398,18 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_search_rtr_admin_scripts": [
         "Find Windows RTR Admin scripts with triage in the name",
         "Show me private custom RTR scripts I could review for this host",
-    ],
-    "falcon_get_rtr_admin_script_details": [
-        "Pull the details for that RTR Admin script ID",
+        "Look up RTR Admin script ID abc123 with an id filter",
     ],
     "falcon_search_rtr_falcon_scripts": [
         "Find CrowdStrike-provided Falcon scripts for Windows collection",
-    ],
-    "falcon_get_rtr_falcon_script_details": [
-        "Show me the details for that Falcon script",
+        "Look up Falcon script ID abc123 with an id filter",
     ],
     "falcon_search_rtr_put_files": [
         "Search RTR put-files with collector in the name",
+        "Look up RTR put-file ID abc123 with an id filter",
     ],
-    "falcon_get_rtr_put_file_details": [
-        "Get metadata for this RTR put-file ID",
+    "falcon_get_rtr_put_file_contents": [
+        "Retrieve the contents for RTR put-file ID abc123",
     ],
     "falcon_check_rtr_admin_command_status": [
         "Check the output for this RTR Admin cloud request ID",
@@ -425,6 +422,9 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     ],
     "falcon_execute_rtr_admin_command": [
         "Run this approved RTR Admin command against the existing RTR session",
+    ],
+    "falcon_run_rtr_admin_command_and_wait": [
+        "Run this approved RTR Admin command and wait for stdout and stderr",
     ],
 }
 
@@ -592,7 +592,7 @@ def extract_registered_tool_names(module_cls: type) -> dict[str, str]:
     """
     try:
         source = inspect.getsource(module_cls.register_tools)  # type: ignore[attr-defined]
-    except (AttributeError, TypeError):
+    except (AttributeError, TypeError, OSError):
         return {}
 
     registered: dict[str, str] = {}
@@ -622,7 +622,7 @@ def extract_resource_info(module_cls: type) -> list[dict[str, str]]:
     """Extract resource URIs and descriptions by inspecting register_resources."""
     try:
         source = inspect.getsource(module_cls.register_resources)  # type: ignore[attr-defined]
-    except (AttributeError, TypeError):
+    except (AttributeError, TypeError, OSError):
         return []
 
     resources = []
@@ -656,9 +656,50 @@ def extract_resource_info(module_cls: type) -> list[dict[str, str]]:
     return resources
 
 
+def extract_prompt_info(module_cls: type) -> list[dict[str, str]]:
+    """Extract prompt names, titles, and descriptions by inspecting register_prompts."""
+    try:
+        source = inspect.getsource(module_cls.register_prompts)  # type: ignore[attr-defined]
+    except (AttributeError, TypeError, OSError):
+        return []
+
+    prompts = []
+
+    for match in re.finditer(r"self\._add_prompt\(", source):
+        start = match.end()
+        depth = 1
+        pos = start
+        while pos < len(source) and depth > 0:
+            if source[pos] == "(":
+                depth += 1
+            elif source[pos] == ")":
+                depth -= 1
+            pos += 1
+        block = source[start : pos - 1]
+
+        name_m = re.search(r'name=["\']([^"\']+)["\']', block)
+        title_m = re.search(r'title=["\']([^"\']+)["\']', block)
+        desc_m = re.search(r'description=["\']([^"\']+)["\']', block)
+
+        if name_m:
+            raw_name = name_m.group(1)
+            prompts.append(
+                {
+                    "name": f"falcon_{raw_name}",
+                    "title": title_m.group(1) if title_m else "",
+                    "description": desc_m.group(1) if desc_m else "",
+                }
+            )
+
+    return prompts
+
+
 def extract_tool_annotations(module_cls: type) -> dict[str, dict[str, bool]]:
     """Extract tool annotations from register_tools source."""
-    source = inspect.getsource(module_cls.register_tools)  # type: ignore[attr-defined]
+    try:
+        source = inspect.getsource(module_cls.register_tools)  # type: ignore[attr-defined]
+    except (AttributeError, TypeError, OSError):
+        return {}
     annotations = {}
 
     # Find _add_tool calls with explicit annotations
@@ -678,7 +719,13 @@ def extract_tool_annotations(module_cls: type) -> dict[str, dict[str, bool]]:
     return annotations
 
 
-def generate_module_page(module_key: str, module_cls: type, auto_title: str, auto_description: str) -> str:
+def generate_module_page(
+    module_key: str,
+    module_cls: type,
+    auto_title: str,
+    auto_description: str,
+    sidebar_order: int,
+) -> str:
     """Generate a complete markdown page for a module."""
     meta = MODULE_METADATA.get(module_key, {})
     title = meta.get("title", auto_title)
@@ -726,13 +773,16 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
     # Extract resources
     resources = extract_resource_info(module_cls)
 
+    # Extract prompts
+    prompts = extract_prompt_info(module_cls)
+
     # Build markdown
     lines = []
     lines.append("---")
     lines.append(f"title: {title}")
     lines.append(f"description: {description}")
     lines.append("sidebar:")
-    lines.append("  order: 10")
+    lines.append(f"  order: {sidebar_order}")
     lines.append("---")
     lines.append("")
     lines.append(description)
@@ -798,6 +848,20 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
             lines.append(f"- **`{r['uri']}`**: {r['description']}")
         lines.append("")
 
+    # Prompts
+    if prompts:
+        lines.append("## Prompts")
+        lines.append("")
+        for prompt in prompts:
+            lines.append(f"### `{prompt['name']}`")
+            lines.append("")
+            if prompt["title"]:
+                lines.append(f"**Title:** {prompt['title']}")
+                lines.append("")
+            if prompt["description"]:
+                lines.append(prompt["description"])
+                lines.append("")
+
     return "\n".join(lines)
 
 
@@ -842,19 +906,26 @@ def main() -> None:
 
     # Generate overview page
     overview = generate_overview_page(modules)
-    (OUTPUT_DIR / "overview.md").write_text(overview)
+    (OUTPUT_DIR / "overview.md").write_text(overview, encoding="utf-8")
     print("  Generated: modules/overview.md")
 
     # Generate per-module pages
     expected_files = {"overview.md"}
-    for key, mod_info in sorted(modules.items()):
+    for sidebar_order, key in enumerate(sorted(modules.keys()), start=10):
+        mod_info = modules[key]
         meta = MODULE_METADATA.get(key, {})
         slug = meta.get("slug", key)
         filename = f"{slug}.md"
         expected_files.add(filename)
 
-        page = generate_module_page(key, mod_info["cls"], mod_info["auto_title"], mod_info["auto_description"])
-        (OUTPUT_DIR / filename).write_text(page)
+        page = generate_module_page(
+            key,
+            mod_info["cls"],
+            mod_info["auto_title"],
+            mod_info["auto_description"],
+            sidebar_order,
+        )
+        (OUTPUT_DIR / filename).write_text(page, encoding="utf-8")
         print(f"  Generated: modules/{filename}")
 
     # Clean up stale module files

@@ -71,6 +71,25 @@ class TestModules(unittest.TestCase):
         for tool in expected_resources:
             self.assertIn(tool, registered_resources)
 
+    def assert_prompts_registered(self, expected_prompts):
+        """
+        Helper method to verify that a module correctly registers its prompts.
+
+        Args:
+            expected_prompts: List of prompt names that should be registered
+        """
+        self.module.register_prompts(self.mock_server)
+
+        self.assertEqual(self.mock_server.add_prompt.call_count, len(expected_prompts))
+
+        registered_prompts = [
+            call.args[0].name if call.args else call.kwargs["prompt"].name
+            for call in self.mock_server.add_prompt.call_args_list
+        ]
+
+        for prompt in expected_prompts:
+            self.assertIn(prompt, registered_prompts)
+
     def assert_tool_annotations(self, tool_name: str, expected_annotations: ToolAnnotations):
         """Verify that a tool was registered with the expected annotations.
 

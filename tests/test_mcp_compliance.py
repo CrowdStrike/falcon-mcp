@@ -50,6 +50,7 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     "falcon_delete_rtr_session",
     # rtr_admin module
     "falcon_execute_rtr_admin_command",
+    "falcon_run_rtr_admin_command_and_wait",
     # shield module
     "falcon_dismiss_shield_check",
     # scheduled_reports module

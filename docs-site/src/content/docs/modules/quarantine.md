@@ -2,7 +2,7 @@
 title: Quarantine
 description: Investigating quarantined files and applying quarantine actions during triage and remediation workflows
 sidebar:
-  order: 10
+  order: 23
 ---
 
 Investigating quarantined files and applying quarantine actions during triage and remediation workflows

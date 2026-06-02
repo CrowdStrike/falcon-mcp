@@ -2,7 +2,7 @@
 title: Custom IOA
 description: Searching, creating, updating, and deleting Custom IOA (Indicators of Attack) behavioral rules and rule groups using Falcon Custom IOA Service Collection endpoints
 sidebar:
-  order: 10
+  order: 13
 ---
 
 Searching, creating, updating, and deleting Custom IOA (Indicators of Attack) behavioral rules and rule groups using Falcon Custom IOA Service Collection endpoints
