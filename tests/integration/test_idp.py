@@ -28,7 +28,7 @@ class TestIdpIntegration(BaseIntegrationTest):
         """
         result = self.call_method(
             self.module.investigate_entity,
-            entity_names=["Administrator"],
+            entity_names="Administrator",
             investigation_types=["entity_details"],
             limit=5,
         )
@@ -47,11 +47,11 @@ class TestIdpIntegration(BaseIntegrationTest):
     def test_investigate_entity_with_email_addresses(self):
         """Test investigate_entity with email addresses.
 
-        Tests USER entity type resolution via secondaryDisplayNames filter.
+        Tests USER entity type resolution via secondaryDisplayNamePattern filter.
         """
         result = self.call_method(
             self.module.investigate_entity,
-            email_addresses=["admin@example.com"],
+            email_addresses="admin@example.com",
             investigation_types=["entity_details"],
             limit=5,
         )
@@ -66,7 +66,7 @@ class TestIdpIntegration(BaseIntegrationTest):
         """
         result = self.call_method(
             self.module.investigate_entity,
-            entity_names=["Administrator"],
+            entity_names="Administrator",
             domain_names=["CORP.LOCAL"],
             investigation_types=["entity_details"],
             limit=5,
@@ -83,7 +83,7 @@ class TestIdpIntegration(BaseIntegrationTest):
         # First, find an entity to investigate
         result = self.call_method(
             self.module.investigate_entity,
-            entity_names=["Administrator"],
+            entity_names="Administrator",
             investigation_types=["entity_details"],
             limit=1,
         )
@@ -123,7 +123,7 @@ class TestIdpIntegration(BaseIntegrationTest):
         # First, find an entity to investigate
         result = self.call_method(
             self.module.investigate_entity,
-            entity_names=["Administrator"],
+            entity_names="Administrator",
             investigation_types=["entity_details"],
             limit=1,
         )
@@ -164,7 +164,7 @@ class TestIdpIntegration(BaseIntegrationTest):
         # First, find an entity to investigate
         result = self.call_method(
             self.module.investigate_entity,
-            entity_names=["Administrator"],
+            entity_names="Administrator",
             investigation_types=["entity_details"],
             limit=1,
         )
@@ -200,7 +200,7 @@ class TestIdpIntegration(BaseIntegrationTest):
         """Test investigate_entity with multiple investigation types."""
         result = self.call_method(
             self.module.investigate_entity,
-            entity_names=["Administrator"],
+            entity_names="Administrator",
             investigation_types=["entity_details", "risk_assessment"],
             limit=5,
         )
@@ -231,7 +231,7 @@ class TestIdpIntegration(BaseIntegrationTest):
         """
         result = self.call_method(
             self.module.investigate_entity,
-            entity_names=["Administrator"],
+            entity_names="Administrator",
             investigation_types=["entity_details"],
             limit=1,
         )

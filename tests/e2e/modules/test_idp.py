@@ -24,7 +24,7 @@ class TestIdpModuleE2E(BaseE2ETest):
                 {
                     "operation": "api_preempt_proxy_post_graphql",
                     "validator": lambda kwargs: (
-                        "primaryDisplayNames" in kwargs.get("body", {}).get("query", "")
+                        "primaryDisplayNamePattern" in kwargs.get("body", {}).get("query", "")
                         and "Wallace Muniz" in kwargs.get("body", {}).get("query", "")
                     ),
                     "response": {
@@ -148,9 +148,9 @@ class TestIdpModuleE2E(BaseE2ETest):
                 "Tool should be called with entity_names parameter",
             )
 
-            entity_names = tool_input.get("entity_names", [])
+            entity_names = tool_input.get("entity_names", "")
             self.assertTrue(
-                any("Wallace Muniz" in name for name in entity_names),
+                "Wallace Muniz" in entity_names,
                 f"Tool should be called with Wallace Muniz in entity_names: {entity_names}",
             )
 
@@ -180,9 +180,9 @@ class TestIdpModuleE2E(BaseE2ETest):
             # First call should be entity name search
             first_call_query = api_calls[0][1].get("body", {}).get("query", "")
             self.assertIn(
-                "primaryDisplayNames",
+                "primaryDisplayNamePattern",
                 first_call_query,
-                "First call should search by primaryDisplayNames",
+                "First call should search by primaryDisplayNamePattern",
             )
             self.assertIn(
                 "Wallace Muniz",

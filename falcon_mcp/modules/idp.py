@@ -47,13 +47,23 @@ class IdpModule(BaseModule):
             default=None,
             description="List of specific entity IDs to investigate (e.g., ['entity-001'])",
         ),
-        entity_names: list[str] | None = Field(
+        entity_names: str | None = Field(
             default=None,
-            description="List of entity names to search for (e.g., ['Administrator', 'John Doe']). When combined with other parameters, uses AND logic.",
+            description=(
+                "Entity display name pattern to search for "
+                "(e.g., 'John Doe' or 'Doe, John' or 'Administrator' or 'Admin*'). Supports '*' wildcards. "
+                "When combined with other parameters, uses AND logic."
+            ),
         ),
-        email_addresses: list[str] | None = Field(
+        email_addresses: str | None = Field(
             default=None,
-            description="List of email addresses to investigate (e.g., ['user@example.com']). When combined with other parameters, uses AND logic.",
+            description=(
+                "UPN, email address, or Azure external identity pattern to search for "
+                "(e.g., 'user@example.com', '*@example.com', "
+                "or 'john.doe_contoso.com#EXT#@tenant.onmicrosoft.com'). Supports '*' wildcards. "
+                "For AD samAccountName lookups, use domain_names + entity_names together instead. "
+                "When combined with other parameters, uses AND logic."
+            ),
         ),
         ip_addresses: list[str] | None = Field(
             default=None,
@@ -61,7 +71,7 @@ class IdpModule(BaseModule):
         ),
         domain_names: list[str] | None = Field(
             default=None,
-            description="List of domain names to search for (e.g., ['XDRHOLDINGS.COM', 'CORP.LOCAL']). When combined with other parameters, uses AND logic. Example: entity_names=['Administrator'] + domain_names=['DOMAIN.COM'] finds Administrator user in that specific domain.",
+            description="List of domain names to search for (e.g., ['XDRHOLDINGS.COM', 'CORP.LOCAL']). When combined with other parameters, uses AND logic. Example: entity_names='Administrator' + domain_names=['DOMAIN.COM'] finds Administrator user in that specific domain.",
         ),
         # Investigation Scope Control
         investigation_types: list[str] = Field(
@@ -254,6 +264,25 @@ class IdpModule(BaseModule):
                     "status": "failed",
                 },
             }
+
+        if (entity_names and isinstance(entity_names, str) and entity_names.strip("* ") == "") or (
+            email_addresses
+            and isinstance(email_addresses, str)
+            and email_addresses.strip("* ") == ""
+        ):
+            return {
+                "error": (
+                    "entity_names/email_addresses cannot be a bare wildcard ('*'). "
+                    "Provide a more specific pattern (e.g., 'Admin*') or narrow the search."
+                ),
+                "investigation_summary": {
+                    "entity_count": 0,
+                    "investigation_types": investigation_types,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "status": "failed",
+                },
+            }
+
         return None
 
     def _create_error_response(
@@ -825,7 +854,7 @@ class IdpModule(BaseModule):
         """Resolve entity IDs from various identifier types using unified AND-based query.
 
         All provided identifiers are combined using AND logic in a single GraphQL query.
-        For example: entity_names=["Administrator"] + domain_names=["XDRHOLDINGS.COM"]
+        For example: entity_names="Administrator" + domain_names=["XDRHOLDINGS.COM"]
         will find entities that match BOTH criteria.
 
         Returns:
@@ -948,10 +977,9 @@ class IdpModule(BaseModule):
         query_fields,
         query_filters,
     ):
-        if email_addresses and isinstance(email_addresses, list):
-            sanitized_emails = [sanitize_input(email) for email in email_addresses]
-            emails_json = json.dumps(sanitized_emails)
-            query_filters.append(f"secondaryDisplayNames: {emails_json}")
+        if email_addresses and isinstance(email_addresses, str):
+            sanitized_email = sanitize_input(email_addresses)
+            query_filters.append(f"secondaryDisplayNamePattern: {json.dumps(sanitized_email)}")
             query_filters.append("types: [USER]")
             query_fields.extend(["primaryDisplayName", "secondaryDisplayName"])
 
@@ -962,10 +990,9 @@ class IdpModule(BaseModule):
         query_filters,
     ):
         entity_names = identifiers.get("entity_names")
-        if entity_names and isinstance(entity_names, list):
-            sanitized_names = [sanitize_input(name) for name in entity_names]
-            names_json = json.dumps(sanitized_names)
-            query_filters.append(f"primaryDisplayNames: {names_json}")
+        if entity_names and isinstance(entity_names, str):
+            sanitized_name = sanitize_input(entity_names)
+            query_filters.append(f"primaryDisplayNamePattern: {json.dumps(sanitized_name)}")
             query_fields.append("primaryDisplayName")
 
     def _get_entity_details_batch(
