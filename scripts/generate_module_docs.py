@@ -21,7 +21,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from falcon_mcp.common.api_scopes import API_SCOPE_REQUIREMENTS
+from falcon_mcp.common.api_scopes import API_SCOPE_REQUIREMENTS  # noqa: E402
 
 OUTPUT_DIR = PROJECT_ROOT / "docs" / "modules"
 SITE_BASE_PATH = "/falcon-mcp"
