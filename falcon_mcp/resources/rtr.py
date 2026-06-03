@@ -75,9 +75,9 @@ SEARCH_RTR_SESSIONS_FQL_FILTERS = [
         "id",
         "String",
         """
-        RTR session ID. Live testing showed exact ID filtering can be
-        API-shape dependent; if no rows return, fall back to aid/hostname plus
-        bounded created_at and inspect returned session IDs client-side.
+        RTR session ID. Exact ID filtering can be API-shape dependent; if no
+        rows return, fall back to aid/hostname plus bounded created_at and
+        inspect returned session IDs client-side.
         Ex: 9f3c5e7a-1234-5678-abcd-ef0123456789
         """,
     ),
@@ -142,10 +142,10 @@ SEARCH_RTR_SESSIONS_FQL_FILTERS = [
         "cloud_request_id",
         "String",
         """
-        Cloud request ID associated with a command execution. Live testing
-        showed exact filtering can be API-shape dependent; if no rows return,
-        fall back to aid/hostname plus bounded created_at and inspect returned
-        command logs client-side.
+        Cloud request ID associated with a command execution. Exact filtering
+        can be API-shape dependent; if no rows return, fall back to
+        aid/hostname plus bounded created_at and inspect returned command logs
+        client-side.
         Ex: a1b2c3d4-5678-90ab-cdef-1234567890ab
         """,
     ),
@@ -245,10 +245,9 @@ SEARCH_RTR_AUDIT_SESSIONS_FQL_FILTERS = [
         "String",
         """
         Cloud request ID associated with command execution. This is most
-        useful when with_command_info=true is enabled. Live testing showed
-        exact filtering can be API-shape dependent; if no rows return, fall
-        back to aid/hostname plus bounded created_at and inspect returned
-        command logs client-side.
+        useful when with_command_info=true is enabled. Exact filtering can be
+        API-shape dependent; if no rows return, fall back to aid/hostname plus
+        bounded created_at and inspect returned command logs client-side.
         Ex: a1b2c3d4-5678-90ab-cdef-1234567890ab
         """,
     ),

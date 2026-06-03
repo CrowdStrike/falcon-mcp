@@ -52,9 +52,9 @@ name:~'triage'
 # Scripts created after a date
 created_timestamp:>'2026-01-01T00:00:00Z'
 
-NOTE: Live testing showed custom script ID filters may not return known IDs
-reliably. Use name/platform/time filters and compare returned IDs manually when
-exact lookup matters.
+NOTE: Custom script ID filters can be API-shape dependent. Use
+name/platform/time filters and compare returned IDs manually when exact lookup
+matters.
 
 NOTE: Search results can include full script content. Treat responses as
 sensitive operational material and avoid copying script bodies into notes unless
@@ -111,13 +111,13 @@ name:'approved-collector.ps1'
 # Put-files created after a date
 created_timestamp:>'2026-01-01T00:00:00Z'
 
-NOTE: Live testing showed put-file ID filters may not return known IDs
-reliably. Use name/time filters and compare returned IDs manually before using
-falcon_get_rtr_put_file_contents with a selected put-file ID.
+NOTE: Put-file ID filters can be API-shape dependent. Use name/time filters and
+compare returned IDs manually before using falcon_get_rtr_put_file_contents
+with a selected put-file ID.
 
-NOTE: Live testing showed exact put-file name filters can match while
-contains/wildcard name filters may return no rows. If exact name is not known,
-use a time-bounded inventory search and compare returned names client-side.
+NOTE: Exact put-file name filters are more reliable than contains or wildcard
+name filters in some Falcon API responses. If exact name is not known, use a
+time-bounded inventory search and compare returned names client-side.
 
 === falcon_search_rtr_put_files FQL filter available fields ===
 
@@ -144,11 +144,11 @@ needed.
      put-file ID. Treat returned content as potentially sensitive operational
      material.
    - Do not rely on put-file inventory `file_type` to predict content exposure.
-     Live testing showed inventory can report `file_type: binary` while the
-     content retrieval endpoint returns text script content.
-   - Falcon script ID filters are supported by live testing. Custom script and
-     put-file ID filters may be API-dependent; prefer broader filters and
-     compare returned IDs manually before acting on a selected record.
+     Inventory can report `file_type: binary` while the content retrieval
+     endpoint returns text script content.
+   - Falcon script ID filters are supported. Custom script and put-file ID
+     filters may be API-dependent; prefer broader filters and compare returned
+     IDs manually before acting on a selected record.
    - For put-files, prefer exact `name:'...'` filters when the name is known.
      Contains or wildcard name filters may return no rows; use time-bounded
      inventory and compare names client-side when exact name is not known.
@@ -169,8 +169,8 @@ needed.
      mismatches are rejected locally before any Falcon call.
    - Review `payload_preview`, `classification`, `missing_context`,
      `approval_gate`, and any command-specific guidance.
-   - For `reg query`, keep the query shape minimal. Live testing showed Falcon
-     can reject extra unquoted arguments with HTTP 400.
+   - For `reg query`, keep the query shape minimal. Falcon can reject extra
+     unquoted arguments with HTTP 400.
    - If `approval_gate.approval_required` is true, ask the operator to approve
      the exact target, command, expected effect, and approval hash before
      re-submitting with `operator_approval`.
@@ -222,9 +222,8 @@ needed.
 - Keep single-host `persist` false unless the operator explicitly wants offline
   execution when a host returns to service.
 - Batch admin execution is intentionally out of scope for this module slice.
-- If audit/session searches return 403 during an RTR Admin investigation, verify
-  `real-time-response-audit:read`; live testing showed newly added audit scope
-  can take effect without restarting the MCP process.
+- If audit/session searches return 403 during an RTR Admin investigation,
+  verify the API client has `real-time-response-audit:read`.
 - Do not place RTR controller actions such as status polling, `get`, `put`, or
   session cleanup inside raw script bodies. Use the separate MCP tools for those
   steps.

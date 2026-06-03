@@ -598,8 +598,8 @@ class RTRAdminModule(BaseModule):
         binaries, or operational payloads staged for RTR `put` workflows.
         Text content is returned for model review; binary content returns size
         metadata and a safe error instead of raw bytes. Treat retrieval results
-        as sensitive regardless of inventory `file_type`; live testing showed
-        binary-tagged inventory can still retrieve text content.
+        as sensitive regardless of inventory `file_type`; binary-tagged
+        inventory can still retrieve text content.
         """
         file_id = unwrap_field_default(file_id)
 
@@ -1604,8 +1604,8 @@ class RTRAdminModule(BaseModule):
     def _put_file_content_warning(self) -> str:
         return (
             "RTR put-file content retrieval is sensitive regardless of inventory "
-            "file_type. Live testing showed put-file metadata can say binary while "
-            "retrieval returns text content."
+            "file_type. Put-file metadata can say binary while retrieval returns "
+            "text content."
         )
 
     def _annotate_put_file_content(self, item: dict[str, Any]) -> dict[str, Any]:
@@ -1642,8 +1642,8 @@ class RTRAdminModule(BaseModule):
         tokens = command_string.split()
         if len(tokens) > 3 and [token.lower() for token in tokens[:2]] == ["reg", "query"]:
             return [
-                "`reg query` reached Falcon with HTTP 400 during live testing when more "
-                "than two arguments followed `reg`. Keep the query shape to "
+                "`reg query` can return Falcon HTTP 400 when more than two "
+                "arguments follow `reg`. Keep the query shape to "
                 "`reg query <key>` or quote paths with spaces before live use."
             ]
         return []

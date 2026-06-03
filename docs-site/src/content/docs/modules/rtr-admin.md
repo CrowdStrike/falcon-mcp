@@ -70,8 +70,8 @@ returned content can be sensitive because put-files may contain scripts,
 binaries, or operational payloads staged for RTR `put` workflows.
 Text content is returned for model review; binary content returns size
 metadata and a safe error instead of raw bytes. Treat retrieval results
-as sensitive regardless of inventory `file_type`; live testing showed
-binary-tagged inventory can still retrieve text content.
+as sensitive regardless of inventory `file_type`; binary-tagged
+inventory can still retrieve text content.
 
 **Example prompts:**
 
