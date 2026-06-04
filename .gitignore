@@ -183,6 +183,13 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+# Local planning / scratch docs
+#  Implementation plans, design scratch, and prompt sequences live here so they
+#  stay OUT of docs/ (which is published and markdown-linted by CI).
+#  The directory and its README are tracked; everything else is ignored.
+/plans/*
+!/plans/README.md
+
 # PyPI configuration file
 .pypirc
 
