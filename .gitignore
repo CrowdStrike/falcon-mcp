@@ -209,10 +209,5 @@ memory-bank/
 static_test_report.html
 test_results.json
 
-# Docs site build artifacts
-docs-site/node_modules/
-docs-site/dist/
-docs-site/.astro/
-
 # Playwright MCP screenshots
 .playwright-mcp/

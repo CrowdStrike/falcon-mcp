@@ -1,0 +1,112 @@
+<!-- meta:title Google Cloud -->
+<!-- meta:description Deploy the Falcon MCP Server on Google Cloud Run or Vertex AI Agent Engine. -->
+<!-- meta:section deployment -->
+<!-- meta:link-base /falcon-mcp/ -->
+
+This guide covers deploying the Falcon MCP Server with the prebuilt Google ADK-based agent to Cloud Run or Vertex AI Agent Engine.
+
+## Prerequisites
+
+- Python 3.11+, `gcloud` CLI, and `git` installed
+- Google Cloud project with billing enabled
+- CrowdStrike API credentials
+- `GOOGLE_API_KEY` from [Google AI Studio](https://ai.google.dev/gemini-api/docs/api-key)
+
+## Running Locally (5 minutes)
+
+Clone the repository:
+
+```bash
+git clone https://github.com/CrowdStrike/falcon-mcp.git
+cd falcon-mcp/examples/adk
+```
+
+Create Python environment and install dependencies:
+
+<!-- component:tabs -->
+#### pip
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r falcon_agent/requirements.txt
+```
+
+#### uv
+
+```bash
+uv venv
+. .venv/bin/activate
+uv pip install -r falcon_agent/requirements.txt
+```
+<!-- /component:tabs -->
+
+Initialize config:
+
+```bash
+chmod +x adk_agent_operations.sh
+./adk_agent_operations.sh
+```
+
+The script creates a `.env` file in `falcon_agent/`. Update at minimum the `General Agent Configuration` section with your CrowdStrike credentials and Google API key.
+
+```bash
+# Run locally
+./adk_agent_operations.sh local_run
+```
+
+Access the agent at `http://localhost:8000`.
+
+> [!CAUTION]
+> Do not use curly braces (`{variable}`) in the `FALCON_AGENT_PROMPT` value. Google ADK interprets `{name}` patterns as context variables, which causes `Context variable not found` errors at runtime.
+
+## Deploying to Cloud Run
+
+Make sure the required [APIs are enabled](https://cloud.google.com/run/docs/quickstarts/build-and-deploy/deploy-python-service#before-you-begin) on your GCP project.
+
+```bash
+cd examples/adk/
+./adk_agent_operations.sh cloudrun_deploy
+```
+
+When prompted `Allow unauthenticated invocations?`, answer **N** to keep IAM authentication enabled.
+
+Once deployed, grant access to your team:
+
+1. Cloud Run > Services > `falcon-agent-service` > Permissions
+2. Add Principal > assign `Cloud Run Invoker` role
+
+Your team members can then access the service via:
+
+```bash
+gcloud run services proxy falcon-agent-service --project PROJECT-ID --region YOUR-REGION
+```
+
+The service is then available at `http://localhost:8080`.
+
+## Deploying to Vertex AI Agent Engine
+
+Create a GCS bucket for staging artifacts, then:
+
+```bash
+cd examples/adk/
+./adk_agent_operations.sh agent_engine_deploy
+```
+
+Note the **Agent Engine Number** from the output (`reasoningEngines/XXXXXX`).
+
+### Registering with Agentspace
+
+Update the `# Agentspace Specific` environment variables (`PROJECT_NUMBER`, `AGENT_LOCATION`, `REASONING_ENGINE_NUMBER`, `AGENT_SPACE_APP_NAME`), then:
+
+```bash
+./adk_agent_operations.sh agentspace_register
+```
+
+## FQL Guide Resources
+
+The agent is configured with `use_mcp_resources=True`, enabling ADK's MCP resource support. The Falcon MCP Server exposes FQL guide resources (e.g., `falcon://detections/search/fql-guide`) that the agent fetches on demand via the auto-discovered `load_mcp_resource` tool, providing accurate Falcon query construction without embedding all FQL documentation in the system prompt.
+
+## Performance Optimization
+
+Control `MAX_PREV_USER_INTERACTIONS` in your `.env` to limit conversation history sent to the LLM (recommended: 5). This reduces costs while maintaining useful context.

@@ -1,7 +1,7 @@
 """Generate Starlight documentation pages from falcon_mcp module source code.
 
 Introspects module classes, tool methods, and resource definitions to produce
-markdown files for docs-site/src/content/docs/modules/.
+markdown files for docs/modules/.
 
 Usage:
     uv run python scripts/generate_module_docs.py
@@ -23,7 +23,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from falcon_mcp.common.api_scopes import API_SCOPE_REQUIREMENTS  # noqa: E402
 
-OUTPUT_DIR = PROJECT_ROOT / "docs-site" / "src" / "content" / "docs" / "modules"
+OUTPUT_DIR = PROJECT_ROOT / "docs" / "modules"
+SITE_BASE_PATH = "/falcon-mcp"
 
 # Module display metadata — overrides only.
 # Titles and descriptions are auto-derived from module docstrings.
@@ -687,12 +688,11 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
 
     # Build markdown
     lines = []
-    lines.append("---")
-    lines.append(f"title: {title}")
-    lines.append(f"description: {description}")
-    lines.append("sidebar:")
-    lines.append("  order: 10")
-    lines.append("---")
+    lines.append(f"<!-- meta:title {title} -->")
+    lines.append(f"<!-- meta:description {description} -->")
+    lines.append("<!-- meta:section modules -->")
+    lines.append("<!-- meta:link-base /falcon-mcp/ -->")
+    lines.append("<!-- frontmatter:sidebar order:10 -->")
     lines.append("")
     lines.append(description)
     lines.append("")
@@ -718,14 +718,12 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
 
             # Admonition for mutating/destructive tools
             if destructive:
-                lines.append(":::caution")
-                lines.append("This tool performs destructive operations.")
-                lines.append(":::")
+                lines.append("> [!CAUTION]")
+                lines.append("> This tool performs destructive operations.")
                 lines.append("")
             elif not read_only:
-                lines.append(":::note")
-                lines.append("This tool modifies data.")
-                lines.append(":::")
+                lines.append("> [!NOTE]")
+                lines.append("> This tool modifies data.")
                 lines.append("")
 
             # Per-tool scopes
@@ -763,12 +761,13 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
 def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
     """Generate the modules overview page with summary table."""
     lines = []
-    lines.append("---")
-    lines.append("title: Module Overview")
-    lines.append("description: Overview of all available Falcon MCP modules with API scopes.")
-    lines.append("sidebar:")
-    lines.append("  order: 0")
-    lines.append("---")
+    lines.append("<!-- meta:title Module Overview -->")
+    lines.append(
+        "<!-- meta:description Overview of all available Falcon MCP modules with API scopes. -->"
+    )
+    lines.append("<!-- meta:section modules -->")
+    lines.append("<!-- meta:link-base /falcon-mcp/ -->")
+    lines.append("<!-- frontmatter:sidebar order:0 -->")
     lines.append("")
     lines.append(
         "The Falcon MCP Server provides the following modules. Each module requires specific CrowdStrike API scopes."
@@ -786,7 +785,7 @@ def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
         scopes = ", ".join(f"`{s}`" for s in scopes_list)
         fallback_desc = modules[key]["auto_description"] or f"{title} module for CrowdStrike Falcon."
         desc = meta.get("description", fallback_desc)
-        lines.append(f"| [{title}](/falcon-mcp/modules/{slug}/) | {scopes} | {desc} |")
+        lines.append(f"| [{title}]({SITE_BASE_PATH}/modules/{slug}/) | {scopes} | {desc} |")
 
     lines.append("")
     return "\n".join(lines)
