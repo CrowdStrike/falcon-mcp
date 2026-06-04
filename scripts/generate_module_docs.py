@@ -43,6 +43,9 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     "dataprotection": {
         "slug": "data-protection",
     },
+    "hostgroups": {
+        "slug": "host-groups",
+    },
     "idp": {
         "title": "Identity Protection",
     },
@@ -217,6 +220,30 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     ],
     "falcon_get_host_details": [
         "Get the full details for host device abc123",
+    ],
+    # Host Groups
+    "falcon_search_host_groups": [
+        "Show me all static host groups",
+        "Find host groups created in the last 30 days",
+    ],
+    "falcon_search_host_group_members": [
+        "List the Windows hosts in host group abc123",
+        "Show me the members of the Production Servers group",
+    ],
+    "falcon_create_host_group": [
+        "Create a static host group called 'Critical Servers'",
+        "Create a dynamic host group for all Windows hosts",
+    ],
+    "falcon_update_host_group": [
+        "Rename host group abc123 to 'Decommissioned'",
+        "Update the assignment rule for the dynamic Windows group",
+    ],
+    "falcon_delete_host_groups": [
+        "Delete host group abc123",
+    ],
+    "falcon_perform_host_group_action": [
+        "Add the hosts matching platform_name Windows to group abc123",
+        "Remove host device xyz from host group abc123",
     ],
     # Identity Protection
     "falcon_idp_investigate_entity": [

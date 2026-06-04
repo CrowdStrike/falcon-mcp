@@ -32,6 +32,7 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | [Discover](https://developer.crowdstrike.com/falcon-mcp/modules/discover/) | Search application inventory and discover unmanaged assets |
 | [Firewall Management](https://developer.crowdstrike.com/falcon-mcp/modules/firewall/) | Search and manage firewall rules and rule groups |
 | [Hosts](https://developer.crowdstrike.com/falcon-mcp/modules/hosts/) | Manage and query host/device information |
+| [Host Groups](https://developer.crowdstrike.com/falcon-mcp/modules/host-groups/) | Search, create, update, and delete host groups; manage group membership |
 | [Identity Protection](https://developer.crowdstrike.com/falcon-mcp/modules/idp/) | Entity investigation and identity protection analysis |
 | [Intel](https://developer.crowdstrike.com/falcon-mcp/modules/intel/) | Research threat actors, IOCs, and intelligence reports |
 | [IOC](https://developer.crowdstrike.com/falcon-mcp/modules/ioc/) | Search, create, and remove custom indicators of compromise |
