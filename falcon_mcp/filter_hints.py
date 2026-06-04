@@ -170,6 +170,35 @@ FILTER_HINTS: dict[str, str] = {
         "Common fields: hostname, sha256, state (quarantined|released), "
         "date_updated (UTC datetime), paths."
     ),
+    # === Host Groups ===
+    "falcon_search_host_groups": (
+        "Common fields: name, group_type (static|dynamic|staticByID), "
+        "created_by, created_timestamp (UTC datetime), "
+        "modified_by, modified_timestamp (UTC datetime)."
+    ),
+    "falcon_search_host_group_members": (
+        "Filters on HOST (device) attributes: hostname, platform_name (Windows|Linux|Mac), "
+        "status (normal|contained), local_ip, external_ip, os_version, last_seen, "
+        "product_type_desc (Workstation|Server|Domain Controller)."
+    ),
+    "falcon_perform_host_group_action": (
+        "Filters on HOST (device) attributes to select members for the action: "
+        "hostname, platform_name (Windows|Linux|Mac), status (normal|contained), "
+        "local_ip, external_ip, os_version, product_type_desc (Workstation|Server|Domain Controller)."
+    ),
+    # === Data Protection ===
+    "falcon_search_data_protection_classifications": (
+        "Common fields: name, created_by, created_at (UTC datetime), "
+        "modified_by, modified_at (UTC datetime)."
+    ),
+    "falcon_search_data_protection_policies": (
+        "Common fields: name, description, is_enabled (true|false), "
+        "is_default (true|false), precedence, created_at (UTC datetime), modified_by."
+    ),
+    "falcon_search_data_protection_content_patterns": (
+        "Common fields: name, category, type, region, "
+        "example, deleted (true|false)."
+    ),
     # === Scheduled Reports ===
     "falcon_search_scheduled_reports": (
         "Common fields: name, type, status (Active|Inactive|Expired), "

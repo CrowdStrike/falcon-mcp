@@ -125,9 +125,7 @@ class DataProtectionModule(BaseModule):
             )
 
         if not ids:
-            return self._format_fql_error_response(
-                [], filter, SEARCH_CLASSIFICATIONS_FQL_DOCUMENTATION
-            )
+            return self._format_empty_response(filter)
 
         return self._base_get_by_ids(
             "entities_classification_get_v2", ids, use_params=True
@@ -185,9 +183,7 @@ class DataProtectionModule(BaseModule):
             )
 
         if not ids:
-            return self._format_fql_error_response(
-                [], filter, SEARCH_POLICIES_FQL_DOCUMENTATION
-            )
+            return self._format_empty_response(filter)
 
         return self._base_get_by_ids("entities_policy_get_v2", ids, use_params=True)
 
@@ -238,8 +234,6 @@ class DataProtectionModule(BaseModule):
             )
 
         if not ids:
-            return self._format_fql_error_response(
-                [], filter, SEARCH_CONTENT_PATTERNS_FQL_DOCUMENTATION
-            )
+            return self._format_empty_response(filter)
 
         return self._base_get_by_ids("entities_content_pattern_get", ids, use_params=True)
