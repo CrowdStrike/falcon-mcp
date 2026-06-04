@@ -84,6 +84,39 @@ class TestExclusionsIntegration(BaseIntegrationTest):
                     f"Operation name validation failed for {exclusion_type}: {result[0]}"
                 )
 
+    def test_documented_sort_fields_are_accepted(self):
+        """Every sort field the FQL guide advertises must be accepted by the API.
+
+        Catches divergence between the guide and the real per-type sort field
+        sets — e.g. IOA v2 rejects `created_on` even though it is a valid filter
+        field. Each documented field is sent with a `.desc` suffix and must not
+        return an error response.
+        """
+        documented_sorts = {
+            "ioa": ["last_modified", "name", "created_by", "modified_by",
+                    "pattern_id", "pattern_name"],
+            "ml": ["created_on", "last_modified", "value", "applied_globally"],
+            "sensor_visibility": ["created_on", "last_modified", "value",
+                                  "applied_globally", "created_by", "modified_by"],
+            "certificate": ["created_on", "modified_on", "name", "created_by",
+                            "modified_by"],
+        }
+        for exclusion_type, fields in documented_sorts.items():
+            if not self._scopes_available(exclusion_type):
+                continue
+            for field in fields:
+                result = self.call_method(
+                    self.module.search_exclusions,
+                    exclusion_type=exclusion_type,
+                    sort=f"{field}.desc",
+                    limit=1,
+                )
+                if isinstance(result, list) and result and isinstance(result[0], dict):
+                    assert "error" not in result[0], (
+                        f"Documented sort field '{field}' rejected for "
+                        f"{exclusion_type}: {result[0]}"
+                    )
+
     # ---- Per-type full-detail searches ------------------------------------------
 
     def test_search_ioa_returns_details(self):

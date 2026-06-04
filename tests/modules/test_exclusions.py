@@ -239,6 +239,22 @@ class TestExclusionsModule(TestModules):
         call = self.mock_client.command.call_args_list[0]
         self.assertEqual(call[1]["parameters"]["limit"], 100)
 
+    def test_fql_guide_documents_ioa_sort_caveat(self):
+        """The FQL guide must warn that IOA cannot sort by created_on.
+
+        IOA v2 rejects sort=created_on with a 400; the guide steers the agent to
+        last_modified instead. This is the documentation half of that bug fix.
+        """
+        from falcon_mcp.resources.exclusions import (
+            SEARCH_EXCLUSIONS_FQL_DOCUMENTATION,
+        )
+
+        self.assertIn("Sortable fields", SEARCH_EXCLUSIONS_FQL_DOCUMENTATION)
+        self.assertIn(
+            "IOA does NOT support sorting by `created_on`",
+            SEARCH_EXCLUSIONS_FQL_DOCUMENTATION,
+        )
+
     # ---- Create ----------------------------------------------------------------
 
     def _create_response(self, entity):
