@@ -73,6 +73,10 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     # quarantine module
     "falcon_update_quarantined_files",
     "falcon_delete_quarantined_files",
+    # exclusions module
+    "falcon_create_exclusion",
+    "falcon_update_exclusion",
+    "falcon_delete_exclusions",
 }
 
 RESOURCE_URI_PATTERN = re.compile(r"^falcon://[a-z0-9-]+(/[a-z0-9-]+)+/[a-z]+-guide$")

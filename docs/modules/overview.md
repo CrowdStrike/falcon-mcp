@@ -15,6 +15,7 @@ The Falcon MCP Server provides the following modules. Each module requires speci
 | [Data Protection](/falcon-mcp/modules/data-protection/) | `Data Protection:read` | Provides read-only access to Data Protection configuration data — classifications, policies, and content patterns — so an LLM can reason about why a Data Protection detection fired |
 | [Detections](/falcon-mcp/modules/detections/) | `Alerts:read` | Accessing and analyzing CrowdStrike Falcon detections |
 | [Discover](/falcon-mcp/modules/discover/) | `Assets:read` | Accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets |
+| [Exclusions](/falcon-mcp/modules/exclusions/) | `IOA Exclusions:read`, `Machine Learning Exclusions:read`, `Sensor Visibility Exclusions:read`, `IOA Exclusions:write`, `Machine Learning Exclusions:write`, `Sensor Visibility Exclusions:write` | This module provides a unified set of tools for managing CrowdStrike exclusions across four types — IOA, Machine Learning, Sensor Visibility, and Certificate-Based — behind a single `exclusion_type` discriminator |
 | [Firewall Management](/falcon-mcp/modules/firewall/) | `Firewall Management:read`, `Firewall Management:write` | Searching and managing firewall rules and rule groups |
 | [Host Groups](/falcon-mcp/modules/host-groups/) | `Host Groups:read`, `Host Groups:write` | Searching, creating, updating, and deleting CrowdStrike Falcon host groups, as well as managing group membership |
 | [Hosts](/falcon-mcp/modules/hosts/) | `Hosts:read` | Accessing and managing CrowdStrike Falcon hosts/devices |

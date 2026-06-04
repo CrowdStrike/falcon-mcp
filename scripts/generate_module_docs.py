@@ -264,6 +264,27 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_get_mitre_report": [
         "Generate MITRE ATT&CK report for FANCY BEAR",
     ],
+    # Exclusions
+    "falcon_search_exclusions": [
+        "Show me my most recent IOA and machine learning exclusions",
+        "List sensor visibility exclusions created in the last 7 days",
+    ],
+    "falcon_create_exclusion": [
+        "Create an ML exclusion for /tmp/foo.sh applied to all hosts",
+        "Add a sensor visibility exclusion for C:\\Temp\\* on the Workstations group",
+    ],
+    "falcon_update_exclusion": [
+        "Update IOA exclusion abc123 to also match a new command line regex",
+    ],
+    "falcon_delete_exclusions": [
+        "Delete the certificate exclusion with ID abc123",
+    ],
+    "falcon_search_certificates": [
+        "Show me the certificate-based exclusions in my environment",
+    ],
+    "falcon_get_certificate_details": [
+        "Look up the signing certificate for SHA256 3dd9a...",
+    ],
     # IOC
     "falcon_search_iocs": [
         "Find all active domain IOCs",

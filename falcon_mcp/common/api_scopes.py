@@ -157,6 +157,31 @@ API_SCOPE_REQUIREMENTS = {
     "entities_policy_get_v2": ["Data Protection:read"],
     "queries_content_pattern_get_v2": ["Data Protection:read"],
     "entities_content_pattern_get": ["Data Protection:read"],
+    # Exclusions operations - IOA (v2)
+    "ss_ioa_exclusions_search_v2": ["IOA Exclusions:read"],
+    "ss_ioa_exclusions_get_v2": ["IOA Exclusions:read"],
+    "ss_ioa_exclusions_create_v2": ["IOA Exclusions:write"],
+    "ss_ioa_exclusions_update_v2": ["IOA Exclusions:write"],
+    "ss_ioa_exclusions_delete_v2": ["IOA Exclusions:write"],
+    # Exclusions operations - Machine Learning (v2)
+    "exclusions_search_v2": ["Machine Learning Exclusions:read"],
+    "exclusions_get_v2": ["Machine Learning Exclusions:read"],
+    "exclusions_create_v2": ["Machine Learning Exclusions:write"],
+    "exclusions_update_v2": ["Machine Learning Exclusions:write"],
+    "exclusions_delete_v2": ["Machine Learning Exclusions:write"],
+    # Exclusions operations - Sensor Visibility (v1)
+    "querySensorVisibilityExclusionsV1": ["Sensor Visibility Exclusions:read"],
+    "getSensorVisibilityExclusionsV1": ["Sensor Visibility Exclusions:read"],
+    "createSVExclusionsV1": ["Sensor Visibility Exclusions:write"],
+    "updateSensorVisibilityExclusionsV1": ["Sensor Visibility Exclusions:write"],
+    "deleteSensorVisibilityExclusionsV1": ["Sensor Visibility Exclusions:write"],
+    # Exclusions operations - Certificate-Based (v1, shares Machine Learning Exclusions scope)
+    "cb_exclusions_query_v1": ["Machine Learning Exclusions:read"],
+    "cb_exclusions_get_v1": ["Machine Learning Exclusions:read"],
+    "cb_exclusions_create_v1": ["Machine Learning Exclusions:write"],
+    "cb_exclusions_update_v1": ["Machine Learning Exclusions:write"],
+    "cb_exclusions_delete_v1": ["Machine Learning Exclusions:write"],
+    "certificates_get_v1": ["Machine Learning Exclusions:read"],
 }
 
 
