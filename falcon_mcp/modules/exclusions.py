@@ -135,12 +135,6 @@ class ExclusionsModule(BaseModule):
 
         self._add_tool(
             server=server,
-            method=self.search_certificates,
-            name="search_certificates",
-        )
-
-        self._add_tool(
-            server=server,
             method=self.get_certificate_details,
             name="get_certificate_details",
         )
@@ -871,38 +865,6 @@ class ExclusionsModule(BaseModule):
             return [result]
 
         return result
-
-    # ---- Certificate discovery ----------------------------------------------------
-
-    def search_certificates(
-        self,
-        filter: str | None = Field(
-            default=None,
-            description="FQL filter expression. See the certificate section of `falcon://exclusions/search/fql-guide`.",
-        ),
-        limit: int = Field(
-            default=100,
-            ge=1,
-            le=100,
-            description="Maximum number of certificate-based exclusions to return (max 100).",
-        ),
-        sort: str | None = Field(
-            default=None,
-            description="Sort expression, e.g. 'created_on.desc'. Bare field names are also accepted.",
-        ),
-        offset: int | None = Field(
-            default=None,
-            description="Starting index of the result set from which to return IDs.",
-        ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search certificate-based exclusions and return full records.
-
-        Use this to discover existing certificate-based exclusions by name,
-        value, or timestamp. This is a convenience equivalent to
-        falcon_search_exclusions with exclusion_type='certificate'. Returns full
-        exclusion records including the certificate metadata, status, and scope.
-        """
-        return self._search_by_type("certificate", filter, limit, sort, offset)
 
     def get_certificate_details(
         self,

@@ -65,19 +65,6 @@ metadata for the given hash.
 
 - "Look up the signing certificate for SHA256 3dd9a..."
 
-### `falcon_search_certificates`
-
-Search certificate-based exclusions and return full records.
-
-Use this to discover existing certificate-based exclusions by name,
-value, or timestamp. This is a convenience equivalent to
-falcon_search_exclusions with exclusion_type='certificate'. Returns full
-exclusion records including the certificate metadata, status, and scope.
-
-**Example prompts:**
-
-- "Show me the certificate-based exclusions in my environment"
-
 ### `falcon_search_exclusions`
 
 Search exclusions of a given type and return full exclusion records.

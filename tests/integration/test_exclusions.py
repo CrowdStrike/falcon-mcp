@@ -117,6 +117,146 @@ class TestExclusionsIntegration(BaseIntegrationTest):
                         f"{exclusion_type}: {result[0]}"
                     )
 
+    def test_documented_filter_fields_match(self):
+        """Every filter field the FQL guide advertises must actually filter.
+
+        These query APIs do NOT validate filter fields — an unsupported field
+        silently returns an empty result instead of a 400, so a documented field
+        the API ignores looks identical to "no matches". This test pulls one real
+        entity per type, then filters by each documented field using that entity's
+        own value (exact for strings/booleans, a wide `>'now-3650d'` range for
+        timestamps) and asserts the result is non-empty — failing if the guide
+        lists a field the API silently no-ops.
+        """
+        documented_filters = {
+            "ioa": ["applied_globally", "created_on", "last_modified", "pattern_id"],
+            "ml": ["applied_globally", "created_on", "last_modified", "value"],
+            "sensor_visibility": ["applied_globally", "created_on", "last_modified",
+                                  "value"],
+            "certificate": ["applied_globally", "created_on", "modified_on", "name",
+                            "created_by", "modified_by"],
+        }
+        timestamp_fields = {"created_on", "last_modified", "modified_on"}
+
+        for exclusion_type, fields in documented_filters.items():
+            if not self._scopes_available(exclusion_type):
+                continue
+            entity_result = self.call_method(
+                self.module.search_exclusions, exclusion_type=exclusion_type, limit=1
+            )
+            # Empty environment returns the FQL guide dict; nothing to assert on.
+            if not entity_result or isinstance(entity_result, dict):
+                self.skip_with_warning(
+                    f"No {exclusion_type} exclusion to validate filter fields",
+                    "filter fields",
+                )
+                continue
+            entity = entity_result[0]
+
+            for field in fields:
+                if field in timestamp_fields:
+                    # A wide range matches any real entity if the field filters,
+                    # and silently returns nothing if the API ignores the field.
+                    filter_expr = f"{field}:>'now-3650d'"
+                else:
+                    value = entity.get(field)
+                    if value is None:
+                        warnings.warn(
+                            f"{exclusion_type} entity has no '{field}' value to "
+                            f"validate the documented filter field; skipping",
+                            stacklevel=2,
+                        )
+                        continue
+                    if isinstance(value, bool):
+                        filter_expr = f"{field}:{str(value).lower()}"
+                    else:
+                        filter_expr = f"{field}:'{value}'"
+
+                result = self.call_method(
+                    self.module.search_exclusions,
+                    exclusion_type=exclusion_type,
+                    filter=filter_expr,
+                    limit=1,
+                )
+                assert result and not isinstance(result, dict), (
+                    f"Documented filter field '{field}' returned no results for "
+                    f"{exclusion_type} (filter={filter_expr!r}) — the API likely "
+                    f"silently ignores this field; remove it from the FQL guide."
+                )
+                assert "error" not in result[0], (
+                    f"Documented filter field '{field}' errored for "
+                    f"{exclusion_type} (filter={filter_expr!r}): {result[0]}"
+                )
+
+    def test_value_name_wildcard_operator(self):
+        """The `:*` wildcard operator must do substring matching on value/name.
+
+        The guide teaches `value:*'*substr*'` for partial matches. This locks in
+        that behavior against the live API and guards against the guide ever
+        regressing to a false "exact-match only" claim. For each type we scan
+        existing entities for one whose value/name contains a clean alphanumeric
+        run (no FQL glob metacharacters), then assert the `:*` query for that run
+        finds it. Skips rather than fails when no suitable entity exists, so a
+        sparse tenant never produces a false negative.
+        """
+        import re
+
+        targets = {
+            "ml": "value",
+            "sensor_visibility": "value",
+            "certificate": "name",
+        }
+        for exclusion_type, field in targets.items():
+            if not self._scopes_available(exclusion_type):
+                continue
+            entities = self.call_method(
+                self.module.search_exclusions, exclusion_type=exclusion_type, limit=20
+            )
+            if not entities or isinstance(entities, dict):
+                self.skip_with_warning(
+                    f"No {exclusion_type} exclusion to validate wildcard operator",
+                    "wildcard operator",
+                )
+                continue
+
+            # Find an interior alphanumeric run (>= 4 chars) that avoids FQL glob
+            # metacharacters so the substring itself can't break the pattern.
+            substr = None
+            for entity in entities:
+                raw = entity.get(field)
+                if not isinstance(raw, str):
+                    continue
+                runs = re.findall(r"[A-Za-z0-9]{4,}", raw)
+                # Drop runs touching the string ends to keep it a true substring.
+                interior = [r for r in runs if r not in (raw[: len(r)], raw[-len(r):])]
+                candidate = interior[0] if interior else (runs[0] if runs else None)
+                if candidate:
+                    substr = candidate
+                    break
+
+            if not substr:
+                self.skip_with_warning(
+                    f"No {exclusion_type} {field} has a clean substring to test",
+                    "wildcard operator",
+                )
+                continue
+
+            wildcard = self.call_method(
+                self.module.search_exclusions,
+                exclusion_type=exclusion_type,
+                filter=f"{field}:*'*{substr}*'",
+                limit=1,
+            )
+            assert wildcard and not isinstance(wildcard, dict), (
+                f"`:*` wildcard substring match returned nothing for "
+                f"{exclusion_type} {field} (substr={substr!r}); the guide's "
+                f"wildcard-operator advice would be wrong."
+            )
+            assert "error" not in wildcard[0], (
+                f"`:*` wildcard query errored for {exclusion_type} {field}: "
+                f"{wildcard[0]}"
+            )
+
     # ---- Per-type full-detail searches ------------------------------------------
 
     def test_search_ioa_returns_details(self):
@@ -343,17 +483,6 @@ class TestExclusionsIntegration(BaseIntegrationTest):
             )
 
     # ---- Certificate discovery --------------------------------------------------
-
-    def test_search_certificates(self):
-        """search_certificates calls the certificate exclusion operations."""
-        if not self._scopes_available("certificate"):
-            self.skip_with_warning(
-                "Certificate exclusion scope not available", "search_certificates"
-            )
-            return
-        result = self.call_method(self.module.search_certificates, limit=2)
-        if isinstance(result, list) and result and isinstance(result[0], dict):
-            assert "error" not in result[0], f"search_certificates error: {result[0]}"
 
     def test_get_certificate_details(self):
         """get_certificate_details returns without an API error for a dummy hash.

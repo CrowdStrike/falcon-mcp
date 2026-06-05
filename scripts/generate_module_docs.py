@@ -279,9 +279,6 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_delete_exclusions": [
         "Delete the certificate exclusion with ID abc123",
     ],
-    "falcon_search_certificates": [
-        "Show me the certificate-based exclusions in my environment",
-    ],
     "falcon_get_certificate_details": [
         "Look up the signing certificate for SHA256 3dd9a...",
     ],

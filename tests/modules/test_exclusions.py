@@ -71,7 +71,6 @@ class TestExclusionsModule(TestModules):
             "falcon_create_exclusion",
             "falcon_update_exclusion",
             "falcon_delete_exclusions",
-            "falcon_search_certificates",
             "falcon_get_certificate_details",
         ]
         self.assert_tools_registered(expected_tools)
@@ -87,7 +86,6 @@ class TestExclusionsModule(TestModules):
         """Mutating tools must carry the correct annotations."""
         self.module.register_tools(self.mock_server)
         self.assert_tool_annotations("falcon_search_exclusions", READ_ONLY_ANNOTATIONS)
-        self.assert_tool_annotations("falcon_search_certificates", READ_ONLY_ANNOTATIONS)
         self.assert_tool_annotations(
             "falcon_get_certificate_details", READ_ONLY_ANNOTATIONS
         )
@@ -254,6 +252,82 @@ class TestExclusionsModule(TestModules):
             "IOA does NOT support sorting by `created_on`",
             SEARCH_EXCLUSIONS_FQL_DOCUMENTATION,
         )
+
+    def test_fql_guide_documents_wildcard_operator(self):
+        """The guide must teach the `:*` wildcard operator for value/name.
+
+        Plain `:` is exact match (any `*` is literal); substring matching needs
+        the `:*` operator (e.g. value:*'*/usr/local*'). The guide must also warn
+        that unsupported fields silently return empty rather than erroring.
+        """
+        from falcon_mcp.resources.exclusions import (
+            SEARCH_EXCLUSIONS_FQL_DOCUMENTATION,
+        )
+
+        self.assertIn("Filtering caveats", SEARCH_EXCLUSIONS_FQL_DOCUMENTATION)
+        self.assertIn(
+            "`:*` wildcard operator",
+            SEARCH_EXCLUSIONS_FQL_DOCUMENTATION,
+        )
+        self.assertIn(
+            "value:*'*/usr/local*'",
+            SEARCH_EXCLUSIONS_FQL_DOCUMENTATION,
+        )
+        self.assertIn(
+            "Unsupported filter fields return an empty result, not an error",
+            SEARCH_EXCLUSIONS_FQL_DOCUMENTATION,
+        )
+
+    def test_fql_filter_tables_drop_nonfunctional_fields(self):
+        """Filter tables must list only fields the API actually filters on.
+
+        Several fields (e.g. IOA `created_by`, `name`, `modified_by`,
+        `pattern_name`, `value`) are silently ignored by the query API — they
+        return an empty result instead of a 400, so they were removed from the
+        filter tables. They must not reappear.
+        """
+        from falcon_mcp.resources.exclusions import (
+            CERTIFICATE_EXCLUSIONS_FQL_FILTERS,
+            IOA_EXCLUSIONS_FQL_FILTERS,
+            ML_EXCLUSIONS_FQL_FILTERS,
+            SENSOR_VISIBILITY_EXCLUSIONS_FQL_FILTERS,
+        )
+
+        def field_names(filters):
+            # Skip the header row ("Field", "Type", "Description").
+            return {row[0] for row in filters[1:]}
+
+        ioa_fields = field_names(IOA_EXCLUSIONS_FQL_FILTERS)
+        self.assertEqual(
+            ioa_fields,
+            {"applied_globally", "created_on", "last_modified", "pattern_id"},
+        )
+        for removed in ("created_by", "name", "modified_by", "pattern_name", "value"):
+            self.assertNotIn(removed, ioa_fields)
+
+        ml_fields = field_names(ML_EXCLUSIONS_FQL_FILTERS)
+        self.assertEqual(
+            ml_fields,
+            {"applied_globally", "created_on", "last_modified", "value"},
+        )
+        self.assertNotIn("created_by", ml_fields)
+        self.assertNotIn("modified_by", ml_fields)
+
+        sv_fields = field_names(SENSOR_VISIBILITY_EXCLUSIONS_FQL_FILTERS)
+        self.assertEqual(
+            sv_fields,
+            {"applied_globally", "created_on", "last_modified", "value"},
+        )
+        self.assertNotIn("created_by", sv_fields)
+        self.assertNotIn("modified_by", sv_fields)
+
+        cert_fields = field_names(CERTIFICATE_EXCLUSIONS_FQL_FILTERS)
+        self.assertEqual(
+            cert_fields,
+            {"applied_globally", "created_by", "created_on", "modified_by",
+             "modified_on", "name"},
+        )
+        self.assertNotIn("value", cert_fields)
 
     # ---- Create ----------------------------------------------------------------
 
@@ -520,18 +594,6 @@ class TestExclusionsModule(TestModules):
         self.assertEqual(self.mock_client.command.call_count, 0)
 
     # ---- Certificate discovery -------------------------------------------------
-
-    def test_search_certificates(self):
-        """search_certificates queries the certificate exclusion operations."""
-        self.mock_client.command.side_effect = self._search_responses()
-        result = self.module.search_certificates(
-            filter=None, limit=50, sort=None, offset=0
-        )
-        first_call = self.mock_client.command.call_args_list[0]
-        second_call = self.mock_client.command.call_args_list[1]
-        self.assertEqual(first_call[0][0], "cb_exclusions_query_v1")
-        self.assertEqual(second_call[0][0], "cb_exclusions_get_v1")
-        self.assertEqual(len(result), 2)
 
     def test_get_certificate_details(self):
         """get_certificate_details calls certificates_get_v1 with the sha256."""
