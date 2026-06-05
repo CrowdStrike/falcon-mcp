@@ -30,6 +30,7 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | [Data Protection](https://developer.crowdstrike.com/falcon-mcp/modules/data-protection/) | Search Data Protection classifications, policies, and content patterns |
 | [Detections](https://developer.crowdstrike.com/falcon-mcp/modules/detections/) | Find and analyze detections to understand malicious activity |
 | [Discover](https://developer.crowdstrike.com/falcon-mcp/modules/discover/) | Search application inventory and discover unmanaged assets |
+| [Exclusions](https://developer.crowdstrike.com/falcon-mcp/modules/exclusions/) | Search, create, update, and delete IOA, machine learning, sensor visibility, and certificate-based exclusions |
 | [Firewall Management](https://developer.crowdstrike.com/falcon-mcp/modules/firewall/) | Search and manage firewall rules and rule groups |
 | [Hosts](https://developer.crowdstrike.com/falcon-mcp/modules/hosts/) | Manage and query host/device information |
 | [Host Groups](https://developer.crowdstrike.com/falcon-mcp/modules/host-groups/) | Search, create, update, and delete host groups; manage group membership |
