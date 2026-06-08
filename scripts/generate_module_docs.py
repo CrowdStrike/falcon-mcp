@@ -300,6 +300,31 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Run this CQL query for the last 24 hours: #event_simpleName=ProcessRollup2",
         "Search NGSIEM for DNS events from January 2025",
     ],
+    # Policies
+    "falcon_search_policies": [
+        "List all firewall policies",
+        "Show enabled sensor update policies for Windows",
+        "Find prevention policies whose name contains 'default'",
+    ],
+    "falcon_search_policy_members": [
+        "What hosts are assigned to firewall policy 1a2b3c?",
+    ],
+    "falcon_create_policy": [
+        "Create a disabled firewall policy named 'Test FW' for Windows",
+    ],
+    "falcon_update_policy": [
+        "Rename prevention policy 1a2b3c to 'Servers - Strict'",
+    ],
+    "falcon_delete_policies": [
+        "Delete firewall policy 1a2b3c",
+    ],
+    "falcon_perform_policy_action": [
+        "Disable prevention policy 1a2b3c",
+        "Add host group 9z8y7x to sensor update policy 1a2b3c",
+    ],
+    "falcon_set_policy_precedence": [
+        "Set the precedence order of these Windows prevention policies: 1a2b3c, 4d5e6f, 7g8h9i",
+    ],
     # Quarantine
     "falcon_search_quarantined_files": [
         "Show me quarantined files on host SE-DAO-WIN10-CO",

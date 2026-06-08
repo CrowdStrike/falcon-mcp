@@ -77,6 +77,12 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     "falcon_create_exclusion",
     "falcon_update_exclusion",
     "falcon_delete_exclusions",
+    # policies module
+    "falcon_create_policy",
+    "falcon_update_policy",
+    "falcon_delete_policies",
+    "falcon_perform_policy_action",
+    "falcon_set_policy_precedence",
 }
 
 RESOURCE_URI_PATTERN = re.compile(r"^falcon://[a-z0-9-]+(/[a-z0-9-]+)+/[a-z]+-guide$")
