@@ -63,6 +63,7 @@ class TestApiScopes(unittest.TestCase):
         # Test with known operations
         self.assertEqual(get_required_scopes("GetQueriesAlertsV2"), ["Alerts:read"])
         self.assertEqual(get_required_scopes("PostEntitiesAlertsV2"), ["Alerts:read"])
+        self.assertEqual(get_required_scopes("PatchEntitiesAlertsV3"), ["Alerts:write"])
         # Test with unknown operation
         self.assertEqual(get_required_scopes("UnknownOperation"), [])
 
@@ -195,7 +196,7 @@ class TestApiScopes(unittest.TestCase):
 
         # Validate that most resources use consistent permission patterns
         read_only_resources = [
-            "Alerts", "Hosts", "Vulnerabilities",
+            "Hosts", "Vulnerabilities",
             "Assets", "Sensor Usage", "Scheduled Reports"
         ]
 
@@ -211,7 +212,7 @@ class TestApiScopes(unittest.TestCase):
         """Test that we have reasonable coverage across expected modules."""
         # Count operations by likely module based on operation patterns
         module_patterns = {
-            "alerts": ["GetQueriesAlertsV2", "PostEntitiesAlertsV2"],
+            "alerts": ["GetQueriesAlertsV2", "PostEntitiesAlertsV2", "PatchEntitiesAlertsV3"],
             "hosts": ["QueryDevicesByFilter", "PostDeviceDetailsV2"],
             "intel": ["QueryIntelActorEntities", "QueryIntelIndicatorEntities", "QueryIntelReportEntities", "GetMitreReport"],
             "spotlight": ["combinedQueryVulnerabilities"],

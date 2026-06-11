@@ -189,6 +189,11 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_get_detection_details": [
         "Get me the details for this detection",
     ],
+    "falcon_update_detections": [
+        "Mark detection abc123 as in_progress",
+        "Assign detection abc123 to analyst@example.com",
+        "Close these detections and add a comment: resolved via playbook",
+    ],
     # Discover
     "falcon_search_applications": [
         "Find all Chrome installations across my environment",
