@@ -159,6 +159,21 @@ docker run --rm -p 8000:8000 --env-file /path/to/.env \
 
 See the [Docker Deployment guide](https://developer.crowdstrike.com/falcon-mcp/deployment/docker/) for building locally, custom ports, and advanced configurations.
 
+## Dynamic Mode
+
+Running many modules at once inflates the context window every AI client must hold. Dynamic mode
+replaces the full tool surface with two meta-tools — `falcon_search_tools` to discover the right
+tool on demand, and `falcon_execute_tool` to run it — so agents only load the schemas they actually
+need.
+
+```bash
+falcon-mcp --dynamic
+# or: FALCON_MCP_DYNAMIC=true
+```
+
+See the [Dynamic Mode guide](https://developer.crowdstrike.com/falcon-mcp/usage/dynamic-mode/) for
+the full discover → execute workflow and trade-offs.
+
 ## Deployment Options
 
 - [Amazon Bedrock AgentCore](https://developer.crowdstrike.com/falcon-mcp/deployment/amazon-bedrock/)
