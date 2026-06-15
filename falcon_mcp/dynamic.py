@@ -206,15 +206,20 @@ class DynamicMode:
             description="Tool parameters as a JSON object.",
         ),
         response_format: str = Field(
-            default="full",
-            description="Response format: 'full' (raw result), 'summary' (truncated large lists to save context).",
+            default="summary",
+            description=(
+                "Response format: 'summary' (default — returns up to 5 records with a total_count "
+                "to avoid token overflow on large result sets) or 'full' (complete raw result, "
+                "use only when you need all fields for a small known result set)."
+            ),
         ),
     ) -> Any:
         """Execute a Falcon tool by name with the given parameters.
 
         Use falcon_search_tools first to discover tool names and their parameter schemas.
-        Supports two response formats: 'full' returns raw results, 'summary' truncates
-        large lists to save context.
+        Results are summarized by default (up to 5 records + total_count) to avoid token
+        overflow on large API responses. Pass response_format='full' only when you need
+        complete records and the result set is known to be small.
         """
         entry = self.catalog.get(tool_name)
         if not entry:
@@ -239,11 +244,21 @@ class DynamicMode:
         return self._format_response(result, response_format)
 
     def _format_response(self, result: Any, response_format: str) -> Any:
-        if response_format == "summary":
+        # Any format other than the explicit "full" opt-in goes through summarize.
+        # This also covers the case where response_format holds a Pydantic FieldInfo
+        # object (when _execute_tool is called directly rather than through the MCP
+        # framework), so the safe default is always summary.
+        if response_format != "full":
             return self._summarize(result)
         return result
 
     def _summarize(self, result: Any) -> Any:
+        if isinstance(result, list) and len(result) == 0:
+            return {
+                "results": [],
+                "total_count": 0,
+                "hint": "No results matched. If unexpected, verify filter field names via falcon_search_tools.",
+            }
         if isinstance(result, list) and len(result) > 5:
             return {
                 "results": result[:5],

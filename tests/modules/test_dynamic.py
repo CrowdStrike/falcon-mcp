@@ -4,16 +4,22 @@ Tests for the Dynamic mode (two-tool pattern).
 
 import asyncio
 import unittest
+from collections.abc import Coroutine
+from typing import Any, TypeVar
 from unittest.mock import MagicMock, patch
 
 from falcon_mcp import registry
 from falcon_mcp.dynamic import DynamicMode, DynamicToolCatalog
 from falcon_mcp.filter_hints import FILTER_HINTS
+from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.modules.detections import DetectionsModule
 from falcon_mcp.modules.hosts import HostsModule
 
 
-def run_async(coro):
+_T = TypeVar("_T")
+
+
+def run_async(coro: Coroutine[Any, Any, _T]) -> _T:
     return asyncio.run(coro)
 
 
@@ -167,11 +173,11 @@ class TestExecuteFalconTool(unittest.TestCase):
 
     def setUp(self):
         self.mock_client = MagicMock()
-        self.modules = {
+        modules: dict[str, BaseModule] = {
             "detections": DetectionsModule(self.mock_client),
         }
         self.mock_server = MagicMock()
-        self.dynamic = DynamicMode(self.modules, self.mock_server)
+        self.dynamic = DynamicMode(modules, self.mock_server)
 
     def test_execute_dispatches_to_tool_run(self):
         entry = self.dynamic.catalog.get("falcon_get_detection_details")
@@ -263,6 +269,46 @@ class TestExecuteFalconTool(unittest.TestCase):
         )
         self.assertEqual(result, small_result)
 
+    def test_execute_default_format_is_summary(self):
+        """Default response_format is 'summary' — large results are truncated."""
+        large_result = [{"id": f"det{i}"} for i in range(20)]
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": large_result},
+        }
+
+        # No response_format argument → should behave as summary
+        result = run_async(
+            self.dynamic._execute_tool(
+                tool_name="falcon_get_detection_details",
+                parameters={"ids": [f"det{i}" for i in range(20)]},
+            )
+        )
+        self.assertIsInstance(result, dict)
+        self.assertIn("total_count", result)
+        self.assertEqual(result["total_count"], 20)
+        self.assertEqual(len(result["results"]), 5)
+
+    def test_execute_empty_list_returns_normalized_dict(self):
+        """Empty list results are returned as {results:[], total_count:0, hint:...}."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+
+        result = run_async(
+            self.dynamic._execute_tool(
+                tool_name="falcon_get_detection_details",
+                parameters={"ids": ["nonexistent"]},
+            )
+        )
+        self.assertIsInstance(result, dict)
+        assert isinstance(result, dict)  # narrow type for Pyright
+        self.assertEqual(result["results"], [])
+        self.assertEqual(result["total_count"], 0)
+        self.assertIn("hint", result)
+        self.assertIn("No results matched", result["hint"])
+
     def test_search_tools_no_results_returns_hint_with_available_modules(self):
         result = run_async(
             self.dynamic._search_tools(
@@ -270,6 +316,7 @@ class TestExecuteFalconTool(unittest.TestCase):
             )
         )
         self.assertIsInstance(result, dict)
+        assert isinstance(result, dict)  # narrow for Pyright
         self.assertEqual(result["results"], [])
         self.assertIn("hint", result)
         self.assertIn("detections", result["hint"])
