@@ -1,5 +1,5 @@
 <!-- meta:title Dynamic Mode -->
-<!-- meta:description Reduce context usage by exposing three tools instead of all module tools. -->
+<!-- meta:description Reduce context usage by exposing two meta-tools instead of all module tools. -->
 <!-- meta:section usage -->
 <!-- meta:link-base /falcon-mcp/ -->
 
@@ -7,11 +7,11 @@ The Falcon MCP server registers one tool schema per tool across all enabled modu
 set grows, this balloons the context window that AI clients must hold in every conversation — even
 for tools that will never be called in that session.
 
-Dynamic mode solves this by replacing the full tool surface with three tools:
-`falcon_list_enabled_modules` to orient the agent, `falcon_search_tools` to discover
-tools on demand, and `falcon_execute_tool` to run them. The agent fetches the schema for
-exactly the tools it needs, paying a short discovery round-trip instead of a large up-front
-context cost.
+Dynamic mode solves this by replacing the full tool surface with two meta-tools:
+`falcon_search_tools` to discover tools on demand and `falcon_execute_tool` to run them. The agent
+fetches the schema for exactly the tools it needs, paying a short discovery round-trip instead of a
+large up-front context cost. A third always-on tool, `falcon_list_enabled_modules`, remains
+available to help orient the agent before it starts searching.
 
 > [!NOTE]
 > Dynamic mode is in public preview. The feature flag and behavior are stable, but feedback is
@@ -43,13 +43,14 @@ are loaded into the catalog and `--transport` to choose the server transport.
 
 ## How It Works
 
-With dynamic mode enabled, the server exposes three tools instead of the full module surface:
+With dynamic mode enabled, the server exposes two meta-tools plus the `falcon_list_enabled_modules`
+core tool, instead of the full module surface:
 
 | Tool | Purpose |
 |------|---------|
-| `falcon_list_enabled_modules` | List which modules are loaded in the current server |
 | `falcon_search_tools` | Discover tools by keyword, module name, or parameter name |
 | `falcon_execute_tool` | Execute a discovered tool by name with the given parameters |
+| `falcon_list_enabled_modules` | List which modules are loaded in the current server |
 
 The typical agent workflow is:
 
