@@ -151,14 +151,8 @@ class FalconMCPServer:
         Returns:
             int: Number of tools registered
         """
-        # Register core tools directly
-        self.server.add_tool(
-            self.falcon_check_connectivity,
-            name="falcon_check_connectivity",
-            annotations=READ_ONLY_ANNOTATIONS,
-            structured_output=False,
-        )
-
+        # falcon_list_enabled_modules is always registered — dynamic mode's no-results
+        # hint references it by name, and it's useful in both modes.
         self.server.add_tool(
             self.list_enabled_modules,
             name="falcon_list_enabled_modules",
@@ -166,27 +160,35 @@ class FalconMCPServer:
             structured_output=False,
         )
 
-        self.server.add_tool(
-            self.list_modules,
-            name="falcon_list_modules",
-            annotations=READ_ONLY_ANNOTATIONS,
-            structured_output=False,
-        )
-
-        tool_count = 3  # the tools added above
-
         if self.dynamic:
+            # Dynamic mode: expose only the discovery/execution meta-tools plus
+            # falcon_list_enabled_modules above (3 tools total) so the context window
+            # stays minimal.
             from falcon_mcp.dynamic import DynamicMode
 
             dynamic_mode = DynamicMode(self.modules, self.server)
             dynamic_mode.register()
-            tool_count += 2
+            tool_count = 3  # falcon_list_enabled_modules + falcon_search_tools + falcon_execute_tool
         else:
-            # Register tools from modules
+            # Normal mode: register all three core tools and then each module's tools.
+            self.server.add_tool(
+                self.falcon_check_connectivity,
+                name="falcon_check_connectivity",
+                annotations=READ_ONLY_ANNOTATIONS,
+                structured_output=False,
+            )
+
+            self.server.add_tool(
+                self.list_modules,
+                name="falcon_list_modules",
+                annotations=READ_ONLY_ANNOTATIONS,
+                structured_output=False,
+            )
+
             for module in self.modules.values():
                 module.register_tools(self.server)
 
-            tool_count += sum(len(getattr(m, "tools", [])) for m in self.modules.values())
+            tool_count = 3 + sum(len(getattr(m, "tools", [])) for m in self.modules.values())
 
         return tool_count
 
@@ -400,7 +402,7 @@ def parse_args() -> argparse.Namespace:
         "--dynamic",
         action="store_true",
         default=os.environ.get("FALCON_MCP_DYNAMIC", "").lower() == "true",
-        help="Enable dynamic mode: exposes 2 meta-tools (search + execute) instead of "
+        help="Enable dynamic mode: exposes 3 tools (list-modules + search + execute) instead of "
         "all module tools (env: FALCON_MCP_DYNAMIC)",
     )
 

@@ -1,8 +1,9 @@
 """
 Dynamic mode for Falcon MCP Server.
 
-Wraps the full tool surface behind 2 meta-tools (falcon_search_tools + falcon_execute_tool)
-to reduce context window consumption while keeping all functionality accessible on-demand.
+Wraps the full tool surface behind 3 tools (falcon_list_enabled_modules +
+falcon_search_tools + falcon_execute_tool) to reduce context window consumption
+while keeping all functionality accessible on-demand.
 """
 
 from dataclasses import dataclass, field
@@ -15,7 +16,7 @@ from pydantic import Field
 from falcon_mcp.common.fql import FQL_FILTER_HINT_SUFFIX
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.filter_hints import FILTER_HINTS
-from falcon_mcp.modules.base import BaseModule, READ_ONLY_ANNOTATIONS
+from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS, BaseModule
 
 logger = get_logger(__name__)
 
@@ -143,7 +144,11 @@ class DynamicToolCatalog:
 
 
 class DynamicMode:
-    """Registers 2 meta-tools on the real server for dynamic tool discovery and execution."""
+    """Registers the 2 discovery meta-tools (falcon_search_tools + falcon_execute_tool).
+
+    falcon_list_enabled_modules is registered separately by the server, giving
+    dynamic mode 3 tools total in the client-visible surface.
+    """
 
     def __init__(self, modules: dict[str, BaseModule], server: FastMCP) -> None:
         self.server = server
@@ -205,21 +210,15 @@ class DynamicMode:
             default_factory=dict,
             description="Tool parameters as a JSON object.",
         ),
-        response_format: str = Field(
-            default="summary",
-            description=(
-                "Response format: 'summary' (default — returns up to 5 records with a total_count "
-                "to avoid token overflow on large result sets) or 'full' (complete raw result, "
-                "use only when you need all fields for a small known result set)."
-            ),
-        ),
     ) -> Any:
         """Execute a Falcon tool by name with the given parameters.
 
-        Use falcon_search_tools first to discover tool names and their parameter schemas.
-        Results are summarized by default (up to 5 records + total_count) to avoid token
-        overflow on large API responses. Pass response_format='full' only when you need
-        complete records and the result set is known to be small.
+        Use falcon_search_tools first to discover tool names, parameter schemas,
+        and mutation risk (read_only / destructive fields). Do not execute destructive
+        tools without confirming the user's intent.
+        Results are returned in full — use each tool's own limit parameter to control
+        response volume. Empty result sets return a dict with results, total_count, and
+        hint keys rather than a bare empty list.
         """
         entry = self.catalog.get(tool_name)
         if not entry:
@@ -241,30 +240,14 @@ class DynamicMode:
                 }
             return {"error": f"Execution failed: {e}", "tool": tool_name}
 
-        return self._format_response(result, response_format)
+        return self._normalize_empty(result)
 
-    def _format_response(self, result: Any, response_format: str) -> Any:
-        # Any format other than the explicit "full" opt-in goes through summarize.
-        # This also covers the case where response_format holds a Pydantic FieldInfo
-        # object (when _execute_tool is called directly rather than through the MCP
-        # framework), so the safe default is always summary.
-        if response_format != "full":
-            return self._summarize(result)
-        return result
-
-    def _summarize(self, result: Any) -> Any:
+    def _normalize_empty(self, result: Any) -> Any:
+        """Return a helpful hint when a tool produces an empty result set."""
         if isinstance(result, list) and len(result) == 0:
             return {
                 "results": [],
                 "total_count": 0,
-                "hint": "No results matched. If unexpected, verify filter field names via falcon_search_tools.",
-            }
-        if isinstance(result, list) and len(result) > 5:
-            return {
-                "results": result[:5],
-                "total_count": len(result),
-                "showing": 5,
-                "truncated": True,
-                "hint": "Refine your query or reduce the limit for more targeted results.",
+                "hint": "No records returned. Use falcon_search_tools to review the tool parameters if this is unexpected.",
             }
         return result

@@ -162,9 +162,9 @@ See the [Docker Deployment guide](https://developer.crowdstrike.com/falcon-mcp/d
 ## Dynamic Mode
 
 Running many modules at once inflates the context window every AI client must hold. Dynamic mode
-replaces the full tool surface with two meta-tools — `falcon_search_tools` to discover the right
-tool on demand, and `falcon_execute_tool` to run it — so agents only load the schemas they actually
-need.
+replaces the full tool surface with three tools — `falcon_list_enabled_modules` to see which
+modules are loaded, `falcon_search_tools` to discover the right tool on demand, and
+`falcon_execute_tool` to run it — so agents only load the schemas they actually need.
 
 ```bash
 falcon-mcp --dynamic

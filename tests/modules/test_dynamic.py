@@ -15,7 +15,6 @@ from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.modules.detections import DetectionsModule
 from falcon_mcp.modules.hosts import HostsModule
 
-
 _T = TypeVar("_T")
 
 
@@ -167,6 +166,27 @@ class TestDynamicToolCatalog(unittest.TestCase):
                     f"Tool '{name}' has FQL filter but no hint in FILTER_HINTS",
                 )
 
+    def test_filter_hints_no_orphan_keys(self):
+        """Verify every FILTER_HINTS key maps to an actual tool in the catalog.
+
+        Guards against stale entries left behind after a tool rename or removal.
+        """
+        from falcon_mcp.client import FalconClient
+
+        mock_client = MagicMock(spec=FalconClient)
+        all_modules = {
+            name: cls(mock_client)
+            for name, cls in registry.get_available_modules().items()
+        }
+        catalog = DynamicToolCatalog(all_modules)
+        for hint_key in FILTER_HINTS:
+            self.assertIn(
+                hint_key,
+                catalog.entries,
+                f"FILTER_HINTS has orphan key '{hint_key}' — no matching tool found. "
+                "Remove or rename the entry in filter_hints.py.",
+            )
+
 
 class TestExecuteFalconTool(unittest.TestCase):
     """Test cases for DynamicMode execute dispatch."""
@@ -194,7 +214,9 @@ class TestExecuteFalconTool(unittest.TestCase):
                 parameters={"ids": ["det1"]},
             )
         )
-        self.assertIsNotNone(result)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["id"], "det1")
 
     def test_execute_unknown_tool_returns_error(self):
         result = run_async(
@@ -217,23 +239,11 @@ class TestExecuteFalconTool(unittest.TestCase):
         self.assertIn("error", result)
         self.assertIn("tool", result)
         self.assertEqual(result["tool"], "falcon_get_detection_details")
+        self.assertIn("expected_parameters", result)
+        self.assertIn("ids", result["expected_parameters"])
 
-    def test_execute_full_format_returns_raw_result(self):
-        self.mock_client.command.return_value = {
-            "status_code": 200,
-            "body": {"resources": [{"id": "det1"}]},
-        }
-
-        result = run_async(
-            self.dynamic._execute_tool(
-                tool_name="falcon_get_detection_details",
-                parameters={"ids": ["det1"]},
-                response_format="full",
-            )
-        )
-        self.assertEqual(result, [{"id": "det1"}])
-
-    def test_execute_summary_format_truncates_large_list(self):
+    def test_execute_returns_full_result(self):
+        """Results are returned in full — no truncation regardless of list size."""
         large_result = [{"id": f"det{i}"} for i in range(20)]
         self.mock_client.command.return_value = {
             "status_code": 200,
@@ -244,50 +254,11 @@ class TestExecuteFalconTool(unittest.TestCase):
             self.dynamic._execute_tool(
                 tool_name="falcon_get_detection_details",
                 parameters={"ids": [f"det{i}" for i in range(20)]},
-                response_format="summary",
             )
         )
-        self.assertIsInstance(result, dict)
-        self.assertEqual(result["total_count"], 20)
-        self.assertEqual(result["showing"], 5)
-        self.assertTrue(result["truncated"])
-        self.assertEqual(len(result["results"]), 5)
-
-    def test_execute_summary_format_preserves_small_list(self):
-        small_result = [{"id": "det1"}, {"id": "det2"}]
-        self.mock_client.command.return_value = {
-            "status_code": 200,
-            "body": {"resources": small_result},
-        }
-
-        result = run_async(
-            self.dynamic._execute_tool(
-                tool_name="falcon_get_detection_details",
-                parameters={"ids": ["det1", "det2"]},
-                response_format="summary",
-            )
-        )
-        self.assertEqual(result, small_result)
-
-    def test_execute_default_format_is_summary(self):
-        """Default response_format is 'summary' — large results are truncated."""
-        large_result = [{"id": f"det{i}"} for i in range(20)]
-        self.mock_client.command.return_value = {
-            "status_code": 200,
-            "body": {"resources": large_result},
-        }
-
-        # No response_format argument → should behave as summary
-        result = run_async(
-            self.dynamic._execute_tool(
-                tool_name="falcon_get_detection_details",
-                parameters={"ids": [f"det{i}" for i in range(20)]},
-            )
-        )
-        self.assertIsInstance(result, dict)
-        self.assertIn("total_count", result)
-        self.assertEqual(result["total_count"], 20)
-        self.assertEqual(len(result["results"]), 5)
+        # All 20 records come back untouched — no total_count wrapper, no truncation.
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 20)
 
     def test_execute_empty_list_returns_normalized_dict(self):
         """Empty list results are returned as {results:[], total_count:0, hint:...}."""
@@ -307,7 +278,13 @@ class TestExecuteFalconTool(unittest.TestCase):
         self.assertEqual(result["results"], [])
         self.assertEqual(result["total_count"], 0)
         self.assertIn("hint", result)
-        self.assertIn("No results matched", result["hint"])
+        self.assertIn("No records returned", result["hint"])
+
+    def test_normalize_empty_passthrough_for_dict(self):
+        """Non-list results (e.g. dicts from non-paginated tools) pass through unchanged."""
+        payload = {"id": "abc", "status": "open"}
+        result = self.dynamic._normalize_empty(payload)
+        self.assertEqual(result, payload)
 
     def test_search_tools_no_results_returns_hint_with_available_modules(self):
         result = run_async(
@@ -340,7 +317,7 @@ class TestDynamicServerIntegration(unittest.TestCase):
 
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
-    def test_dynamic_mode_registers_five_tools(self, mock_fastmcp, mock_client):
+    def test_dynamic_mode_registers_three_tools(self, mock_fastmcp, mock_client):
         from falcon_mcp.server import FalconMCPServer
 
         mock_client_instance = MagicMock()
@@ -358,12 +335,13 @@ class TestDynamicServerIntegration(unittest.TestCase):
         tool_names = [
             call.kwargs["name"] for call in mock_server_instance.add_tool.call_args_list
         ]
-        self.assertEqual(len(tool_names), 5)
-        self.assertIn("falcon_check_connectivity", tool_names)
+        self.assertEqual(len(tool_names), 3)
         self.assertIn("falcon_list_enabled_modules", tool_names)
-        self.assertIn("falcon_list_modules", tool_names)
         self.assertIn("falcon_search_tools", tool_names)
         self.assertIn("falcon_execute_tool", tool_names)
+        # These must NOT be registered in dynamic mode
+        self.assertNotIn("falcon_check_connectivity", tool_names)
+        self.assertNotIn("falcon_list_modules", tool_names)
 
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
@@ -385,8 +363,14 @@ class TestDynamicServerIntegration(unittest.TestCase):
         tool_names = [
             call.kwargs["name"] for call in mock_server_instance.add_tool.call_args_list
         ]
+        # Meta-tools must be absent in normal mode
         self.assertNotIn("falcon_search_tools", tool_names)
         self.assertNotIn("falcon_execute_tool", tool_names)
+        # All three core tools must be present in normal mode
+        self.assertIn("falcon_check_connectivity", tool_names)
+        self.assertIn("falcon_list_enabled_modules", tool_names)
+        self.assertIn("falcon_list_modules", tool_names)
+        # Module tools must be registered directly
         self.assertIn("falcon_search_detections", tool_names)
 
     @patch("falcon_mcp.server.FalconClient")

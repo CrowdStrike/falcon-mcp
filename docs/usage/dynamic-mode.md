@@ -1,5 +1,5 @@
 <!-- meta:title Dynamic Mode -->
-<!-- meta:description Reduce context usage by exposing two meta-tools instead of all module tools. -->
+<!-- meta:description Reduce context usage by exposing three tools instead of all module tools. -->
 <!-- meta:section usage -->
 <!-- meta:link-base /falcon-mcp/ -->
 
@@ -7,10 +7,11 @@ The Falcon MCP server registers one tool schema per tool across all enabled modu
 set grows, this balloons the context window that AI clients must hold in every conversation — even
 for tools that will never be called in that session.
 
-Dynamic mode solves this by replacing the full tool surface with just two meta-tools:
-`falcon_search_tools` discovers tools on demand, and `falcon_execute_tool` runs them. The agent
-fetches the schema for exactly the tools it needs, paying a short discovery round-trip instead of
-a large up-front context cost.
+Dynamic mode solves this by replacing the full tool surface with three tools:
+`falcon_list_enabled_modules` to orient the agent, `falcon_search_tools` to discover
+tools on demand, and `falcon_execute_tool` to run them. The agent fetches the schema for
+exactly the tools it needs, paying a short discovery round-trip instead of a large up-front
+context cost.
 
 > [!NOTE]
 > Dynamic mode is in public preview. The feature flag and behavior are stable, but feedback is

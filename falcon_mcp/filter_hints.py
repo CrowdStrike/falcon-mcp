@@ -212,7 +212,8 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Sensor Usage ===
     "falcon_search_sensor_usage": (
-        "Common fields: event_date (YYYY-MM-DD), period (daily|weekly|monthly)."
+        "Common fields: event_date (YYYY-MM-DD format, e.g. event_date:'2024-06-11'), "
+        "period (number of days as quoted string, e.g. period:'30'; min 1, max 395, default 28)."
     ),
     # === Serverless Vulnerabilities ===
     "falcon_search_serverless_vulnerabilities": (
