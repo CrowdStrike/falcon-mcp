@@ -74,6 +74,7 @@ falcon-mcp --help
 | `--stateless-http` | `FALCON_MCP_STATELESS_HTTP` | `false` | Stateless mode for scalable deployments |
 | `--member-cid` | `FALCON_MEMBER_CID` | — | Flight Control child CID |
 | `--proxy` | `FALCON_PROXY_URL` | — | HTTP/HTTPS proxy for outbound API connections |
+| `--dynamic` | `FALCON_MCP_DYNAMIC` | `false` | [Dynamic mode](dynamic-mode.md): expose three tools instead of all module tools to reduce context usage |
 
 ## Using as a Library
 

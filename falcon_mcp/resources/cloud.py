@@ -2,48 +2,10 @@
 Contains Cloud resources.
 """
 
+from falcon_mcp.common.fql import FQL_BASE_OPERATORS
 from falcon_mcp.common.utils import generate_md_table
 
-FQL_DOCUMENTATION = """Falcon Query Language (FQL)
-
-=== BASIC SYNTAX ===
-property_name:[operator]'value'
-
-=== AVAILABLE OPERATORS ===
-• No operator = equals (default)
-• ! = not equal
-• > = greater than
-• >= = greater than or equal
-• < = less than
-• <= = less than or equal
-• ~ = text match (ignores case, spaces, punctuation)
-• !~ = not text match
-• * = wildcard (one or more characters)
-• !* = not wildcard (one or more characters)
-
-=== COMBINING CONDITIONS ===
-• + = AND condition
-• , = OR condition
-• ( ) = Group expressions
-
-=== DATA TYPES & SUPPORTED OPERATORS ===
-• String: equal, not equal, wildcard.
-• Date, Timestamp: equal, not equal, less than, less than or equal, greater than, greater than or equal.
-• Boolean: equal, not equal.
-• Number: equal, not equal, less than, less than or equal, greater than, greater than or equal.
-
-=== DATA TYPES & SYNTAX ===
-• String: 'value' or ['value1', 'value2'] for a list of values. Wildcards: 'partial*' or '*partial' or '*partial*'.
-• Date, Timestamp: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format).
-• Boolean: true or false (no quotes).
-• Number: 123 (no quotes).
-
-=== IMPORTANT NOTES ===
-• Use single quotes around string values: 'value'
-• Use square brackets for list of string values: ['value 1', 'value 2']
-• Use wildcard operator to determine if a property contains or not a substring. Ex: `property:*'*sub*'`, `property:!*'*sub*'`
-• Dates and timestamps format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
-"""
+FQL_DOCUMENTATION = FQL_BASE_OPERATORS
 
 # List of tuples containing filter options data: (name, type, description)
 KUBERNETES_CONTAINERS_FQL_FILTERS = [

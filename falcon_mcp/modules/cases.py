@@ -156,9 +156,7 @@ class CasesModule(BaseModule):
             )
 
         if not case_ids:
-            return self._format_fql_error_response(
-                [], filter, SEARCH_CASES_FQL_DOCUMENTATION
-            )
+            return self._format_empty_response(filter)
 
         details = self._base_get_by_ids(
             operation="entities_cases_post_v2",

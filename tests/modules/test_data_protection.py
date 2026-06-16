@@ -81,7 +81,7 @@ class TestDataProtectionModule(TestModules):
         self.assertEqual(result[0]["name"], "Credit Card Detection")
 
     def test_search_classifications_empty_results(self):
-        """Test that empty search returns FQL guide response."""
+        """Test that empty search returns clean empty response."""
         query_response = {
             "status_code": 200,
             "body": {"resources": []},
@@ -93,9 +93,10 @@ class TestDataProtectionModule(TestModules):
         )
 
         self.assertIsInstance(result, dict)
-        self.assertIn("fql_guide", result)
-        self.assertIn("hint", result)
+        self.assertEqual(result["results"], [])
+        self.assertEqual(result["total"], 0)
         self.assertEqual(result["filter_used"], "name:~'nonexistent'")
+        self.assertNotIn("fql_guide", result)
 
     def test_search_classifications_error_response(self):
         """Test that an API error returns FQL guide with error hint."""
@@ -165,7 +166,7 @@ class TestDataProtectionModule(TestModules):
         self.assertEqual(params.get("platform_name"), "mac")
 
     def test_search_policies_empty_results(self):
-        """Test that empty policy search returns FQL guide response."""
+        """Test that empty policy search returns clean empty response."""
         query_response = {
             "status_code": 200,
             "body": {"resources": []},
@@ -177,7 +178,9 @@ class TestDataProtectionModule(TestModules):
         )
 
         self.assertIsInstance(result, dict)
-        self.assertIn("fql_guide", result)
+        self.assertEqual(result["results"], [])
+        self.assertEqual(result["total"], 0)
+        self.assertNotIn("fql_guide", result)
 
     def test_search_policies_error_response(self):
         """Test that policy error returns FQL guide."""
@@ -237,7 +240,7 @@ class TestDataProtectionModule(TestModules):
         self.assertEqual(result[0]["type"], "predefined")
 
     def test_search_content_patterns_empty_results(self):
-        """Test that empty content pattern search returns FQL guide response."""
+        """Test that empty content pattern search returns clean empty response."""
         query_response = {
             "status_code": 200,
             "body": {"resources": []},
@@ -249,7 +252,9 @@ class TestDataProtectionModule(TestModules):
         )
 
         self.assertIsInstance(result, dict)
-        self.assertIn("fql_guide", result)
+        self.assertEqual(result["results"], [])
+        self.assertEqual(result["total"], 0)
+        self.assertNotIn("fql_guide", result)
 
     def test_search_content_patterns_error_response(self):
         """Test that content pattern error returns FQL guide."""

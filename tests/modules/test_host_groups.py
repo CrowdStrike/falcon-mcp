@@ -75,7 +75,7 @@ class TestHostGroupsModule(TestModules):
         self.assertEqual(result[0]["id"], "group-1")
 
     def test_search_host_groups_empty_results_returns_fql_guide(self):
-        """Test host group search empty results include FQL guide context."""
+        """Test host group search empty results return clean empty response."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": []},
@@ -85,8 +85,9 @@ class TestHostGroupsModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertIn("fql_guide", result)
-        self.assertIn("No results matched", result["hint"])
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["filter_used"], "name:'nonexistent'")
+        self.assertNotIn("fql_guide", result)
 
     def test_search_host_groups_error_returns_fql_guide(self):
         """Test host group search errors include FQL guide context."""

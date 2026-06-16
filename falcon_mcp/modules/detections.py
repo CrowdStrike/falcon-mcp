@@ -142,9 +142,9 @@ class DetectionsModule(BaseModule):
                 [detection_ids], filter, SEARCH_DETECTIONS_FQL_DOCUMENTATION
             )
 
-        # Handle empty results - return with FQL guide
+        # Handle empty results
         if not detection_ids:
-            return self._format_fql_error_response([], filter, SEARCH_DETECTIONS_FQL_DOCUMENTATION)
+            return self._format_empty_response(filter)
 
         # Get detection details - past FQL concerns, normal API flow
         details = self._base_get_by_ids(

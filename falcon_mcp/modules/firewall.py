@@ -145,9 +145,7 @@ class FirewallModule(BaseModule):
             return [rule_ids]
 
         if not rule_ids:
-            if filter:
-                return self._format_fql_error_response([], filter, SEARCH_FIREWALL_RULES_FQL_DOCUMENTATION)
-            return []
+            return self._format_empty_response(filter)
 
         details = self._base_get_by_ids(
             operation="get_rules",
@@ -217,9 +215,7 @@ class FirewallModule(BaseModule):
             return [rule_group_ids]
 
         if not rule_group_ids:
-            if filter:
-                return self._format_fql_error_response([], filter, SEARCH_FIREWALL_RULES_FQL_DOCUMENTATION)
-            return []
+            return self._format_empty_response(filter)
 
         details = self._base_get_by_ids(
             operation="get_rule_groups",
@@ -287,9 +283,7 @@ class FirewallModule(BaseModule):
             return [policy_rule_ids]
 
         if not policy_rule_ids:
-            if filter:
-                return self._format_fql_error_response([], filter, SEARCH_FIREWALL_RULES_FQL_DOCUMENTATION)
-            return []
+            return self._format_empty_response(filter)
 
         details = self._base_get_by_ids(
             operation="get_rules",

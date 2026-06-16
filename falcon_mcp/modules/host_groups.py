@@ -169,9 +169,7 @@ class HostGroupsModule(BaseModule):
             )
 
         if not host_groups:
-            return self._format_fql_error_response(
-                [], filter, SEARCH_HOST_GROUPS_FQL_DOCUMENTATION
-            )
+            return self._format_empty_response(filter)
 
         return host_groups
 

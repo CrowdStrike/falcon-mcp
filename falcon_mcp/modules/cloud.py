@@ -392,13 +392,9 @@ class CloudModule(BaseModule):
                 SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION,
             )
 
-        # Handle empty results - return with FQL guide
+        # Handle empty results
         if not asset_ids:
-            return self._format_fql_error_response(
-                [],
-                filter,
-                SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION,
-            )
+            return self._format_empty_response(filter)
 
         # Step 2: Batch fetch full details (API limit: 100 IDs per request)
         details = self._batch_get_cspm_assets(asset_ids)
@@ -598,13 +594,9 @@ class CloudModule(BaseModule):
                 CSPM_IOM_FINDINGS_FQL_DOCUMENTATION,
             )
 
-        # Handle empty results - return with FQL guide
+        # Handle empty results
         if not iom_ids:
-            return self._format_fql_error_response(
-                [],
-                filter,
-                CSPM_IOM_FINDINGS_FQL_DOCUMENTATION,
-            )
+            return self._format_empty_response(filter)
 
         # Step 2: Fetch full IOM entity details (GET with query params, max 100 per call)
         return self._batch_get_iom_entities(iom_ids)

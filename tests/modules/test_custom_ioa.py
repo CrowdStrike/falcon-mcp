@@ -87,7 +87,7 @@ class TestCustomIOAModule(TestModules):
         self.assertEqual(result[0]["id"], "rg-001")
 
     def test_search_ioa_rule_groups_empty_returns_fql_guide(self):
-        """Test that empty results return FQL guide context."""
+        """Test that empty results return clean empty response."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": []},
@@ -97,8 +97,9 @@ class TestCustomIOAModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertIn("fql_guide", result)
-        self.assertIn("No results matched", result["hint"])
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["filter_used"], "name:'nonexistent'")
+        self.assertNotIn("fql_guide", result)
 
     def test_search_ioa_rule_groups_error_returns_fql_guide(self):
         """Test that errors return FQL guide context."""

@@ -143,7 +143,7 @@ class IOCModule(BaseModule):
             )
 
         if not indicator_ids:
-            return self._format_fql_error_response([], filter, SEARCH_IOCS_FQL_DOCUMENTATION)
+            return self._format_empty_response(filter)
 
         details = self._base_get_by_ids(
             operation="indicator_get_v1",

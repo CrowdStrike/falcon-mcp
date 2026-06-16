@@ -226,22 +226,16 @@ class TestDetectionsModule(TestModules):
         self.assertEqual(result, expected_result)
 
 
-    def test_format_fql_error_response_empty_results(self):
-        """Test that empty results include FQL guide for refinement."""
-        from falcon_mcp.resources.detections import SEARCH_DETECTIONS_FQL_DOCUMENTATION
-
-        result = self.module._format_fql_error_response(
-            error_or_empty=[],
+    def test_format_empty_response(self):
+        """Test that empty results return a clean response without FQL guide."""
+        result = self.module._format_empty_response(
             filter_used="status:'nonexistent'",
-            fql_documentation=SEARCH_DETECTIONS_FQL_DOCUMENTATION
         )
 
         self.assertEqual(result["results"], [])
+        self.assertEqual(result["total"], 0)
         self.assertEqual(result["filter_used"], "status:'nonexistent'")
-        self.assertIn("fql_guide", result)
-        self.assertEqual(result["fql_guide"], SEARCH_DETECTIONS_FQL_DOCUMENTATION)
-        self.assertIn("hint", result)
-        self.assertIn("No results matched", result["hint"])
+        self.assertNotIn("fql_guide", result)
 
     def test_format_fql_error_response_error(self):
         """Test that error responses include FQL guide."""
@@ -249,7 +243,7 @@ class TestDetectionsModule(TestModules):
 
         error_result = {"error": "Invalid filter syntax", "details": "..."}
         result = self.module._format_fql_error_response(
-            error_or_empty=[error_result],
+            errors=[error_result],
             filter_used="bad filter",
             fql_documentation=SEARCH_DETECTIONS_FQL_DOCUMENTATION
         )

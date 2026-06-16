@@ -117,9 +117,7 @@ class CorrelationRulesModule(BaseModule):
             )
 
         if not result:
-            return self._format_fql_error_response(
-                [], filter, SEARCH_CORRELATION_RULES_FQL_DOCUMENTATION
-            )
+            return self._format_empty_response(filter)
 
         return result
 

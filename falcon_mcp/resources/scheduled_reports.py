@@ -2,6 +2,7 @@
 Contains Scheduled Reports resources.
 """
 
+from falcon_mcp.common.fql import FQL_BASE_OPERATORS
 from falcon_mcp.common.utils import generate_md_table
 
 # Scheduled report/search entity FQL filters
@@ -209,31 +210,7 @@ SEARCH_SCHEDULED_REPORTS_FQL_FILTERS = [
 
 SEARCH_SCHEDULED_REPORTS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Scheduled Reports Guide
 
-=== BASIC SYNTAX ===
-property_name:[operator]'value'
-
-=== AVAILABLE OPERATORS ===
-• No operator = equals (default)
-• ! = not equal to
-• > = greater than
-• >= = greater than or equal
-• < = less than
-• <= = less than or equal
-• ~ = text match (ignores case, spaces, punctuation)
-• !~ = does not text match
-• * = wildcard matching (one or more characters)
-
-=== DATA TYPES & SYNTAX ===
-• Strings: 'value' or ['exact_value'] for exact match
-• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
-• Booleans: true or false (no quotes)
-• Numbers: 123 (no quotes)
-• Wildcards: 'partial*' or '*partial' or '*partial*'
-
-=== COMBINING CONDITIONS ===
-• + = AND condition
-• , = OR condition
-• ( ) = Group expressions
+""" + FQL_BASE_OPERATORS + """
 
 === MULTIPLE VALUES ===
 Use brackets for OR logic: filter=type:['hosts','filevantage']
@@ -418,31 +395,7 @@ SEARCH_REPORT_EXECUTIONS_FQL_FILTERS = [
 
 SEARCH_REPORT_EXECUTIONS_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Search Report Executions Guide
 
-=== BASIC SYNTAX ===
-property_name:[operator]'value'
-
-=== AVAILABLE OPERATORS ===
-• No operator = equals (default)
-• ! = not equal to
-• > = greater than
-• >= = greater than or equal
-• < = less than
-• <= = less than or equal
-• ~ = text match (ignores case, spaces, punctuation)
-• !~ = does not text match
-• * = wildcard matching (one or more characters)
-
-=== DATA TYPES & SYNTAX ===
-• Strings: 'value' or ['exact_value'] for exact match
-• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
-• Booleans: true or false (no quotes)
-• Numbers: 123 (no quotes)
-• Wildcards: 'partial*' or '*partial' or '*partial*'
-
-=== COMBINING CONDITIONS ===
-• + = AND condition
-• , = OR condition
-• ( ) = Group expressions
+""" + FQL_BASE_OPERATORS + """
 
 === MULTIPLE VALUES ===
 Use brackets for OR logic: filter=status:['FAILED','NO_DATA']

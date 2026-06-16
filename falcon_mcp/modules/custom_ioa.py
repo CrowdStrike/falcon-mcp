@@ -189,9 +189,7 @@ class CustomIOAModule(BaseModule):
             )
 
         if not result:
-            return self._format_fql_error_response(
-                [], filter, SEARCH_IOA_RULE_GROUPS_FQL_DOCUMENTATION
-            )
+            return self._format_empty_response(filter)
 
         return result
 

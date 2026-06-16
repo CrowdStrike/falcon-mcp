@@ -48,6 +48,7 @@ class FalconMCPServer:
         port: int = 8000,
         member_cid: str | None = None,
         proxy: str | None = None,
+        dynamic: bool = False,
     ):
         """Initialize the Falcon MCP server.
 
@@ -73,6 +74,7 @@ class FalconMCPServer:
         self.api_key = api_key
         self.host = host
         self.port = port
+        self.dynamic = dynamic
 
         self.enabled_modules = enabled_modules or set(registry.get_module_names())
 
@@ -132,7 +134,7 @@ class FalconMCPServer:
         module_word = "module" if module_count == 1 else "modules"
 
         logger.info(
-            "Falcon MCP v%s — %d %s, %d %s, %d %s",
+            "Falcon MCP v%s — %d %s, %d %s, %d %s%s",
             get_version(),
             module_count,
             module_word,
@@ -140,6 +142,7 @@ class FalconMCPServer:
             tool_word,
             resource_count,
             resource_word,
+            " (dynamic mode)" if self.dynamic else "",
         )
 
     def _register_tools(self) -> int:
@@ -148,14 +151,8 @@ class FalconMCPServer:
         Returns:
             int: Number of tools registered
         """
-        # Register core tools directly
-        self.server.add_tool(
-            self.falcon_check_connectivity,
-            name="falcon_check_connectivity",
-            annotations=READ_ONLY_ANNOTATIONS,
-            structured_output=False,
-        )
-
+        # falcon_list_enabled_modules is always registered — dynamic mode's no-results
+        # hint references it by name, and it's useful in both modes.
         self.server.add_tool(
             self.list_enabled_modules,
             name="falcon_list_enabled_modules",
@@ -163,20 +160,35 @@ class FalconMCPServer:
             structured_output=False,
         )
 
-        self.server.add_tool(
-            self.list_modules,
-            name="falcon_list_modules",
-            annotations=READ_ONLY_ANNOTATIONS,
-            structured_output=False,
-        )
+        if self.dynamic:
+            # Dynamic mode: expose only the discovery/execution meta-tools plus
+            # falcon_list_enabled_modules above (3 tools total) so the context window
+            # stays minimal.
+            from falcon_mcp.dynamic import DynamicMode
 
-        tool_count = 3  # the tools added above
+            dynamic_mode = DynamicMode(self.modules, self.server)
+            dynamic_mode.register()
+            tool_count = 3  # falcon_list_enabled_modules + falcon_search_tools + falcon_execute_tool
+        else:
+            # Normal mode: register all three core tools and then each module's tools.
+            self.server.add_tool(
+                self.falcon_check_connectivity,
+                name="falcon_check_connectivity",
+                annotations=READ_ONLY_ANNOTATIONS,
+                structured_output=False,
+            )
 
-        # Register tools from modules
-        for module in self.modules.values():
-            module.register_tools(self.server)
+            self.server.add_tool(
+                self.list_modules,
+                name="falcon_list_modules",
+                annotations=READ_ONLY_ANNOTATIONS,
+                structured_output=False,
+            )
 
-        tool_count += sum(len(getattr(m, "tools", [])) for m in self.modules.values())
+            for module in self.modules.values():
+                module.register_tools(self.server)
+
+            tool_count = 3 + sum(len(getattr(m, "tools", [])) for m in self.modules.values())
 
         return tool_count
 
@@ -385,6 +397,15 @@ def parse_args() -> argparse.Namespace:
         "Example: http://proxy.corp.example.com:8080",
     )
 
+    # Dynamic mode
+    parser.add_argument(
+        "--dynamic",
+        action="store_true",
+        default=os.environ.get("FALCON_MCP_DYNAMIC", "").lower() == "true",
+        help="Enable dynamic mode: exposes 3 tools (list-modules + search + execute) instead of "
+        "all module tools (env: FALCON_MCP_DYNAMIC)",
+    )
+
     return parser.parse_args()
 
 
@@ -409,6 +430,7 @@ def main() -> None:
             port=args.port,
             member_cid=args.member_cid,
             proxy=args.proxy,
+            dynamic=args.dynamic,
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport)
