@@ -263,7 +263,7 @@ class TestIOCModule(TestModules):
         """Test removing IOCs by explicit IDs."""
         self.mock_client.command.return_value = {
             "status_code": 200,
-            "body": {"resources": [{"id": "ioc-id-1"}]},
+            "body": {"resources": ["ioc-id-1"]},
         }
 
         result = self.module.remove_iocs(
@@ -274,14 +274,15 @@ class TestIOCModule(TestModules):
             "indicator_delete_v1",
             parameters={"ids": ["ioc-id-1"], "comment": "cleanup"},
         )
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["id"], "ioc-id-1")
+        self.assertEqual(result["status"], "deleted")
+        self.assertEqual(result["deleted_ids"], ["ioc-id-1"])
+        self.assertEqual(result["count"], 1)
 
     def test_remove_iocs_by_filter(self):
         """Test removing IOCs by FQL filter."""
         self.mock_client.command.return_value = {
             "status_code": 200,
-            "body": {"resources": [{"id": "ioc-id-1"}, {"id": "ioc-id-2"}]},
+            "body": {"resources": ["ioc-id-1", "ioc-id-2"]},
         }
 
         result = self.module.remove_iocs(
@@ -297,7 +298,8 @@ class TestIOCModule(TestModules):
             call_args[1]["parameters"]["filter"], "source:'mcp'+expired:true"
         )
         self.assertEqual(call_args[1]["parameters"]["comment"], "cleanup expired IOCs")
-        self.assertEqual(len(result), 2)
+        self.assertEqual(result["deleted_ids"], ["ioc-id-1", "ioc-id-2"])
+        self.assertEqual(result["count"], 2)
 
     def test_remove_iocs_validation_error(self):
         """Test remove_iocs requires either ids or filter."""
@@ -458,5 +460,3 @@ class TestIOCModule(TestModules):
 
 if __name__ == "__main__":
     unittest.main()
-
-
