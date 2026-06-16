@@ -40,7 +40,8 @@ Returns the created indicator records on success.
 Remove custom IOCs by IDs or FQL filter.
 
 Provide either specific IDs or an FQL filter for bulk removal. If both are
-given, filter takes precedence. Returns an empty list on success.
+given, filter takes precedence. Returns a success envelope with the deleted
+IOC IDs and a count on success, or an error dict wrapped in a list on failure.
 
 **Example prompts:**
 

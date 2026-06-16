@@ -261,9 +261,10 @@ class TestIOCModule(TestModules):
 
     def test_remove_iocs_by_ids_success(self):
         """Test removing IOCs by explicit IDs."""
+        # indicator_delete_v1 returns deleted IDs as plain strings, not objects
         self.mock_client.command.return_value = {
             "status_code": 200,
-            "body": {"resources": [{"id": "ioc-id-1"}]},
+            "body": {"resources": ["ioc-id-1"]},
         }
 
         result = self.module.remove_iocs(
@@ -274,14 +275,17 @@ class TestIOCModule(TestModules):
             "indicator_delete_v1",
             parameters={"ids": ["ioc-id-1"], "comment": "cleanup"},
         )
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["id"], "ioc-id-1")
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["deleted_ids"], ["ioc-id-1"])
+        self.assertEqual(result["deleted_count"], 1)
 
     def test_remove_iocs_by_filter(self):
         """Test removing IOCs by FQL filter."""
+        # indicator_delete_v1 returns deleted IDs as plain strings, not objects
         self.mock_client.command.return_value = {
             "status_code": 200,
-            "body": {"resources": [{"id": "ioc-id-1"}, {"id": "ioc-id-2"}]},
+            "body": {"resources": ["ioc-id-1", "ioc-id-2"]},
         }
 
         result = self.module.remove_iocs(
@@ -297,7 +301,35 @@ class TestIOCModule(TestModules):
             call_args[1]["parameters"]["filter"], "source:'mcp'+expired:true"
         )
         self.assertEqual(call_args[1]["parameters"]["comment"], "cleanup expired IOCs")
-        self.assertEqual(len(result), 2)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["deleted_ids"], ["ioc-id-1", "ioc-id-2"])
+        self.assertEqual(result["deleted_count"], 2)
+
+    def test_remove_iocs_success_returns_envelope_not_validation_error(self):
+        """Regression test: remove_iocs must return a typed success envelope on success.
+
+        indicator_delete_v1 returns resources as a list of plain ID strings, not
+        objects. The tool was previously annotated -> list[dict[str, Any]], so a
+        list[str] response caused a Pydantic ValidationError on the success path
+        (GitHub issue #443). The fix wraps the deleted IDs in a structured dict
+        so the return type is always valid and the success/failure signal is
+        unambiguous.
+        """
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": ["ioc-id-1", "ioc-id-2"]},
+        }
+
+        result = self.module.remove_iocs(
+            ids=["ioc-id-1", "ioc-id-2"], filter=None, comment=None, from_parent=None
+        )
+
+        # Must be a dict, not a list[str] (which would fail validation)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(sorted(result["deleted_ids"]), ["ioc-id-1", "ioc-id-2"])
+        self.assertEqual(result["deleted_count"], 2)
 
     def test_remove_iocs_validation_error(self):
         """Test remove_iocs requires either ids or filter."""
