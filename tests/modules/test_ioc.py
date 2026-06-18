@@ -457,6 +457,31 @@ class TestIOCModule(TestModules):
             ),
         )
 
+    def test_remove_iocs_success_returns_envelope_not_validation_error(self):
+        """Regression test: remove_iocs must return a typed success envelope on success.
+
+        indicator_delete_v1 returns resources as a list of plain ID strings, not
+        objects. The tool was previously annotated -> list[dict[str, Any]], so a
+        list[str] response caused a Pydantic ValidationError on the success path
+        (GitHub issue #443). The fix wraps the deleted IDs in a structured dict
+        so the return type is always valid and the success/failure signal is
+        unambiguous.
+        """
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": ["ioc-id-1", "ioc-id-2"]},
+        }
+
+        result = self.module.remove_iocs(
+            ids=["ioc-id-1", "ioc-id-2"], filter=None, comment=None, from_parent=None
+        )
+
+        # Must be a dict, not a list[str] (which would fail output-schema validation)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["status"], "deleted")
+        self.assertEqual(sorted(result["deleted_ids"]), ["ioc-id-1", "ioc-id-2"])
+        self.assertEqual(result["count"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
