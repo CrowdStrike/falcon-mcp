@@ -292,11 +292,11 @@ class IOCModule(BaseModule):
             default=None,
             description="Limit action to IOCs originating from the MSSP parent.",
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> dict[str, Any] | list[dict[str, Any]]:
         """Remove custom IOCs by IDs or FQL filter.
 
         Provide either specific IDs or an FQL filter for bulk removal. If both are
-        given, filter takes precedence. Returns an empty list on success.
+        given, filter takes precedence. Returns a success summary with deleted IOC IDs.
         """
         if not ids and not filter:
             return [
@@ -321,7 +321,11 @@ class IOCModule(BaseModule):
         if self._is_error(result):
             return [result]
 
-        return result
+        return {
+            "status": "deleted",
+            "deleted_ids": result,
+            "count": len(result),
+        }
 
     def _build_add_ioc_payload(
         self,
