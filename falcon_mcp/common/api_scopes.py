@@ -233,6 +233,13 @@ API_SCOPE_REQUIREMENTS = {
     "deleteRTResponsePolicies": ["Response Policies:write"],
     "performRTResponsePoliciesAction": ["Response Policies:write"],
     "setRTResponsePoliciesPrecedence": ["Response Policies:write"],
+    # Recon (Falcon Intelligence Recon) operations
+    "QueryNotificationsV1": ["Monitoring rules (Falcon Intelligence Recon):read"],
+    "GetNotificationsDetailedV1": ["Monitoring rules (Falcon Intelligence Recon):read"],
+    "QueryRulesV1": ["Monitoring rules (Falcon Intelligence Recon):read"],
+    "GetRulesV1": ["Monitoring rules (Falcon Intelligence Recon):read"],
+    "QueryNotificationsExposedDataRecordsV1": ["Monitoring rules (Falcon Intelligence Recon):read"],
+    "GetNotificationsExposedDataRecordsV1": ["Monitoring rules (Falcon Intelligence Recon):read"],
     # Policies operations - Content Update
     "queryCombinedContentUpdatePolicies": ["Content Update Policies:read"],
     "queryContentUpdatePolicies": ["Content Update Policies:read"],
