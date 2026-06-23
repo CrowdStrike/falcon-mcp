@@ -195,7 +195,12 @@ class TestCloudIntegration(BaseIntegrationTest):
         )
 
         self.assert_no_error(result, context="search_cspm_assets with tag filter")
-        self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets with tag filter")
+        # May return empty dict if no assets match; both are valid
+        if isinstance(result, list):
+            self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets with tag filter")
+        else:
+            assert isinstance(result, dict), "Expected dict or list response for tag filter"
+            assert "results" in result or "total" in result, "Empty response dict should have results/total keys"
 
     def test_search_cspm_assets_with_sort(self):
         """Test search_cspm_assets with sort parameter."""
