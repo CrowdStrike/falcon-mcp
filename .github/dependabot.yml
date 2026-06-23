@@ -12,6 +12,11 @@ updates:
       - "python"
     groups:
       python-all:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      python-security:
+        applies-to: security-updates
         patterns:
           - "*"
 
