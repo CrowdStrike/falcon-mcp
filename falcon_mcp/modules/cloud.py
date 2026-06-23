@@ -18,6 +18,7 @@ from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.cloud import (
+    CLOUD_RISKS_FQL_DOCUMENTATION,
     CSPM_IOM_FINDINGS_FQL_DOCUMENTATION,
     IMAGES_VULNERABILITIES_FQL_DOCUMENTATION,
     KUBERNETES_CONTAINERS_FQL_DOCUMENTATION,
@@ -98,6 +99,12 @@ class CloudModule(BaseModule):
             ),
         )
 
+        self._add_tool(
+            server=server,
+            method=self.search_cloud_risks,
+            name="search_cloud_risks",
+        )
+
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.
         Args:
@@ -149,6 +156,14 @@ class CloudModule(BaseModule):
             server,
             cspm_iom_findings_fql_resource,
         )
+
+        cloud_risks_fql_resource = TextResource(
+            uri=AnyUrl("falcon://cloud/cloud-risks/fql-guide"),
+            name="falcon_search_cloud_risks_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_cloud_risks` tool.",
+            text=CLOUD_RISKS_FQL_DOCUMENTATION,
+        )
+        self._add_resource(server, cloud_risks_fql_resource)
 
     def search_kubernetes_containers(
         self,
@@ -600,6 +615,53 @@ class CloudModule(BaseModule):
 
         # Step 2: Fetch full IOM entity details (GET with query params, max 100 per call)
         return self._batch_get_iom_entities(iom_ids)
+
+    def search_cloud_risks(
+        self,
+        filter: str | None = Field(
+            default=None,
+            description="FQL filter expression. See `falcon://cloud/cloud-risks/fql-guide` for syntax.",
+            examples=["severity:'critical'+status:'open'", "cloud_provider:'aws'+groups.environment:'production'"],
+        ),
+        limit: int = Field(
+            default=100,
+            ge=1,
+            le=1000,
+            description="Maximum number of risks to return (default: 100; max: 1000). Use with offset for pagination.",
+        ),
+        offset: int | None = Field(
+            default=None,
+            description="Starting index of overall result set from which to return results.",
+        ),
+        sort: str | None = Field(
+            default=None,
+            description=(
+                "Sort risks using field|asc or field|desc syntax.\n\n"
+                "Supported fields: account_id, account_name, asset_id, asset_name, "
+                "asset_region, asset_type, cloud_provider, first_seen, last_seen, "
+                "resolved_at, rule_name, service_category, severity, status\n\n"
+                "Examples: 'severity|desc', 'first_seen|desc', 'account_name|asc'"
+            ),
+            examples=["severity|desc", "first_seen|desc", "account_name|asc"],
+        ),
+    ) -> list[dict[str, Any]]:
+        """Search for cloud risks in your CrowdStrike environment.
+
+        Use this to find risks by severity, status, cloud provider, account, asset, rule,
+        or threat actor. Consult falcon://cloud/cloud-risks/fql-guide before constructing
+        filter expressions. Returns full risk details including severity, lifecycle status,
+        asset context, and threat intelligence attribution.
+        """
+        return self._base_search_api_call(
+            operation="combined_cloud_risks",
+            search_params={
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            },
+            error_message="Failed to search cloud risks",
+        )
 
     def _batch_get_iom_entities(self, iom_ids: list[str]) -> list[dict[str, Any]] | dict[str, Any]:
         """Fetch IOM entity details in batches of 100 (API limit).

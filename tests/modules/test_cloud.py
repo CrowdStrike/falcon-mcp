@@ -28,6 +28,7 @@ class TestCloudModule(TestModules):
             "falcon_search_cspm_suppression_rules",
             "falcon_create_cspm_suppression_rule",
             "falcon_delete_cspm_suppression_rules",
+            "falcon_search_cloud_risks",
         ]
         self.assert_tools_registered(expected_tools)
 
@@ -38,6 +39,7 @@ class TestCloudModule(TestModules):
             "falcon_images_vulnerabilities_fql_filter_guide",
             "falcon_search_cspm_assets_fql_guide",
             "falcon_search_iom_findings_fql_guide",
+            "falcon_search_cloud_risks_fql_guide",
         ]
         self.assert_resources_registered(expected_resources)
 
@@ -753,6 +755,85 @@ class TestCloudModule(TestModules):
                 openWorldHint=True,
             ),
         )
+
+    def test_register_tools_includes_cloud_risks(self):
+        """Test that cloud risks tools are registered."""
+        self.module.register_tools(self.mock_server)
+        registered = [call.kwargs["name"] for call in self.mock_server.add_tool.call_args_list]
+        self.assertIn("falcon_search_cloud_risks", registered)
+
+    def test_register_resources_includes_cloud_risks_fql(self):
+        """Test that cloud risks FQL resource is registered."""
+        self.module.register_resources(self.mock_server)
+        registered = [
+            call.kwargs["resource"].name
+            for call in self.mock_server.add_resource.call_args_list
+        ]
+        self.assertIn("falcon_search_cloud_risks_fql_guide", registered)
+
+    def test_search_cloud_risks_success(self):
+        """Test search_cloud_risks returns entities on success."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "risk-1", "severity": "critical", "status": "open"},
+                    {"id": "risk-2", "severity": "high", "status": "open"},
+                ]
+            },
+        }
+        result = self.module.search_cloud_risks(
+            filter="severity:'critical'", limit=10, offset=None, sort=None
+        )
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "risk-1")
+
+    def test_search_cloud_risks_empty(self):
+        """Test search_cloud_risks returns empty list when no results."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+        result = self.module.search_cloud_risks(
+            filter=None, limit=100, offset=None, sort=None
+        )
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 0)
+
+    def test_search_cloud_risks_api_error(self):
+        """Test search_cloud_risks returns error dict on API failure."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid filter"}]},
+        }
+        result = self.module.search_cloud_risks(
+            filter="invalid!", limit=10, offset=None, sort=None
+        )
+        self.assertIsInstance(result, (dict, list))
+        if isinstance(result, list):
+            self.assertTrue(len(result) > 0)
+            self.assertIn("error", result[0])
+        else:
+            self.assertIn("error", result)
+
+    def test_search_cloud_risks_passes_all_params(self):
+        """Test search_cloud_risks passes filter, sort, limit, offset to API."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+        self.module.search_cloud_risks(
+            filter="cloud_provider:'aws'",
+            limit=50,
+            offset=100,
+            sort="severity|desc",
+        )
+        call_params = self.mock_client.command.call_args[1]["parameters"]
+        self.assertEqual(call_params["filter"], "cloud_provider:'aws'")
+        self.assertEqual(call_params["limit"], 50)
+        self.assertEqual(call_params["offset"], 100)
+        self.assertEqual(call_params["sort"], "severity|desc")
 
 
 if __name__ == "__main__":
