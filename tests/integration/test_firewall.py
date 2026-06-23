@@ -52,7 +52,7 @@ class TestFirewallIntegration(BaseIntegrationTest):
         if len(result) > 0:
             self.assert_search_returns_details(
                 result,
-                expected_fields=["id", "platform"],
+                expected_fields=["id", "platform_ids"],
                 context="search_firewall_rules",
             )
 
