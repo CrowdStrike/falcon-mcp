@@ -84,8 +84,8 @@ disallow_incomplete_defs = false
 target-version = "py311"
 line-length = 100
 
-[tool.setuptools]
-packages = ["falcon_mcp"]
+[tool.setuptools.packages.find]
+include = ["falcon_mcp*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

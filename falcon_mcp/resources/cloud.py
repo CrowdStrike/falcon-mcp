@@ -1337,10 +1337,12 @@ CLOUD_RISKS_FQL_FILTERS = [
 
 CLOUD_RISKS_FQL_DOCUMENTATION = (
     FQL_DOCUMENTATION
-    + "\n\n## Supported Filter Fields\n\n"
-    + generate_md_table(CLOUD_RISKS_FQL_FILTERS)
     + """
-## Supported Sort Fields
+=== falcon_search_cloud_risks FQL filter available fields ===
+
+""" + generate_md_table(CLOUD_RISKS_FQL_FILTERS) + """
+
+=== falcon_search_cloud_risks FQL filter sort fields ===
 
 Use `field|asc` or `field|desc` suffix:
 
@@ -1348,17 +1350,24 @@ Use `field|asc` or `field|desc` suffix:
 `cloud_provider`, `first_seen`, `last_seen`, `resolved_at`, `rule_name`,
 `service_category`, `severity`, `status`
 
-## Example Queries
+=== falcon_search_cloud_risks FQL filter examples ===
 
-- Open critical risks in AWS: `severity:'critical'+status:'open'+cloud_provider:'aws'`
-- Risks in production group: `groups.environment:'production'`
-- Recent risks (last 7 days): `first_seen:>'now-7d'`
-- Resolved risks this month: `resolved_at:>'now-30d'+status:'resolved'`
-- Suppressed risks: `status:'suppressed'`
-- Risks by service category: `service_category:'Storage'+severity:'critical'`
+# Open critical risks in AWS
+severity:'critical'+status:'open'+cloud_provider:'aws'
 
-**Note:** Operator support (exact, wildcard, range) varies per field and must be
-validated against the live API. The examples above use common patterns — if a query
-returns no results unexpectedly, try an exact match (`field:'value'`) as the baseline.
+# Risks in production group
+groups.environment:'production'
+
+# Recent risks (last 7 days)
+first_seen:>'now-7d'
+
+# Resolved risks this month
+resolved_at:>'now-30d'+status:'resolved'
+
+# Suppressed risks
+status:'suppressed'
+
+# Risks by service category
+service_category:'Storage'+severity:'critical'
 """
 )

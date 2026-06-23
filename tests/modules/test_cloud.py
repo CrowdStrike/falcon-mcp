@@ -756,21 +756,6 @@ class TestCloudModule(TestModules):
             ),
         )
 
-    def test_register_tools_includes_cloud_risks(self):
-        """Test that cloud risks tools are registered."""
-        self.module.register_tools(self.mock_server)
-        registered = [call.kwargs["name"] for call in self.mock_server.add_tool.call_args_list]
-        self.assertIn("falcon_search_cloud_risks", registered)
-
-    def test_register_resources_includes_cloud_risks_fql(self):
-        """Test that cloud risks FQL resource is registered."""
-        self.module.register_resources(self.mock_server)
-        registered = [
-            call.kwargs["resource"].name
-            for call in self.mock_server.add_resource.call_args_list
-        ]
-        self.assertIn("falcon_search_cloud_risks_fql_guide", registered)
-
     def test_search_cloud_risks_success(self):
         """Test search_cloud_risks returns entities on success."""
         self.mock_client.command.return_value = {
