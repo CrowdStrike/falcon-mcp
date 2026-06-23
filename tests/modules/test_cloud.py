@@ -772,6 +772,7 @@ class TestCloudModule(TestModules):
         result = self.module.search_cloud_risks(
             filter="severity:'critical'", limit=10, offset=None, sort=None
         )
+        self.assertEqual(self.mock_client.command.call_args[0][0], "combined_cloud_risks")
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "risk-1")
@@ -797,12 +798,8 @@ class TestCloudModule(TestModules):
         result = self.module.search_cloud_risks(
             filter="invalid!", limit=10, offset=None, sort=None
         )
-        self.assertIsInstance(result, (dict, list))
-        if isinstance(result, list):
-            self.assertTrue(len(result) > 0)
-            self.assertIn("error", result[0])
-        else:
-            self.assertIn("error", result)
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result)
 
     def test_search_cloud_risks_passes_all_params(self):
         """Test search_cloud_risks passes filter, sort, limit, offset to API."""

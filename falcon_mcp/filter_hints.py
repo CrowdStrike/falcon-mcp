@@ -60,6 +60,10 @@ FILTER_HINTS: dict[str, str] = {
         "service, region, resource_type, account_name, rule_name."
     ),
     # === Cloud: Cloud Risks ===
+    "falcon_search_cloud_groups": (
+        "Common fields: name, created_at (UTC datetime), updated_at (UTC datetime). "
+        "Group tag fields: environment, business_unit, business_impact."
+    ),
     "falcon_search_cloud_risks": (
         "Common fields: severity (critical|high|medium|low|informational), "
         "status (open|resolved|suppressed), cloud_provider (aws|azure|gcp), "
