@@ -193,6 +193,8 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Mark detection abc123 as in_progress",
         "Assign detection abc123 to analyst@example.com",
         "Close these detections and add a comment: resolved via playbook",
+        "Mark detection abc123 as a true positive and close it",
+        "Remove all fc/ prefixed tags from this detection",
     ],
     # Discover
     "falcon_search_applications": [
