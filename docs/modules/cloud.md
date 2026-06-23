@@ -10,6 +10,8 @@ Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Con
 
 - `Cloud Security API Assets:read`
 - `Cloud Security API Detections:read`
+- `Cloud Security API Groups:read`
+- `Cloud Security API Risks:read`
 - `Cloud Security Policies:read`
 - `Falcon Container Image:read`
 - `Cloud Security Policies:write`
@@ -66,6 +68,54 @@ first. Returns a confirmation response.
 
 - "Delete CSPM suppression rule abc-123"
 - "Remove the CSPM IOM suppression rule for the S3 public access finding"
+
+### `falcon_get_cloud_groups`
+
+**Required scopes:** `Cloud Security API Groups:read`
+
+Get detailed information for cloud groups by ID.
+
+Use when you already have specific cloud group IDs from `falcon_search_cloud_groups`
+results. Returns full group details including name, selectors, business impact,
+and environment tags.
+
+**Example prompts:**
+
+- "Get the details for cloud group abc-123"
+
+### `falcon_search_cloud_groups`
+
+**Required scopes:** `Cloud Security API Groups:read`
+
+List cloud groups in your CrowdStrike environment.
+
+Use this to discover available cloud groups before filtering risks by
+`cloud_group` or `groups.*` FQL fields in `falcon_search_cloud_risks`.
+Returns full group details including name, selectors, and tags.
+
+**Example prompts:**
+
+- "What cloud groups are configured in my environment?"
+- "List all cloud groups tagged as production"
+
+### `falcon_search_cloud_risks`
+
+**Required scopes:** `Cloud Security API Risks:read`
+
+Search for cloud risks in your CrowdStrike environment.
+
+Use this to find risks by severity, status, cloud provider, account, asset, rule,
+or threat actor. Consult falcon://cloud/cloud-risks/fql-guide before constructing
+filter expressions. Returns full risk details including severity, lifecycle status,
+asset context, and threat intelligence attribution.
+
+**Example prompts:**
+
+- "Show me all open critical cloud risks in AWS"
+- "Which account has the most unresolved critical risks?"
+- "What new cloud risks appeared in the last 7 days?"
+- "Show me risks for the production cloud group"
+- "What cloud risks have been suppressed and why?"
 
 ### `falcon_search_cspm_assets`
 
@@ -150,3 +200,4 @@ expressions. Returns full container details including image, status, and vulnera
 - **`falcon://cloud/images-vulnerabilities/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_images_vulnerabilities` tool.
 - **`falcon://cloud/cspm-assets/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_cspm_assets` tool.
 - **`falcon://cloud/cspm-iom-findings/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_iom_findings` tool.
+- **`falcon://cloud/cloud-risks/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_cloud_risks` tool.
