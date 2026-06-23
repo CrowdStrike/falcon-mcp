@@ -105,6 +105,18 @@ class CloudModule(BaseModule):
             name="search_cloud_risks",
         )
 
+        self._add_tool(
+            server=server,
+            method=self.search_cloud_groups,
+            name="search_cloud_groups",
+        )
+
+        self._add_tool(
+            server=server,
+            method=self.get_cloud_groups,
+            name="get_cloud_groups",
+        )
+
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.
         Args:
@@ -661,6 +673,71 @@ class CloudModule(BaseModule):
                 "sort": sort,
             },
             error_message="Failed to search cloud risks",
+        )
+
+    def search_cloud_groups(
+        self,
+        filter: str | None = Field(
+            default=None,
+            description=(
+                "FQL filter expression. Supports group properties: name, description, "
+                "created_at, updated_at. Selector properties: cloud_provider, account_id, "
+                "region. Group tags: business_unit, business_impact, environment.\n\n"
+                "Examples: \"name:'prod-group'\", \"environment:'production'\""
+            ),
+        ),
+        limit: int = Field(
+            default=100,
+            ge=1,
+            le=500,
+            description="Maximum number of cloud groups to return (default: 100).",
+        ),
+        offset: int | None = Field(
+            default=None,
+            description="Starting index of overall result set from which to return results.",
+        ),
+        sort: str | None = Field(
+            default=None,
+            description="Sort groups. Default: name|asc. Examples: 'name|asc', 'created_at|desc'",
+            examples=["name|asc", "created_at|desc"],
+        ),
+    ) -> list[dict[str, Any]]:
+        """List cloud groups in your CrowdStrike environment.
+
+        Use this to discover available cloud groups before filtering risks by
+        `cloud_group` or `groups.*` FQL fields in `falcon_search_cloud_risks`.
+        Returns full group details including name, selectors, and tags.
+        """
+        return self._base_search_api_call(
+            operation="ListCloudGroupsExternal",
+            search_params={
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            },
+            error_message="Failed to search cloud groups",
+        )
+
+    def get_cloud_groups(
+        self,
+        ids: list[str] = Field(
+            description="One or more cloud group IDs to retrieve. Find IDs with falcon_search_cloud_groups.",
+        ),
+    ) -> list[dict[str, Any]]:
+        """Get detailed information for cloud groups by ID.
+
+        Use when you already have specific cloud group IDs from `falcon_search_cloud_groups`
+        results. Returns full group details including name, selectors, business impact,
+        and environment tags.
+        """
+        params = prepare_api_parameters({"ids": ids})
+        response = self.client.command("ListCloudGroupsByIDExternal", parameters=params)
+        return handle_api_response(
+            response,
+            operation="ListCloudGroupsByIDExternal",
+            error_message="Failed to get cloud groups",
+            default_result=[],
         )
 
     def _batch_get_iom_entities(self, iom_ids: list[str]) -> list[dict[str, Any]] | dict[str, Any]:

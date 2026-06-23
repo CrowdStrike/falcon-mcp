@@ -60,6 +60,8 @@ API_SCOPE_REQUIREMENTS = {
     "cspm_evaluations_iom_entities": ["Cloud Security API Detections:read"],
     # Cloud Security Risks operations
     "combined_cloud_risks": ["Cloud Security API Risks:read"],
+    "ListCloudGroupsExternal": ["Cloud Security API Groups:read"],
+    "ListCloudGroupsByIDExternal": ["Cloud Security API Groups:read"],
     # CSPM Suppression Rules (override endpoints)
     "QuerySuppressionRules": ["Cloud Security Policies:read"],
     "GetSuppressionRules": ["Cloud Security Policies:read"],

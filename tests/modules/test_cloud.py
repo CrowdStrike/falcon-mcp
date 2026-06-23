@@ -29,6 +29,8 @@ class TestCloudModule(TestModules):
             "falcon_create_cspm_suppression_rule",
             "falcon_delete_cspm_suppression_rules",
             "falcon_search_cloud_risks",
+            "falcon_search_cloud_groups",
+            "falcon_get_cloud_groups",
         ]
         self.assert_tools_registered(expected_tools)
 
@@ -819,6 +821,81 @@ class TestCloudModule(TestModules):
         self.assertEqual(call_params["limit"], 50)
         self.assertEqual(call_params["offset"], 100)
         self.assertEqual(call_params["sort"], "severity|desc")
+
+    def test_search_cloud_groups_success(self):
+        """Test search_cloud_groups returns entities on success."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "grp-1", "name": "prod-group", "environment": "production"},
+                ]
+            },
+        }
+        result = self.module.search_cloud_groups(
+            filter=None, limit=100, offset=None, sort=None
+        )
+        self.mock_client.command.assert_called_once_with(
+            "ListCloudGroupsExternal",
+            parameters={"limit": 100},
+        )
+        self.assertIsInstance(result, list)
+        self.assertEqual(result[0]["id"], "grp-1")
+
+    def test_search_cloud_groups_with_filter(self):
+        """Test search_cloud_groups passes filter param."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+        self.module.search_cloud_groups(
+            filter="environment:'production'", limit=10, offset=None, sort=None
+        )
+        call_params = self.mock_client.command.call_args[1]["parameters"]
+        self.assertEqual(call_params["filter"], "environment:'production'")
+
+    def test_search_cloud_groups_api_error(self):
+        """Test search_cloud_groups returns error dict on API failure."""
+        self.mock_client.command.return_value = {
+            "status_code": 403,
+            "body": {"errors": [{"message": "access denied"}]},
+        }
+        result = self.module.search_cloud_groups(
+            filter=None, limit=100, offset=None, sort=None
+        )
+        self.assertIsInstance(result, (dict, list))
+        if isinstance(result, list):
+            self.assertIn("error", result[0])
+        else:
+            self.assertIn("error", result)
+
+    def test_get_cloud_groups_success(self):
+        """Test get_cloud_groups fetches entities by ID."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "grp-1", "name": "prod-group"},
+                ]
+            },
+        }
+        result = self.module.get_cloud_groups(ids=["grp-1"])
+        self.mock_client.command.assert_called_once_with(
+            "ListCloudGroupsByIDExternal",
+            parameters={"ids": ["grp-1"]},
+        )
+        self.assertIsInstance(result, list)
+        self.assertEqual(result[0]["id"], "grp-1")
+
+    def test_get_cloud_groups_multiple_ids(self):
+        """Test get_cloud_groups accepts multiple IDs."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+        self.module.get_cloud_groups(ids=["grp-1", "grp-2"])
+        call_params = self.mock_client.command.call_args[1]["parameters"]
+        self.assertEqual(call_params["ids"], ["grp-1", "grp-2"])
 
 
 if __name__ == "__main__":
