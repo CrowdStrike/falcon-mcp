@@ -133,6 +133,37 @@ class TestDetectionsModule(TestModules):
         self.assertIn("fql_guide", result)
         self.assertIn("hint", result)
 
+    def test_search_detections_details_error(self):
+        """Test that a details-step error (query ok, details 400) returns the wrapped error."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["detection1"]},
+        }
+        details_response = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "server error"}]},
+        }
+        self.mock_client.command.side_effect = [query_response, details_response]
+
+        result = self.module.search_detections(filter="status:'new'")
+
+        self.assertIsInstance(result, list)
+        self.assertIsInstance(result[0], dict)
+        self.assertIn("error", result[0])
+
+    def test_search_detections_empty_results(self):
+        """Test that an empty query result returns a clean empty response (no FQL guide)."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": []}},
+        ]
+
+        result = self.module.search_detections(filter="status:'new'")
+
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["results"], [])
+        self.assertEqual(result["total"], 0)
+        self.assertNotIn("fql_guide", result)
+
     def test_get_detection_details(self):
         """Test getting detection details."""
         # Setup mock response
@@ -275,7 +306,7 @@ class TestDetectionsModule(TestModules):
             ids=["id1"], status="in_progress",
             assign_to_uuid=None, assign_to_user_id=None,
             assign_to_name=None, unassign=None, append_comment=None, show_in_ui=None,
-            verdict=None,
+            add_tags=None, remove_tags=None, remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_called_once_with(
@@ -301,7 +332,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         call_body = self.mock_client.command.call_args[1]["body"]
@@ -324,7 +357,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         call_body = self.mock_client.command.call_args[1]["body"]
@@ -344,7 +379,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
@@ -370,7 +407,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=False,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         call_body = self.mock_client.command.call_args[1]["body"]
@@ -393,7 +432,9 @@ class TestDetectionsModule(TestModules):
             unassign=True,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         call_body = self.mock_client.command.call_args[1]["body"]
@@ -413,7 +454,9 @@ class TestDetectionsModule(TestModules):
             unassign=False,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
@@ -436,7 +479,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_called_once()
@@ -454,7 +499,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
@@ -472,7 +519,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
@@ -490,7 +539,9 @@ class TestDetectionsModule(TestModules):
             unassign=True,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
@@ -508,7 +559,9 @@ class TestDetectionsModule(TestModules):
             unassign=True,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
@@ -526,7 +579,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
@@ -545,7 +600,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
@@ -566,7 +623,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=True,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         call_body = self.mock_client.command.call_args[1]["body"]
@@ -589,7 +648,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         call_body = self.mock_client.command.call_args[1]["body"]
@@ -612,7 +673,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment="Investigating now",
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         call_body = self.mock_client.command.call_args[1]["body"]
@@ -621,8 +684,8 @@ class TestDetectionsModule(TestModules):
             call_body["action_parameters"],
         )
 
-    def test_update_detections_verdict_false_positive(self):
-        """Test setting verdict to false_positive emits add_tag action_parameter."""
+    def test_update_detections_add_tags_resolution(self):
+        """Test add_tags with a resolution tag emits an add_tag action_parameter."""
         mock_response = {"status_code": 200, "body": {"resources": []}}
         self.mock_client.command.return_value = mock_response
 
@@ -635,17 +698,19 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict="false_positive",
+            add_tags=["true_positive"],
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         call_body = self.mock_client.command.call_args[1]["body"]
         self.assertIn(
-            {"name": "add_tag", "value": "false_positive"},
+            {"name": "add_tag", "value": "true_positive"},
             call_body["action_parameters"],
         )
 
-    def test_update_detections_verdict_ignored(self):
-        """Test setting verdict to ignored emits add_tag action_parameter."""
+    def test_update_detections_add_tags_arbitrary(self):
+        """Test that arbitrary (non-resolution) tags are accepted and emitted."""
         mock_response = {"status_code": 200, "body": {"resources": []}}
         self.mock_client.command.return_value = mock_response
 
@@ -658,14 +723,131 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict="ignored",
+            add_tags=["custom_tag", "testing"],
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         call_body = self.mock_client.command.call_args[1]["body"]
         self.assertIn(
-            {"name": "add_tag", "value": "ignored"},
+            {"name": "add_tag", "value": "custom_tag"},
             call_body["action_parameters"],
         )
+        self.assertIn(
+            {"name": "add_tag", "value": "testing"},
+            call_body["action_parameters"],
+        )
+
+    def test_update_detections_remove_tags(self):
+        """Test remove_tags emits a remove_tag action_parameter per tag."""
+        mock_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.return_value = mock_response
+
+        self.module.update_detections(
+            ids=["id1"],
+            status=None,
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=None,
+            remove_tags=["false_positive"],
+            remove_tags_by_prefix=None,
+        )
+
+        call_body = self.mock_client.command.call_args[1]["body"]
+        self.assertIn(
+            {"name": "remove_tag", "value": "false_positive"},
+            call_body["action_parameters"],
+        )
+
+    def test_update_detections_remove_tags_by_prefix(self):
+        """Test remove_tags_by_prefix emits the remove_tags_by_prefix action_parameter."""
+        mock_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.return_value = mock_response
+
+        self.module.update_detections(
+            ids=["id1"],
+            status=None,
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix="fc/",
+        )
+
+        call_body = self.mock_client.command.call_args[1]["body"]
+        self.assertIn(
+            {"name": "remove_tags_by_prefix", "value": "fc/"},
+            call_body["action_parameters"],
+        )
+
+    def test_update_detections_empty_tag_returns_error(self):
+        """Test that an empty/whitespace tag returns an error without calling API."""
+        result = self.module.update_detections(
+            ids=["id1"],
+            status=None,
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=["   "],
+            remove_tags=None,
+            remove_tags_by_prefix=None,
+        )
+
+        self.mock_client.command.assert_not_called()
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result)
+
+    def test_update_detections_empty_remove_tag_returns_error(self):
+        """Test that an empty/whitespace value in remove_tags returns an error without calling API."""
+        result = self.module.update_detections(
+            ids=["id1"],
+            status=None,
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=None,
+            remove_tags=["   "],
+            remove_tags_by_prefix=None,
+        )
+
+        self.mock_client.command.assert_not_called()
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result)
+
+    def test_update_detections_empty_prefix_returns_error(self):
+        """Test that an empty/whitespace remove_tags_by_prefix returns an error without calling API."""
+        for prefix in ("", "   "):
+            result = self.module.update_detections(
+                ids=["id1"],
+                status=None,
+                assign_to_uuid=None,
+                assign_to_user_id=None,
+                assign_to_name=None,
+                unassign=None,
+                append_comment=None,
+                show_in_ui=None,
+                add_tags=None,
+                remove_tags=None,
+                remove_tags_by_prefix=prefix,
+            )
+
+            self.mock_client.command.assert_not_called()
+            self.assertIsInstance(result, dict)
+            self.assertIn("error", result)
 
     def test_update_detections_two_assign_params_returns_error(self):
         """Test that providing multiple assign_to_* params returns an error without calling API."""
@@ -678,7 +860,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
@@ -697,7 +881,9 @@ class TestDetectionsModule(TestModules):
             unassign=True,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
@@ -716,7 +902,9 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment="",
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
@@ -735,57 +923,17 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment="   ",
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         self.mock_client.command.assert_not_called()
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)
 
-    def test_update_detections_verdict_true_positive(self):
-        """Test setting verdict to true_positive emits add_tag action_parameter."""
-        mock_response = {"status_code": 200, "body": {"resources": []}}
-        self.mock_client.command.return_value = mock_response
-
-        self.module.update_detections(
-            ids=["id1"],
-            status=None,
-            assign_to_uuid=None,
-            assign_to_user_id=None,
-            assign_to_name=None,
-            unassign=None,
-            append_comment=None,
-            show_in_ui=None,
-            verdict="true_positive",
-        )
-
-        call_body = self.mock_client.command.call_args[1]["body"]
-        self.assertIn(
-            {"name": "add_tag", "value": "true_positive"},
-            call_body["action_parameters"],
-        )
-
-    def test_update_detections_verdict_invalid_returns_error(self):
-        """Test that an invalid verdict value returns an error without calling API."""
-        result = self.module.update_detections(
-            ids=["id1"],
-            status=None,
-            assign_to_uuid=None,
-            assign_to_user_id=None,
-            assign_to_name=None,
-            unassign=None,
-            append_comment=None,
-            show_in_ui=None,
-            verdict="definitely_not_a_verdict",
-        )
-
-        self.mock_client.command.assert_not_called()
-        self.assertIsInstance(result, dict)
-        self.assertIn("error", result)
-        self.assertIn("verdict", result["error"])
-
-    def test_update_detections_verdict_combined_with_status(self):
-        """Test combining verdict with status update in one call."""
+    def test_update_detections_add_tags_combined_with_status(self):
+        """Test combining add_tags with a status update in one call."""
         mock_response = {"status_code": 200, "body": {"resources": []}}
         self.mock_client.command.return_value = mock_response
 
@@ -798,13 +946,138 @@ class TestDetectionsModule(TestModules):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict="true_positive",
+            add_tags=["true_positive"],
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         call_body = self.mock_client.command.call_args[1]["body"]
         param_names = [p["name"] for p in call_body["action_parameters"]]
         self.assertIn("update_status", param_names)
         self.assertIn("add_tag", param_names)
+
+    def test_update_detections_close_without_resolution_tag_returns_hint(self):
+        """Test that closing without a resolution tag wraps success with a hint.
+
+        Covers both add_tags=None and add_tags=[] (explicit empty list) — both must
+        trigger the hint since neither carries a resolution tag.
+        """
+        mock_response = {"status_code": 200, "body": {"resources": []}}
+
+        for add_tags in (None, []):
+            self.mock_client.command.reset_mock()
+            self.mock_client.command.return_value = mock_response
+
+            result = self.module.update_detections(
+                ids=["id1"],
+                status="closed",
+                assign_to_uuid=None,
+                assign_to_user_id=None,
+                assign_to_name=None,
+                unassign=None,
+                append_comment=None,
+                show_in_ui=None,
+                add_tags=add_tags,
+                remove_tags=None,
+                remove_tags_by_prefix=None,
+            )
+
+            self.mock_client.command.assert_called_once()
+            self.assertIsInstance(result, dict)
+            self.assertIn("hint", result)
+            self.assertIn("resolution", result["hint"].lower())
+            self.assertEqual(result["result"], [])
+
+    def test_update_detections_close_with_resolution_tag_no_hint(self):
+        """Test that closing with any resolution tag returns the plain success shape."""
+        mock_response = {"status_code": 200, "body": {"resources": []}}
+
+        for tag in ("true_positive", "false_positive", "ignored"):
+            self.mock_client.command.return_value = mock_response
+            result = self.module.update_detections(
+                ids=["id1"],
+                status="closed",
+                assign_to_uuid=None,
+                assign_to_user_id=None,
+                assign_to_name=None,
+                unassign=None,
+                append_comment=None,
+                show_in_ui=None,
+                add_tags=[tag],
+                remove_tags=None,
+                remove_tags_by_prefix=None,
+            )
+
+            self.assertEqual(result, [], msg=f"hint must not fire for resolution tag {tag!r}")
+
+    def test_update_detections_close_with_mixed_tags_no_hint(self):
+        """Test that a resolution tag mixed with a custom tag still suppresses the hint."""
+        mock_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.return_value = mock_response
+
+        result = self.module.update_detections(
+            ids=["id1"],
+            status="closed",
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=["true_positive", "my_custom_tag"],
+            remove_tags=None,
+            remove_tags_by_prefix=None,
+        )
+
+        self.assertEqual(result, [])
+
+    def test_update_detections_close_with_non_resolution_tag_returns_hint(self):
+        """Test that closing with only a non-resolution tag still emits the hint."""
+        mock_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.return_value = mock_response
+
+        result = self.module.update_detections(
+            ids=["id1"],
+            status="closed",
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=["MY_CUSTOM_TAG"],
+            remove_tags=None,
+            remove_tags_by_prefix=None,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("hint", result)
+        self.assertEqual(result["result"], [])
+
+    def test_update_detections_close_api_error_no_hint(self):
+        """Test that an API error while closing is returned as-is, not hint-wrapped."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Bad request"}]},
+        }
+
+        result = self.module.update_detections(
+            ids=["id1"],
+            status="closed",
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result)
+        self.assertNotIn("hint", result)
 
     def test_update_detections_unassign_false_is_noop(self):
         """Test that unassign=False does not add the action parameter."""
@@ -820,7 +1093,9 @@ class TestDetectionsModule(TestModules):
             unassign=False,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         call_body = self.mock_client.command.call_args[1]["body"]

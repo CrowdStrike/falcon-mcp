@@ -217,17 +217,33 @@ class DetectionsModule(BaseModule):
             default=None,
             description="Whether to show the detection(s) in the Falcon UI. Set to False to hide.",
         ),
-        verdict: str | None = Field(
+        add_tags: list[str] | None = Field(
             default=None,
-            description="Resolution verdict tag to add. Allowed values: true_positive, false_positive, ignored. Tags are additive — calling this tool does not clear a previously set verdict tag.",
+            description=(
+                "Tags to add to the detection(s). Tags are free-form strings; any value is accepted. "
+                "true_positive, false_positive, and ignored are the conventional resolution tags the "
+                "Falcon console surfaces in its Resolution column — use them when recording a resolution, "
+                "but they are guidance, not an enforced set."
+            ),
+        ),
+        remove_tags: list[str] | None = Field(
+            default=None,
+            description="Tags to remove from the detection(s). Each value must match an existing tag exactly.",
+        ),
+        remove_tags_by_prefix: str | None = Field(
+            default=None,
+            description="Remove all tags on the detection(s) that start with this prefix (e.g. 'fc/').",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Update the status, assignment, visibility, or verdict of one or more detections.
+        """Update the status, assignment, visibility, comments, and tags of one or more detections.
 
-        Use to change status (new, in_progress, reopened, closed), assign to a user by
-        UUID, email address, or full name, append a comment, unassign, hide/show
-        detections in the UI, or set a verdict (true_positive, false_positive, ignored).
-        At least one update parameter must be provided. Returns `[]` (empty list) on success; returns an error dict on failure.
+        Use to change status (new, in_progress, reopened, closed), assign to a user by UUID,
+        email address, or full name, unassign, append a comment, hide/show detections in the UI,
+        or add/remove tags. Resolution is tag-based: applying the conventional tags true_positive,
+        false_positive, or ignored is what populates the console's Resolution view. At least one
+        update parameter must be provided. Returns `[]` (empty list) on success, or
+        `{"result": [], "hint": "..."}` when closing without adding a resolution tag in this call;
+        returns an error dict on failure.
         """
         # Validate mutually exclusive assignment parameters
         assignment_params = [assign_to_uuid, assign_to_user_id, assign_to_name]
@@ -240,9 +256,16 @@ class DetectionsModule(BaseModule):
         if append_comment is not None and append_comment.strip() == "":
             return {"error": "append_comment must not be empty."}
 
-        _valid_verdicts = {"true_positive", "false_positive", "ignored"}
-        if verdict is not None and verdict not in _valid_verdicts:
-            return {"error": f"verdict must be one of: {', '.join(sorted(_valid_verdicts))}."}
+        for tag in add_tags or []:
+            if tag.strip() == "":
+                return {"error": "add_tags must not contain empty or whitespace-only strings."}
+
+        for tag in remove_tags or []:
+            if tag.strip() == "":
+                return {"error": "remove_tags must not contain empty or whitespace-only strings."}
+
+        if remove_tags_by_prefix is not None and remove_tags_by_prefix.strip() == "":
+            return {"error": "remove_tags_by_prefix must not be empty or whitespace-only."}
 
         _valid_statuses = {"new", "in_progress", "reopened", "closed"}
         if status is not None and status not in _valid_statuses:
@@ -269,8 +292,13 @@ class DetectionsModule(BaseModule):
             action_parameters.append({"name": "show_in_ui", "value": str(show_in_ui).lower()})
         if unassign is True:
             action_parameters.append({"name": "unassign", "value": "true"})
-        if verdict is not None:
-            action_parameters.append({"name": "add_tag", "value": verdict})
+
+        for tag in add_tags or []:
+            action_parameters.append({"name": "add_tag", "value": tag})
+        for tag in remove_tags or []:
+            action_parameters.append({"name": "remove_tag", "value": tag})
+        if remove_tags_by_prefix is not None:
+            action_parameters.append({"name": "remove_tags_by_prefix", "value": remove_tags_by_prefix})
 
         if not action_parameters:
             return {"error": "At least one update parameter must be provided."}
@@ -280,9 +308,29 @@ class DetectionsModule(BaseModule):
             "action_parameters": action_parameters,
         }
 
-        return self._base_query_api_call(
+        result = self._base_query_api_call(
             operation="PatchEntitiesAlertsV3",
             body_params=body,
             error_message="Failed to update detections",
             default_result=[],
         )
+
+        # Soft hint: closing without adding a resolution tag in this call may leave the
+        # detection out of the console's Resolution view. Non-fatal — only wraps the success
+        # case. We only know this call's add_tags, not any resolution tag set previously.
+        _resolution_tags = {"true_positive", "false_positive", "ignored"}
+        if (
+            not self._is_error(result)
+            and status == "closed"
+            and not _resolution_tags.intersection(add_tags or [])
+        ):
+            return {
+                "result": result,
+                "hint": (
+                    "No resolution tag was added in this update call. The console convention is to "
+                    "add true_positive, false_positive, or ignored when closing a detection so it "
+                    "appears in the Resolution view (skip if a resolution tag was already set)."
+                ),
+            }
+
+        return result
