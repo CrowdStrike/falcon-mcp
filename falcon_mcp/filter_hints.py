@@ -66,7 +66,8 @@ FILTER_HINTS: dict[str, str] = {
         "asset_name, asset_type, asset_region, account_id, account_name, "
         "rule_name, service_category, groups.environment, groups.business_unit. "
         "Date filters: first_seen:>'now-7d' (relative) or first_seen:>'2024-01-01T00:00:00Z' (absolute). "
-        "Ex: severity:'critical'+status:'open'+cloud_provider:'aws'"
+        "Ex: severity:'critical'+status:'open'+cloud_provider:'aws' "
+        "threat_actors (adversary/threat group name), risk_factor (risk factor identifier like PUBLIC_ACCESS)."
     ),
     # === Correlation Rules ===
     "falcon_search_correlation_rules": (

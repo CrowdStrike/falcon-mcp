@@ -1306,12 +1306,12 @@ CLOUD_RISKS_FQL_FILTERS = [
     (
         "severity",
         "String",
-        "Risk severity level.\n\nEx: severity:'critical'",
+        "Risk severity level.\nValues: critical, high, medium, low, informational.\n\nEx: severity:'critical'",
     ),
     (
         "status",
         "String",
-        "Risk lifecycle status.\n\nEx: status:'open'",
+        "Risk lifecycle status.\nValues: open, resolved, suppressed.\n\nEx: status:'open'",
     ),
     (
         "suppressed_by",
