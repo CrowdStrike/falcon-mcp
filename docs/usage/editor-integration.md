@@ -5,6 +5,9 @@
 
 The Falcon MCP Server works with any MCP-compatible editor or AI assistant. Below are configuration examples for popular clients.
 
+> [!TIP]
+> Some clients can install falcon-mcp directly from a registry — see the [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.CrowdStrike%2Ffalcon-mcp&all=1)<!-- link:external -->, [GitHub MCP Registry](https://github.com/mcp/CrowdStrike/falcon-mcp)<!-- link:external -->, and [Gemini CLI Extensions](https://geminicli.com/extensions/?name=CrowdStrikefalcon-mcp)<!-- link:external --> listings.
+
 ## Claude Desktop
 
 Edit `claude_desktop_config.json`:

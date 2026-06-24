@@ -8,6 +8,9 @@
 [![PyPI version](https://badge.fury.io/py/falcon-mcp.svg)](https://badge.fury.io/py/falcon-mcp)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/falcon-mcp)](https://pypi.org/project/falcon-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-falcon--mcp-blue)](https://registry.modelcontextprotocol.io/?q=io.github.CrowdStrike%2Ffalcon-mcp&all=1)
+[![GitHub MCP](https://img.shields.io/badge/GitHub_MCP-falcon--mcp-blue?logo=github)](https://github.com/mcp/CrowdStrike/falcon-mcp)
+[![Gemini CLI Extension](https://img.shields.io/badge/Gemini_CLI-falcon--mcp-blue?logo=google)](https://geminicli.com/extensions/?name=CrowdStrikefalcon-mcp)
 
 **falcon-mcp** is a Model Context Protocol (MCP) server that connects AI agents with the CrowdStrike Falcon platform, powering intelligent security analysis in your agentic workflows. It delivers programmatic access to essential security capabilities—including detections, threat intelligence, and host management—establishing the foundation for advanced security operations and automation.
 
@@ -201,6 +204,14 @@ uv run pytest
 - [Resource Development Guide](docs/development/resource-development.md): Instructions for implementing resources
 - [End-to-End Testing Guide](docs/development/e2e-testing.md): Guide for running and understanding E2E tests
 - [Integration Testing Guide](docs/development/integration-testing.md): Guide for running integration tests with real API calls
+
+## Registries
+
+falcon-mcp is published to public MCP catalogs for discovery and one-click setup in compatible clients:
+
+- [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.CrowdStrike%2Ffalcon-mcp&all=1)
+- [GitHub MCP Registry](https://github.com/mcp/CrowdStrike/falcon-mcp)
+- [Gemini CLI Extensions](https://geminicli.com/extensions/?name=CrowdStrikefalcon-mcp)
 
 ## License
 
