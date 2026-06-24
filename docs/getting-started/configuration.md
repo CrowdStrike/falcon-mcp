@@ -27,7 +27,7 @@ Configure your CrowdStrike API credentials and server settings using environment
 | `FALCON_MCP_PORT` | `8000` | Port for HTTP transports |
 | `FALCON_MCP_STATELESS_HTTP` | `false` | Stateless mode for scalable deployments (required for AWS AgentCore) |
 | `FALCON_MCP_API_KEY` | — | API key for HTTP transport authentication |
-| `FALCON_MCP_DYNAMIC` | `false` | [Dynamic mode](../usage/dynamic-mode.md): expose three tools instead of all module tools |
+| `FALCON_MCP_DYNAMIC` | `false` | [Dynamic mode](/falcon-mcp/usage/dynamic/): expose three tools instead of all module tools |
 | `FALCON_PROXY_URL` | — | HTTP/HTTPS proxy URL for outbound API connections |
 
 ## Using a .env File
