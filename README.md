@@ -44,6 +44,7 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | [Policies](https://developer.crowdstrike.com/falcon-mcp/modules/policies/) | Search, create, update, and delete prevention, sensor update, firewall, device control, response, and content update policies; manage host-group assignment, enable/disable, and precedence |
 | [Quarantine](https://developer.crowdstrike.com/falcon-mcp/modules/quarantine/) | Search quarantine records, preview action counts, and release, unrelease, or delete quarantined files |
 | [Real Time Response](https://developer.crowdstrike.com/falcon-mcp/modules/rtr/) | Audit, summarize, and run read-only RTR triage workflows |
+| [Recon](https://developer.crowdstrike.com/falcon-mcp/modules/recon/) | Search Falcon Intelligence Recon notifications (recon alerts), monitoring rules, and exposed-data records for dark web, leaked credentials, and typosquatting |
 | [Scheduled Reports](https://developer.crowdstrike.com/falcon-mcp/modules/scheduled-reports/) | Manage scheduled reports and download report files |
 | [Sensor Usage](https://developer.crowdstrike.com/falcon-mcp/modules/sensor-usage/) | Access and analyze sensor usage data |
 | [Serverless](https://developer.crowdstrike.com/falcon-mcp/modules/serverless/) | Search for vulnerabilities in serverless functions |

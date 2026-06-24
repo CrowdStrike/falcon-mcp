@@ -200,6 +200,32 @@ FILTER_HINTS: dict[str, str] = {
         "Common fields: name, category, type, region, "
         "example, deleted (true|false)."
     ),
+    # === Recon ===
+    "falcon_search_recon_notifications": (
+        "Common fields: status (new|in-progress|closed-false-positive|closed-true-positive), "
+        "rule_priority (low|medium|high), "
+        "rule_topic (SA_DOMAIN|SA_TYPOSQUATTING|SA_EMAIL|SA_IP|SA_BRAND_PRODUCT), "
+        "item_type (exposed_data), item_site (stealer_logs|...), "
+        "created_date:>'now-7d' (relative date). "
+        "NOTE: assigned_to_uuid requires a UUID, not an email. "
+        "Ex: status:'new'+rule_priority:'high'"
+    ),
+    "falcon_search_recon_rules": (
+        "Common fields: status (active), "
+        "topic (SA_DOMAIN|SA_TYPOSQUATTING|SA_EMAIL|SA_IP|SA_BRAND_PRODUCT), "
+        "priority (low|medium|high), permissions (private|public), "
+        "breach_monitoring_enabled (true|false), "
+        "created_timestamp:>'now-30d' (relative date). "
+        "Ex: status:'active'+topic:'SA_TYPOSQUATTING'"
+    ),
+    "falcon_search_recon_exposed_data_records": (
+        "Common fields: domain, email, "
+        "credential_status (newly_reported|confirmed_active|previously_reported), "
+        "site, source_category, notification_id, "
+        "rule.topic (SA_DOMAIN|...), "
+        "created_date:>'now-7d' (relative date). "
+        "Ex: domain:'example.com'+credential_status:'newly_reported'"
+    ),
     # === Scheduled Reports ===
     "falcon_search_scheduled_reports": (
         "Common fields: name, type, status (Active|Inactive|Expired), "
