@@ -41,8 +41,9 @@ Use this for dark web matches, leaked credentials, typosquatting detections, and
 summaries triggered by your monitoring rules. Consult
 `falcon://recon/notifications/search/fql-guide` before constructing filter expressions.
 This serves the external cyber risk monitoring capability of CrowdStrike Counter Adversary
-Operations (CAO). Returns full notification records with a nested `notification` object
-containing status, rule metadata, breach_summary, and item details.
+Operations (CAO). For endpoint detections or NG-SIEM alerts, use
+`falcon_search_detections` instead. Returns full notification records with a nested
+`notification` object containing status, rule metadata, breach_summary, and item details.
 
 **Example prompts:**
 
