@@ -171,7 +171,7 @@ falcon-mcp --dynamic
 # or: FALCON_MCP_DYNAMIC=true
 ```
 
-See the [Dynamic Mode guide](https://developer.crowdstrike.com/falcon-mcp/usage/dynamic/) for
+See the [Dynamic Mode guide](https://developer.crowdstrike.com/falcon-mcp/usage/dynamic-mode/) for
 the full discover → execute workflow and trade-offs.
 
 ## Deployment Options
