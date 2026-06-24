@@ -126,13 +126,13 @@ class ReconModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search Falcon Intelligence Recon notifications (also called recon alerts) and return their full details.
 
-        Use this for dark web matches, leaked credentials, typosquatting detections, and breach
+        Use this for dark web matches, leaked credentials, typosquatting matches, and breach
         summaries triggered by your monitoring rules. Consult
         `falcon://recon/notifications/search/fql-guide` before constructing filter expressions.
         This serves the external cyber risk monitoring capability of CrowdStrike Counter Adversary
-        Operations (CAO). For endpoint detections or NG-SIEM alerts, use
-        `falcon_search_detections` instead. Returns full notification records with a nested
-        `notification` object containing status, rule metadata, breach_summary, and item details.
+        Operations (CAO). For endpoint, XDR, or NG-SIEM alerts, use `falcon_search_detections`
+        instead. Returns full notification records with a nested `notification` object
+        containing status, rule metadata, breach_summary, and item details.
         """
         logger.debug(
             "Searching recon notifications with filter=%s, q=%s, limit=%s, offset=%s, sort=%s",
