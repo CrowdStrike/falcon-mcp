@@ -119,9 +119,10 @@ class DetectionsModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Find detections (also called alerts) by criteria and return their complete details.
 
-        Use this for any general request about alerts or detections. Covers alerts across
-        all Falcon products — endpoint (EPP), identity (IDP), XDR, OverWatch, NG-SIEM, and
-        more. Consult falcon://detections/search/fql-guide before constructing filter
+        Use this to discover detections by severity, status, hostname, time range, or other
+        attributes — this is the tool for general alert and detection queries. Covers alerts
+        across all Falcon products: endpoint (EPP), identity (IDP), XDR, OverWatch, and
+        NG-SIEM. Consult falcon://detections/search/fql-guide before constructing filter
         expressions. Returns full alert records including process context, device info,
         tactic/technique details, and threat classification.
         """
