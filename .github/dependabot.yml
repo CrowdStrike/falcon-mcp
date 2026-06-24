@@ -5,6 +5,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "deps(python):"
     labels:
@@ -25,6 +27,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "deps(actions):"
     labels:
@@ -40,6 +44,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "deps(docker):"
     labels:

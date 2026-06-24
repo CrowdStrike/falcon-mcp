@@ -12,22 +12,6 @@ resolution-markers = [
     "python_full_version < '3.12'",
 ]
 
-[manifest]
-constraints = [
-    { name = "aiohttp", specifier = ">=3.14.1,<4" },
-    { name = "click", specifier = ">=8.3.3,<9" },
-    { name = "cryptography", specifier = ">=46.0.7,<47" },
-    { name = "langchain", specifier = ">=0.3.30,<0.4" },
-    { name = "langchain-core", specifier = ">=0.3.86,<0.4" },
-    { name = "langchain-text-splitters", specifier = ">=0.3.9,<0.4" },
-    { name = "langsmith", specifier = ">=0.8.0" },
-    { name = "orjson", specifier = ">=3.11.6,<4" },
-    { name = "pillow", specifier = ">=12.2.0,<13" },
-    { name = "protobuf", specifier = ">=6.33.5,<7" },
-    { name = "python-multipart", specifier = ">=0.0.30,<0.1" },
-    { name = "urllib3", specifier = ">=2.7.0,<3" },
-]
-
 [[package]]
 name = "aiohappyeyeballs"
 version = "2.6.1"
