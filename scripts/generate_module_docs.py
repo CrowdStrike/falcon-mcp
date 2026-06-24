@@ -366,9 +366,8 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     ],
     "falcon_search_recon_exposed_data_records": [
         "Find exposed credentials for example.com",
-        "Show newly reported credential records from the past 7 days",
+        "Show leaked credentials from the past 7 days",
         "Find exposed data records for a specific notification",
-        "Show leaked credentials with status newly_reported",
     ],
     # Scheduled Reports
     "falcon_search_scheduled_reports": [
