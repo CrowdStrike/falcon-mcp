@@ -43,6 +43,20 @@ dev = [
 [project.scripts]
 falcon-mcp = "falcon_mcp.server:main"
 
+# Security floors for transitive dependencies flagged by the 2026-06-24 JetStream
+# Security CVE report (Asana 1216018657066070). Scoped to only the packages whose
+# currently locked version is below the advisory fix version; the other reported
+# packages (cryptography, python-multipart, starlette, urllib3) are already at or
+# above their safe floor. Each parent declares these deps without a version cap so
+# these floors simply hold the resolver at a safe version without forcing major
+# bumps. Reviewed/approved by internal product-security.
+[tool.uv]
+constraint-dependencies = [
+    "pyjwt>=2.12.0",    # CVE-2026-32597
+    "idna>=3.15",       # CVE-2026-45409
+    "requests>=2.33.0", # CVE-2026-25645
+]
+
 [tool.black]
 line-length = 100
 target-version = ["py311"]
