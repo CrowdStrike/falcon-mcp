@@ -3,6 +3,22 @@
 
 # Changelog
 
+## [0.13.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.12.0...v0.13.0) (2026-06-25)
+
+
+### Features
+
+* **dynamic:** add dynamic mode to reduce context window usage ([#441](https://github.com/CrowdStrike/falcon-mcp/issues/441)) ([807d3db](https://github.com/CrowdStrike/falcon-mcp/commit/807d3db203dd0d9cd2c04dfa5f8455d971b0a97e))
+* **modules/recon:** add Falcon Intelligence Recon module ([#446](https://github.com/CrowdStrike/falcon-mcp/issues/446)) ([f8d4839](https://github.com/CrowdStrike/falcon-mcp/commit/f8d4839de6224e6c052f53238e83257bed3f3a84))
+
+
+### Bug Fixes
+
+* **deps:** add version floor constraints for pyjwt, idna, requests ([#455](https://github.com/CrowdStrike/falcon-mcp/issues/455)) ([a9536ea](https://github.com/CrowdStrike/falcon-mcp/commit/a9536eadb6c39f7d66d2128251bcbd5fe2280744))
+* **modules/detections:** replace verdict param with tags to be inline with ui experience ([#450](https://github.com/CrowdStrike/falcon-mcp/issues/450)) ([c1aee37](https://github.com/CrowdStrike/falcon-mcp/commit/c1aee371b4d9e92aa246b0074b64d1aa7a440faf))
+* **modules/ioc:** return delete summary ([#444](https://github.com/CrowdStrike/falcon-mcp/issues/444)) ([df2995a](https://github.com/CrowdStrike/falcon-mcp/commit/df2995a4e2e6948a57738fb8bb3660e0a23d0318))
+* **tests/integration:** correct platform field assertion in firewall tests ([#449](https://github.com/CrowdStrike/falcon-mcp/issues/449)) ([3d5a2bb](https://github.com/CrowdStrike/falcon-mcp/commit/3d5a2bb1b1052b026933937ee2bdc30bf846a289)), closes [#448](https://github.com/CrowdStrike/falcon-mcp/issues/448)
+
 ## [0.12.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.11.0...v0.12.0) (2026-06-11)
 
 
