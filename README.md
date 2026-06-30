@@ -203,7 +203,6 @@ uv run pytest
 - [Documentation Guide](docs/development/docs-site.md): Architecture and maintenance guide for the documentation
 - [Module Development Guide](docs/development/module-development.md): Instructions for implementing new modules
 - [Resource Development Guide](docs/development/resource-development.md): Instructions for implementing resources
-- [End-to-End Testing Guide](docs/development/e2e-testing.md): Guide for running and understanding E2E tests
 - [Integration Testing Guide](docs/development/integration-testing.md): Guide for running integration tests with real API calls
 
 ## Registries
