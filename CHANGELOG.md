@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.1](https://github.com/CrowdStrike/falcon-mcp/compare/v0.13.0...v0.13.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* **deps:** add cryptography floor constraint for CVE-2026-34180 ([3e43ecb](https://github.com/CrowdStrike/falcon-mcp/commit/3e43ecb9890a501830564f0a88193452f491a4d3))
+* **deps:** bump cryptography minimum version ([#458](https://github.com/CrowdStrike/falcon-mcp/issues/458)) ([3e43ecb](https://github.com/CrowdStrike/falcon-mcp/commit/3e43ecb9890a501830564f0a88193452f491a4d3))
+
 ## [0.13.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.12.0...v0.13.0) (2026-06-25)
 
 
