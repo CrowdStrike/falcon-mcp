@@ -101,6 +101,69 @@ class TestSpotlightModule(TestModules):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["cve_id"], "CVE-2023-12345")
 
+    def test_search_vulnerabilities_with_single_facet(self):
+        """Test that a single facet string is forwarded unchanged to the API."""
+        mock_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.return_value = mock_response
+
+        result = self.module.search_vulnerabilities(filter="status:'open'", facet="cve")
+
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        call_args = self.mock_client.command.call_args
+        self.assertEqual(call_args[0][0], "combinedQueryVulnerabilities")
+
+        params = call_args[1]["parameters"]
+        self.assertEqual(params["facet"], "cve")
+        self.assertEqual(result, [])
+
+    def test_search_vulnerabilities_with_multiple_facets(self):
+        """Test that a list of facets is forwarded intact (no joining/mangling)."""
+        mock_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.return_value = mock_response
+
+        result = self.module.search_vulnerabilities(
+            filter="status:'open'",
+            facet=["cve", "host_info", "remediation"],
+        )
+
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        call_args = self.mock_client.command.call_args
+        self.assertEqual(call_args[0][0], "combinedQueryVulnerabilities")
+
+        params = call_args[1]["parameters"]
+        self.assertEqual(params["facet"], ["cve", "host_info", "remediation"])
+        self.assertEqual(result, [])
+
+    def test_search_vulnerabilities_facet_empty_list(self):
+        """Test that an empty facet list is forwarded as-is (no facets requested)."""
+        mock_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.return_value = mock_response
+
+        self.module.search_vulnerabilities(filter="status:'open'", facet=[])
+
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        call_args = self.mock_client.command.call_args
+        params = call_args[1]["parameters"]
+        # An empty list is not None, so prepare_api_parameters does not strip it;
+        # it reaches the API unchanged and is treated as "no facets requested".
+        self.assertEqual(params["facet"], [])
+
+    def test_search_vulnerabilities_facet_none_stripped(self):
+        """Test that a None facet is stripped from the forwarded parameters.
+
+        When the tool runs through FastMCP the unset facet resolves to None;
+        prepare_api_parameters must drop it so it never reaches the API.
+        """
+        mock_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.return_value = mock_response
+
+        self.module.search_vulnerabilities(filter="status:'open'", facet=None)
+
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        call_args = self.mock_client.command.call_args
+        params = call_args[1]["parameters"]
+        self.assertNotIn("facet", params)
+
     def test_search_vulnerabilities_empty_response(self):
         """Test searching vulnerabilities with empty response."""
         # Setup mock response with empty resources

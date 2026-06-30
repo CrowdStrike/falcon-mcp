@@ -78,6 +78,36 @@ class TestSpotlightIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_vulnerabilities with facet")
         self.assert_valid_list_response(result, min_length=0, context="search_vulnerabilities with facet")
 
+        if len(result) > 0:
+            self.assert_search_returns_details(
+                result,
+                expected_fields=["cve"],
+                context="search_vulnerabilities with facet",
+            )
+
+    def test_search_vulnerabilities_with_multiple_facets(self):
+        """Test search_vulnerabilities with multiple facets in a single request."""
+        result = self.call_method(
+            self.module.search_vulnerabilities,
+            filter="status:'open'",
+            facet=["cve", "host_info"],
+            limit=3,
+        )
+
+        self.assert_no_error(result, context="search_vulnerabilities with multiple facets")
+        self.assert_valid_list_response(
+            result, min_length=0, context="search_vulnerabilities with multiple facets"
+        )
+
+        # Verify both requested facet blocks are actually present in a single
+        # response — this is the core contract of the multi-facet enhancement.
+        if len(result) > 0:
+            self.assert_search_returns_details(
+                result,
+                expected_fields=["cve", "host_info"],
+                context="search_vulnerabilities with multiple facets",
+            )
+
     def test_operation_name_is_correct(self):
         """Validate that FalconPy operation name is correct.
 
