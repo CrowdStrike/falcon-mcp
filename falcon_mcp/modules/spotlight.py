@@ -57,7 +57,7 @@ class SpotlightModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description="FQL filter expression. See `falcon://spotlight/vulnerabilities/fql-guide` for syntax.",
-            examples={"status:'open'", "cve.severity:'HIGH'"},
+            examples=["status:'open'", "cve.severity:'HIGH'"],
         ),
         limit: int = Field(
             default=10,
@@ -84,22 +84,24 @@ class SpotlightModule(BaseModule):
 
                 Examples: 'created_timestamp|desc', 'updated_timestamp|desc', 'closed_timestamp|asc'
             """).strip(),
-            examples={
+            examples=[
                 "created_timestamp|desc",
                 "updated_timestamp|desc",
                 "closed_timestamp|asc",
-            },
+            ],
         ),
         after: str | None = Field(
             default=None,
             description="A pagination token used with the limit parameter to manage pagination of results. On your first request, don't provide an after token. On subsequent requests, provide the after token from the previous response to continue from that place in the results.",
         ),
-        facet: str | None = Field(
+        facet: str | list[str] | None = Field(
             default=None,
             description=dedent("""
-                Important: Use only one value!
+                Select one or more detail blocks to be returned for each vulnerability.
 
-                Select various detail blocks to be returned for each vulnerability.
+                Accepts a single value (e.g. 'cve') or a list of values
+                (e.g. ['cve', 'host_info', 'remediation']) to retrieve multiple
+                detail blocks in a single request.
 
                 Supported values:
                 • host_info: Include host/asset information and context
@@ -110,9 +112,9 @@ class SpotlightModule(BaseModule):
                 Use host_info when you need asset context, remediation for fix information,
                 cve for detailed vulnerability scoring, and evaluation_logic for assessment details.
 
-                Examples: 'host_info', 'cve', 'remediation'
+                Examples: 'cve', ['cve', 'host_info'], ['cve', 'host_info', 'remediation', 'evaluation_logic']
             """).strip(),
-            examples={"host_info", "cve", "remediation", "evaluation_logic"},
+            examples=["cve", ["cve", "host_info"], ["cve", "host_info", "remediation", "evaluation_logic"]],
         ),
     ) -> list[dict[str, Any]]:
         """Search for vulnerabilities in your CrowdStrike environment.
