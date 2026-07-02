@@ -406,7 +406,7 @@ SUCCESS: cURL command completed successfully for AgentSpace registration.
 
 <br>
 
-> You can find more about [Agentspace registration](https://cloud.google.com/agentspace/agentspace-enterprise/docs/assistant#create-assistant-existing-app).
+> You can find more about [Agentspace registration](https://cloud.google.com/gemini-enterprise/docs/).
 
 Now you can access the agent in the Agentspace application you created earlier.
 
