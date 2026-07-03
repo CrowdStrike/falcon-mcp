@@ -180,6 +180,35 @@ class TestHostsModule(TestModules):
         # Verify result
         self.assertEqual(result, [])
 
+    def test_search_hosts_reorders_to_match_sorted_ids(self):
+        """When PostDeviceDetailsV2 returns devices out of order, the result is
+        reordered to match the sorted ID order from QueryDevicesByFilter.
+
+        Live API validated: the details endpoint preserves order today, so this
+        guards against regressions and future endpoint behavior changes. Entities
+        carry their ID in the ``device_id`` field.
+        """
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["device2", "device1"]},
+        }
+        details_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"device_id": "device1", "hostname": "alpha"},
+                    {"device_id": "device2", "hostname": "bravo"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, details_response]
+
+        result = self.module.search_hosts(sort="last_seen.desc")
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["device_id"], "device2")
+        self.assertEqual(result[1]["device_id"], "device1")
+
     def test_get_host_details(self):
         """Test getting host details."""
         # Setup mock response

@@ -174,6 +174,28 @@ class TestCustomIOAModule(TestModules):
         self.mock_client.command.assert_called_once()
         self.assertEqual(result, [])
 
+    def test_get_ioa_platforms_reorders_to_match_sorted_ids(self):
+        """When get_platformsMixin0 returns platforms out of order, the result is
+        reordered to match the query-step ID order."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["linux", "windows"]},
+        }
+        details_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "windows", "name": "Windows"},
+                    {"id": "linux", "name": "Linux"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, details_response]
+
+        result = self.module.get_ioa_platforms()
+
+        self.assertEqual([p["id"] for p in result], ["linux", "windows"])
+
     def test_get_ioa_platforms_query_error(self):
         """Test that query errors are surfaced correctly."""
         self.mock_client.command.return_value = {
@@ -214,6 +236,28 @@ class TestCustomIOAModule(TestModules):
         self.assertEqual(first_call[1]["parameters"]["limit"], 50)
         self.assertEqual(second_call[0][0], "get_rule_types")
         self.assertEqual(len(result), 2)
+
+    def test_get_ioa_rule_types_reorders_to_match_sorted_ids(self):
+        """When get_rule_types returns types out of order, the result is reordered
+        to match the query-step ID order."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["rt-002", "rt-001"]},
+        }
+        details_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "rt-001", "name": "Process Creation"},
+                    {"id": "rt-002", "name": "Network Connection"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, details_response]
+
+        result = self.module.get_ioa_rule_types(limit=50)
+
+        self.assertEqual([rt["id"] for rt in result], ["rt-002", "rt-001"])
 
     def test_get_ioa_rule_types_empty(self):
         """Test getting rule types when none exist returns empty list."""

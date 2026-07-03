@@ -127,9 +127,15 @@ class DataProtectionModule(BaseModule):
         if not ids:
             return self._format_empty_response(filter)
 
-        return self._base_get_by_ids(
+        details = self._base_get_by_ids(
             "entities_classification_get_v2", ids, use_params=True
         )
+
+        if self._is_error(details):
+            return [details]
+
+        # Restore the query-step sort order if the get endpoint reorders results.
+        return self._reorder_by_ids(ids, details, id_field="id")
 
     def search_data_protection_policies(
         self,
@@ -185,7 +191,13 @@ class DataProtectionModule(BaseModule):
         if not ids:
             return self._format_empty_response(filter)
 
-        return self._base_get_by_ids("entities_policy_get_v2", ids, use_params=True)
+        details = self._base_get_by_ids("entities_policy_get_v2", ids, use_params=True)
+
+        if self._is_error(details):
+            return [details]
+
+        # Restore the query-step sort order if the get endpoint reorders results.
+        return self._reorder_by_ids(ids, details, id_field="id")
 
     def search_data_protection_content_patterns(
         self,
@@ -236,4 +248,10 @@ class DataProtectionModule(BaseModule):
         if not ids:
             return self._format_empty_response(filter)
 
-        return self._base_get_by_ids("entities_content_pattern_get", ids, use_params=True)
+        details = self._base_get_by_ids("entities_content_pattern_get", ids, use_params=True)
+
+        if self._is_error(details):
+            return [details]
+
+        # Restore the query-step sort order if the get endpoint reorders results.
+        return self._reorder_by_ids(ids, details, id_field="id")

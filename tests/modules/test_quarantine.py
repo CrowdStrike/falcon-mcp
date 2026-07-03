@@ -104,6 +104,35 @@ class TestQuarantineModule(TestModules):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[1]["status"], "quarantined")
 
+    def test_search_quarantined_files_reorders_to_match_sorted_ids(self):
+        """When GetQuarantineFiles returns files out of order, the result is
+        reordered to match the sorted ID order from QueryQuarantineFiles."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["qf-b", "qf-a"]},
+        }
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "qf-a", "status": "quarantined"},
+                    {"id": "qf-b", "status": "released"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_quarantined_files(
+            filter=None,
+            limit=25,
+            offset="0",
+            sort="date_updated|desc",
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "qf-b")
+        self.assertEqual(result[1]["id"], "qf-a")
+
     def test_search_quarantined_files_error_returns_fql_guide(self):
         """Test quarantine search returns FQL guide on filter error."""
         self.mock_client.command.return_value = {

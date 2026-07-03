@@ -291,7 +291,8 @@ class ExclusionsModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Restore the query-step sort order in case the get endpoint reorders results.
+        return self._reorder_by_ids(ids, details, id_field="id")
 
     # ---- Body builders ------------------------------------------------------------
 

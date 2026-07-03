@@ -166,7 +166,9 @@ class CasesModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # entities_cases_post_v2 returns cases in arbitrary order; restore the sort
+        # applied by the query step (validated against live API: field is id).
+        return self._reorder_by_ids(case_ids, details, id_field="id")
 
     def get_cases(
         self,
@@ -504,4 +506,5 @@ class CasesModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Preserve the query-step order in case the details endpoint reorders results.
+        return self._reorder_by_ids(template_ids, details, id_field="id")

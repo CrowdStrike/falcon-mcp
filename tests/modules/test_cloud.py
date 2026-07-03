@@ -187,6 +187,32 @@ class TestCloudModule(TestModules):
         self.assertIn("cloud_provider", result[0])
         self.assertIn("resource_type", result[0])
 
+    def test_search_cspm_assets_reorders_to_match_sorted_ids(self):
+        """When cloud_security_assets_entities_get returns assets out of order,
+        the result is reordered to match the sorted ID order from the query step."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["asset-b", "asset-a"]},
+        }
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "asset-a", "resource_type": "s3-bucket"},
+                    {"id": "asset-b", "resource_type": "ec2-instance"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_cspm_assets(
+            filter=None, limit=10
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "asset-b")
+        self.assertEqual(result[1]["id"], "asset-a")
+
     def test_search_cspm_assets_batching(self):
         """Test CSPM assets search handles >100 IDs with batching."""
         # Mock 250 IDs
@@ -208,7 +234,7 @@ class TestCloudModule(TestModules):
         ]
 
         batch1 = {"status_code": 200, "body": {"resources": batch1_assets}}
-        batch2 = {"status_code": 200, "body": {"resources": batch2_assets}}
+        batch2 = {"status_code": 200, "body": {"resources": list(reversed(batch2_assets))}}
         batch3 = {"status_code": 200, "body": {"resources": batch3_assets}}
 
         self.mock_client.command.side_effect = [
@@ -247,6 +273,10 @@ class TestCloudModule(TestModules):
 
         # Verify all 250 assets returned
         self.assertEqual(len(result), 250)
+
+        # Verify reorder restores query-step order across batches even though
+        # batch2 was returned reversed.
+        self.assertEqual([r["id"] for r in result], asset_ids)
 
     def test_search_cspm_assets_error_returns_fql_guide(self):
         """Test CSPM assets search returns FQL guide on error."""
@@ -520,6 +550,32 @@ class TestCloudModule(TestModules):
         self.assertEqual(len(result), 2)
         self.assertIn("severity", result[0])
 
+    def test_search_iom_findings_reorders_to_match_sorted_ids(self):
+        """When cspm_evaluations_iom_entities returns findings out of order,
+        the result is reordered to match the sorted ID order from the query step."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["iom-b", "iom-a"]},
+        }
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "iom-a", "severity": "high", "status": "open"},
+                    {"id": "iom-b", "severity": "critical", "status": "open"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_iom_findings(
+            filter=None, limit=10
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "iom-b")
+        self.assertEqual(result[1]["id"], "iom-a")
+
     def test_search_iom_findings_error_returns_fql_guide(self):
         """Test IOM search returns FQL guide on error."""
         mock_response = {
@@ -554,7 +610,7 @@ class TestCloudModule(TestModules):
         query_response = {"status_code": 200, "body": {"resources": iom_ids}}
 
         batch1 = {"status_code": 200, "body": {"resources": [{"id": f"iom_{i}"} for i in range(100)]}}
-        batch2 = {"status_code": 200, "body": {"resources": [{"id": f"iom_{i}"} for i in range(100, 150)]}}
+        batch2 = {"status_code": 200, "body": {"resources": [{"id": f"iom_{i}"} for i in reversed(range(100, 150))]}}
 
         self.mock_client.command.side_effect = [query_response, batch1, batch2]
 
@@ -562,6 +618,23 @@ class TestCloudModule(TestModules):
 
         self.assertEqual(self.mock_client.command.call_count, 3)
         self.assertEqual(len(result), 150)
+        # Reorder restores query-step order across batches even though batch2 was reversed.
+        self.assertEqual([r["id"] for r in result], iom_ids)
+
+    def test_search_iom_findings_batch_error_fails_fast(self):
+        """Test IOM search wraps a step-2 (entities) error in a list."""
+        query_response = {"status_code": 200, "body": {"resources": ["iom_1", "iom_2"]}}
+        error_response = {
+            "status_code": 500,
+            "body": {"errors": [{"message": "Internal server error"}]},
+        }
+        self.mock_client.command.side_effect = [query_response, error_response]
+
+        result = self.module.search_iom_findings(limit=10)
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
 
     def test_search_iom_findings_uses_params_true(self):
         """Test IOM entity fetch uses GET with query params."""
@@ -617,6 +690,30 @@ class TestCloudModule(TestModules):
         result = self.module.search_cspm_suppression_rules()
 
         self.assertEqual(result, [])
+
+    def test_search_suppression_rules_reorders_to_match_sorted_ids(self):
+        """When GetSuppressionRules returns rules out of order, the result is
+        reordered to match the query-step ID order."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["rule_2", "rule_1"]},
+        }
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "rule_1", "suppression_reason": "accept-risk"},
+                    {"id": "rule_2", "suppression_reason": "false-positive"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_cspm_suppression_rules(limit=10)
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "rule_2")
+        self.assertEqual(result[1]["id"], "rule_1")
 
     def test_create_suppression_rule_success(self):
         """Test creating a suppression rule."""

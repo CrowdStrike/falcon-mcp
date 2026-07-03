@@ -250,7 +250,8 @@ class RTRModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Restore the query-step sort order in case RTR_ListSessions reorders results.
+        return self._reorder_by_ids(session_ids, details, id_field="id")
 
     def search_audit_sessions(
         self,

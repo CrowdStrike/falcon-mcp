@@ -139,7 +139,8 @@ class QuarantineModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Restore the query-step sort order if the details endpoint reorders results.
+        return self._reorder_by_ids(file_ids, details, id_field="id")
 
     def preview_quarantine_actions(
         self,

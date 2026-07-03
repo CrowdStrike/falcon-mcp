@@ -135,6 +135,48 @@ class BaseModule(ABC):
             default_result=[],
         )
 
+    def _reorder_by_ids(
+        self,
+        ordered_ids: list[str],
+        entities: list[dict[str, Any]],
+        id_field: str,
+    ) -> list[dict[str, Any]]:
+        """Reorder hydrated entities to match the sorted ID order from the query step.
+
+        Search tools query entity IDs first (honoring the requested sort) and then
+        hydrate full details by ID. Some "get entities by IDs" endpoints return
+        resources in arbitrary order, discarding the sort. This restores the order
+        of ``ordered_ids``. It is a no-op for endpoints that already preserve order.
+
+        Entities whose ID is not in ``ordered_ids`` are appended in their original
+        order (never dropped); IDs with no matching entity are skipped.
+
+        Args:
+            ordered_ids: Entity IDs from the query step, in the desired order.
+            entities: Hydrated entity dicts from the get-by-IDs step.
+            id_field: The key inside each entity dict that holds its ID.
+
+        Returns:
+            The entities reordered to match ordered_ids.
+        """
+        by_id = {str(entity.get(id_field, "")): entity for entity in entities}
+
+        result: list[dict[str, Any]] = []
+        placed: set[str] = set()
+        for entity_id in ordered_ids:
+            key = str(entity_id)
+            if key in by_id and key not in placed:
+                result.append(by_id[key])
+                placed.add(key)
+
+        # Preserve entities not referenced by ordered_ids rather than dropping them
+        result.extend(
+            entity for entity in entities
+            if str(entity.get(id_field, "")) not in placed
+        )
+
+        return result
+
     def _base_search_api_call(
         self,
         operation: str,

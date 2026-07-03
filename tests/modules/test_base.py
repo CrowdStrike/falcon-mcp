@@ -716,5 +716,77 @@ class TestBaseModule(TestModules):
         self.assertFalse(call_kwargs["structured_output"])
 
 
+class TestBaseModuleReorderByIds(TestModules):
+    """Test cases for BaseModule._reorder_by_ids."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.setup_module(ConcreteBaseModule)
+
+    def test_reorder_restores_sorted_order(self):
+        """Entities are reordered to match the query-step ID order."""
+        ordered_ids = ["c", "a", "b"]
+        entities = [{"id": "a"}, {"id": "b"}, {"id": "c"}]
+        result = self.module._reorder_by_ids(ordered_ids, entities, "id")
+        self.assertEqual([e["id"] for e in result], ["c", "a", "b"])
+
+    def test_reorder_custom_id_field(self):
+        """The id_field argument selects which key to match on."""
+        ordered_ids = ["dev2", "dev1"]
+        entities = [{"device_id": "dev1"}, {"device_id": "dev2"}]
+        result = self.module._reorder_by_ids(ordered_ids, entities, "device_id")
+        self.assertEqual([e["device_id"] for e in result], ["dev2", "dev1"])
+
+    def test_reorder_extra_entity_appended_at_end(self):
+        """Entities not present in ordered_ids are appended, never dropped."""
+        ordered_ids = ["a", "b"]
+        entities = [{"id": "b"}, {"id": "a"}, {"id": "extra"}]
+        result = self.module._reorder_by_ids(ordered_ids, entities, "id")
+        self.assertEqual([e["id"] for e in result], ["a", "b", "extra"])
+
+    def test_reorder_missing_entity_skipped(self):
+        """IDs with no matching entity are skipped silently."""
+        ordered_ids = ["a", "missing", "b"]
+        entities = [{"id": "b"}, {"id": "a"}]
+        result = self.module._reorder_by_ids(ordered_ids, entities, "id")
+        self.assertEqual([e["id"] for e in result], ["a", "b"])
+
+    def test_reorder_empty_entities_returns_empty(self):
+        """An empty entity list returns an empty list."""
+        result = self.module._reorder_by_ids(["a", "b"], [], "id")
+        self.assertEqual(result, [])
+
+    def test_reorder_empty_ordered_ids_appends_all(self):
+        """With no ordered IDs, all entities are returned in original order."""
+        entities = [{"id": "a"}, {"id": "b"}]
+        result = self.module._reorder_by_ids([], entities, "id")
+        self.assertEqual([e["id"] for e in result], ["a", "b"])
+
+    def test_reorder_duplicate_id_in_ordered_ids_yields_no_extra_slot(self):
+        """A duplicate ID in ordered_ids yields one slot, not a repeated entity.
+
+        Query endpoints return primary-key IDs, so a repeat is degenerate; the
+        second occurrence is skipped like a missing-entity ID.
+        """
+        ordered_ids = ["a", "a", "b"]
+        entities = [{"id": "a"}, {"id": "b"}]
+        result = self.module._reorder_by_ids(ordered_ids, entities, "id")
+        self.assertEqual([e["id"] for e in result], ["a", "b"])
+
+    def test_reorder_extra_entity_appended_even_when_first_in_input(self):
+        """An unmatched entity is appended at the tail regardless of input position."""
+        ordered_ids = ["a", "b"]
+        entities = [{"id": "extra"}, {"id": "b"}, {"id": "a"}]
+        result = self.module._reorder_by_ids(ordered_ids, entities, "id")
+        self.assertEqual([e["id"] for e in result], ["a", "b", "extra"])
+
+    def test_reorder_already_ordered_is_noop(self):
+        """When entities already match ordered_ids, output is unchanged."""
+        ordered_ids = ["a", "b", "c"]
+        entities = [{"id": "a"}, {"id": "b"}, {"id": "c"}]
+        result = self.module._reorder_by_ids(ordered_ids, entities, "id")
+        self.assertEqual([e["id"] for e in result], ["a", "b", "c"])
+
+
 if __name__ == "__main__":
     unittest.main()

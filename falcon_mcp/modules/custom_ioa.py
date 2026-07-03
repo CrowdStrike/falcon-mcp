@@ -220,7 +220,8 @@ class CustomIOAModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Preserve the query-step order in case the details endpoint reorders results.
+        return self._reorder_by_ids(platform_ids, details, id_field="id")
 
     def get_ioa_rule_types(
         self,
@@ -265,7 +266,8 @@ class CustomIOAModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Preserve the query-step order in case the details endpoint reorders results.
+        return self._reorder_by_ids(rule_type_ids, details, id_field="id")
 
     def create_ioa_rule_group(
         self,

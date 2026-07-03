@@ -183,6 +183,36 @@ class TestPoliciesModule(TestModules):
                 self.assertEqual(len(result), 2)
                 self.assertEqual(result[0]["id"], "pol-1")
 
+    def test_search_device_control_reorders_to_match_sorted_ids(self):
+        """When getDeviceControlPoliciesV2 returns policies out of order, the
+        result is reordered to match the sorted ID order from the query step."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["pol-2", "pol-1"]},
+        }
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "pol-1", "name": "a", "usb_settings": {}},
+                    {"id": "pol-2", "name": "b", "usb_settings": {}},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_policies(
+            policy_type="device_control",
+            filter=None,
+            limit=50,
+            offset=0,
+            sort="name.asc",
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "pol-2")
+        self.assertEqual(result[1]["id"], "pol-1")
+
     def test_search_invalid_type(self):
         """An invalid policy_type returns an error and makes no API call."""
         result = self.module.search_policies(

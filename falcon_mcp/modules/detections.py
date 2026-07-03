@@ -159,7 +159,9 @@ class DetectionsModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # PostEntitiesAlertsV2 returns entities in arbitrary order; restore the sort
+        # applied by the query step (validated against live API: field is composite_id).
+        return self._reorder_by_ids(detection_ids, details, id_field="composite_id")
 
     def get_detection_details(
         self,
