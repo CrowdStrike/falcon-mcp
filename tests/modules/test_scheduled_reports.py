@@ -189,7 +189,7 @@ class TestScheduledReportsModule(TestModules):
         # Verify client command was called correctly
         self.mock_client.command.assert_called_once_with(
             "scheduled_reports_launch",
-            body={"id": "report-id-1"},
+            body=[{"id": "report-id-1"}],
         )
 
         # Verify result

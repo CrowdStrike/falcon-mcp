@@ -165,9 +165,19 @@ class ScheduledReportsModule(BaseModule):
         falcon_search_report_executions and downloaded with
         falcon_download_report_execution when complete.
         """
-        result = self._base_query_api_call(
+        # scheduled_reports_launch expects the request body as a JSON array of
+        # {id} objects, not a bare object. _base_query_api_call routes body_params
+        # through prepare_api_parameters, which always returns a plain dict, so
+        # call the client directly to preserve the list-of-dict shape (mirrors
+        # falcon_mcp/modules/rtr.py and correlation_rules.py).
+        response = self.client.command(
+            "scheduled_reports_launch",
+            body=[{"id": id}],
+        )
+
+        result = handle_api_response(
+            response,
             operation="scheduled_reports_launch",
-            body_params={"id": id},
             error_message="Failed to launch scheduled report",
             default_result=[],
         )
