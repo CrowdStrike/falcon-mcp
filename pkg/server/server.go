@@ -6,7 +6,6 @@ package server
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -59,10 +58,17 @@ func Build(fc *falcon.FalconClient, opts Options) (*mcp.Server, int, int, error)
 	toolCount++
 
 	if opts.Dynamic {
-		// Dynamic mode registration is implemented in Phase 6; for now the
-		// non-dynamic path is the supported one. The two meta-tools will be
-		// added here.
-		slog.Warn("dynamic mode not yet implemented; falling back to full tool registration")
+		// Dynamic mode: expose only the two discovery meta-tools plus
+		// falcon_list_enabled_modules above (3 tools total), keeping the
+		// client's context window minimal while all functionality stays
+		// reachable via falcon_execute_tool.
+		cat, err := buildDynamicCatalog(context.Background(), fc, enabled)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		registerDynamicTools(srv, cat)
+		toolCount += 2
+		return srv, toolCount, resourceCount, nil
 	}
 
 	// Server-level tools available in normal mode.
