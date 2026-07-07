@@ -25,6 +25,7 @@ var implementedModules = []string{
 	"data_protection",
 	"detections",
 	"discover",
+	"exclusions",
 	"firewall",
 	"host_groups",
 	"hosts",

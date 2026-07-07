@@ -12,6 +12,7 @@ import (
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/data_protection"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/detections"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/discover"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/exclusions"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/firewall"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/host_groups"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/hosts"
