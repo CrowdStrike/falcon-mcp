@@ -8,9 +8,11 @@ package all
 import (
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/cases"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/correlation_rules"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/custom_ioa"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/data_protection"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/detections"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/discover"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/firewall"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/host_groups"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/hosts"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/intel"

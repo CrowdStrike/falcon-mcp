@@ -21,9 +21,11 @@ import (
 var implementedModules = []string{
 	"cases",
 	"correlation_rules",
+	"custom_ioa",
 	"data_protection",
 	"detections",
 	"discover",
+	"firewall",
 	"host_groups",
 	"hosts",
 	"intel",
