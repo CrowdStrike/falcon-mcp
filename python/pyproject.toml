@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "falcon-mcp"
+version = "0.0.0"
+description = "CrowdStrike Falcon MCP Server (Model Context Protocol)"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.8"
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/crowdstrike/falcon-mcp"
+Repository = "https://github.com/crowdstrike/falcon-mcp"
+
+[project.scripts]
+falcon-mcp = "falcon_mcp:main"

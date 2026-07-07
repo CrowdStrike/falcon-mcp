@@ -1,0 +1,50 @@
+#!/usr/bin/env node
+
+const childProcess = require('child_process');
+
+const BINARY_MAP = {
+  darwin_x64: { name: 'falcon-mcp-macos-x86_64', suffix: '' },
+  darwin_arm64: { name: 'falcon-mcp-macos-arm64', suffix: '' },
+  linux_x64: { name: 'falcon-mcp-linux-x86_64', suffix: '' },
+  linux_arm64: { name: 'falcon-mcp-linux-arm64', suffix: '' },
+  win32_x64: { name: 'falcon-mcp-windows-x86_64', suffix: '.exe' },
+  win32_arm64: { name: 'falcon-mcp-windows-arm64', suffix: '.exe' },
+};
+
+// Resolving fails if the optionalDependency was not installed or the platform/arch is unsupported.
+const resolveBinaryPath = () => {
+  try {
+    const binary = BINARY_MAP[`${process.platform}_${process.arch}`];
+    return require.resolve(`${binary.name}/bin/${binary.name}${binary.suffix}`);
+  } catch (e) {
+    throw new Error(`Could not resolve binary path for platform/arch: ${process.platform}/${process.arch}`);
+  }
+};
+
+const child = childProcess.spawn(resolveBinaryPath(), process.argv.slice(2), {
+  stdio: 'inherit',
+});
+
+const handleSignal = () => (signal) => {
+  if (signal === 'SIGHUP') {
+    console.log(`Received ${signal}, forwarding to child process...`);
+  } else {
+    console.log(`Received ${signal}, terminating child process...`);
+  }
+  if (child && !child.killed) {
+    child.kill(signal);
+  }
+};
+
+['SIGTERM', 'SIGINT', 'SIGHUP'].forEach((signal) => {
+  process.on(signal, handleSignal(signal));
+});
+
+child.on('close', (code, signal) => {
+  if (signal) {
+    console.log(`Child process terminated by signal: ${signal}`);
+    process.exit(128 + (signal === 'SIGTERM' ? 15 : signal === 'SIGINT' ? 2 : 1));
+  } else {
+    process.exit(code || 0);
+  }
+});
