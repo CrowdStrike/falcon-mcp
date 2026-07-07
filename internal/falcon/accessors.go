@@ -5,6 +5,7 @@ import (
 	"github.com/crowdstrike/gofalcon/falcon/client/hosts"
 	"github.com/crowdstrike/gofalcon/falcon/client/intel"
 	"github.com/crowdstrike/gofalcon/falcon/client/recon"
+	"github.com/crowdstrike/gofalcon/falcon/client/report_executions"
 	"github.com/crowdstrike/gofalcon/falcon/client/scheduled_reports"
 	"github.com/crowdstrike/gofalcon/falcon/client/sensor_usage_api"
 	"github.com/crowdstrike/gofalcon/falcon/client/serverless_vulnerabilities"
@@ -41,6 +42,11 @@ func (c *FalconClient) Recon() recon.ClientService { return c.api.Recon }
 // ScheduledReports returns the Scheduled Reports service client.
 func (c *FalconClient) ScheduledReports() scheduled_reports.ClientService {
 	return c.api.ScheduledReports
+}
+
+// ReportExecutions returns the Report Executions service client.
+func (c *FalconClient) ReportExecutions() report_executions.ClientService {
+	return c.api.ReportExecutions
 }
 
 // Intel returns the Intel service client.

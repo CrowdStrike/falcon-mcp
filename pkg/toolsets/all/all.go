@@ -6,5 +6,9 @@
 package all
 
 import (
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/discover"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/hosts"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/recon"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/sensor_usage"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/spotlight"
 )
