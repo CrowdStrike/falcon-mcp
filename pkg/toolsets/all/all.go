@@ -20,6 +20,7 @@ import (
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/policies"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/quarantine"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/recon"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/rtr"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/scheduled_reports"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/sensor_usage"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/serverless"

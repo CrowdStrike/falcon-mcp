@@ -33,6 +33,7 @@ var implementedModules = []string{
 	"policies",
 	"quarantine",
 	"recon",
+	"rtr",
 	"scheduled_reports",
 	"sensor_usage",
 	"serverless",
