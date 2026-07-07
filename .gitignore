@@ -220,3 +220,4 @@ memory-bank/
 /dist/
 /falcon-mcp-go
 cmd/falcon-mcp/falcon-mcp
+/falcon-mcp
