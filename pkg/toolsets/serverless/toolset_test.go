@@ -14,8 +14,8 @@ import (
 // mockServerlessAPI is a hand-written mock satisfying the narrow
 // ServerlessVulnerabilitiesAPI interface.
 type mockServerlessAPI struct {
-	resp    *serverless_vulnerabilities.GetCombinedVulnerabilitiesSARIFOK
-	err     error
+	resp      *serverless_vulnerabilities.GetCombinedVulnerabilitiesSARIFOK
+	err       error
 	gotParams *serverless_vulnerabilities.GetCombinedVulnerabilitiesSARIFParams
 }
 

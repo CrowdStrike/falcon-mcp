@@ -23,8 +23,9 @@ var implementedModules = []string{
 	"hosts",
 	"recon",
 	"sensor_usage",
+	"serverless",
 	"spotlight",
-	// scheduled_reports and serverless are added once their toolsets land.
+	// scheduled_reports is added once its toolset lands.
 }
 
 func testClient(t *testing.T, enabled []string) *mcp.ClientSession {
