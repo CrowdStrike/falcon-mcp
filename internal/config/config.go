@@ -20,11 +20,11 @@ type Config struct {
 	ProxyURL     string
 
 	// MCP server behavior.
-	Transport         string // stdio | sse | streamable-http
-	Modules           []string
-	Debug             bool
-	UserAgentComment  string
-	Dynamic           bool
+	Transport        string // stdio | sse | streamable-http
+	Modules          []string
+	Debug            bool
+	UserAgentComment string
+	Dynamic          bool
 
 	// HTTP transport.
 	Host          string

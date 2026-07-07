@@ -19,12 +19,7 @@ import (
 // ReadOnlyAnnotations is the default annotation set for read-only tools that
 // talk to an external API, matching the Python READ_ONLY_ANNOTATIONS.
 func ReadOnlyAnnotations() *mcp.ToolAnnotations {
-	return &mcp.ToolAnnotations{
-		ReadOnlyHint:    true,
-		DestructiveHint: mcpx.BoolPtr(false),
-		IdempotentHint:  true,
-		OpenWorldHint:   mcpx.BoolPtr(true),
-	}
+	return mcpx.ReadOnly()
 }
 
 // Options configures how the MCP server is assembled.

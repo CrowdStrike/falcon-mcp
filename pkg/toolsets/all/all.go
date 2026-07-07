@@ -4,3 +4,7 @@
 //
 // Toolset imports are added here as each module is implemented in later phases.
 package all
+
+import (
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/hosts"
+)
