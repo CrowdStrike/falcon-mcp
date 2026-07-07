@@ -2,6 +2,7 @@ package falcon
 
 import (
 	"github.com/crowdstrike/gofalcon/falcon/client/alerts"
+	"github.com/crowdstrike/gofalcon/falcon/client/case_management"
 	"github.com/crowdstrike/gofalcon/falcon/client/cases"
 	"github.com/crowdstrike/gofalcon/falcon/client/correlation_rules"
 	"github.com/crowdstrike/gofalcon/falcon/client/data_protection_configuration"
@@ -73,6 +74,11 @@ func (c *FalconClient) HostGroup() host_group.ClientService { return c.api.HostG
 
 // Cases returns the Cases service client.
 func (c *FalconClient) Cases() cases.ClientService { return c.api.Cases }
+
+// CaseManagement returns the Case Management service client (case templates).
+func (c *FalconClient) CaseManagement() case_management.ClientService {
+	return c.api.CaseManagement
+}
 
 // CorrelationRules returns the Correlation Rules service client.
 func (c *FalconClient) CorrelationRules() correlation_rules.ClientService {

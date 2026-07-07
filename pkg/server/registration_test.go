@@ -19,13 +19,21 @@ import (
 // As each phase lands more toolsets, add them here; the parity test then
 // enforces their expected tool counts. The final phase enables the full set.
 var implementedModules = []string{
+	"correlation_rules",
+	"data_protection",
+	"detections",
 	"discover",
+	"host_groups",
 	"hosts",
+	"intel",
+	"ioc",
+	"quarantine",
 	"recon",
 	"scheduled_reports",
 	"sensor_usage",
 	"serverless",
 	"spotlight",
+	// cases is added once its list_case_templates tool is wired to CaseManagement.
 }
 
 func testClient(t *testing.T, enabled []string) *mcp.ClientSession {

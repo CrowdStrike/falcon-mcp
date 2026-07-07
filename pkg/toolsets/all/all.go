@@ -6,8 +6,15 @@
 package all
 
 import (
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/correlation_rules"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/data_protection"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/detections"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/discover"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/host_groups"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/hosts"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/intel"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/ioc"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/quarantine"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/recon"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/scheduled_reports"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/sensor_usage"
