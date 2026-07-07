@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,6 +17,7 @@ import (
 	"github.com/crowdstrike/falcon-mcp-go/internal/dotenv"
 	"github.com/crowdstrike/falcon-mcp-go/internal/falcon"
 	"github.com/crowdstrike/falcon-mcp-go/internal/logging"
+	falconhttp "github.com/crowdstrike/falcon-mcp-go/pkg/http"
 	"github.com/crowdstrike/falcon-mcp-go/pkg/server"
 	"github.com/crowdstrike/falcon-mcp-go/pkg/version"
 
@@ -86,8 +88,13 @@ func run(cfg *config.Config) error {
 	case "stdio":
 		return srv.Run(ctx, &mcp.StdioTransport{})
 	case "streamable-http", "sse":
-		// HTTP transports are wired in Phase 2 (pkg/http).
-		return fmt.Errorf("transport %q not yet implemented", cfg.Transport)
+		return falconhttp.Serve(ctx, func(*http.Request) *mcp.Server { return srv }, falconhttp.Options{
+			Addr:      fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+			APIKey:    cfg.APIKey,
+			Stateless: cfg.StatelessHTTP,
+			SSE:       cfg.Transport == "sse",
+			Ready:     falconhttp.SingleTenantReady(fc),
+		})
 	default:
 		return fmt.Errorf("unknown transport %q", cfg.Transport)
 	}
