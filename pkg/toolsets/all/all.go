@@ -7,6 +7,7 @@ package all
 
 import (
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/cases"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/cloud"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/correlation_rules"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/custom_ioa"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/data_protection"
@@ -27,5 +28,6 @@ import (
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/scheduled_reports"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/sensor_usage"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/serverless"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/shield"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/spotlight"
 )

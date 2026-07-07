@@ -20,6 +20,7 @@ import (
 // enforces their expected tool counts. The final phase enables the full set.
 var implementedModules = []string{
 	"cases",
+	"cloud",
 	"correlation_rules",
 	"custom_ioa",
 	"data_protection",
@@ -40,6 +41,7 @@ var implementedModules = []string{
 	"scheduled_reports",
 	"sensor_usage",
 	"serverless",
+	"shield",
 	"spotlight",
 }
 
@@ -120,5 +122,31 @@ func TestAllToolsPrefixed(t *testing.T) {
 		if len(tl.Name) < 7 || tl.Name[:7] != "falcon_" {
 			t.Errorf("tool %q missing falcon_ prefix", tl.Name)
 		}
+	}
+}
+
+// TestFullInventoryParity asserts the complete registered inventory matches the
+// Python implementation: 115 tools (112 module + 3 server) and 36 FQL-guide
+// resources across all 24 modules.
+func TestFullInventoryParity(t *testing.T) {
+	if len(implementedModules) != 24 {
+		t.Fatalf("expected 24 modules registered, got %d", len(implementedModules))
+	}
+	cs := testClient(t, implementedModules)
+
+	tools, err := cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	if len(tools.Tools) != parity.TotalTools {
+		t.Errorf("total tools = %d, want %d", len(tools.Tools), parity.TotalTools)
+	}
+
+	resources, err := cs.ListResources(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("ListResources: %v", err)
+	}
+	if len(resources.Resources) != parity.TotalResources {
+		t.Errorf("total resources = %d, want %d", len(resources.Resources), parity.TotalResources)
 	}
 }
