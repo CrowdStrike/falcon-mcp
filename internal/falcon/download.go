@@ -3,10 +3,13 @@ package falcon
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 
+	"github.com/crowdstrike/gofalcon/falcon/client/identity_protection"
 	"github.com/crowdstrike/gofalcon/falcon/client/intel"
 	"github.com/crowdstrike/gofalcon/falcon/client/report_executions"
+	"github.com/crowdstrike/gofalcon/falcon/models"
 	"github.com/go-openapi/runtime"
 )
 
@@ -66,4 +69,30 @@ func (c *FalconClient) GetMitreReport(ctx context.Context, actorID, format strin
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// InvestigateGraphQL runs an Identity Protection GraphQL query and returns the
+// decoded JSON response body. gofalcon's APIPreemptProxyPostGraphql discards the
+// response body (its OK struct has no Payload), so this captures the raw body
+// via CaptureBodyOption and unmarshals it. Returns the parsed JSON as a generic
+// value (matching the Python module, which returns the full GraphQL body).
+func (c *FalconClient) InvestigateGraphQL(ctx context.Context, query string) (any, error) {
+	params := identity_protection.NewAPIPreemptProxyPostGraphqlParamsWithContext(ctx)
+	params.Body = &models.SwaggerGraphQLQuery{Query: &query}
+
+	var buf bytes.Buffer
+	reader := &identity_protection.APIPreemptProxyPostGraphqlReader{}
+	_, err := c.api.IdentityProtection.APIPreemptProxyPostGraphql(params, CaptureBodyOption(&buf, reader))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if len(buf.Bytes()) == 0 {
+		return map[string]any{}, nil
+	}
+	if err := json.Unmarshal(buf.Bytes(), &out); err != nil {
+		// Return the raw string if it is not valid JSON.
+		return buf.String(), nil
+	}
+	return out, nil
 }
