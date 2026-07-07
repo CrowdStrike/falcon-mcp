@@ -30,6 +30,7 @@ var implementedModules = []string{
 	"hosts",
 	"intel",
 	"ioc",
+	"policies",
 	"quarantine",
 	"recon",
 	"scheduled_reports",

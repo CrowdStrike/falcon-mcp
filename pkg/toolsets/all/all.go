@@ -17,6 +17,7 @@ import (
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/hosts"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/intel"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/ioc"
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/policies"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/quarantine"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/recon"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/scheduled_reports"
