@@ -27,6 +27,9 @@ type Options struct {
 	// Ready probes Falcon token reachability for /readyz. It should be cheap
 	// and must not block indefinitely.
 	Ready func(ctx context.Context) error
+	// MultiTenant, when true, wraps the handler with requireTLSMiddleware so
+	// credential-bearing requests over plaintext are rejected with a clear 400.
+	MultiTenant bool
 }
 
 // Serve builds and runs the HTTP server until ctx is cancelled, then shuts down
@@ -66,8 +69,14 @@ func Serve(ctx context.Context, getServer func(*http.Request) *mcp.Server, opts 
 	}
 	mux.Handle("/", mcpHandler)
 
-	// Compose middleware (outermost first): strip slash → normalize CT → auth.
-	handler := stripTrailingSlash(normalizeContentType(apiKeyAuth(mux, opts.APIKey)))
+	// Compose middleware (outermost first): strip slash → normalize CT →
+	// [require-TLS for multi-tenant] → auth.
+	var chain http.Handler = mux
+	chain = apiKeyAuth(chain, opts.APIKey)
+	if opts.MultiTenant {
+		chain = requireTLSMiddleware(chain)
+	}
+	handler := stripTrailingSlash(normalizeContentType(chain))
 
 	srv := &http.Server{
 		Addr:              opts.Addr,

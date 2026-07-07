@@ -53,6 +53,33 @@ func run(cfg *config.Config) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	buildServer := func(fc *falcon.FalconClient) (*mcp.Server, error) {
+		srv, _, _, err := server.Build(fc, server.Options{Enabled: cfg.Modules, Dynamic: cfg.Dynamic})
+		return srv, err
+	}
+
+	// Multi-tenant mode: no process-wide credentials; each request supplies its
+	// own via headers, served from an LRU+TTL client pool. Only valid for HTTP
+	// transports.
+	if cfg.MultiTenant {
+		if cfg.Transport == "stdio" {
+			return fmt.Errorf("--multi-tenant requires an HTTP transport (streamable-http or sse), not stdio")
+		}
+		pool := falcon.NewPool(falcon.PoolOptions{Debug: cfg.Debug, UserAgentComment: cfg.UserAgentComment})
+		getServer := falconhttp.MultiTenantServerFunc(pool, buildServer, true /* requireTLS */)
+		slog.Info("Falcon MCP ready (multi-tenant)",
+			"version", version.String(), "transport", cfg.Transport, "dynamic", cfg.Dynamic)
+		return falconhttp.Serve(ctx, getServer, falconhttp.Options{
+			Addr:        fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+			APIKey:      cfg.APIKey,
+			Stateless:   cfg.StatelessHTTP,
+			SSE:         cfg.Transport == "sse",
+			MultiTenant: true,
+			// No readiness probe against a specific tenant; liveness only.
+		})
+	}
+
+	// Single-tenant: one shared, thread-safe client from env/flags.
 	fc, err := falcon.NewClient(ctx, falcon.Credentials{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
@@ -69,10 +96,7 @@ func run(cfg *config.Config) error {
 		return fmt.Errorf("failed to authenticate with the Falcon API: %w", err)
 	}
 
-	srv, toolCount, resourceCount, err := server.Build(fc, server.Options{
-		Enabled: cfg.Modules,
-		Dynamic: cfg.Dynamic,
-	})
+	srv, toolCount, resourceCount, err := buildServerWithCounts(fc, cfg)
 	if err != nil {
 		return err
 	}
@@ -98,4 +122,10 @@ func run(cfg *config.Config) error {
 	default:
 		return fmt.Errorf("unknown transport %q", cfg.Transport)
 	}
+}
+
+// buildServerWithCounts builds the server and returns tool/resource counts for
+// the startup log line.
+func buildServerWithCounts(fc *falcon.FalconClient, cfg *config.Config) (*mcp.Server, int, int, error) {
+	return server.Build(fc, server.Options{Enabled: cfg.Modules, Dynamic: cfg.Dynamic})
 }
