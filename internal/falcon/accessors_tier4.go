@@ -8,6 +8,7 @@ import (
 	"github.com/crowdstrike/gofalcon/falcon/client/identity_protection"
 	"github.com/crowdstrike/gofalcon/falcon/client/kubernetes_protection"
 	"github.com/crowdstrike/gofalcon/falcon/client/ngsiem"
+	"github.com/crowdstrike/gofalcon/falcon/client/saas_security"
 )
 
 // Tier-4 accessors: cloud (5 sub-clients), ngsiem, idp.
@@ -42,3 +43,6 @@ func (c *FalconClient) Ngsiem() ngsiem.ClientService { return c.api.Ngsiem }
 func (c *FalconClient) IdentityProtection() identity_protection.ClientService {
 	return c.api.IdentityProtection
 }
+
+// SaasSecurity returns the SaaS Security (Shield) service client.
+func (c *FalconClient) SaasSecurity() saas_security.ClientService { return c.api.SaasSecurity }
