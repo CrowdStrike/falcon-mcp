@@ -90,15 +90,19 @@ func (m *mockCasesAPI) EntitiesCaseTagsDeleteV1(p *cases.EntitiesCaseTagsDeleteV
 type mockCaseMgmtAPI struct {
 	queryResp   *case_management.QueriesTemplatesGetV1OK
 	queryErr    error
+	queryGot    *case_management.QueriesTemplatesGetV1Params
 	detailsResp *case_management.EntitiesTemplatesGetV1OK
 	detailsErr  error
+	detailsGot  *case_management.EntitiesTemplatesGetV1Params
 }
 
 func (m *mockCaseMgmtAPI) QueriesTemplatesGetV1(p *case_management.QueriesTemplatesGetV1Params, _ ...case_management.ClientOption) (*case_management.QueriesTemplatesGetV1OK, error) {
+	m.queryGot = p
 	return m.queryResp, m.queryErr
 }
 
 func (m *mockCaseMgmtAPI) EntitiesTemplatesGetV1(p *case_management.EntitiesTemplatesGetV1Params, _ ...case_management.ClientOption) (*case_management.EntitiesTemplatesGetV1OK, error) {
+	m.detailsGot = p
 	return m.detailsResp, m.detailsErr
 }
 
@@ -500,19 +504,7 @@ func TestAddCaseEventEvidenceSuccess(t *testing.T) {
 
 // ---- list_case_templates tests ----
 
-func TestListCaseTemplatesNilAPI(t *testing.T) {
-	// With nil api (not yet wired), the tool should return an informative error.
-	text, isErr := callTool(t, func(s *mcp.Server) { registerListCaseTemplates(s, nil) },
-		"falcon_list_case_templates", map[string]any{})
-	if isErr {
-		t.Fatalf("unexpected protocol error: %s", text)
-	}
-	if !contains(text, "not yet wired") {
-		t.Errorf("expected 'not yet wired' message, got: %s", text)
-	}
-}
-
-func TestListCaseTemplatesSuccess(t *testing.T) {
+func TestListCaseTemplatesTwoStep(t *testing.T) {
 	tmplName := "IR Template"
 	tmpl := &models.APITemplateV1{Name: &tmplName}
 	mock := &mockCaseMgmtAPI{
@@ -530,6 +522,16 @@ func TestListCaseTemplatesSuccess(t *testing.T) {
 	}
 	if !contains(text, "IR Template") {
 		t.Errorf("expected template name in result: %s", text)
+	}
+	// Both steps must have been invoked.
+	if mock.queryGot == nil {
+		t.Error("QueriesTemplatesGetV1 was not called")
+	}
+	if mock.detailsGot == nil {
+		t.Error("EntitiesTemplatesGetV1 was not called")
+	}
+	if len(mock.detailsGot.Ids) != 1 || mock.detailsGot.Ids[0] != "tmpl-1" {
+		t.Errorf("details step received wrong IDs: %v", mock.detailsGot.Ids)
 	}
 }
 

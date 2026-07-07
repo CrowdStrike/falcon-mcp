@@ -6,6 +6,7 @@
 package all
 
 import (
+	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/cases"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/correlation_rules"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/data_protection"
 	_ "github.com/crowdstrike/falcon-mcp-go/pkg/toolsets/detections"
