@@ -1,0 +1,59 @@
+# GoReleaser config for falcon-mcp (Go rewrite).
+# Builds static binaries for darwin/linux/windows × amd64/arm64 and attaches them
+# to GitHub Releases. The npm and PyPI wrappers download these release assets.
+version: 2
+
+project_name: falcon-mcp
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: falcon-mcp
+    main: ./cmd/falcon-mcp
+    binary: falcon-mcp
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/crowdstrike/falcon-mcp-go/pkg/version.Version={{.Version}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: falcon-mcp
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+dockers:
+  - image_templates:
+      - "ghcr.io/crowdstrike/falcon-mcp-go:{{ .Version }}-amd64"
+    dockerfile: Dockerfile.golang
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=VERSION={{ .Version }}"
+  - image_templates:
+      - "ghcr.io/crowdstrike/falcon-mcp-go:{{ .Version }}-arm64"
+    dockerfile: Dockerfile.golang
+    use: buildx
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--build-arg=VERSION={{ .Version }}"
+
+release:
+  draft: true

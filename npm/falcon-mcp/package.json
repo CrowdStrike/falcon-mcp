@@ -1,0 +1,25 @@
+{
+  "name": "@crowdstrike/falcon-mcp",
+  "version": "0.13.0",
+  "description": "CrowdStrike Falcon MCP server (Go) — Node launcher",
+  "bin": {
+    "falcon-mcp": "bin/index.js"
+  },
+  "files": [
+    "bin/index.js"
+  ],
+  "scripts": {
+    "postinstall": "node bin/index.js --resolve-only || true"
+  },
+  "optionalDependencies": {
+    "@crowdstrike/falcon-mcp-darwin-arm64": "0.13.0",
+    "@crowdstrike/falcon-mcp-darwin-amd64": "0.13.0",
+    "@crowdstrike/falcon-mcp-linux-arm64": "0.13.0",
+    "@crowdstrike/falcon-mcp-linux-amd64": "0.13.0",
+    "@crowdstrike/falcon-mcp-windows-amd64": "0.13.0"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}

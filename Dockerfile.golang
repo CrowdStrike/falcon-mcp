@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+
+# Multi-stage build: compile a static Go binary, then ship it on a distroless
+# nonroot base for a minimal, hardened runtime image.
+
+FROM golang:1.23 AS builder
+WORKDIR /src
+
+# Cache dependencies first.
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+ARG VERSION=dev
+# CGO disabled for a fully static binary; trim debug info to shrink the image.
+RUN CGO_ENABLED=0 go build \
+    -trimpath \
+    -ldflags "-s -w -X github.com/crowdstrike/falcon-mcp-go/pkg/version.Version=${VERSION}" \
+    -o /out/falcon-mcp ./cmd/falcon-mcp
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=builder /out/falcon-mcp /usr/local/bin/falcon-mcp
+
+# Default to streamable-http on all interfaces for container deployments.
+ENV FALCON_MCP_TRANSPORT=streamable-http \
+    FALCON_MCP_HOST=0.0.0.0 \
+    FALCON_MCP_PORT=8000
+EXPOSE 8000
+
+ENTRYPOINT ["/usr/local/bin/falcon-mcp"]

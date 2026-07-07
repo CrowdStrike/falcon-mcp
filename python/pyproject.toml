@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "falcon-mcp-go"
+version = "0.13.0"
+description = "CrowdStrike Falcon MCP server (Go) — Python launcher that downloads and runs the matching release binary"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+
+[project.scripts]
+falcon-mcp = "falcon_mcp_go.launcher:main"
+
+[tool.setuptools]
+packages = ["falcon_mcp_go"]

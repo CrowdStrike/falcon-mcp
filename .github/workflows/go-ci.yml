@@ -1,0 +1,63 @@
+# CI for the Go rewrite of falcon-mcp: build, vet, race-tested unit tests, and a
+# docs-parity check that fails if the generated module docs drift from what is
+# committed (the Go analogue of docs-check.yml).
+name: go-ci
+
+on:
+  push:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "cmd/**"
+      - "internal/**"
+      - "pkg/**"
+      - "scripts/gen_docs.go"
+      - "docs/modules-go/**"
+      - ".github/workflows/go-ci.yml"
+  pull_request:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "cmd/**"
+      - "internal/**"
+      - "pkg/**"
+      - "scripts/gen_docs.go"
+      - "docs/modules-go/**"
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      - name: Verify formatting
+        run: |
+          unformatted=$(gofmt -l cmd internal pkg scripts)
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt:"; echo "$unformatted"; exit 1
+          fi
+      - name: Vet
+        run: go vet ./...
+      - name: Test (race)
+        run: go test -race ./...
+      - name: Build
+        run: go build ./...
+
+  docs-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      - name: Regenerate module docs
+        run: go run scripts/gen_docs.go docs/modules-go
+      - name: Fail if docs drifted
+        run: |
+          if ! git diff --quiet -- docs/modules-go; then
+            echo "Module docs are out of date. Run: go run scripts/gen_docs.go docs/modules-go"
+            git diff -- docs/modules-go
+            exit 1
+          fi
