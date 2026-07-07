@@ -215,3 +215,8 @@ memory-bank/
 
 # Playwright MCP screenshots
 .playwright-mcp/
+
+# Go rewrite build artifacts
+/dist/
+/falcon-mcp-go
+cmd/falcon-mcp/falcon-mcp
