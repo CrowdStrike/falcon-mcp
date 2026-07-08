@@ -401,24 +401,45 @@ class TestCloudRisksIntegration(BaseIntegrationTest):
             assert field in first, f"Expected '{field}' in risk entity. Got: {sorted(first.keys())}"
 
     def test_search_cloud_risks_with_severity_filter(self):
-        """Test severity FQL filter returns results (validates operator support)."""
+        """Test severity FQL filter with correct capitalized value."""
         result = self.call_method(
             self.module.search_cloud_risks,
-            filter="severity:'critical'",
+            filter="severity:'Critical'",
             limit=3,
         )
         self.assert_no_error(result, context="search_cloud_risks severity filter")
         self.assert_valid_list_response(result, min_length=0, context="severity filter")
 
     def test_search_cloud_risks_with_status_filter(self):
-        """Test status FQL filter (validates operator support)."""
+        """Test status FQL filter with correct capitalized value."""
         result = self.call_method(
             self.module.search_cloud_risks,
-            filter="status:'open'",
+            filter="status:'Open'",
             limit=3,
         )
         self.assert_no_error(result, context="search_cloud_risks status filter")
         self.assert_valid_list_response(result, min_length=0, context="status filter")
+
+    def test_search_cloud_risks_capitalized_filter_values_return_results(self):
+        """Regression: capitalized severity/status values must match when risks exist.
+
+        Lowercase values (severity:'critical', status:'open') silently return 0
+        on this endpoint. This test catches that regression by asserting non-empty
+        results whenever the environment has any cloud risks at all.
+        """
+        baseline = self.call_method(self.module.search_cloud_risks, limit=1)
+        self.assert_no_error(baseline, context="baseline cloud risks")
+        if not baseline:
+            self.skip_with_warning("No cloud risks in environment, skipping case-sensitivity regression test", "cloud risks case")
+            return
+
+        result = self.call_method(
+            self.module.search_cloud_risks,
+            filter="severity:'Critical',severity:'High',severity:'Medium',severity:'Low',severity:'Informational'",
+            limit=5,
+        )
+        self.assert_no_error(result, context="capitalized severity filter")
+        self.assert_valid_list_response(result, min_length=1, context="capitalized severity values must match when risks exist")
 
     def test_search_cloud_risks_with_cloud_provider_filter(self):
         """Test cloud_provider FQL filter (validates operator support)."""
