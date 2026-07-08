@@ -636,7 +636,7 @@ class CloudModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description="FQL filter expression. See `falcon://cloud/cloud-risks/fql-guide` for syntax.",
-            examples=["severity:'critical'+status:'open'", "cloud_provider:'aws'+groups.environment:'production'"],
+            examples=["severity:'Critical'+status:'Open'", "cloud_provider:'aws'+groups.environment:'production'"],
         ),
         limit: int = Field(
             default=100,
@@ -733,7 +733,7 @@ class CloudModule(BaseModule):
     ) -> list[dict[str, Any]]:
         """Get detailed information for cloud groups by ID.
 
-        Use when you already have specific cloud group IDs — for example, the `cloud_group`
+        Use when you already have specific cloud group IDs — for example, the `cloud_groups`
         field returned by `falcon_search_cloud_risks`. Returns full group details including
         name, selectors, business impact, and environment tags.
         """

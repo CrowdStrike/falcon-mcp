@@ -65,12 +65,12 @@ FILTER_HINTS: dict[str, str] = {
         "Group tag fields: environment, business_unit, business_impact."
     ),
     "falcon_search_cloud_risks": (
-        "Common fields: severity (critical|high|medium|low|informational), "
-        "status (open|resolved|suppressed), cloud_provider (aws|azure|gcp), "
+        "Common fields: severity (Critical|High|Medium|Low|Informational), "
+        "status (Open|Resolved|Suppressed), cloud_provider (aws|azure|gcp), "
         "asset_name, asset_type, asset_region, account_id, account_name, "
         "rule_name, service_category, groups.environment, groups.business_unit. "
-        "Date filters: first_seen:>'now-7d' (relative) or first_seen:>'2024-01-01T00:00:00Z' (absolute). "
-        "Ex: severity:'critical'+status:'open'+cloud_provider:'aws'. "
+        "Date filters: use absolute ISO-8601 only, e.g. first_seen:>'2024-01-01T00:00:00Z'. "
+        "Ex: severity:'Critical'+status:'Open'+cloud_provider:'aws'. "
         "Also: threat_actors (adversary/threat group name), risk_factor (risk factor identifier like PUBLIC_ACCESS)."
     ),
     # === Correlation Rules ===

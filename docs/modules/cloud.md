@@ -8,9 +8,9 @@ Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Con
 
 ## API Scopes
 
+- `Cloud Groups V2:read`
 - `Cloud Security API Assets:read`
 - `Cloud Security API Detections:read`
-- `Cloud Security API Groups:read`
 - `Cloud Security API Risks:read`
 - `Cloud Security Policies:read`
 - `Falcon Container Image:read`
@@ -71,11 +71,11 @@ first. Returns a confirmation response.
 
 ### `falcon_get_cloud_groups`
 
-**Required scopes:** `Cloud Security API Groups:read`
+**Required scopes:** `Cloud Groups V2:read`
 
 Get detailed information for cloud groups by ID.
 
-Use when you already have specific cloud group IDs — for example, the `cloud_group`
+Use when you already have specific cloud group IDs — for example, the `cloud_groups`
 field returned by `falcon_search_cloud_risks`. Returns full group details including
 name, selectors, business impact, and environment tags.
 
@@ -85,7 +85,7 @@ name, selectors, business impact, and environment tags.
 
 ### `falcon_search_cloud_groups`
 
-**Required scopes:** `Cloud Security API Groups:read`
+**Required scopes:** `Cloud Groups V2:read`
 
 List cloud groups in your CrowdStrike environment.
 

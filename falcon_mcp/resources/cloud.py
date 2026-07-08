@@ -1251,7 +1251,7 @@ CLOUD_RISKS_FQL_FILTERS = [
     (
         "first_seen",
         "Timestamp",
-        "When the risk was first observed. Supports range operators.\n\nEx: first_seen:>'2024-01-01T00:00:00Z' or first_seen:>'now-7d'",
+        "When the risk was first observed. Supports range operators. Use absolute ISO-8601 timestamps only.\n\nEx: first_seen:>'2024-01-01T00:00:00Z'",
     ),
     (
         "groups",
@@ -1276,7 +1276,7 @@ CLOUD_RISKS_FQL_FILTERS = [
     (
         "last_seen",
         "Timestamp",
-        "When the risk was last observed. Supports range operators.\n\nEx: last_seen:>'now-24h'",
+        "When the risk was last observed. Supports range operators. Use absolute ISO-8601 timestamps only.\n\nEx: last_seen:>'2024-01-01T00:00:00Z'",
     ),
     (
         "resolved_at",
@@ -1306,12 +1306,12 @@ CLOUD_RISKS_FQL_FILTERS = [
     (
         "severity",
         "String",
-        "Risk severity level.\nValues: critical, high, medium, low, informational.\n\nEx: severity:'critical'",
+        "Risk severity level.\nValues: Critical, High, Medium, Low, Informational.\n\nEx: severity:'Critical'",
     ),
     (
         "status",
         "String",
-        "Risk lifecycle status.\nValues: open, resolved, suppressed.\n\nEx: status:'open'",
+        "Risk lifecycle status.\nValues: Open, Resolved, Suppressed.\n\nEx: status:'Open'",
     ),
     (
         "suppressed_by",
@@ -1353,21 +1353,21 @@ Use `field|asc` or `field|desc` suffix:
 === falcon_search_cloud_risks FQL filter examples ===
 
 # Open critical risks in AWS
-severity:'critical'+status:'open'+cloud_provider:'aws'
+severity:'Critical'+status:'Open'+cloud_provider:'aws'
 
 # Risks in production group
 groups.environment:'production'
 
-# Recent risks (last 7 days)
-first_seen:>'now-7d'
+# Risks first seen after a specific date (use absolute ISO-8601 only)
+first_seen:>'2025-01-01T00:00:00Z'
 
-# Resolved risks this month
-resolved_at:>'now-30d'+status:'resolved'
+# Resolved risks after a specific date
+resolved_at:>'2025-01-01T00:00:00Z'+status:'Resolved'
 
 # Suppressed risks
-status:'suppressed'
+status:'Suppressed'
 
 # Risks by service category
-service_category:'Storage'+severity:'critical'
+service_category:'Storage'+severity:'Critical'
 """
 )
