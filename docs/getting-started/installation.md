@@ -36,3 +36,11 @@ This is the recommended approach for editor integrations.
 
 > [!NOTE]
 > If you just want to interact with falcon-mcp via an agent chat interface rather than running the server yourself, see the [Deployment](/falcon-mcp/deployment/docker/) options.
+
+## Find it on a registry
+
+falcon-mcp is published to public MCP catalogs for discovery and one-click setup in compatible clients:
+
+- [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.CrowdStrike%2Ffalcon-mcp&all=1)<!-- link:external -->
+- [GitHub MCP Registry](https://github.com/mcp/CrowdStrike/falcon-mcp)<!-- link:external -->
+- [Gemini CLI Extensions](https://geminicli.com/extensions/?name=CrowdStrikefalcon-mcp)<!-- link:external -->

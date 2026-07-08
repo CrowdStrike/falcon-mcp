@@ -207,6 +207,8 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Mark detection abc123 as in_progress",
         "Assign detection abc123 to analyst@example.com",
         "Close these detections and add a comment: resolved via playbook",
+        "Mark detection abc123 as a true positive and close it",
+        "Remove all fc/ prefixed tags from this detection",
     ],
     # Discover
     "falcon_search_applications": [
@@ -361,6 +363,25 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_delete_quarantined_files": [
         "Delete quarantine records for host SE-DAO-WIN10-CO",
         "Delete quarantine record abc123",
+    ],
+    # Recon
+    "falcon_search_recon_notifications": [
+        "Show me recon alerts from the past 7 days",
+        "Show me new recon alerts with high priority",
+        "Find recon notifications for domain monitoring rules",
+        "Show typosquatting recon alerts",
+        "Find leaked credential notifications from stealer logs",
+    ],
+    "falcon_search_recon_rules": [
+        "List all active Recon monitoring rules",
+        "Show typosquatting monitoring rules",
+        "Find Recon rules with breach monitoring enabled",
+        "List high priority domain monitoring rules",
+    ],
+    "falcon_search_recon_exposed_data_records": [
+        "Find exposed credentials for example.com",
+        "Show leaked credentials from the past 7 days",
+        "Find exposed data records for a specific notification",
     ],
     # Scheduled Reports
     "falcon_search_scheduled_reports": [

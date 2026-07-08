@@ -150,9 +150,6 @@ uv run pytest
 
 # Integration tests (requires API credentials)
 uv run pytest --run-integration tests/integration/
-
-# E2E tests (requires API credentials + OpenAI key)
-uv run pytest --run-e2e tests/e2e/
 ```
 
 ### Rebase Early, Rebase Often

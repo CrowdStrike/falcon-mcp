@@ -8,6 +8,9 @@
 [![PyPI version](https://badge.fury.io/py/falcon-mcp.svg)](https://badge.fury.io/py/falcon-mcp)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/falcon-mcp)](https://pypi.org/project/falcon-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-falcon--mcp-blue)](https://registry.modelcontextprotocol.io/?q=io.github.CrowdStrike%2Ffalcon-mcp&all=1)
+[![GitHub MCP](https://img.shields.io/badge/GitHub_MCP-falcon--mcp-blue?logo=github)](https://github.com/mcp/CrowdStrike/falcon-mcp)
+[![Gemini CLI Extension](https://img.shields.io/badge/Gemini_CLI-falcon--mcp-blue?logo=google)](https://geminicli.com/extensions/?name=CrowdStrikefalcon-mcp)
 
 **falcon-mcp** is a Model Context Protocol (MCP) server that connects AI agents with the CrowdStrike Falcon platform, powering intelligent security analysis in your agentic workflows. It delivers programmatic access to essential security capabilities—including detections, threat intelligence, and host management—establishing the foundation for advanced security operations and automation.
 
@@ -41,6 +44,7 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | [Policies](https://developer.crowdstrike.com/falcon-mcp/modules/policies/) | Search, create, update, and delete prevention, sensor update, firewall, device control, response, and content update policies; manage host-group assignment, enable/disable, and precedence |
 | [Quarantine](https://developer.crowdstrike.com/falcon-mcp/modules/quarantine/) | Search quarantine records, preview action counts, and release, unrelease, or delete quarantined files |
 | [Real Time Response](https://developer.crowdstrike.com/falcon-mcp/modules/rtr/) | Audit, summarize, and run read-only RTR triage workflows |
+| [Recon](https://developer.crowdstrike.com/falcon-mcp/modules/recon/) | Search Falcon Intelligence Recon notifications (recon alerts), monitoring rules, and exposed-data records for dark web, leaked credentials, and typosquatting |
 | [Scheduled Reports](https://developer.crowdstrike.com/falcon-mcp/modules/scheduled-reports/) | Manage scheduled reports and download report files |
 | [Sensor Usage](https://developer.crowdstrike.com/falcon-mcp/modules/sensor-usage/) | Access and analyze sensor usage data |
 | [Serverless](https://developer.crowdstrike.com/falcon-mcp/modules/serverless/) | Search for vulnerabilities in serverless functions |
@@ -199,8 +203,15 @@ uv run pytest
 - [Documentation Guide](docs/development/docs-site.md): Architecture and maintenance guide for the documentation
 - [Module Development Guide](docs/development/module-development.md): Instructions for implementing new modules
 - [Resource Development Guide](docs/development/resource-development.md): Instructions for implementing resources
-- [End-to-End Testing Guide](docs/development/e2e-testing.md): Guide for running and understanding E2E tests
 - [Integration Testing Guide](docs/development/integration-testing.md): Guide for running integration tests with real API calls
+
+## Registries
+
+falcon-mcp is published to public MCP catalogs for discovery and one-click setup in compatible clients:
+
+- [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.CrowdStrike%2Ffalcon-mcp&all=1)
+- [GitHub MCP Registry](https://github.com/mcp/CrowdStrike/falcon-mcp)
+- [Gemini CLI Extensions](https://geminicli.com/extensions/?name=CrowdStrikefalcon-mcp)
 
 ## License
 

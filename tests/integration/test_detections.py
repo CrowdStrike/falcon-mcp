@@ -146,7 +146,9 @@ class TestDetectionsIntegration(BaseIntegrationTest):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         # Skip on 401/403 — the caller lacks Alerts:write
@@ -174,8 +176,9 @@ class TestDetectionsIntegration(BaseIntegrationTest):
                 f"got {updated[0].get('status')!r}"
             )
         finally:
-            # Restore original status
-            self.call_method(
+            # Restore original status. A hint-wrapped dict is an acceptable (non-error)
+            # outcome here if the original status was 'closed'.
+            restore_result = self.call_method(
                 self.module.update_detections,
                 ids=[detection_id],
                 status=original_status,
@@ -185,22 +188,26 @@ class TestDetectionsIntegration(BaseIntegrationTest):
                 unassign=None,
                 append_comment=None,
                 show_in_ui=None,
-                verdict=None,
+                add_tags=None,
+                remove_tags=None,
+                remove_tags_by_prefix=None,
             )
+            self.assert_no_error(restore_result, context="restore original_status")
 
-    def test_update_detections_verdict(self):
-        """Test setting a verdict tag (true_positive) via PatchEntitiesAlertsV3.
+    def test_update_detections_tags(self):
+        """Test adding and removing a resolution tag via PatchEntitiesAlertsV3.
 
-        Validates that add_tag action_parameter is accepted and the tag appears
-        in the read-back entity. Always cleans up the tag afterward.
+        Validates the add_tag and remove_tag action_parameters against a real
+        detection: adds true_positive and confirms it in the read-back, then
+        removes it via the tool's own remove_tags path and confirms it is gone.
 
         Skips gracefully if Alerts:write scope is not available.
         """
         search_result = self.call_method(self.module.search_detections, limit=1)
         if not search_result or isinstance(search_result, dict):
             self.skip_with_warning(
-                "No detections available to test update_detections verdict",
-                context="test_update_detections_verdict",
+                "No detections available to test update_detections tags",
+                context="test_update_detections_tags",
             )
             return
 
@@ -208,11 +215,11 @@ class TestDetectionsIntegration(BaseIntegrationTest):
         if not detection_id:
             self.skip_with_warning(
                 "Could not extract composite_id from search results",
-                context="test_update_detections_verdict",
+                context="test_update_detections_tags",
             )
             return
 
-        # Set verdict to true_positive
+        # Add the true_positive resolution tag
         result = self.call_method(
             self.module.update_detections,
             ids=[detection_id],
@@ -223,7 +230,9 @@ class TestDetectionsIntegration(BaseIntegrationTest):
             unassign=None,
             append_comment=None,
             show_in_ui=None,
-            verdict="true_positive",
+            add_tags=["true_positive"],
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         # Skip on 401/403 — the caller lacks Alerts:write
@@ -232,11 +241,11 @@ class TestDetectionsIntegration(BaseIntegrationTest):
             status_code = details.get("status_code", 0) if isinstance(details, dict) else 0
             if status_code in (401, 403):
                 self.skip_with_warning(
-                    f"Insufficient scope for update_detections verdict (Alerts:write required): {result}",
-                    context="test_update_detections_verdict",
+                    f"Insufficient scope for update_detections tags (Alerts:write required): {result}",
+                    context="test_update_detections_tags",
                 )
                 return
-            pytest.fail(f"update_detections verdict failed unexpectedly: {result}")
+            pytest.fail(f"update_detections add_tags failed unexpectedly: {result}")
 
         # Read back and confirm tag is present; cleanup always runs via try/finally
         updated = self.call_method(
@@ -244,21 +253,98 @@ class TestDetectionsIntegration(BaseIntegrationTest):
             ids=[detection_id],
         )
         try:
-            self.assert_no_error(updated, context="read-back after update_detections verdict")
-            assert updated, f"get_detection_details returned empty after successful verdict update for {detection_id}"
+            self.assert_no_error(updated, context="read-back after update_detections add_tags")
+            assert updated, f"get_detection_details returned empty after successful add_tags for {detection_id}"
             tags = updated[0].get("tags") or []
             assert "true_positive" in tags, (
-                f"Expected 'true_positive' in tags after setting verdict, got: {tags}"
+                f"Expected 'true_positive' in tags after add_tags, got: {tags}"
             )
         finally:
-            # Clean up — remove the tag via direct API call (remove_tag is not exposed on the tool)
-            self.module.client.command(
-                "PatchEntitiesAlertsV3",
-                body={
-                    "composite_ids": [detection_id],
-                    "action_parameters": [{"name": "remove_tag", "value": "true_positive"}],
-                },
+            # Remove the tag via the tool's own remove_tags path (now live-validated)
+            remove_result = self.call_method(
+                self.module.update_detections,
+                ids=[detection_id],
+                status=None,
+                assign_to_uuid=None,
+                assign_to_user_id=None,
+                assign_to_name=None,
+                unassign=None,
+                append_comment=None,
+                show_in_ui=None,
+                add_tags=None,
+                remove_tags=["true_positive"],
+                remove_tags_by_prefix=None,
             )
+            self.assert_no_error(remove_result, context="update_detections remove_tags")
+
+        # Confirm the tag is gone after removal
+        after_remove = self.call_method(
+            self.module.get_detection_details,
+            ids=[detection_id],
+        )
+        self.assert_no_error(after_remove, context="read-back after update_detections remove_tags")
+        assert after_remove, f"get_detection_details returned empty after remove_tags for {detection_id}"
+        remaining_tags = after_remove[0].get("tags") or []
+        assert "true_positive" not in remaining_tags, (
+            f"Expected 'true_positive' to be removed, but still present: {remaining_tags}"
+        )
+
+        # Round-trip remove_tags_by_prefix: add a prefixed tag, then remove by prefix
+        prefix_tag = "fc_mcp_probe/scratch"
+        prefix = "fc_mcp_probe/"
+        add_prefixed = self.call_method(
+            self.module.update_detections,
+            ids=[detection_id],
+            status=None,
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=[prefix_tag],
+            remove_tags=None,
+            remove_tags_by_prefix=None,
+        )
+        self.assert_no_error(add_prefixed, context="update_detections add prefixed tag")
+        try:
+            with_prefix = self.call_method(
+                self.module.get_detection_details,
+                ids=[detection_id],
+            )
+            self.assert_no_error(with_prefix, context="read-back after adding prefixed tag")
+            assert with_prefix, f"get_detection_details returned empty after adding prefixed tag for {detection_id}"
+            assert prefix_tag in (with_prefix[0].get("tags") or []), (
+                f"Expected {prefix_tag!r} in tags, got: {with_prefix[0].get('tags')}"
+            )
+        finally:
+            remove_by_prefix = self.call_method(
+                self.module.update_detections,
+                ids=[detection_id],
+                status=None,
+                assign_to_uuid=None,
+                assign_to_user_id=None,
+                assign_to_name=None,
+                unassign=None,
+                append_comment=None,
+                show_in_ui=None,
+                add_tags=None,
+                remove_tags=None,
+                remove_tags_by_prefix=prefix,
+            )
+            self.assert_no_error(remove_by_prefix, context="update_detections remove_tags_by_prefix")
+
+        # Confirm the prefixed tag is gone after prefix removal
+        after_prefix_remove = self.call_method(
+            self.module.get_detection_details,
+            ids=[detection_id],
+        )
+        self.assert_no_error(after_prefix_remove, context="read-back after remove_tags_by_prefix")
+        assert after_prefix_remove, f"get_detection_details returned empty after remove_tags_by_prefix for {detection_id}"
+        assert prefix_tag not in (after_prefix_remove[0].get("tags") or []), (
+            f"Expected {prefix_tag!r} to be removed by prefix, but still present: "
+            f"{after_prefix_remove[0].get('tags')}"
+        )
 
     def test_update_detections_show_in_ui(self):
         """Test toggling show_in_ui validates that string encoding reaches the API correctly.
@@ -298,7 +384,9 @@ class TestDetectionsIntegration(BaseIntegrationTest):
             unassign=None,
             append_comment=None,
             show_in_ui=new_show_in_ui,
-            verdict=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
         )
 
         # Skip on 401/403 — the caller lacks Alerts:write
@@ -336,5 +424,7 @@ class TestDetectionsIntegration(BaseIntegrationTest):
                 unassign=None,
                 append_comment=None,
                 show_in_ui=original_show_in_ui,
-                verdict=None,
+                add_tags=None,
+                remove_tags=None,
+                remove_tags_by_prefix=None,
             )
