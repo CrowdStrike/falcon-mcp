@@ -18,6 +18,7 @@ from falcon_mcp.common.logging import get_logger
 from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.cloud import (
+    CLOUD_RISKS_FQL_DOCUMENTATION,
     CSPM_IOM_FINDINGS_FQL_DOCUMENTATION,
     IMAGES_VULNERABILITIES_FQL_DOCUMENTATION,
     KUBERNETES_CONTAINERS_FQL_DOCUMENTATION,
@@ -98,6 +99,24 @@ class CloudModule(BaseModule):
             ),
         )
 
+        self._add_tool(
+            server=server,
+            method=self.search_cloud_risks,
+            name="search_cloud_risks",
+        )
+
+        self._add_tool(
+            server=server,
+            method=self.search_cloud_groups,
+            name="search_cloud_groups",
+        )
+
+        self._add_tool(
+            server=server,
+            method=self.get_cloud_groups,
+            name="get_cloud_groups",
+        )
+
     def register_resources(self, server: FastMCP) -> None:
         """Register resources with the MCP server.
         Args:
@@ -149,6 +168,14 @@ class CloudModule(BaseModule):
             server,
             cspm_iom_findings_fql_resource,
         )
+
+        cloud_risks_fql_resource = TextResource(
+            uri=AnyUrl("falcon://cloud/cloud-risks/fql-guide"),
+            name="falcon_search_cloud_risks_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_cloud_risks` tool.",
+            text=CLOUD_RISKS_FQL_DOCUMENTATION,
+        )
+        self._add_resource(server, cloud_risks_fql_resource)
 
     def search_kubernetes_containers(
         self,
@@ -569,10 +596,13 @@ class CloudModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for CSPM Indicators of Misconfiguration (IOM) findings.
 
-        Use this to find cloud misconfigurations by severity, provider, service, or
-        suppression state. Consult falcon://cloud/cspm-iom-findings/fql-guide before
-        constructing filter expressions. Returns IOM entities with cloud context,
-        evaluation details, and resource information.
+        Use this to find specific compliance rule failures on individual cloud resources —
+        each IOM is a single rule-against-resource violation (e.g. "S3 bucket ACL allows
+        public write" on a named bucket). For aggregated risk posture combining multiple
+        IOMs and IOAs across assets, use falcon_search_cloud_risks instead. For runtime
+        behavioral threats, use falcon_search_detections. Consult
+        falcon://cloud/cspm-iom-findings/fql-guide before constructing filter expressions.
+        Returns IOM entities with cloud context, evaluation details, and resource information.
         """
         # Step 1: Query for IOM IDs
         iom_ids = self._base_search_api_call(
@@ -600,6 +630,121 @@ class CloudModule(BaseModule):
 
         # Step 2: Fetch full IOM entity details (GET with query params, max 100 per call)
         return self._batch_get_iom_entities(iom_ids)
+
+    def search_cloud_risks(
+        self,
+        filter: str | None = Field(
+            default=None,
+            description="FQL filter expression. See `falcon://cloud/cloud-risks/fql-guide` for syntax.",
+            examples=["severity:'Critical'+status:'Open'", "cloud_provider:'aws'+groups.environment:'production'"],
+        ),
+        limit: int = Field(
+            default=100,
+            ge=1,
+            le=1000,
+            description="Maximum number of risks to return (default: 100; max: 1000). Use with offset for pagination.",
+        ),
+        offset: int | None = Field(
+            default=None,
+            description="Starting index of overall result set from which to return results.",
+        ),
+        sort: str | None = Field(
+            default=None,
+            description=(
+                "Sort risks using field|asc or field|desc syntax.\n\n"
+                "Supported fields: account_id, account_name, asset_id, asset_name, "
+                "asset_region, asset_type, cloud_provider, first_seen, last_seen, "
+                "resolved_at, rule_name, service_category, severity, status\n\n"
+                "Examples: 'severity|desc', 'first_seen|desc', 'account_name|asc'"
+            ),
+            examples=["severity|desc", "first_seen|desc", "account_name|asc"],
+        ),
+    ) -> list[dict[str, Any]]:
+        """Search for cloud risks in your CrowdStrike environment.
+
+        Use this to find risks by severity, status, cloud provider, account, asset, rule,
+        or threat actor. Cloud risks aggregate IOM and IOA findings into per-asset risk
+        records and include threat intelligence attribution. For individual compliance rule
+        violations on specific resources, use falcon_search_iom_findings instead. Consult
+        falcon://cloud/cloud-risks/fql-guide before constructing filter expressions.
+        Returns full risk details including severity, lifecycle status, asset context, and
+        threat intelligence attribution.
+        """
+        return self._base_search_api_call(
+            operation="combined_cloud_risks",
+            search_params={
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            },
+            error_message="Failed to search cloud risks",
+        )
+
+    def search_cloud_groups(
+        self,
+        filter: str | None = Field(
+            default=None,
+            description=(
+                "FQL filter expression. Supports group properties: name, description, "
+                "created_at, updated_at. Selector properties: cloud_provider, account_id, "
+                "region. Group tags: business_unit, business_impact, environment.\n\n"
+                "Examples: \"name:'prod-group'\", \"environment:'production'\""
+            ),
+        ),
+        limit: int = Field(
+            default=100,
+            ge=1,
+            le=500,
+            description="Maximum number of cloud groups to return (default: 100).",
+        ),
+        offset: int | None = Field(
+            default=None,
+            description="Starting index of overall result set from which to return results.",
+        ),
+        sort: str | None = Field(
+            default=None,
+            description="Sort groups. Default: name|asc. Examples: 'name|asc', 'created_at|desc'",
+            examples=["name|asc", "created_at|desc"],
+        ),
+    ) -> list[dict[str, Any]]:
+        """List cloud groups in your CrowdStrike environment.
+
+        Use this to discover available cloud groups before filtering risks by
+        `cloud_group` or `groups.*` FQL fields in `falcon_search_cloud_risks`.
+        Returns full group details including name, selectors, and tags.
+        """
+        return self._base_search_api_call(
+            operation="ListCloudGroupsExternal",
+            search_params={
+                "filter": filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            },
+            error_message="Failed to search cloud groups",
+        )
+
+    def get_cloud_groups(
+        self,
+        ids: list[str] = Field(
+            description="One or more cloud group IDs to retrieve. Find IDs with falcon_search_cloud_groups.",
+        ),
+    ) -> list[dict[str, Any]]:
+        """Get detailed information for cloud groups by ID.
+
+        Use when you already have specific cloud group IDs — for example, the `cloud_groups`
+        field returned by `falcon_search_cloud_risks`. Returns full group details including
+        name, selectors, business impact, and environment tags.
+        """
+        params = prepare_api_parameters({"ids": ids})
+        response = self.client.command("ListCloudGroupsByIDExternal", parameters=params)
+        return handle_api_response(
+            response,
+            operation="ListCloudGroupsByIDExternal",
+            error_message="Failed to get cloud groups",
+            default_result=[],
+        )
 
     def _batch_get_iom_entities(self, iom_ids: list[str]) -> list[dict[str, Any]] | dict[str, Any]:
         """Fetch IOM entity details in batches of 100 (API limit).

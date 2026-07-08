@@ -59,6 +59,20 @@ FILTER_HINTS: dict[str, str] = {
         "status (open|suppressed|pass), cloud_provider (aws|azure|gcp), "
         "service, region, resource_type, account_name, rule_name."
     ),
+    # === Cloud: Cloud Risks ===
+    "falcon_search_cloud_groups": (
+        "Common fields: name, created_at (UTC datetime), updated_at (UTC datetime). "
+        "Group tag fields: environment, business_unit, business_impact."
+    ),
+    "falcon_search_cloud_risks": (
+        "Common fields: severity (Critical|High|Medium|Low|Informational), "
+        "status (Open|Resolved|Suppressed), cloud_provider (aws|azure|gcp), "
+        "asset_name, asset_type, asset_region, account_id, account_name, "
+        "rule_name, service_category, groups.environment, groups.business_unit. "
+        "Date filters: use absolute ISO-8601 only, e.g. first_seen:>'2024-01-01T00:00:00Z'. "
+        "Ex: severity:'Critical'+status:'Open'+cloud_provider:'aws'. "
+        "Also: threat_actors (adversary/threat group name), risk_factor (risk factor identifier like PUBLIC_ACCESS)."
+    ),
     # === Correlation Rules ===
     "falcon_search_correlation_rules": (
         "Common fields: name, status (active|inactive), state (published|unpublished|draft), "

@@ -1191,3 +1191,183 @@ updated_at:>'2025-03-11T00:00:00Z'
 managed_by:'Unmanaged'+ioa_count:>0
 """
 )
+
+CLOUD_RISKS_FQL_FILTERS = [
+    (
+        "Name",
+        "Type",
+        "Description",
+    ),
+    (
+        "account_id",
+        "String",
+        "Cloud account identifier.\n\nEx: account_id:'123456789012'",
+    ),
+    (
+        "account_name",
+        "String",
+        "Cloud account display name.\n\nEx: account_name:'prod-account'",
+    ),
+    (
+        "adversary",
+        "String",
+        "Associated adversary or threat group name.\n\nEx: adversary:'COZY BEAR'",
+    ),
+    (
+        "asset_gcrn",
+        "String",
+        "Global cloud resource name identifier.\n\nEx: asset_gcrn:'arn:aws:ec2:us-east-1:123456789012:instance/i-1234'",
+    ),
+    (
+        "asset_id",
+        "String",
+        "Asset identifier.\n\nEx: asset_id:'abc123'",
+    ),
+    (
+        "asset_name",
+        "String",
+        "Asset display name.\n\nEx: asset_name:'my-ec2-instance'",
+    ),
+    (
+        "asset_region",
+        "String",
+        "Cloud region where the asset resides.\n\nEx: asset_region:'us-east-1'",
+    ),
+    (
+        "asset_type",
+        "String",
+        "Type of cloud asset.\n\nEx: asset_type:'AWS::EC2::Instance'",
+    ),
+    (
+        "cloud_group",
+        "String",
+        "Cloud group identifier the asset belongs to.\n\nEx: cloud_group:'my-group-id'",
+    ),
+    (
+        "cloud_provider",
+        "String",
+        "Cloud provider name.\n\nEx: cloud_provider:'aws'",
+    ),
+    (
+        "first_seen",
+        "Timestamp",
+        "When the risk was first observed. Supports range operators. Use absolute ISO-8601 timestamps only.\n\nEx: first_seen:>'2024-01-01T00:00:00Z'",
+    ),
+    (
+        "groups",
+        "String",
+        "Cloud group associated with this risk.\n\nEx: groups:'my-group-id'",
+    ),
+    (
+        "groups.business_impact",
+        "String",
+        "Business impact level of the associated cloud group.\n\nEx: groups.business_impact:'high'",
+    ),
+    (
+        "groups.business_unit",
+        "String",
+        "Business unit of the associated cloud group.\n\nEx: groups.business_unit:'engineering'",
+    ),
+    (
+        "groups.environment",
+        "String",
+        "Environment tag of the associated cloud group.\n\nEx: groups.environment:'production'",
+    ),
+    (
+        "last_seen",
+        "Timestamp",
+        "When the risk was last observed. Supports range operators. Use absolute ISO-8601 timestamps only.\n\nEx: last_seen:>'2024-01-01T00:00:00Z'",
+    ),
+    (
+        "resolved_at",
+        "Timestamp",
+        "When the risk was resolved. Supports range operators.\n\nEx: resolved_at:>'2024-01-01T00:00:00Z'",
+    ),
+    (
+        "risk_factor",
+        "String",
+        "Risk factor identifier.\n\nEx: risk_factor:'PUBLIC_ACCESS'",
+    ),
+    (
+        "rule_id",
+        "String",
+        "ID of the rule that triggered the risk.\n\nEx: rule_id:'ABC-001'",
+    ),
+    (
+        "rule_name",
+        "String",
+        "Name of the rule that triggered the risk.\n\nEx: rule_name:'S3 Bucket Public Access'",
+    ),
+    (
+        "service_category",
+        "String",
+        "Cloud service category.\n\nEx: service_category:'Storage'",
+    ),
+    (
+        "severity",
+        "String",
+        "Risk severity level.\nValues: Critical, High, Medium, Low, Informational.\n\nEx: severity:'Critical'",
+    ),
+    (
+        "status",
+        "String",
+        "Risk lifecycle status.\nValues: Open, Resolved, Suppressed.\n\nEx: status:'Open'",
+    ),
+    (
+        "suppressed_by",
+        "String",
+        "User or entity who suppressed the risk.\n\nEx: suppressed_by:'analyst@example.com'",
+    ),
+    (
+        "suppressed_reason",
+        "String",
+        "Reason the risk was suppressed.\n\nEx: suppressed_reason:'accepted_risk'",
+    ),
+    (
+        "tags",
+        "String",
+        "Resource tags associated with the asset.\n\nEx: tags:'Environment:Production'",
+    ),
+    (
+        "threat_actors",
+        "String",
+        "Threat actors associated with the risk.\n\nEx: threat_actors:'APT29'",
+    ),
+]
+
+CLOUD_RISKS_FQL_DOCUMENTATION = (
+    FQL_DOCUMENTATION
+    + """
+=== falcon_search_cloud_risks FQL filter available fields ===
+
+""" + generate_md_table(CLOUD_RISKS_FQL_FILTERS) + """
+
+=== falcon_search_cloud_risks FQL filter sort fields ===
+
+Use `field|asc` or `field|desc` suffix:
+
+`account_id`, `account_name`, `asset_id`, `asset_name`, `asset_region`, `asset_type`,
+`cloud_provider`, `first_seen`, `last_seen`, `resolved_at`, `rule_name`,
+`service_category`, `severity`, `status`
+
+=== falcon_search_cloud_risks FQL filter examples ===
+
+# Open critical risks in AWS
+severity:'Critical'+status:'Open'+cloud_provider:'aws'
+
+# Risks in production group
+groups.environment:'production'
+
+# Risks first seen after a specific date (use absolute ISO-8601 only)
+first_seen:>'2025-01-01T00:00:00Z'
+
+# Resolved risks after a specific date
+resolved_at:>'2025-01-01T00:00:00Z'+status:'Resolved'
+
+# Suppressed risks
+status:'Suppressed'
+
+# Risks by service category
+service_category:'Storage'+severity:'Critical'
+"""
+)

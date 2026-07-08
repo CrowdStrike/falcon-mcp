@@ -140,6 +140,20 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Delete CSPM suppression rule abc-123",
         "Remove the CSPM IOM suppression rule for the S3 public access finding",
     ],
+    "falcon_search_cloud_risks": [
+        "Show me all open critical cloud risks in AWS",
+        "Which account has the most unresolved critical risks?",
+        "What new cloud risks appeared in the last 7 days?",
+        "Show me risks for the production cloud group",
+        "What cloud risks have been suppressed and why?",
+    ],
+    "falcon_search_cloud_groups": [
+        "What cloud groups are configured in my environment?",
+        "List all cloud groups tagged as production",
+    ],
+    "falcon_get_cloud_groups": [
+        "Get the details for cloud group abc-123",
+    ],
     # Custom IOA
     "falcon_search_ioa_rule_groups": [
         "Find enabled Windows Custom IOA rule groups",
