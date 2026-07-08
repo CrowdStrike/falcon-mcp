@@ -156,7 +156,8 @@ class FirewallModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Restore the query-step sort order in case get_rules reorders results.
+        return self._reorder_by_ids(rule_ids, details, id_field="id")
 
     def search_firewall_rule_groups(
         self,
@@ -226,7 +227,8 @@ class FirewallModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Restore the query-step sort order in case get_rule_groups reorders results.
+        return self._reorder_by_ids(rule_group_ids, details, id_field="id")
 
     def search_firewall_policy_rules(
         self,
@@ -294,7 +296,8 @@ class FirewallModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Restore the query-step sort order in case get_rules reorders results.
+        return self._reorder_by_ids(policy_rule_ids, details, id_field="id")
 
     def create_firewall_rule_group(
         self,

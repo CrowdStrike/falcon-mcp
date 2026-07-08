@@ -74,6 +74,35 @@ class TestIOCModule(TestModules):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "ioc-id-1")
 
+    def test_search_iocs_reorders_to_match_sorted_ids(self):
+        """When indicator_get_v1 returns IOCs out of order, the result is reordered
+        to match the sorted ID order from indicator_search_v1."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["ioc-id-b", "ioc-id-a"]},
+        }
+        details_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "ioc-id-a", "type": "domain", "value": "a.example"},
+                    {"id": "ioc-id-b", "type": "ipv4", "value": "1.2.3.4"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, details_response]
+
+        result = self.module.search_iocs(
+            filter=None,
+            limit=25,
+            offset=0,
+            sort="modified_on.desc",
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "ioc-id-b")
+        self.assertEqual(result[1]["id"], "ioc-id-a")
+
     def test_search_iocs_empty_results_returns_fql_guide(self):
         """Test IOC search empty results return clean empty response."""
         self.mock_client.command.return_value = {

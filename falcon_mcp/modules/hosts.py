@@ -133,7 +133,9 @@ class HostsModule(BaseModule):
             if self._is_error(details):
                 return [details]
 
-            return details
+            # Restore the query-step sort order in case the details endpoint
+            # returns entities in a different order (validated field: device_id).
+            return self._reorder_by_ids(device_ids, details, id_field="device_id")
 
         return []
 

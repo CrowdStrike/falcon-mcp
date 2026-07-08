@@ -139,6 +139,35 @@ class TestRTRModule(TestModules):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "session-1")
 
+    def test_search_sessions_reorders_to_match_sorted_ids(self):
+        """When RTR_ListSessions returns sessions out of order, the result is
+        reordered to match the sorted ID order from RTR_ListAllSessions."""
+        search_response = {
+            "status_code": 200,
+            "body": {"resources": ["session-b", "session-a"]},
+        }
+        details_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "session-a", "aid": "aid-1"},
+                    {"id": "session-b", "aid": "aid-2"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [search_response, details_response]
+
+        result = self.module.search_sessions(
+            filter=None,
+            limit=25,
+            offset=0,
+            sort="created_at.desc",
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "session-b")
+        self.assertEqual(result[1]["id"], "session-a")
+
     def test_search_audit_sessions(self):
         """Test searching RTR audit sessions."""
         self.mock_client.command.return_value = {

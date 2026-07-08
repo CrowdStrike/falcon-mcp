@@ -77,6 +77,34 @@ class TestReconModule(TestModules):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "notif1")
 
+    def test_search_recon_notifications_reorders_to_match_sorted_ids(self):
+        """When GetNotificationsDetailedV1 returns notifications out of order, the
+        result is reordered to match the sorted ID order from QueryNotificationsV1.
+
+        Live API validated: the details endpoint scrambles order; entities carry
+        their ID in the ``id`` field.
+        """
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["notif-b", "notif-a"]},
+        }
+        details_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "notif-a", "status": "new"},
+                    {"id": "notif-b", "status": "new"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, details_response]
+
+        result = self.module.search_recon_notifications(sort="created_date.desc")
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "notif-b")
+        self.assertEqual(result[1]["id"], "notif-a")
+
     def test_search_recon_notifications_empty(self):
         """Test that empty query results return the empty-response dict (no fql_guide)."""
         self.mock_client.command.return_value = {
@@ -161,6 +189,32 @@ class TestReconModule(TestModules):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "rule1")
 
+    def test_search_recon_rules_reorders_to_match_sorted_ids(self):
+        """When GetRulesV1 returns rules out of order, the result is reordered
+        to match the sorted ID order from QueryRulesV1."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["rule-b", "rule-a"]},
+        }
+        details_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "rule-a", "topic": "SA_DOMAIN", "status": "active"},
+                    {"id": "rule-b", "topic": "SA_TYPOSQUATTING", "status": "active"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, details_response]
+
+        result = self.module.search_recon_rules(
+            filter=None, limit=5, sort="created_date.desc"
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "rule-b")
+        self.assertEqual(result[1]["id"], "rule-a")
+
     def test_search_recon_rules_empty(self):
         """Test that empty rule query returns the empty-response dict."""
         self.mock_client.command.return_value = {
@@ -226,6 +280,32 @@ class TestReconModule(TestModules):
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["email"], "user@example.com")
+
+    def test_search_recon_exposed_data_records_reorders_to_match_sorted_ids(self):
+        """When GetNotificationsExposedDataRecordsV1 returns records out of order,
+        the result is reordered to match the sorted ID order from the query step."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["rec-b", "rec-a"]},
+        }
+        details_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "rec-a", "email": "a@example.com", "credential_status": "newly_reported"},
+                    {"id": "rec-b", "email": "b@example.com", "credential_status": "previously_reported"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, details_response]
+
+        result = self.module.search_recon_exposed_data_records(
+            filter=None, limit=10, sort="created_date.desc"
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "rec-b")
+        self.assertEqual(result[1]["id"], "rec-a")
 
     def test_search_recon_exposed_data_records_empty(self):
         """Test that empty exposed-data query returns the empty-response dict."""

@@ -72,6 +72,26 @@ class TestSpotlightModule(TestModules):
         self.assertEqual(result[0]["status"], "open")
         self.assertEqual(result[0]["cvss_base_score"], 8.5)
 
+    def test_search_vulnerabilities_forwards_sort(self):
+        """The sort parameter is forwarded to combinedQueryVulnerabilities.
+
+        Spotlight is single-step (combinedQueryVulnerabilities returns full entities
+        with sort applied), so no reordering is needed — but we assert sort reaches
+        the operation.
+        """
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+
+        self.module.search_vulnerabilities(
+            filter="status:'open'", sort="created_timestamp|desc"
+        )
+
+        call_args = self.mock_client.command.call_args
+        self.assertEqual(call_args[0][0], "combinedQueryVulnerabilities")
+        self.assertEqual(call_args[1]["parameters"]["sort"], "created_timestamp|desc")
+
     def test_search_vulnerabilities_no_filter(self):
         """Test searching vulnerabilities with no filter parameter."""
         # Setup mock response with sample vulnerability data

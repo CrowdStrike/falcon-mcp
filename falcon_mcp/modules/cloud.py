@@ -429,6 +429,10 @@ class CloudModule(BaseModule):
         if self._is_error(details):
             return [details]
 
+        # Restore the query-step sort order before slimming, in case the entities
+        # endpoint reorders results.
+        details = self._reorder_by_ids(asset_ids, details, id_field="id")
+
         return [self._slim_cspm_asset(asset) for asset in details]
 
     def _batch_get_cspm_assets(self, asset_ids: list[str]) -> list[dict[str, Any]] | dict[str, Any]:
@@ -629,7 +633,13 @@ class CloudModule(BaseModule):
             return self._format_empty_response(filter)
 
         # Step 2: Fetch full IOM entity details (GET with query params, max 100 per call)
-        return self._batch_get_iom_entities(iom_ids)
+        details = self._batch_get_iom_entities(iom_ids)
+
+        if self._is_error(details):
+            return [details]
+
+        # Restore the query-step sort order in case the entities endpoint reorders results.
+        return self._reorder_by_ids(iom_ids, details, id_field="id")
 
     def search_cloud_risks(
         self,
@@ -823,12 +833,18 @@ class CloudModule(BaseModule):
             parameters=detail_params,
         )
 
-        return handle_api_response(
+        details = handle_api_response(
             detail_response,
             operation="GetSuppressionRules",
             error_message="Failed to get suppression rule details",
             default_result=[],
         )
+
+        if self._is_error(details):
+            return [details]
+
+        # Preserve the query-step order in case the details endpoint reorders results.
+        return self._reorder_by_ids(query_result, details, id_field="id")
 
     def create_cspm_suppression_rule(
         self,

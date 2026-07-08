@@ -136,6 +136,36 @@ class TestExclusionsModule(TestModules):
                 self.assertEqual(len(result), 2)
                 self.assertEqual(result[0]["id"], "excl-1")
 
+    def test_search_exclusions_reorders_to_match_sorted_ids(self):
+        """When the get step returns exclusions out of order, the result is
+        reordered to match the sorted ID order from the query step (ml type)."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["excl-b", "excl-a"]},
+        }
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "excl-a", "value": "/tmp/a"},
+                    {"id": "excl-b", "value": "/tmp/b"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_exclusions(
+            exclusion_type="ml",
+            filter=None,
+            limit=50,
+            sort="created_on.desc",
+            offset=0,
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "excl-b")
+        self.assertEqual(result[1]["id"], "excl-a")
+
     def test_search_invalid_type(self):
         """An invalid exclusion_type returns an error response, not a crash."""
         result = self.module.search_exclusions(

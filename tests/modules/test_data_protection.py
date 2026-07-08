@@ -80,6 +80,32 @@ class TestDataProtectionModule(TestModules):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["name"], "Credit Card Detection")
 
+    def test_search_classifications_reorders_to_match_sorted_ids(self):
+        """When the get step returns classifications out of order, the result is
+        reordered to match the sorted ID order from the query step."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["cls-id-b", "cls-id-a"]},
+        }
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "cls-id-a", "name": "Classification A"},
+                    {"id": "cls-id-b", "name": "Classification B"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_data_protection_classifications(
+            filter=None, limit=100, offset=0, sort="created_at.desc"
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "cls-id-b")
+        self.assertEqual(result[1]["id"], "cls-id-a")
+
     def test_search_classifications_empty_results(self):
         """Test that empty search returns clean empty response."""
         query_response = {
@@ -148,6 +174,32 @@ class TestDataProtectionModule(TestModules):
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["platform_name"], "win")
+
+    def test_search_policies_reorders_to_match_sorted_ids(self):
+        """When the get step returns policies out of order, the result is
+        reordered to match the sorted ID order from the query step."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["pol-id-b", "pol-id-a"]},
+        }
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "pol-id-a", "name": "Policy A", "platform_name": "win"},
+                    {"id": "pol-id-b", "name": "Policy B", "platform_name": "win"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_data_protection_policies(
+            platform_name="win", filter=None, limit=100, offset=0, sort="created_at.desc"
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "pol-id-b")
+        self.assertEqual(result[1]["id"], "pol-id-a")
 
     def test_search_policies_passes_platform_name(self):
         """Test that platform_name is sent to the query API."""
@@ -238,6 +290,32 @@ class TestDataProtectionModule(TestModules):
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["type"], "predefined")
+
+    def test_search_content_patterns_reorders_to_match_sorted_ids(self):
+        """When the get step returns content patterns out of order, the result is
+        reordered to match the sorted ID order from the query step."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["cp-id-b", "cp-id-a"]},
+        }
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "cp-id-a", "name": "Pattern A", "type": "predefined"},
+                    {"id": "cp-id-b", "name": "Pattern B", "type": "custom"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_data_protection_content_patterns(
+            filter=None, limit=100, offset=0, sort="created_at.desc"
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "cp-id-b")
+        self.assertEqual(result[1]["id"], "cp-id-a")
 
     def test_search_content_patterns_empty_results(self):
         """Test that empty content pattern search returns clean empty response."""

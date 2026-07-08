@@ -168,7 +168,8 @@ class ReconModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Restore the query-step sort order; GetNotificationsDetailedV1 may reorder.
+        return self._reorder_by_ids(notification_ids, details, id_field="id")
 
     def search_recon_rules(
         self,
@@ -253,7 +254,8 @@ class ReconModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Restore the query-step sort order in case GetRulesV1 reorders results.
+        return self._reorder_by_ids(rule_ids, details, id_field="id")
 
     def search_recon_exposed_data_records(
         self,
@@ -285,7 +287,7 @@ class ReconModule(BaseModule):
             description=dedent("""
                 Sort records using these options:
                 created_date: When the record was created
-                updated_date: When the record was last updated
+                exposure_date: When the data was exposed/breached
 
                 Append |asc or |desc for direction (default desc).
                 Examples: 'created_date|desc', 'exposure_date|desc'
@@ -336,4 +338,5 @@ class ReconModule(BaseModule):
         if self._is_error(details):
             return [details]
 
-        return details
+        # Restore the query-step sort order; the exposed-data details endpoint may reorder.
+        return self._reorder_by_ids(record_ids, details, id_field="id")

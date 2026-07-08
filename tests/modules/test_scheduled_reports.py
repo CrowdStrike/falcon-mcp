@@ -107,6 +107,36 @@ class TestScheduledReportsModule(TestModules):
         self.assertEqual(result[1]["id"], "report-id-2")
         self.assertEqual(result[1]["name"], "Daily Vulnerability Scan")
 
+    def test_search_scheduled_reports_reorders_to_match_sorted_ids(self):
+        """When scheduled_reports_get returns reports out of order, the result is
+        reordered to match the sorted ID order from scheduled_reports_query."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["report-id-b", "report-id-a"]},
+        }
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "report-id-a", "name": "Report A", "status": "ACTIVE"},
+                    {"id": "report-id-b", "name": "Report B", "status": "ACTIVE"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_scheduled_reports(
+            filter=None,
+            limit=100,
+            offset=0,
+            sort="created_on.desc",
+            q=None,
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "report-id-b")
+        self.assertEqual(result[1]["id"], "report-id-a")
+
     def test_search_scheduled_reports_empty(self):
         """Test searching scheduled reports with empty response."""
         # Setup mock response with empty resources
@@ -233,6 +263,35 @@ class TestScheduledReportsModule(TestModules):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["id"], "execution-id-1")
         self.assertEqual(result[0]["status"], "DONE")
+
+    def test_search_report_executions_reorders_to_match_sorted_ids(self):
+        """When report_executions_get returns executions out of order, the result
+        is reordered to match the sorted ID order from report_executions_query."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["execution-id-b", "execution-id-a"]},
+        }
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"id": "execution-id-a", "status": "DONE"},
+                    {"id": "execution-id-b", "status": "PENDING"},
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_report_executions(
+            filter=None,
+            limit=50,
+            offset=0,
+            sort="created_on.desc",
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["id"], "execution-id-b")
+        self.assertEqual(result[1]["id"], "execution-id-a")
 
     def test_download_report_execution_csv_format(self):
         """Test downloading CSV format report returns decoded string content.
