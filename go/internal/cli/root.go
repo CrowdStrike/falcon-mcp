@@ -7,8 +7,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
+	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 
 	"github.com/spf13/cobra"
 
@@ -19,8 +23,11 @@ import (
 	"github.com/crowdstrike/falcon-mcp/internal/version"
 )
 
-// Execute builds and runs the root command.
+// Execute builds and runs the root command. It first loads a .env file from the
+// working directory (if present) so its values participate in the
+// defaults < env < flag precedence, mirroring the Python server.
 func Execute() error {
+	config.LoadDotEnv(".env")
 	return newRootCmd().Execute()
 }
 
@@ -137,7 +144,8 @@ func run(cmd *cobra.Command) error {
 		return err
 	}
 
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	client, err := fal.NewClient(ctx, fal.Config{
 		ClientID:         cfg.ClientID,
 		ClientSecret:     cfg.ClientSecret,
@@ -152,6 +160,12 @@ func run(cmd *cobra.Command) error {
 	}
 
 	sets := toolsets.Default().Build(client, cfg.Modules, cfg.ReadOnly)
+	if cfg.Dynamic {
+		// Dynamic mode collapses the full surface into 3 discovery meta-tools.
+		// Building the facade from the already-filtered sets carries read-only
+		// filtering through: dropped write tools are absent from search/execute.
+		sets = []*toolsets.Toolset{toolsets.Dynamic(sets)}
+	}
 	srv := mcpx.NewServer(version.Version)
 	mcpx.Register(srv, sets)
 
@@ -162,7 +176,23 @@ func run(cmd *cobra.Command) error {
 	switch cfg.Transport {
 	case "stdio":
 		return mcpx.RunStdio(ctx, srv)
+	case "streamable-http":
+		return mcpx.RunStreamableHTTP(ctx, httpConfig(cfg), srv)
+	case "sse":
+		return mcpx.RunSSE(ctx, httpConfig(cfg), srv)
 	default:
-		return fmt.Errorf("transport %q not yet implemented in this build (stdio only)", cfg.Transport)
+		return fmt.Errorf("unknown transport %q: want stdio, streamable-http, or sse", cfg.Transport)
+	}
+}
+
+// httpConfig builds the HTTP transport settings from cfg, including the
+// middleware chain (api-key auth, content-type normalization, trailing-slash
+// stripping, request logging).
+func httpConfig(cfg config.Config) mcpx.HTTPConfig {
+	mw := mcpx.HTTPMiddleware{APIKey: cfg.APIKey}
+	return mcpx.HTTPConfig{
+		Addr:      net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port)),
+		Stateless: cfg.StatelessHTTP,
+		Handler:   func(h http.Handler) http.Handler { return mcpx.WrapHTTP(h, mw) },
 	}
 }

@@ -9,40 +9,23 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/crowdstrike/gofalcon/falcon"
 
+	"github.com/crowdstrike/falcon-mcp/internal/config"
 	fal "github.com/crowdstrike/falcon-mcp/internal/falcon"
 )
 
-// loadDotEnv loads KEY=VALUE lines from the project-root .env into the process
-// environment when the variables are not already set. It intentionally does not
-// print values. A missing file is not an error (CI may inject env directly).
+// loadDotEnv loads the project-root .env through the shared config loader so
+// there is one loader across the CLI and the live tests. A missing file is not
+// an error (CI may inject env directly), and existing variables are preserved.
 func loadDotEnv(t *testing.T) {
 	t.Helper()
 	_, thisFile, _, _ := runtime.Caller(0)
 	// internal/toolsets/idp -> repo root is four levels up from go/.
 	root := filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", "..", "..", ".."))
-	data, err := os.ReadFile(filepath.Join(root, ".env"))
-	if err != nil {
-		return
-	}
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		k, v, ok := strings.Cut(line, "=")
-		if !ok {
-			continue
-		}
-		k, v = strings.TrimSpace(k), strings.Trim(strings.TrimSpace(v), `"'`)
-		if os.Getenv(k) == "" {
-			t.Setenv(k, v)
-		}
-	}
+	config.LoadDotEnv(filepath.Join(root, ".env"))
 }
 
 // hostFromURL returns the host component of a full base URL, or the input

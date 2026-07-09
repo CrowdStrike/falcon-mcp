@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"io"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/crowdstrike/falcon-mcp/internal/toolsets"
@@ -61,6 +64,21 @@ func TestResolveConfig_ReadOnlyFlag(t *testing.T) {
 	}
 }
 
+// TestHTTPConfig_MapsHostPortStateless asserts the run() switch feeds the HTTP
+// transports a correctly-joined address and the stateless toggle.
+func TestHTTPConfig_MapsHostPortStateless(t *testing.T) {
+	root := newRootCmd()
+	_ = root.ParseFlags([]string{"--host", "0.0.0.0", "--port", "9123", "--stateless-http"})
+	cfg := resolveConfig(root)
+	hc := httpConfig(cfg)
+	if hc.Addr != "0.0.0.0:9123" {
+		t.Fatalf("Addr = %q, want 0.0.0.0:9123", hc.Addr)
+	}
+	if !hc.Stateless {
+		t.Fatal("Stateless not propagated from --stateless-http")
+	}
+}
+
 // TestHostsRegisteredSlug asserts the hosts module registers under the exact
 // slug agents/configs depend on.
 func TestHostsRegisteredSlug(t *testing.T) {
@@ -88,10 +106,30 @@ func TestReadOnlyDropsWriteTools(t *testing.T) {
 	}
 }
 
-func TestConfigureLogging_WritesToStderr(t *testing.T) {
-	// configureLogging must not panic and must return a usable logger.
+func TestConfigureLogging_WritesToStderrNotStdout(t *testing.T) {
+	// Redirect both streams so we can prove log output lands on stderr and
+	// stdout stays clean (stdio transport owns stdout; HTTP must not pollute it).
+	origOut, origErr := os.Stdout, os.Stderr
+	outR, outW, _ := os.Pipe()
+	errR, errW, _ := os.Pipe()
+	os.Stdout, os.Stderr = outW, errW
+	t.Cleanup(func() { os.Stdout, os.Stderr = origOut, origErr })
+
 	logger := configureLogging(true)
 	if logger == nil {
 		t.Fatal("configureLogging returned nil")
+	}
+	logger.Info("probe-line")
+
+	_ = outW.Close()
+	_ = errW.Close()
+	outBuf, _ := io.ReadAll(outR)
+	errBuf, _ := io.ReadAll(errR)
+
+	if strings.Contains(string(outBuf), "probe-line") {
+		t.Fatalf("log line leaked to stdout: %q", outBuf)
+	}
+	if !strings.Contains(string(errBuf), "probe-line") {
+		t.Fatalf("log line not found on stderr: %q", errBuf)
 	}
 }

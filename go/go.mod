@@ -6,6 +6,7 @@ require (
 	github.com/crowdstrike/gofalcon v0.21.0
 	github.com/go-openapi/runtime v0.27.1
 	github.com/google/jsonschema-go v0.4.3
+	github.com/joho/godotenv v1.5.1
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/oauth2 v0.35.0
