@@ -92,6 +92,7 @@ line-length = 100
 
 [tool.setuptools.packages.find]
 include = ["falcon_mcp*"]
+exclude = ["go*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
