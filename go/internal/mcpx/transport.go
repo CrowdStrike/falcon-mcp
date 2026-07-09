@@ -46,13 +46,22 @@ func RunSSE(ctx context.Context, cfg HTTPConfig, srv *mcp.Server) error {
 	return serve(ctx, cfg, handler)
 }
 
+// readHeaderTimeout bounds how long a client may take to send request headers,
+// preventing a slow-client (Slowloris) connection from tying up a server
+// goroutine indefinitely. Bodies and SSE streams are unbounded by design.
+const readHeaderTimeout = 10 * time.Second
+
 // serve runs an http.Server with the given handler (optionally wrapped by
 // cfg.Handler middleware) and shuts it down gracefully when ctx is canceled.
 func serve(ctx context.Context, cfg HTTPConfig, h http.Handler) error {
 	if cfg.Handler != nil {
 		h = cfg.Handler(h)
 	}
-	hs := &http.Server{Addr: cfg.Addr, Handler: h}
+	hs := &http.Server{
+		Addr:              cfg.Addr,
+		Handler:           h,
+		ReadHeaderTimeout: readHeaderTimeout,
+	}
 
 	errc := make(chan error, 1)
 	go func() { errc <- hs.ListenAndServe() }()

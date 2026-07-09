@@ -89,10 +89,11 @@ func stripNulls(v any) any {
 		}
 		return out
 	case []any:
-		for i := range t {
-			t[i] = stripNulls(t[i])
+		out := make([]any, len(t))
+		for i, elem := range t {
+			out[i] = stripNulls(elem)
 		}
-		return t
+		return out
 	default:
 		return v
 	}

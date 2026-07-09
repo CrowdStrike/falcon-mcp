@@ -16,10 +16,10 @@ type HTTPMiddleware struct {
 	APIKey string
 }
 
-// WrapHTTP wraps h with the configured middleware. The layers run
-// outermost-first: logging, then auth, then content-type normalization, then
-// trailing-slash stripping, then the handler. This mirrors the Python server's
-// composition while ensuring rejected requests are still logged.
+// wrap applies the middleware chain to h. The layers run outermost-first:
+// logging, then auth, then content-type normalization, then trailing-slash
+// stripping, then the handler. This mirrors the Python server's composition
+// while ensuring rejected requests are still logged.
 func (m HTTPMiddleware) wrap(h http.Handler) http.Handler {
 	h = stripTrailingSlash(h)
 	h = normalizeContentType(h)
