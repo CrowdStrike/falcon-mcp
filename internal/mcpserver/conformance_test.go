@@ -200,3 +200,71 @@ func TestModuleSelectionEndToEnd(t *testing.T) {
 		}
 	}
 }
+
+// connectNewServer builds a full New server (zero API — registration only, no
+// API calls) and returns a connected in-memory client session.
+func connectNewServer(t *testing.T, cfg *config.Config) *mcp.ClientSession {
+	t.Helper()
+	srv, err := New(cfg, &client.CrowdStrikeAPISpecification{})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() { _ = srv.Close() })
+
+	ctx := context.Background()
+	clientT, serverT := mcp.NewInMemoryTransports()
+	ss, err := srv.MCP().Connect(ctx, serverT, nil)
+	if err != nil {
+		t.Fatalf("server connect: %v", err)
+	}
+	t.Cleanup(func() { _ = ss.Wait() })
+
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "test"}, nil).Connect(ctx, clientT, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	t.Cleanup(func() { _ = cs.Close() })
+	return cs
+}
+
+// TestInitializeInstructions asserts the initialize response carries exactly the
+// wired serverInstructions value. It is intentionally the empty stub today; when
+// real guidance is written into serverInstructions this assertion tracks it.
+func TestInitializeInstructions(t *testing.T) {
+	cs := connectNewServer(t, &config.Config{})
+	if got := cs.InitializeResult().Instructions; got != serverInstructions {
+		t.Fatalf("instructions = %q, want %q", got, serverInstructions)
+	}
+}
+
+// TestPromptsEndToEnd asserts the detections FQL-builder prompt is advertised
+// with the falcon_ prefix and renders a non-empty message via prompts/get.
+func TestPromptsEndToEnd(t *testing.T) {
+	cs := connectNewServer(t, &config.Config{Modules: []string{"detections"}})
+	ctx := context.Background()
+
+	list, err := cs.ListPrompts(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListPrompts: %v", err)
+	}
+	found := false
+	for _, p := range list.Prompts {
+		if p.Name == "falcon_build_detection_filter" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("prompt falcon_build_detection_filter not advertised; got %+v", list.Prompts)
+	}
+
+	get, err := cs.GetPrompt(ctx, &mcp.GetPromptParams{
+		Name:      "falcon_build_detection_filter",
+		Arguments: map[string]string{"status": "new"},
+	})
+	if err != nil {
+		t.Fatalf("GetPrompt: %v", err)
+	}
+	if len(get.Messages) == 0 {
+		t.Fatalf("prompt returned no messages")
+	}
+}

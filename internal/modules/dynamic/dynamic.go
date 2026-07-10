@@ -52,6 +52,9 @@ func (m *MetaModule) Description() string {
 // still register their FQL guides separately in dynamic mode.
 func (m *MetaModule) RegisterResources(_ *mcp.Server) {}
 
+// RegisterPrompts is a no-op: the meta-module owns no prompts.
+func (m *MetaModule) RegisterPrompts(_ *mcp.Server) {}
+
 // searchToolsSchema is the input schema for falcon_search_tools. It is inferred
 // from SearchToolsInput's struct tags, then a mutate func adds the limit
 // bounds/default the tag syntax cannot express, reusing the clamp constants.

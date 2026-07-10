@@ -23,6 +23,13 @@ import (
 // registered module. Callers can branch with errors.Is.
 var ErrUnknownModule = errors.New("mcpserver: unknown module")
 
+// serverInstructions is returned to clients in the initialize response's
+// instructions field as a usage hint for the LLM. It is intentionally empty for
+// now: the field is wired end-to-end so populating it later is a one-line change,
+// and an empty value is omitted from the wire (json:",omitempty"), leaving the
+// initialize response unchanged until real guidance is written here.
+const serverInstructions = ""
+
 // Server wraps the assembled MCP server and its registered modules. In dynamic
 // mode it also owns the tool catalog's in-process session, torn down by Close.
 type Server struct {
@@ -38,7 +45,13 @@ type Server struct {
 // does not exist. In dynamic mode it wires the catalog's in-process session;
 // call Close to release it.
 func New(cfg *config.Config, api *client.CrowdStrikeAPISpecification) (*Server, error) {
-	s := mcp.NewServer(&mcp.Implementation{Name: "falcon-mcp", Version: version.Version}, nil)
+	s := mcp.NewServer(&mcp.Implementation{Name: "falcon-mcp", Version: version.Version}, &mcp.ServerOptions{
+		Instructions: serverInstructions,
+		// KeepAlive pings idle sessions to detect dead peers and hold long-lived
+		// http/sse connections open. Zero disables it (the SDK default), so stdio
+		// and unconfigured deployments are unaffected.
+		KeepAlive: cfg.KeepAlive,
+	})
 
 	// The process logger's level was already set by the CLI (preRunE) before we
 	// are called; injecting it here keeps handlers free of the slog global.
@@ -68,13 +81,15 @@ func New(cfg *config.Config, api *client.CrowdStrikeAPISpecification) (*Server, 
 // nil. In dynamic mode the real tools are registered on the catalog's internal
 // server and only the three meta-tools are registered on s; the returned
 // catalog owns the in-process session (already connected) and must be closed by
-// the caller. Module resources (FQL guides) are exposed on s in both modes.
+// the caller. Module resources (FQL guides) and prompts are exposed on s in both
+// modes.
 func registerModules(s *mcp.Server, enabled []base.Module, dynamicMode bool) (*dynamic.Catalog, error) {
 	if !dynamicMode {
 		reg := base.ServerRegistrar(s)
 		for _, m := range enabled {
 			m.RegisterTools(reg)
 			m.RegisterResources(s)
+			m.RegisterPrompts(s)
 		}
 		return nil, nil
 	}
@@ -83,6 +98,7 @@ func registerModules(s *mcp.Server, enabled []base.Module, dynamicMode bool) (*d
 	for _, m := range enabled {
 		m.RegisterTools(cat.ForModule(m.Name()))
 		m.RegisterResources(s)
+		m.RegisterPrompts(s)
 	}
 	// Connect the in-process session before serving so falcon_execute_tool can
 	// dispatch. context.Background is right here: the session lives for the

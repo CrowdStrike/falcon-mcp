@@ -34,6 +34,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync/atomic"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -61,6 +62,11 @@ type Module interface {
 	// guides). Each resource should be registered via TextResource so the
 	// "falcon_" name prefix is applied centrally.
 	RegisterResources(s *mcp.Server)
+	// RegisterPrompts registers the module's MCP prompts on s (e.g. guided
+	// FQL-filter builders). Each prompt should be registered via Prompt so the
+	// "falcon_" name prefix is applied centrally. A module with no prompts
+	// implements this as a no-op.
+	RegisterPrompts(s *mcp.Server)
 }
 
 // ErrFQLSyntax classifies a Falcon 400-class error caused by an invalid FQL
@@ -185,7 +191,47 @@ func TextResource(s *mcp.Server, uri, name, description, mime, text string) {
 	})
 }
 
-// opaqueRecordSchema describes a resource record as an unconstrained (open)
+// PromptParams describes a static MCP prompt registered via Prompt. It groups
+// the descriptor fields (CQ-3) so the handler stays a separate argument.
+type PromptParams struct {
+	// Name is the prompt name without the "falcon_" prefix, which Prompt adds.
+	Name string
+	// Title is an optional human-readable display name.
+	Title string
+	// Description is a one-line summary of what the prompt produces.
+	Description string
+	// Arguments declares the prompt's templating arguments (all optional to the
+	// client unless marked Required).
+	Arguments []*mcp.PromptArgument
+}
+
+// PromptRenderer builds the prompt's messages from the client-supplied
+// arguments. It is called on each prompts/get request; args is never nil (an
+// absent Arguments map arrives as an empty map).
+type PromptRenderer func(args map[string]string) []*mcp.PromptMessage
+
+// Prompt registers an MCP prompt on s under the name "falcon_"+p.Name, matching
+// the tool- and resource-name convention applied by AddTool and TextResource.
+// render is invoked per prompts/get to produce the messages from the request's
+// arguments; the prompt's Description is echoed on the result.
+func Prompt(s *mcp.Server, p PromptParams, render PromptRenderer) {
+	s.AddPrompt(&mcp.Prompt{
+		Name:        namePrefix + p.Name,
+		Title:       p.Title,
+		Description: p.Description,
+		Arguments:   p.Arguments,
+	}, func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		args := req.Params.Arguments
+		if args == nil {
+			args = map[string]string{}
+		}
+		return &mcp.GetPromptResult{
+			Description: p.Description,
+			Messages:    render(args),
+		}, nil
+	})
+}
+
 // JSON object. It is used to stop schema reflection from descending into
 // gofalcon's payload models — see inferOutputSchema.
 var opaqueRecordSchema = &jsonschema.Schema{Types: []string{"null", "object"}}
@@ -314,6 +360,33 @@ type FQLErrorDetail struct {
 // safe for concurrent use and must honor ctx cancellation.
 type DetailFetcher[T any] func(ctx context.Context, ids []string) ([]T, error)
 
+// ProgressFunc returns a chunk-progress callback suitable for
+// FetchDetailsParams.Progress, or nil when the client did not request progress.
+// It reports progress only when req carries a progress token (nil req, or an
+// absent token, yields nil) — per the MCP spec, servers send progress
+// notifications solely for requests that opted in with a token.
+//
+// The returned callback sends a best-effort progress/notification per completed
+// chunk over req.Session; notification errors are ignored, as progress is
+// telemetry and must never fail the tool call. It is safe for concurrent use.
+func ProgressFunc(ctx context.Context, req *mcp.CallToolRequest) func(done, total int) {
+	if req == nil || req.Session == nil || req.Params == nil {
+		return nil
+	}
+	token := req.Params.GetProgressToken()
+	if token == nil {
+		return nil
+	}
+	session := req.Session
+	return func(done, total int) {
+		_ = session.NotifyProgress(ctx, &mcp.ProgressNotificationParams{
+			ProgressToken: token,
+			Progress:      float64(done),
+			Total:         float64(total),
+		})
+	}
+}
+
 // FetchDetailsParams configures a bounded concurrent two-step detail fetch.
 type FetchDetailsParams[T any] struct {
 	// IDs is the full set of entity IDs to fetch details for.
@@ -330,6 +403,12 @@ type FetchDetailsParams[T any] struct {
 	// entities in arbitrary order, silently discarding that sort. When nil,
 	// results keep the order the fetcher returned.
 	KeyFn func(T) string
+	// Progress, when non-nil, is called once per chunk as it completes with the
+	// running (done, total) chunk counts. It reports progress at chunk
+	// granularity, not per record. It must be safe for concurrent use: on the
+	// multi-chunk path chunks finish on separate goroutines. A single-chunk fetch
+	// calls it once with (1, 1). It is not called when there are no IDs to fetch.
+	Progress func(done, total int)
 }
 
 // FetchDetails fetches details for p.IDs, chunking when the set exceeds p.ChunkSize
@@ -352,9 +431,14 @@ func FetchDetails[T any](ctx context.Context, p FetchDetailsParams[T]) ([]T, err
 		if err != nil {
 			return nil, err
 		}
+		if p.Progress != nil {
+			p.Progress(1, 1)
+		}
 		return reorderByIDs(chunks[0], res, p.KeyFn), nil
 	}
 
+	total := len(chunks)
+	var done atomic.Int64
 	perChunk := make([][]T, len(chunks))
 	g, gctx := errgroup.WithContext(ctx)
 	if p.Concurrency > 0 {
@@ -367,6 +451,9 @@ func FetchDetails[T any](ctx context.Context, p FetchDetailsParams[T]) ([]T, err
 				return fmt.Errorf("fetch details chunk %d: %w", i, err)
 			}
 			perChunk[i] = reorderByIDs(chunk, res, p.KeyFn)
+			if p.Progress != nil {
+				p.Progress(int(done.Add(1)), total)
+			}
 			return nil
 		})
 	}

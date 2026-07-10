@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/crowdstrike/falcon-mcp/internal/version"
 )
@@ -84,6 +85,11 @@ type Config struct {
 	// config normalizes this list but does not validate names against the real
 	// module set — that authority belongs to the mcpserver package.
 	Modules []string
+	// KeepAlive is the interval at which the server pings idle sessions to detect
+	// dead peers and hold long-lived connections open. Zero (the default)
+	// disables keepalive. It is only meaningful for the http and sse transports;
+	// stdio ignores it.
+	KeepAlive time.Duration
 }
 
 // Load validates cfg, applies defaults, and returns the normalized Config. It

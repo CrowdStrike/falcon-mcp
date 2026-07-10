@@ -145,6 +145,7 @@ func registerFlags(cmd *cobra.Command) {
 	f.Bool("stateless-http", false, "run the http transport in stateless mode: a fresh session per request, no session tracking, for scalable deployments (env FALCON_MCP_STATELESS_HTTP)")
 	f.String("api-key", "", "static secret required in the x-api-key header for http/sse clients; empty disables auth (env FALCON_MCP_API_KEY)")
 	f.StringSlice("modules", nil, "modules to enable (comma-separated); empty enables all")
+	f.Duration("keep-alive", 0, "interval to ping idle sessions and hold long-lived http/sse connections open; 0 disables; ignored by stdio (env FALCON_MCP_KEEP_ALIVE)")
 
 	// Alias --user-agent-comment to the canonical --user-agent flag. Normalizing
 	// the input name (rather than declaring a second flag) means bindFlags's
@@ -201,6 +202,7 @@ func bindEnv(v *viper.Viper) {
 	_ = v.BindEnv("api_key", "FALCON_MCP_API_KEY")
 	_ = v.BindEnv("modules", "FALCON_MCP_MODULES")
 	_ = v.BindEnv("proxy", "FALCON_MCP_PROXY")
+	_ = v.BindEnv("keep_alive", "FALCON_MCP_KEEP_ALIVE")
 }
 
 // newViper returns a viper instance with the INI codec registered. viper v1.20+
@@ -233,6 +235,7 @@ func resolve(v *viper.Viper) config.Config {
 		APIKey:        v.GetString("api_key"),
 		Modules:       v.GetStringSlice("modules"),
 		UserAgent:     v.GetString("user_agent"),
+		KeepAlive:     v.GetDuration("keep_alive"),
 	}
 }
 

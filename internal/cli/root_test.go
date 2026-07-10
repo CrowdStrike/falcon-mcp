@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/spf13/viper"
 
@@ -201,6 +202,46 @@ func TestExecuteStatelessHTTPFlag(t *testing.T) {
 	}
 }
 
+func TestExecuteKeepAliveFlag(t *testing.T) {
+	t.Setenv("FALCON_CLIENT_ID", "id")
+	t.Setenv("FALCON_CLIENT_SECRET", "s")
+
+	cfg, err := resolveArgs(t, []string{"--transport", "http", "--http-addr", ":8080", "--keep-alive", "30s"})
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	if cfg == nil || cfg.KeepAlive != 30*time.Second {
+		t.Fatalf("KeepAlive = %v, want 30s from --keep-alive: %+v", cfgKeepAlive(cfg), cfg)
+	}
+}
+
+func TestExecuteKeepAliveEnv(t *testing.T) {
+	t.Setenv("FALCON_CLIENT_ID", "id")
+	t.Setenv("FALCON_CLIENT_SECRET", "s")
+	t.Setenv("FALCON_MCP_KEEP_ALIVE", "45s")
+
+	cfg, err := resolveArgs(t, []string{"--transport", "http", "--http-addr", ":8080"})
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	if cfg == nil || cfg.KeepAlive != 45*time.Second {
+		t.Fatalf("KeepAlive = %v, want 45s from FALCON_MCP_KEEP_ALIVE: %+v", cfgKeepAlive(cfg), cfg)
+	}
+}
+
+func TestExecuteKeepAliveDefaultsZero(t *testing.T) {
+	t.Setenv("FALCON_CLIENT_ID", "id")
+	t.Setenv("FALCON_CLIENT_SECRET", "s")
+
+	cfg, err := resolveArgs(t, nil)
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	if cfg == nil || cfg.KeepAlive != 0 {
+		t.Fatalf("KeepAlive = %v, want 0 by default: %+v", cfgKeepAlive(cfg), cfg)
+	}
+}
+
 func TestExecuteStatelessHTTPEnv(t *testing.T) {
 	t.Setenv("FALCON_CLIENT_ID", "id")
 	t.Setenv("FALCON_CLIENT_SECRET", "s")
@@ -290,6 +331,14 @@ func cfgAPIKey(c *config.Config) string {
 		return "<nil>"
 	}
 	return c.APIKey
+}
+
+// cfgKeepAlive safely reads KeepAlive for failure messages when cfg may be nil.
+func cfgKeepAlive(c *config.Config) time.Duration {
+	if c == nil {
+		return -1
+	}
+	return c.KeepAlive
 }
 
 func TestExecuteProxyFlag(t *testing.T) {

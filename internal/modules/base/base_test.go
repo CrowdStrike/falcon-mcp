@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -71,6 +72,156 @@ func TestTextResourceRegistersAndServes(t *testing.T) {
 	if read.Contents[0].URI != uri {
 		t.Errorf("content URI = %q, want %q", read.Contents[0].URI, uri)
 	}
+}
+
+func TestPromptRegistersAndServes(t *testing.T) {
+	t.Parallel()
+
+	srv := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "test"}, nil)
+	Prompt(srv, PromptParams{
+		Name:        "build_filter",
+		Title:       "Build a filter",
+		Description: "guide desc",
+		Arguments:   []*mcp.PromptArgument{{Name: "status", Description: "status arg"}},
+	}, func(args map[string]string) []*mcp.PromptMessage {
+		return []*mcp.PromptMessage{
+			{Role: "user", Content: &mcp.TextContent{Text: "status=" + args["status"]}},
+		}
+	})
+
+	ctx := context.Background()
+	clientT, serverT := mcp.NewInMemoryTransports()
+	ss, err := srv.Connect(ctx, serverT, nil)
+	if err != nil {
+		t.Fatalf("server connect: %v", err)
+	}
+	t.Cleanup(func() { _ = ss.Wait() })
+
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "c", Version: "test"}, nil).Connect(ctx, clientT, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	t.Cleanup(func() { _ = cs.Close() })
+
+	list, err := cs.ListPrompts(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListPrompts: %v", err)
+	}
+	if len(list.Prompts) != 1 {
+		t.Fatalf("expected 1 prompt, got %d", len(list.Prompts))
+	}
+	if got := list.Prompts[0].Name; got != "falcon_build_filter" {
+		t.Errorf("name = %q, want falcon_ prefix applied", got)
+	}
+
+	get, err := cs.GetPrompt(ctx, &mcp.GetPromptParams{
+		Name:      "falcon_build_filter",
+		Arguments: map[string]string{"status": "new"},
+	})
+	if err != nil {
+		t.Fatalf("GetPrompt: %v", err)
+	}
+	if len(get.Messages) != 1 {
+		t.Fatalf("expected 1 message, got %d", len(get.Messages))
+	}
+	tc, ok := get.Messages[0].Content.(*mcp.TextContent)
+	if !ok {
+		t.Fatalf("content type = %T, want *mcp.TextContent", get.Messages[0].Content)
+	}
+	if tc.Text != "status=new" {
+		t.Errorf("message text = %q, want %q (arguments woven in)", tc.Text, "status=new")
+	}
+}
+
+// TestProgressFuncEndToEnd drives a tool that fetches details via FetchDetails
+// with base.ProgressFunc over the real SDK. With a progress token the client
+// must receive one notification per chunk; without one, none.
+func TestProgressFuncEndToEnd(t *testing.T) {
+	t.Parallel()
+
+	// The tool chunks its IDs by 2 and reports progress from the request.
+	newSession := func(t *testing.T, onProgress func(*mcp.ProgressNotificationParams)) *mcp.ClientSession {
+		t.Helper()
+		srv := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "test"}, nil)
+		mcp.AddTool(srv, &mcp.Tool{Name: "fetch"}, func(ctx context.Context, req *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+			_, err := FetchDetails(ctx, FetchDetailsParams[string]{
+				IDs:         []string{"0", "1", "2", "3"}, // 2 chunks of 2
+				ChunkSize:   2,
+				Concurrency: 2,
+				Fetch:       func(_ context.Context, chunk []string) ([]string, error) { return chunk, nil },
+				Progress:    ProgressFunc(ctx, req),
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+			return &mcp.CallToolResult{}, nil, nil
+		})
+
+		ctx := context.Background()
+		clientT, serverT := mcp.NewInMemoryTransports()
+		ss, err := srv.Connect(ctx, serverT, nil)
+		if err != nil {
+			t.Fatalf("server connect: %v", err)
+		}
+		t.Cleanup(func() { _ = ss.Wait() })
+
+		c := mcp.NewClient(&mcp.Implementation{Name: "c", Version: "test"}, &mcp.ClientOptions{
+			ProgressNotificationHandler: func(_ context.Context, req *mcp.ProgressNotificationClientRequest) {
+				onProgress(req.Params)
+			},
+		})
+		cs, err := c.Connect(ctx, clientT, nil)
+		if err != nil {
+			t.Fatalf("client connect: %v", err)
+		}
+		t.Cleanup(func() { _ = cs.Close() })
+		return cs
+	}
+
+	t.Run("with token", func(t *testing.T) {
+		var (
+			mu    sync.Mutex
+			count int
+		)
+		cs := newSession(t, func(*mcp.ProgressNotificationParams) {
+			mu.Lock()
+			count++
+			mu.Unlock()
+		})
+		if _, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+			Name: "fetch",
+			Meta: mcp.Meta{"progressToken": "tok-1"},
+		}); err != nil {
+			t.Fatalf("CallTool: %v", err)
+		}
+		mu.Lock()
+		got := count
+		mu.Unlock()
+		if got != 2 {
+			t.Fatalf("progress notifications = %d, want 2 (one per chunk)", got)
+		}
+	})
+
+	t.Run("without token", func(t *testing.T) {
+		var (
+			mu    sync.Mutex
+			count int
+		)
+		cs := newSession(t, func(*mcp.ProgressNotificationParams) {
+			mu.Lock()
+			count++
+			mu.Unlock()
+		})
+		if _, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "fetch"}); err != nil {
+			t.Fatalf("CallTool: %v", err)
+		}
+		mu.Lock()
+		got := count
+		mu.Unlock()
+		if got != 0 {
+			t.Fatalf("progress notifications = %d, want 0 (no token supplied)", got)
+		}
+	})
 }
 
 func TestFetchDetailsSingleChunkSequential(t *testing.T) {
@@ -183,6 +334,83 @@ func TestFetchDetailsEmpty(t *testing.T) {
 	}
 	if len(got) != 0 {
 		t.Fatalf("expected empty result, got %d", len(got))
+	}
+}
+
+func TestFetchDetailsProgressSingleChunk(t *testing.T) {
+	t.Parallel()
+
+	var calls [][2]int
+	_, err := FetchDetails(context.Background(), FetchDetailsParams[string]{
+		IDs:       []string{"a", "b", "c"},
+		ChunkSize: 10, // one chunk
+		Fetch:     func(_ context.Context, ids []string) ([]string, error) { return ids, nil },
+		Progress:  func(done, total int) { calls = append(calls, [2]int{done, total}) },
+	})
+	if err != nil {
+		t.Fatalf("FetchDetails: %v", err)
+	}
+	want := [][2]int{{1, 1}}
+	if fmt.Sprint(calls) != fmt.Sprint(want) {
+		t.Fatalf("progress calls = %v, want %v", calls, want)
+	}
+}
+
+func TestFetchDetailsProgressMultiChunk(t *testing.T) {
+	t.Parallel()
+
+	var (
+		mu    sync.Mutex
+		calls [][2]int
+	)
+	ids := []string{"0", "1", "2", "3", "4", "5", "6"} // 4 chunks of 2 (last has 1)
+	_, err := FetchDetails(context.Background(), FetchDetailsParams[string]{
+		IDs:         ids,
+		ChunkSize:   2,
+		Concurrency: 4,
+		Fetch:       func(_ context.Context, chunk []string) ([]string, error) { return chunk, nil },
+		Progress: func(done, total int) {
+			mu.Lock()
+			calls = append(calls, [2]int{done, total})
+			mu.Unlock()
+		},
+	})
+	if err != nil {
+		t.Fatalf("FetchDetails: %v", err)
+	}
+	// One call per chunk; total is constant; done counts 1..N in some order
+	// (chunks complete concurrently), so assert the multiset of done values.
+	if len(calls) != 4 {
+		t.Fatalf("progress call count = %d, want 4", len(calls))
+	}
+	seen := make(map[int]bool)
+	for _, c := range calls {
+		if c[1] != 4 {
+			t.Fatalf("progress total = %d, want 4", c[1])
+		}
+		seen[c[0]] = true
+	}
+	for want := 1; want <= 4; want++ {
+		if !seen[want] {
+			t.Fatalf("missing progress done=%d; got %v", want, calls)
+		}
+	}
+}
+
+func TestFetchDetailsProgressEmptyNotCalled(t *testing.T) {
+	t.Parallel()
+
+	called := false
+	_, err := FetchDetails(context.Background(), FetchDetailsParams[string]{
+		IDs:      nil,
+		Fetch:    func(_ context.Context, ids []string) ([]string, error) { return ids, nil },
+		Progress: func(int, int) { called = true },
+	})
+	if err != nil {
+		t.Fatalf("FetchDetails: %v", err)
+	}
+	if called {
+		t.Fatal("progress callback called for empty ID set")
 	}
 }
 

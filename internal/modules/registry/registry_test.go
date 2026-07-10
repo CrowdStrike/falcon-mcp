@@ -20,6 +20,7 @@ func (m fakeModule) Name() string                  { return m.name }
 func (m fakeModule) Description() string           { return "fake " + m.name }
 func (m fakeModule) RegisterTools(base.Registrar)  {}
 func (m fakeModule) RegisterResources(*mcp.Server) {}
+func (m fakeModule) RegisterPrompts(*mcp.Server)   {}
 
 func TestBuildPreservesOrder(t *testing.T) {
 	factories := []Factory{

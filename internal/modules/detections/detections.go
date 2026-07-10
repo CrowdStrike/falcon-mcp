@@ -117,7 +117,7 @@ type SearchInput struct {
 	IncludeHidden *bool  `json:"include_hidden,omitempty" jsonschema:"include hidden alerts (default true)"`
 }
 
-func (m *Module) searchDetections(ctx context.Context, _ *mcp.CallToolRequest, in SearchInput) (*mcp.CallToolResult, base.SearchResult[*models.DetectsAlert], error) {
+func (m *Module) searchDetections(ctx context.Context, req *mcp.CallToolRequest, in SearchInput) (*mcp.CallToolResult, base.SearchResult[*models.DetectsAlert], error) {
 	var zero base.SearchResult[*models.DetectsAlert]
 	limit := int64(in.Limit)
 	if limit == 0 {
@@ -156,7 +156,7 @@ func (m *Module) searchDetections(ctx context.Context, _ *mcp.CallToolRequest, i
 		return nil, base.Found([]*models.DetectsAlert{}, in.Filter), nil
 	}
 
-	alertsResult, err := m.fetchDetails(ctx, ids, in.IncludeHidden)
+	alertsResult, err := m.fetchDetails(ctx, req, ids, in.IncludeHidden)
 	if err != nil {
 		return nil, zero, err
 	}
@@ -169,12 +169,12 @@ type DetailsInput struct {
 	IncludeHidden *bool    `json:"include_hidden,omitempty" jsonschema:"include hidden alerts (default true)"`
 }
 
-func (m *Module) getDetectionDetails(ctx context.Context, _ *mcp.CallToolRequest, in DetailsInput) (*mcp.CallToolResult, base.EntitiesResult[*models.DetectsAlert], error) {
+func (m *Module) getDetectionDetails(ctx context.Context, req *mcp.CallToolRequest, in DetailsInput) (*mcp.CallToolResult, base.EntitiesResult[*models.DetectsAlert], error) {
 	m.Logger.Debug("get_detection_details", "ids", len(in.IDs))
 	if len(in.IDs) == 0 {
 		return nil, base.Entities([]*models.DetectsAlert{}), nil
 	}
-	alertsResult, err := m.fetchDetails(ctx, in.IDs, in.IncludeHidden)
+	alertsResult, err := m.fetchDetails(ctx, req, in.IDs, in.IncludeHidden)
 	if err != nil {
 		return nil, base.EntitiesResult[*models.DetectsAlert]{}, err
 	}
@@ -182,12 +182,14 @@ func (m *Module) getDetectionDetails(ctx context.Context, _ *mcp.CallToolRequest
 }
 
 // fetchDetails fetches full alert records for the given composite IDs, chunking and
-// fetching concurrently when the set exceeds a single GetV2 call's capacity.
-func (m *Module) fetchDetails(ctx context.Context, ids []string, includeHidden *bool) ([]*models.DetectsAlert, error) {
+// fetching concurrently when the set exceeds a single GetV2 call's capacity. It
+// emits per-chunk progress notifications when req carries a progress token.
+func (m *Module) fetchDetails(ctx context.Context, req *mcp.CallToolRequest, ids []string, includeHidden *bool) ([]*models.DetectsAlert, error) {
 	return base.FetchDetails(ctx, base.FetchDetailsParams[*models.DetectsAlert]{
 		IDs:         ids,
 		ChunkSize:   alertBatchSize,
 		Concurrency: m.Concurrency,
+		Progress:    base.ProgressFunc(ctx, req),
 		Fetch: func(ctx context.Context, chunk []string) ([]*models.DetectsAlert, error) {
 			params := alerts.NewGetV2ParamsWithContext(ctx)
 			params.Body = &models.DetectsapiPostEntitiesAlertsV2Request{CompositeIds: chunk}

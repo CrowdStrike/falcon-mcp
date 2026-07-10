@@ -47,6 +47,7 @@ type fakeModule struct {
 func (m fakeModule) Name() string                    { return m.name }
 func (m fakeModule) Description() string             { return "fake " + m.name + " module" }
 func (m fakeModule) RegisterResources(_ *mcp.Server) {}
+func (m fakeModule) RegisterPrompts(_ *mcp.Server)   {}
 
 func (m fakeModule) RegisterTools(r base.Registrar) {
 	base.AddTool(r, &mcp.Tool{

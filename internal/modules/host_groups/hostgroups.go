@@ -147,6 +147,9 @@ func (m *Module) RegisterResources(s *mcp.Server) {
 	)
 }
 
+// RegisterPrompts is a no-op: the host-groups module exposes no prompts.
+func (m *Module) RegisterPrompts(_ *mcp.Server) {}
+
 // SearchInput is the input for falcon_search_host_groups.
 type SearchInput struct {
 	Filter string `json:"filter,omitempty" jsonschema:"host-group FQL filter (e.g. name:'Servers*', group_type:'static')"`

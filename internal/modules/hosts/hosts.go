@@ -134,6 +134,9 @@ func (m *Module) RegisterResources(s *mcp.Server) {
 	)
 }
 
+// RegisterPrompts is a no-op: the hosts module exposes no prompts.
+func (m *Module) RegisterPrompts(_ *mcp.Server) {}
+
 // SearchInput is the input for falcon_search_hosts. The json tags drive the
 // SDK's unmarshal into this struct; the served schema (searchHostsSchema) is
 // inferred from these jsonschema tags, then augmented with the limit/offset
@@ -145,7 +148,7 @@ type SearchInput struct {
 	Sort   string `json:"sort,omitempty" jsonschema:"FQL sort (e.g. hostname.asc, last_seen.desc)"`
 }
 
-func (m *Module) searchHosts(ctx context.Context, _ *mcp.CallToolRequest, in SearchInput) (*mcp.CallToolResult, base.SearchResult[*models.DeviceapiDeviceSwagger], error) {
+func (m *Module) searchHosts(ctx context.Context, req *mcp.CallToolRequest, in SearchInput) (*mcp.CallToolResult, base.SearchResult[*models.DeviceapiDeviceSwagger], error) {
 	var zero base.SearchResult[*models.DeviceapiDeviceSwagger]
 	limit := int64(in.Limit)
 	if limit == 0 {
@@ -175,7 +178,7 @@ func (m *Module) searchHosts(ctx context.Context, _ *mcp.CallToolRequest, in Sea
 	if len(ids) == 0 {
 		return nil, base.Found([]*models.DeviceapiDeviceSwagger{}, in.Filter), nil
 	}
-	devices, err := m.fetchDetails(ctx, ids)
+	devices, err := m.fetchDetails(ctx, req, ids)
 	if err != nil {
 		return nil, zero, err
 	}
@@ -188,12 +191,12 @@ type DetailsInput struct {
 	IDs []string `json:"ids" jsonschema:"Host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request."`
 }
 
-func (m *Module) getHostDetails(ctx context.Context, _ *mcp.CallToolRequest, in DetailsInput) (*mcp.CallToolResult, base.EntitiesResult[*models.DeviceapiDeviceSwagger], error) {
+func (m *Module) getHostDetails(ctx context.Context, req *mcp.CallToolRequest, in DetailsInput) (*mcp.CallToolResult, base.EntitiesResult[*models.DeviceapiDeviceSwagger], error) {
 	m.Logger.Debug("get_host_details", "ids", len(in.IDs))
 	if len(in.IDs) == 0 {
 		return nil, base.Entities([]*models.DeviceapiDeviceSwagger{}), nil
 	}
-	devices, err := m.fetchDetails(ctx, in.IDs)
+	devices, err := m.fetchDetails(ctx, req, in.IDs)
 	if err != nil {
 		return nil, base.EntitiesResult[*models.DeviceapiDeviceSwagger]{}, err
 	}
@@ -201,12 +204,14 @@ func (m *Module) getHostDetails(ctx context.Context, _ *mcp.CallToolRequest, in 
 }
 
 // fetchDetails fetches full device records for the given IDs, chunking and fetching
-// concurrently when the set exceeds a single details call's capacity.
-func (m *Module) fetchDetails(ctx context.Context, ids []string) ([]*models.DeviceapiDeviceSwagger, error) {
+// concurrently when the set exceeds a single details call's capacity. It emits
+// per-chunk progress notifications when req carries a progress token.
+func (m *Module) fetchDetails(ctx context.Context, req *mcp.CallToolRequest, ids []string) ([]*models.DeviceapiDeviceSwagger, error) {
 	return base.FetchDetails(ctx, base.FetchDetailsParams[*models.DeviceapiDeviceSwagger]{
 		IDs:         ids,
 		ChunkSize:   deviceBatchSize,
 		Concurrency: m.Concurrency,
+		Progress:    base.ProgressFunc(ctx, req),
 		Fetch: func(ctx context.Context, chunk []string) ([]*models.DeviceapiDeviceSwagger, error) {
 			params := hosts.NewPostDeviceDetailsV2ParamsWithContext(ctx)
 			params.Body = &models.MsaIdsRequest{Ids: chunk}
