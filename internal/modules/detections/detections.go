@@ -21,7 +21,7 @@ import (
 // aggregator (internal/mcpserver) collects it, so the module needs no init
 // side effect.
 var Factory registry.Factory = func(d registry.Deps) base.Module {
-	return New(Params{API: d.API.Alerts, Concurrency: d.Concurrency, Logger: d.Logger})
+	return &Module{API: d.API.Alerts, Concurrency: d.Concurrency, Logger: d.Logger}
 }
 
 // errInvalidInput classifies client-side validation failures in update_detections.
@@ -48,22 +48,11 @@ var (
 
 // Module registers the detections tools. It holds only the shared, concurrency-
 // safe Falcon client and configuration; handlers are stateless and reentrant.
+// Logger must be non-nil.
 type Module struct {
-	api         alertsAPI
-	concurrency int
-	logger      *slog.Logger
-}
-
-// Params configures a detections Module. Logger must be non-nil.
-type Params struct {
 	API         alertsAPI
 	Concurrency int // bounds detail-fetch fan-out
 	Logger      *slog.Logger
-}
-
-// New returns a detections Module from p.
-func New(p Params) *Module {
-	return &Module{api: p.API, concurrency: p.Concurrency, logger: p.Logger}
 }
 
 // Name reports the module name.
@@ -121,7 +110,7 @@ func (m *Module) searchDetections(ctx context.Context, _ *mcp.CallToolRequest, i
 	if limit == 0 {
 		limit = 10
 	}
-	m.logger.Debug("search_detections", "filter", in.Filter, "limit", limit, "offset", in.Offset, "q", in.Q, "sort", in.Sort)
+	m.Logger.Debug("search_detections", "filter", in.Filter, "limit", limit, "offset", in.Offset, "q", in.Q, "sort", in.Sort)
 	params := alerts.NewQueryV2ParamsWithContext(ctx)
 	params.Limit = &limit
 	if in.Filter != "" {
@@ -138,7 +127,7 @@ func (m *Module) searchDetections(ctx context.Context, _ *mcp.CallToolRequest, i
 		params.Sort = &in.Sort
 	}
 
-	queryResp, err := m.api.QueryV2(params)
+	queryResp, err := m.API.QueryV2(params)
 	if err != nil {
 		if details, ok := fqlBadRequest(err); ok {
 			return nil, base.FQLError[*models.DetectsAlert](details, in.Filter, fqlGuide), nil
@@ -149,7 +138,7 @@ func (m *Module) searchDetections(ctx context.Context, _ *mcp.CallToolRequest, i
 	}
 
 	ids := queryResp.Payload.Resources
-	m.logger.Debug("search_detections query complete", "matched_ids", len(ids))
+	m.Logger.Debug("search_detections query complete", "matched_ids", len(ids))
 	if len(ids) == 0 {
 		return nil, base.Found([]*models.DetectsAlert{}, in.Filter), nil
 	}
@@ -168,7 +157,7 @@ type DetailsInput struct {
 }
 
 func (m *Module) getDetectionDetails(ctx context.Context, _ *mcp.CallToolRequest, in DetailsInput) (*mcp.CallToolResult, base.EntitiesResult[*models.DetectsAlert], error) {
-	m.logger.Debug("get_detection_details", "ids", len(in.IDs))
+	m.Logger.Debug("get_detection_details", "ids", len(in.IDs))
 	if len(in.IDs) == 0 {
 		return nil, base.Entities([]*models.DetectsAlert{}), nil
 	}
@@ -185,14 +174,14 @@ func (m *Module) fetchDetails(ctx context.Context, ids []string, includeHidden *
 	return base.FetchDetails(ctx, base.FetchDetailsParams[*models.DetectsAlert]{
 		IDs:         ids,
 		ChunkSize:   alertBatchSize,
-		Concurrency: m.concurrency,
+		Concurrency: m.Concurrency,
 		Fetch: func(ctx context.Context, chunk []string) ([]*models.DetectsAlert, error) {
 			params := alerts.NewGetV2ParamsWithContext(ctx)
 			params.Body = &models.DetectsapiPostEntitiesAlertsV2Request{CompositeIds: chunk}
 			if includeHidden != nil {
 				params.IncludeHidden = includeHidden
 			}
-			resp, err := m.api.GetV2(params)
+			resp, err := m.API.GetV2(params)
 			if e := base.APIError(err, resp, scopeAlertsRead); e != nil {
 				return nil, e
 			}

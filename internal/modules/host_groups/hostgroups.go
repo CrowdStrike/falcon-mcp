@@ -26,7 +26,7 @@ import (
 // side effect. This module does no bulk detail fetch, so it ignores
 // Deps.Concurrency.
 var Factory registry.Factory = func(d registry.Deps) base.Module {
-	return New(Params{API: d.API.HostGroup, Logger: d.Logger})
+	return &Module{API: d.API.HostGroup, Logger: d.Logger}
 }
 
 // errInvalidInput classifies client-side validation failures in the mutating
@@ -60,20 +60,10 @@ type hostGroupAPI interface {
 
 // Module registers the host-groups tools. It holds only the shared, concurrency-
 // safe Falcon client and configuration; handlers are stateless and reentrant.
+// Logger must be non-nil.
 type Module struct {
-	api    hostGroupAPI
-	logger *slog.Logger
-}
-
-// Params configures a host-groups Module. Logger must be non-nil.
-type Params struct {
 	API    hostGroupAPI
 	Logger *slog.Logger
-}
-
-// New returns a host-groups Module from p.
-func New(p Params) *Module {
-	return &Module{api: p.API, logger: p.Logger}
 }
 
 // Name reports the module name.
@@ -151,7 +141,7 @@ func (m *Module) searchHostGroups(ctx context.Context, _ *mcp.CallToolRequest, i
 	if sort == "" {
 		sort = defaultSort
 	}
-	m.logger.Debug("search_host_groups", "filter", in.Filter, "limit", limit, "offset", in.Offset, "sort", sort)
+	m.Logger.Debug("search_host_groups", "filter", in.Filter, "limit", limit, "offset", in.Offset, "sort", sort)
 
 	params := host_group.NewQueryCombinedHostGroupsParamsWithContext(ctx)
 	params.Limit = &limit
@@ -164,7 +154,7 @@ func (m *Module) searchHostGroups(ctx context.Context, _ *mcp.CallToolRequest, i
 		params.Offset = &offset
 	}
 
-	resp, err := m.api.QueryCombinedHostGroups(params)
+	resp, err := m.API.QueryCombinedHostGroups(params)
 	if err != nil {
 		if details, ok := groupsFQLBadRequest(err); ok {
 			return nil, base.FQLError[*models.HostGroupsHostGroupV1](details, in.Filter, fqlGuide), nil
@@ -175,7 +165,7 @@ func (m *Module) searchHostGroups(ctx context.Context, _ *mcp.CallToolRequest, i
 	}
 
 	groups := resp.Payload.Resources
-	m.logger.Debug("search_host_groups query complete", "matched", len(groups))
+	m.Logger.Debug("search_host_groups query complete", "matched", len(groups))
 	return nil, base.Found(groups, in.Filter), nil
 }
 
@@ -197,7 +187,7 @@ func (m *Module) searchHostGroupMembers(ctx context.Context, _ *mcp.CallToolRequ
 	if limit == 0 {
 		limit = defaultLimit
 	}
-	m.logger.Debug("search_host_group_members", "id", in.ID, "filter", in.Filter, "limit", limit, "offset", in.Offset, "sort", in.Sort)
+	m.Logger.Debug("search_host_group_members", "id", in.ID, "filter", in.Filter, "limit", limit, "offset", in.Offset, "sort", in.Sort)
 
 	params := host_group.NewQueryCombinedGroupMembersParamsWithContext(ctx)
 	params.ID = &in.ID
@@ -213,7 +203,7 @@ func (m *Module) searchHostGroupMembers(ctx context.Context, _ *mcp.CallToolRequ
 		params.Sort = &in.Sort
 	}
 
-	resp, err := m.api.QueryCombinedGroupMembers(params)
+	resp, err := m.API.QueryCombinedGroupMembers(params)
 	if err != nil {
 		if details, ok := membersFQLBadRequest(err); ok {
 			return nil, base.FQLError[*models.DeviceDevice](details, in.Filter, fqlGuide), nil
@@ -224,7 +214,7 @@ func (m *Module) searchHostGroupMembers(ctx context.Context, _ *mcp.CallToolRequ
 	}
 
 	members := resp.Payload.Resources
-	m.logger.Debug("search_host_group_members query complete", "matched", len(members))
+	m.Logger.Debug("search_host_group_members query complete", "matched", len(members))
 	return nil, base.Found(members, in.Filter), nil
 }
 

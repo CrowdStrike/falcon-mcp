@@ -47,7 +47,7 @@ func TestSearchDetectionsEmpty(t *testing.T) {
 	t.Parallel()
 
 	f := &fakeAlerts{queryResp: &alerts.QueryV2OK{Payload: &models.DetectsapiAlertQueryResponse{Resources: []string{}}}}
-	m := New(Params{API: f, Concurrency: 4, Logger: testLogger})
+	m := &Module{API: f, Concurrency: 4, Logger: testLogger}
 
 	_, out, err := m.searchDetections(context.Background(), nil, SearchInput{Filter: "status:'new'"})
 	if err != nil {
@@ -71,7 +71,7 @@ func TestSearchDetectionsFQLError(t *testing.T) {
 		Errors: []*models.MsaAPIError{{Code: i32(400), Message: str("invalid filter")}},
 	}}
 	f := &fakeAlerts{queryErr: badReq}
-	m := New(Params{API: f, Concurrency: 4, Logger: testLogger})
+	m := &Module{API: f, Concurrency: 4, Logger: testLogger}
 
 	_, out, err := m.searchDetections(context.Background(), nil, SearchInput{Filter: "bogus"})
 	if err != nil {
@@ -97,7 +97,7 @@ func TestSearchDetectionsFetchesDetails(t *testing.T) {
 			{CompositeID: str("id1")},
 		}}},
 	}
-	m := New(Params{API: f, Concurrency: 4, Logger: testLogger})
+	m := &Module{API: f, Concurrency: 4, Logger: testLogger}
 
 	_, out, err := m.searchDetections(context.Background(), nil, SearchInput{})
 	if err != nil {
@@ -137,7 +137,7 @@ func TestUpdateDetectionsValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			f := &fakeAlerts{}
-			m := New(Params{API: f, Concurrency: 4, Logger: testLogger})
+			m := &Module{API: f, Concurrency: 4, Logger: testLogger}
 			_, _, err := m.updateDetections(context.Background(), nil, tc.in)
 			if tc.wantErr && err == nil {
 				t.Fatalf("expected error, got nil")
@@ -156,7 +156,7 @@ func TestUpdateDetectionsBooleanAsString(t *testing.T) {
 	t.Parallel()
 
 	f := &fakeAlerts{}
-	m := New(Params{API: f, Concurrency: 4, Logger: testLogger})
+	m := &Module{API: f, Concurrency: 4, Logger: testLogger}
 	show := false
 	_, _, err := m.updateDetections(context.Background(), nil, UpdateInput{IDs: []string{"x"}, ShowInUI: &show})
 	if err != nil {
@@ -180,7 +180,7 @@ func TestUpdateDetectionsCloseWithoutResolutionHint(t *testing.T) {
 	t.Parallel()
 
 	f := &fakeAlerts{}
-	m := New(Params{API: f, Concurrency: 4, Logger: testLogger})
+	m := &Module{API: f, Concurrency: 4, Logger: testLogger}
 	_, out, err := m.updateDetections(context.Background(), nil, UpdateInput{IDs: []string{"x"}, Status: "closed"})
 	if err != nil {
 		t.Fatalf("updateDetections: %v", err)
@@ -197,7 +197,7 @@ func TestRegisterResourcesServesFQLGuide(t *testing.T) {
 	t.Parallel()
 
 	srv := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "test"}, nil)
-	New(Params{API: &fakeAlerts{}, Concurrency: 4, Logger: testLogger}).RegisterResources(srv)
+	(&Module{API: &fakeAlerts{}, Concurrency: 4, Logger: testLogger}).RegisterResources(srv)
 
 	ctx := context.Background()
 	clientT, serverT := mcp.NewInMemoryTransports()

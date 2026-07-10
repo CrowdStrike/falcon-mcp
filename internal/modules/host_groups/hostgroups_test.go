@@ -73,7 +73,7 @@ func TestSearchHostGroupsSuccess(t *testing.T) {
 	f := &fakeHostGroups{searchResp: &host_group.QueryCombinedHostGroupsOK{Payload: &models.HostGroupsRespV1{
 		Resources: []*models.HostGroupsHostGroupV1{{ID: str("g1"), Name: str("Servers")}},
 	}}}
-	m := New(Params{API: f, Logger: testLogger})
+	m := &Module{API: f, Logger: testLogger}
 
 	_, out, err := m.searchHostGroups(context.Background(), nil, SearchInput{Filter: "group_type:'static'"})
 	if err != nil {
@@ -90,7 +90,7 @@ func TestSearchHostGroupsEmpty(t *testing.T) {
 	f := &fakeHostGroups{searchResp: &host_group.QueryCombinedHostGroupsOK{Payload: &models.HostGroupsRespV1{
 		Resources: []*models.HostGroupsHostGroupV1{},
 	}}}
-	m := New(Params{API: f, Logger: testLogger})
+	m := &Module{API: f, Logger: testLogger}
 
 	_, out, err := m.searchHostGroups(context.Background(), nil, SearchInput{})
 	if err != nil {
@@ -108,7 +108,7 @@ func TestSearchHostGroupsFQLError(t *testing.T) {
 		Errors: []*models.MsaAPIError{{Code: i32(400), Message: str("invalid filter")}},
 	}}
 	f := &fakeHostGroups{searchErr: badReq}
-	m := New(Params{API: f, Logger: testLogger})
+	m := &Module{API: f, Logger: testLogger}
 
 	_, out, err := m.searchHostGroups(context.Background(), nil, SearchInput{Filter: "bogus"})
 	if err != nil {
@@ -126,7 +126,7 @@ func TestSearchHostGroupsAPIError(t *testing.T) {
 	t.Parallel()
 
 	f := &fakeHostGroups{searchErr: errors.New("boom")}
-	m := New(Params{API: f, Logger: testLogger})
+	m := &Module{API: f, Logger: testLogger}
 
 	_, _, err := m.searchHostGroups(context.Background(), nil, SearchInput{})
 	if err == nil {
@@ -139,7 +139,7 @@ func TestSearchHostGroupMembers(t *testing.T) {
 
 	t.Run("requires id", func(t *testing.T) {
 		t.Parallel()
-		m := New(Params{API: &fakeHostGroups{}, Logger: testLogger})
+		m := &Module{API: &fakeHostGroups{}, Logger: testLogger}
 		_, _, err := m.searchHostGroupMembers(context.Background(), nil, MembersInput{})
 		if !errors.Is(err, errInvalidInput) {
 			t.Fatalf("expected errInvalidInput, got %v", err)
@@ -151,7 +151,7 @@ func TestSearchHostGroupMembers(t *testing.T) {
 		f := &fakeHostGroups{membersResp: &host_group.QueryCombinedGroupMembersOK{Payload: &models.HostGroupsMembersRespV1{
 			Resources: []*models.DeviceDevice{{DeviceID: str("d1")}},
 		}}}
-		m := New(Params{API: f, Logger: testLogger})
+		m := &Module{API: f, Logger: testLogger}
 		_, out, err := m.searchHostGroupMembers(context.Background(), nil, MembersInput{ID: "g1", Filter: "platform_name:'Windows'"})
 		if err != nil {
 			t.Fatalf("searchHostGroupMembers: %v", err)
@@ -180,7 +180,7 @@ func TestCreateHostGroupValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			f := &fakeHostGroups{createResp: &host_group.CreateHostGroupsCreated{Payload: &models.HostGroupsRespV1{}}}
-			m := New(Params{API: f, Logger: testLogger})
+			m := &Module{API: f, Logger: testLogger}
 			_, _, err := m.createHostGroup(context.Background(), nil, tc.in)
 			if tc.wantErr && !errors.Is(err, errInvalidInput) {
 				t.Fatalf("expected errInvalidInput, got %v", err)
@@ -198,7 +198,7 @@ func TestCreateHostGroupBody(t *testing.T) {
 	f := &fakeHostGroups{createResp: &host_group.CreateHostGroupsCreated{Payload: &models.HostGroupsRespV1{
 		Resources: []*models.HostGroupsHostGroupV1{{ID: str("new")}},
 	}}}
-	m := New(Params{API: f, Logger: testLogger})
+	m := &Module{API: f, Logger: testLogger}
 
 	_, out, err := m.createHostGroup(context.Background(), nil, CreateInput{Name: "Servers", GroupType: "dynamic", Description: "desc", AssignmentRule: "platform_name:'Windows'"})
 	if err != nil {
@@ -221,7 +221,7 @@ func TestUpdateHostGroup(t *testing.T) {
 
 	t.Run("requires id", func(t *testing.T) {
 		t.Parallel()
-		m := New(Params{API: &fakeHostGroups{}, Logger: testLogger})
+		m := &Module{API: &fakeHostGroups{}, Logger: testLogger}
 		_, _, err := m.updateHostGroup(context.Background(), nil, UpdateInput{Name: "x"})
 		if !errors.Is(err, errInvalidInput) {
 			t.Fatalf("expected errInvalidInput, got %v", err)
@@ -233,7 +233,7 @@ func TestUpdateHostGroup(t *testing.T) {
 		f := &fakeHostGroups{updateResp: &host_group.UpdateHostGroupsOK{Payload: &models.HostGroupsRespV1{
 			Resources: []*models.HostGroupsHostGroupV1{{ID: str("g1")}},
 		}}}
-		m := New(Params{API: f, Logger: testLogger})
+		m := &Module{API: f, Logger: testLogger}
 		rule := "platform_name:'Linux'"
 		_, out, err := m.updateHostGroup(context.Background(), nil, UpdateInput{ID: "g1", Name: "renamed", AssignmentRule: &rule})
 		if err != nil {
@@ -251,7 +251,7 @@ func TestUpdateHostGroup(t *testing.T) {
 	t.Run("omits unset assignment_rule", func(t *testing.T) {
 		t.Parallel()
 		f := &fakeHostGroups{updateResp: &host_group.UpdateHostGroupsOK{Payload: &models.HostGroupsRespV1{}}}
-		m := New(Params{API: f, Logger: testLogger})
+		m := &Module{API: f, Logger: testLogger}
 		_, _, err := m.updateHostGroup(context.Background(), nil, UpdateInput{ID: "g1", Description: "d"})
 		if err != nil {
 			t.Fatalf("updateHostGroup: %v", err)
@@ -267,7 +267,7 @@ func TestDeleteHostGroups(t *testing.T) {
 
 	t.Run("empty ids", func(t *testing.T) {
 		t.Parallel()
-		m := New(Params{API: &fakeHostGroups{}, Logger: testLogger})
+		m := &Module{API: &fakeHostGroups{}, Logger: testLogger}
 		_, _, err := m.deleteHostGroups(context.Background(), nil, DeleteInput{})
 		if !errors.Is(err, errInvalidInput) {
 			t.Fatalf("expected errInvalidInput, got %v", err)
@@ -277,7 +277,7 @@ func TestDeleteHostGroups(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
 		f := &fakeHostGroups{}
-		m := New(Params{API: f, Logger: testLogger})
+		m := &Module{API: f, Logger: testLogger}
 		_, out, err := m.deleteHostGroups(context.Background(), nil, DeleteInput{IDs: []string{"g1", "g2"}})
 		if err != nil {
 			t.Fatalf("deleteHostGroups: %v", err)
@@ -307,7 +307,7 @@ func TestPerformHostGroupAction(t *testing.T) {
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
-				m := New(Params{API: &fakeHostGroups{}, Logger: testLogger})
+				m := &Module{API: &fakeHostGroups{}, Logger: testLogger}
 				_, _, err := m.performHostGroupAction(context.Background(), nil, tc.in)
 				if !errors.Is(err, errInvalidInput) {
 					t.Fatalf("expected errInvalidInput, got %v", err)
@@ -321,7 +321,7 @@ func TestPerformHostGroupAction(t *testing.T) {
 		f := &fakeHostGroups{actionResp: &host_group.PerformGroupActionOK{Payload: &models.HostGroupsRespV1{
 			Resources: []*models.HostGroupsHostGroupV1{{ID: str("g1")}},
 		}}}
-		m := New(Params{API: f, Logger: testLogger})
+		m := &Module{API: f, Logger: testLogger}
 		_, out, err := m.performHostGroupAction(context.Background(), nil, ActionInput{ActionName: "add-hosts", IDs: []string{"g1"}, Filter: "hostname:'PC*'"})
 		if err != nil {
 			t.Fatalf("performHostGroupAction: %v", err)
@@ -349,7 +349,7 @@ func TestRegisterResourcesServesFQLGuide(t *testing.T) {
 	t.Parallel()
 
 	srv := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "test"}, nil)
-	New(Params{API: &fakeHostGroups{}, Logger: testLogger}).RegisterResources(srv)
+	(&Module{API: &fakeHostGroups{}, Logger: testLogger}).RegisterResources(srv)
 
 	ctx := context.Background()
 	clientT, serverT := mcp.NewInMemoryTransports()

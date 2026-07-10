@@ -35,7 +35,7 @@ func (m *Module) createHostGroup(ctx context.Context, _ *mcp.CallToolRequest, in
 	if err := in.validate(); err != nil {
 		return nil, zero, err
 	}
-	m.logger.Debug("create_host_group", "name", in.Name, "group_type", in.GroupType, "has_rule", in.AssignmentRule != "")
+	m.Logger.Debug("create_host_group", "name", in.Name, "group_type", in.GroupType, "has_rule", in.AssignmentRule != "")
 
 	params := host_group.NewCreateHostGroupsParamsWithContext(ctx)
 	params.Body = &models.HostGroupsCreateGroupsReqV1{
@@ -47,7 +47,7 @@ func (m *Module) createHostGroup(ctx context.Context, _ *mcp.CallToolRequest, in
 		}},
 	}
 
-	resp, err := m.api.CreateHostGroups(params)
+	resp, err := m.API.CreateHostGroups(params)
 	if e := base.APIError(err, resp, scopeHostGroupWrite); e != nil {
 		return nil, zero, e
 	}
@@ -84,7 +84,7 @@ func (m *Module) updateHostGroup(ctx context.Context, _ *mcp.CallToolRequest, in
 	if in.ID == "" {
 		return nil, zero, wrapInvalid("update host group", "id must not be empty")
 	}
-	m.logger.Debug("update_host_group", "id", in.ID, "set_name", in.Name != "", "set_description", in.Description != "", "set_rule", in.AssignmentRule != nil)
+	m.Logger.Debug("update_host_group", "id", in.ID, "set_name", in.Name != "", "set_description", in.Description != "", "set_rule", in.AssignmentRule != nil)
 
 	resource := &models.HostGroupsUpdateGroupReqV1{
 		ID:          &in.ID,
@@ -100,7 +100,7 @@ func (m *Module) updateHostGroup(ctx context.Context, _ *mcp.CallToolRequest, in
 		Resources: []*models.HostGroupsUpdateGroupReqV1{resource},
 	}
 
-	resp, err := m.api.UpdateHostGroups(params)
+	resp, err := m.API.UpdateHostGroups(params)
 	if e := base.APIError(err, resp, scopeHostGroupWrite); e != nil {
 		return nil, zero, e
 	}
@@ -116,12 +116,12 @@ func (m *Module) deleteHostGroups(ctx context.Context, _ *mcp.CallToolRequest, i
 	if len(in.IDs) == 0 {
 		return nil, base.ActionResult{}, wrapInvalid("delete host groups", "ids must not be empty")
 	}
-	m.logger.Debug("delete_host_groups", "ids", len(in.IDs))
+	m.Logger.Debug("delete_host_groups", "ids", len(in.IDs))
 
 	params := host_group.NewDeleteHostGroupsParamsWithContext(ctx)
 	params.Ids = in.IDs
 
-	resp, err := m.api.DeleteHostGroups(params)
+	resp, err := m.API.DeleteHostGroups(params)
 	if e := base.APIError(err, resp, scopeHostGroupWrite); e != nil {
 		return nil, base.ActionResult{}, e
 	}
@@ -140,7 +140,7 @@ func (m *Module) performHostGroupAction(ctx context.Context, _ *mcp.CallToolRequ
 	if err := in.validate(); err != nil {
 		return nil, zero, err
 	}
-	m.logger.Debug("perform_host_group_action", "action_name", in.ActionName, "ids", len(in.IDs), "filter", in.Filter)
+	m.Logger.Debug("perform_host_group_action", "action_name", in.ActionName, "ids", len(in.IDs), "filter", in.Filter)
 
 	params := host_group.NewPerformGroupActionParamsWithContext(ctx)
 	params.ActionName = in.ActionName
@@ -151,7 +151,7 @@ func (m *Module) performHostGroupAction(ctx context.Context, _ *mcp.CallToolRequ
 		},
 	}
 
-	resp, err := m.api.PerformGroupAction(params)
+	resp, err := m.API.PerformGroupAction(params)
 	if e := base.APIError(err, resp, scopeHostGroupWrite); e != nil {
 		return nil, zero, e
 	}

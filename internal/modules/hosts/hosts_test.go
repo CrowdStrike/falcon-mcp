@@ -36,7 +36,7 @@ func TestSearchHostsEmptyReturnsList(t *testing.T) {
 	t.Parallel()
 
 	f := &fakeHosts{queryResp: &hosts.QueryDevicesByFilterOK{Payload: &models.MsaQueryResponse{Resources: []string{}}}}
-	m := New(Params{API: f, Concurrency: 4, Logger: testLogger})
+	m := &Module{API: f, Concurrency: 4, Logger: testLogger}
 	_, out, err := m.searchHosts(context.Background(), nil, SearchInput{})
 	if err != nil {
 		t.Fatalf("searchHosts: %v", err)
@@ -53,7 +53,7 @@ func TestGetHostDetailsEmptyShortCircuits(t *testing.T) {
 	t.Parallel()
 
 	f := &fakeHosts{}
-	m := New(Params{API: f, Concurrency: 4, Logger: testLogger})
+	m := &Module{API: f, Concurrency: 4, Logger: testLogger}
 	_, _, err := m.getHostDetails(context.Background(), nil, DetailsInput{IDs: nil})
 	if err != nil {
 		t.Fatalf("getHostDetails: %v", err)
@@ -73,7 +73,7 @@ func TestSearchHostsEmitsDebugLog(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 	f := &fakeHosts{queryResp: &hosts.QueryDevicesByFilterOK{Payload: &models.MsaQueryResponse{Resources: []string{}}}}
-	m := New(Params{API: f, Concurrency: 4, Logger: logger})
+	m := &Module{API: f, Concurrency: 4, Logger: logger}
 	if _, _, err := m.searchHosts(context.Background(), nil, SearchInput{Filter: "hostname:'PC*'"}); err != nil {
 		t.Fatalf("searchHosts: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestSearchHostsFetchesDetails(t *testing.T) {
 			{DeviceID: &d1},
 		}}},
 	}
-	m := New(Params{API: f, Concurrency: 4, Logger: testLogger})
+	m := &Module{API: f, Concurrency: 4, Logger: testLogger}
 	_, out, err := m.searchHosts(context.Background(), nil, SearchInput{})
 	if err != nil {
 		t.Fatalf("searchHosts: %v", err)

@@ -7,6 +7,26 @@
 // Modules call typed gofalcon methods directly and classify typed errors with
 // errors.As against the sentinels declared here, rather than routing calls
 // through a dynamic dispatch layer or sniffing untyped responses for an error.
+//
+// # Modules consuming multiple APIs
+//
+// A module declares a minimal local interface over each gofalcon sub-client it
+// consumes, next to its consumer, so handlers can be tested against a small fake.
+// A module that needs more than one API declares one such interface per API and
+// holds one struct field per API, named for the API rather than a generic "API":
+//
+//	type Module struct {
+//		Incidents incidentsAPI
+//		Behaviors behaviorsAPI
+//		Logger    *slog.Logger
+//	}
+//
+// Its Factory pulls each field off the shared client independently; two roles
+// served by the same sub-client are assigned from the same registry.Deps.API
+// field, while roles from different sub-clients are assigned from their own.
+// Prefer this to merging methods into one combined interface, which would force
+// an adapter whenever the methods span sub-clients. Single-API modules keep the
+// unambiguous field name "API".
 package base
 
 import (

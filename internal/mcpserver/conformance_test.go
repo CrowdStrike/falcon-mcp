@@ -55,7 +55,7 @@ func connectTestServer(t *testing.T) *mcp.ClientSession {
 	t.Helper()
 	srv := mcp.NewServer(&mcp.Implementation{Name: "falcon-mcp-test", Version: "test"}, nil)
 	reg := base.ServerRegistrar(srv)
-	for _, m := range []base.Module{hostsmod.New(hostsmod.Params{API: stubHosts{}, Concurrency: 4, Logger: slog.New(slog.DiscardHandler)}), hostgroups.New(hostgroups.Params{API: stubGroups{}, Logger: slog.New(slog.DiscardHandler)})} {
+	for _, m := range []base.Module{&hostsmod.Module{API: stubHosts{}, Concurrency: 4, Logger: slog.New(slog.DiscardHandler)}, &hostgroups.Module{API: stubGroups{}, Logger: slog.New(slog.DiscardHandler)}} {
 		m.RegisterTools(reg)
 		m.RegisterResources(srv)
 	}

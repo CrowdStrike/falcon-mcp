@@ -46,7 +46,7 @@ func (m *Module) updateDetections(ctx context.Context, _ *mcp.CallToolRequest, i
 	}
 	// Log the shape of the update, not comment text (which may carry sensitive
 	// content): id count, status, assignment intent, and action count.
-	m.logger.Debug("update_detections",
+	m.Logger.Debug("update_detections",
 		"ids", len(in.IDs),
 		"status", in.Status,
 		"unassign", in.Unassign,
@@ -59,7 +59,7 @@ func (m *Module) updateDetections(ctx context.Context, _ *mcp.CallToolRequest, i
 		CompositeIds:     in.IDs,
 		ActionParameters: actions,
 	}
-	resp, err := m.api.UpdateV3(params)
+	resp, err := m.API.UpdateV3(params)
 	if e := base.APIError(err, resp, scopeAlertsWrite); e != nil {
 		return nil, base.ActionResult{}, e
 	}
