@@ -114,9 +114,20 @@ func AddTool[In, Out any](r Registrar, tool *mcp.Tool, handler mcp.ToolHandlerFo
 	}
 	r.Add(ToolEntry{
 		Tool:        tool,
-		InputSchema: inferInputSchema[In](),
+		InputSchema: catalogInputSchema[In](tool),
 		register:    func(s *mcp.Server) { mcp.AddTool(s, tool, handler) },
 	})
+}
+
+// catalogInputSchema returns the schema the dynamic catalog exposes for a tool.
+// A caller-provided tool.InputSchema is authoritative — the served tool uses it
+// verbatim, so the catalog must match rather than re-infer a divergent one from
+// In. Only when the caller omits it does the catalog fall back to inference.
+func catalogInputSchema[In any](tool *mcp.Tool) *jsonschema.Schema {
+	if s, ok := tool.InputSchema.(*jsonschema.Schema); ok && s != nil {
+		return s
+	}
+	return inferInputSchema[In]()
 }
 
 // inferInputSchema returns the JSON Schema for In, or nil when In is any (no

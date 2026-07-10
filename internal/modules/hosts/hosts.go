@@ -5,23 +5,17 @@ package hosts
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 
 	"github.com/crowdstrike/gofalcon/falcon/client/hosts"
 	"github.com/crowdstrike/gofalcon/falcon/models"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/crowdstrike/falcon-mcp/internal/modules/base"
 	"github.com/crowdstrike/falcon-mcp/internal/modules/registry"
 )
-
-const filterParamDescription = "FQL filter expression. See `falcon://hosts/search/fql-guide` for syntax."
-
-// Factory builds the hosts module from shared deps. The generated aggregator
-// (internal/mcpserver) collects it, so the module needs no init side effect.
-var Factory registry.Factory = func(d registry.Deps) base.Module {
-	return &Module{API: d.API.Hosts, Concurrency: d.Concurrency, Logger: d.Logger}
-}
 
 // deviceBatchSize is the maximum number of device IDs fetched per details call.
 const deviceBatchSize = 5000
@@ -29,16 +23,22 @@ const deviceBatchSize = 5000
 // fqlGuideURI is the MCP resource URI serving the hosts FQL filter guide.
 const fqlGuideURI = "falcon://hosts/search/fql-guide"
 
+// scopeHostsRead is the CrowdStrike API scope required by this module's hosts
+// operations. Surfaced on a 403 via base.APIError.
+var scopeHostsRead = base.Scope{Name: "Hosts", Read: true}
+
+// Factory builds the hosts module from shared deps. The generated aggregator
+// (internal/mcpserver) collects it, so the module needs no init side effect.
+var Factory registry.Factory = func(d registry.Deps) base.Module {
+	return &Module{API: d.API.Hosts, Concurrency: d.Concurrency, Logger: d.Logger}
+}
+
 // hostsAPI is the minimal slice of the gofalcon hosts client this module
 // consumes, declared next to its consumer for testability.
 type hostsAPI interface {
 	QueryDevicesByFilter(params *hosts.QueryDevicesByFilterParams, opts ...hosts.ClientOption) (*hosts.QueryDevicesByFilterOK, error)
 	PostDeviceDetailsV2(params *hosts.PostDeviceDetailsV2Params, opts ...hosts.ClientOption) (*hosts.PostDeviceDetailsV2OK, error)
 }
-
-// scopeHostsRead is the CrowdStrike API scope required by this module's hosts
-// operations. Surfaced on a 403 via base.APIError.
-var scopeHostsRead = base.Scope{Name: "Hosts", Read: true}
 
 // Module registers the hosts tools. It holds only the shared Falcon client and
 // configuration; handlers are stateless and reentrant. Logger must be non-nil.
@@ -56,34 +56,105 @@ func (m *Module) Description() string {
 	return "Search Falcon hosts/devices and retrieve their full details"
 }
 
-// searchHostsDescription is the falcon_search_hosts tool description, kept 1:1
-// with the Python falcon-mcp hosts module.
-const searchHostsDescription = `Search for hosts in your CrowdStrike environment.
+// Tool and parameter descriptions, kept 1:1 with the Python falcon-mcp hosts
+// module. filterParamDescription and idsParamDescription hold backticks or
+// content that cannot live in a jsonschema struct tag, so they are consts fed
+// into the hand-written schemas below.
+const (
+	searchHostsDescription = `Search for hosts in your CrowdStrike environment.
 
 Use this to find devices by hostname, platform, IP, sensor version, or other
 attributes. Consult falcon://hosts/search/fql-guide before constructing filter
 expressions. Returns full host details including device info, OS, and network
 context.`
 
-// getHostDetailsDescription is the falcon_get_host_details tool description,
-// kept 1:1 with the Python falcon-mcp hosts module.
-const getHostDetailsDescription = `Retrieve detailed information for one or more host device IDs.
+	getHostDetailsDescription = `Retrieve detailed information for one or more host device IDs.
 
 Use when you already have specific device IDs from search results, the Falcon
 console, or the Streaming API. For discovering hosts by criteria, use
 falcon_search_hosts instead. Returns comprehensive host details.`
 
+	filterParamDescription = "FQL filter expression. See `falcon://hosts/search/fql-guide` for syntax."
+
+	sortParamDescription = `Sort hosts using these options:
+
+hostname: Host name/computer name
+last_seen: Timestamp when the host was last seen
+first_seen: Timestamp when the host was first seen
+modified_timestamp: When the host record was last modified
+platform_name: Operating system platform
+agent_version: CrowdStrike agent version
+os_version: Operating system version
+external_ip: External IP address
+
+Sort either asc (ascending) or desc (descending).
+Both formats are supported: 'hostname.desc' or 'hostname|desc'
+
+Examples: 'hostname.asc', 'last_seen.desc', 'platform_name.asc'`
+
+	idsParamDescription = "Host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request."
+)
+
+// searchHostsSchema is the hand-written input schema for falcon_search_hosts.
+// Declaring it explicitly (rather than inferring from SearchInput) lets limit
+// carry min/max/default and offset a minimum — constraints the jsonschema struct
+// tag cannot express.
+var searchHostsSchema = &jsonschema.Schema{
+	Type: "object",
+	Properties: map[string]*jsonschema.Schema{
+		"filter": {
+			Type:        "string",
+			Description: filterParamDescription,
+		},
+		"limit": {
+			Type:        "integer",
+			Description: "The maximum records to return. [1-5000]",
+			Minimum:     jsonschema.Ptr(1.0),
+			Maximum:     jsonschema.Ptr(5000.0),
+			Default:     json.RawMessage(`10`),
+		},
+		"offset": {
+			Type:        "integer",
+			Description: "The offset to start retrieving records from.",
+			Minimum:     jsonschema.Ptr(0.0),
+		},
+		"sort": {
+			Type:        "string",
+			Description: sortParamDescription,
+		},
+	},
+	// All search params are optional, so there is no Required list.
+}
+
+// getHostDetailsSchema is the hand-written input schema for
+// falcon_get_host_details.
+var getHostDetailsSchema = &jsonschema.Schema{
+	Type: "object",
+	Properties: map[string]*jsonschema.Schema{
+		"ids": {
+			Type:        "array",
+			Description: idsParamDescription,
+			Items:       &jsonschema.Schema{Type: "string"},
+		},
+	},
+	Required: []string{"ids"},
+}
+
 // RegisterTools registers the hosts tools into r.
 func (m *Module) RegisterTools(r base.Registrar) {
-	base.AddTool(r, &mcp.Tool{
+	searchTool := &mcp.Tool{
 		Name:        "search_hosts",
 		Description: searchHostsDescription,
-	}, m.searchHosts)
+		InputSchema: searchHostsSchema,
+	}
+	base.AddTool(r, searchTool, m.searchHosts)
 
-	base.AddTool(r, &mcp.Tool{
+	detailsTool := &mcp.Tool{
 		Name:        "get_host_details",
 		Description: getHostDetailsDescription,
-	}, m.getHostDetails)
+		InputSchema: getHostDetailsSchema,
+	}
+	base.AddTool(r, detailsTool, m.getHostDetails)
 }
 
 // RegisterResources publishes the hosts FQL guide as an MCP resource,
@@ -98,12 +169,14 @@ func (m *Module) RegisterResources(s *mcp.Server) {
 	)
 }
 
-// SearchInput is the input for falcon_search_hosts.
+// SearchInput is the input for falcon_search_hosts. The served schema is
+// hand-written (searchHostsSchema); the json tags drive the SDK's unmarshal into
+// this struct.
 type SearchInput struct {
-	Filter string `json:"filter,omitempty" jsonschema:"FQL filter (e.g. platform_name:'Windows', hostname:'PC*')"`
-	Limit  int    `json:"limit,omitempty" jsonschema:"maximum results to return (1-5000, default 10)"`
-	Offset int    `json:"offset,omitempty" jsonschema:"pagination offset"`
-	Sort   string `json:"sort,omitempty" jsonschema:"FQL sort (e.g. hostname.asc, last_seen.desc)"`
+	Filter string `json:"filter,omitempty"`
+	Limit  int    `json:"limit,omitempty"`
+	Offset int    `json:"offset,omitempty"`
+	Sort   string `json:"sort,omitempty"`
 }
 
 func (m *Module) searchHosts(ctx context.Context, _ *mcp.CallToolRequest, in SearchInput) (*mcp.CallToolResult, base.SearchResult[*models.DeviceapiDeviceSwagger], error) {
@@ -145,7 +218,7 @@ func (m *Module) searchHosts(ctx context.Context, _ *mcp.CallToolRequest, in Sea
 
 // DetailsInput is the input for falcon_get_host_details.
 type DetailsInput struct {
-	IDs []string `json:"ids" jsonschema:"device IDs to retrieve (max 5000)"`
+	IDs []string `json:"ids"`
 }
 
 func (m *Module) getHostDetails(ctx context.Context, _ *mcp.CallToolRequest, in DetailsInput) (*mcp.CallToolResult, base.EntitiesResult[*models.DeviceapiDeviceSwagger], error) {
