@@ -2,10 +2,13 @@ package dynamic
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/crowdstrike/falcon-mcp/internal/modules/base"
@@ -49,6 +52,15 @@ func (m *MetaModule) Description() string {
 // still register their FQL guides separately in dynamic mode.
 func (m *MetaModule) RegisterResources(_ *mcp.Server) {}
 
+// searchToolsSchema is the input schema for falcon_search_tools. It is inferred
+// from SearchToolsInput's struct tags, then a mutate func adds the limit
+// bounds/default the tag syntax cannot express, reusing the clamp constants.
+var searchToolsSchema = base.SchemaFor[SearchToolsInput](func(s *jsonschema.Schema) {
+	s.Properties["limit"].Minimum = jsonschema.Ptr(float64(minSearchLimit))
+	s.Properties["limit"].Maximum = jsonschema.Ptr(float64(maxSearchLimit))
+	s.Properties["limit"].Default = json.RawMessage(strconv.Itoa(defaultSearchLimit))
+})
+
 // RegisterTools registers the three meta-tools into r (the live server, in
 // dynamic mode). They flow through base.AddTool so they get the "falcon_"
 // prefix and default annotations too.
@@ -56,6 +68,7 @@ func (m *MetaModule) RegisterTools(r base.Registrar) {
 	base.AddTool(r, &mcp.Tool{
 		Name:        "search_tools",
 		Description: "Discover available Falcon tools by keyword search. Returns matching tool names, descriptions, and parameters; call falcon_execute_tool to run one.",
+		InputSchema: searchToolsSchema,
 	}, m.searchTools)
 
 	base.AddTool(r, &mcp.Tool{
@@ -73,7 +86,7 @@ func (m *MetaModule) RegisterTools(r base.Registrar) {
 type SearchToolsInput struct {
 	Query  string `json:"query,omitempty" jsonschema:"keywords to match across tool names, descriptions, module names, and parameter names"`
 	Module string `json:"module,omitempty" jsonschema:"filter results to a specific module (e.g. 'hosts', 'detections')"`
-	Limit  int    `json:"limit,omitempty" jsonschema:"maximum results to return (1-100, default 20)"`
+	Limit  int    `json:"limit,omitempty" jsonschema:"maximum results to return"`
 }
 
 // ToolSummary is one falcon_search_tools result.

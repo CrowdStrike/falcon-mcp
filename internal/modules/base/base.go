@@ -79,6 +79,20 @@ const namePrefix = "falcon_"
 // default is true, where a nil pointer would mean "true".
 func ptr[T any](v T) *T { return &v }
 
+// SchemaFor infers In's schema from its struct tags, then applies mutate to add
+// constraints and defaults the tag syntax can't express. Panics on a schema
+// error (a programming error caught at startup).
+func SchemaFor[In any](mutate func(*jsonschema.Schema)) *jsonschema.Schema {
+	s, err := jsonschema.For[In](nil)
+	if err != nil {
+		panic(fmt.Sprintf("base.SchemaFor[%T]: %v", *new(In), err))
+	}
+	if mutate != nil {
+		mutate(s)
+	}
+	return s
+}
+
 // readOnlyAnnotations returns the default annotations applied to query tools:
 // readOnlyHint=true, idempotentHint=true, openWorldHint=true, destructiveHint=false.
 func readOnlyAnnotations() *mcp.ToolAnnotations {

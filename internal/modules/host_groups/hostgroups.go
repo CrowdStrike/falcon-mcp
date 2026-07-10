@@ -10,11 +10,13 @@ package hostgroups
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 
 	"github.com/crowdstrike/gofalcon/falcon/client/host_group"
 	"github.com/crowdstrike/gofalcon/falcon/models"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/crowdstrike/falcon-mcp/internal/modules/base"
@@ -74,16 +76,38 @@ func (m *Module) Description() string {
 	return "Search, create, update, and delete Falcon host groups and manage their membership"
 }
 
+// searchHostGroupsSchema and searchHostGroupMembersSchema are the input schemas
+// for the two host-group search tools. Each is inferred from its Input struct's
+// tags, then a mutate func adds the limit bounds/default and offset minimum the
+// tag syntax cannot express.
+var (
+	searchHostGroupsSchema = base.SchemaFor[SearchInput](func(s *jsonschema.Schema) {
+		s.Properties["limit"].Minimum = jsonschema.Ptr(1.0)
+		s.Properties["limit"].Maximum = jsonschema.Ptr(5000.0)
+		s.Properties["limit"].Default = json.RawMessage(`100`)
+		s.Properties["offset"].Minimum = jsonschema.Ptr(0.0)
+	})
+
+	searchHostGroupMembersSchema = base.SchemaFor[MembersInput](func(s *jsonschema.Schema) {
+		s.Properties["limit"].Minimum = jsonschema.Ptr(1.0)
+		s.Properties["limit"].Maximum = jsonschema.Ptr(5000.0)
+		s.Properties["limit"].Default = json.RawMessage(`100`)
+		s.Properties["offset"].Minimum = jsonschema.Ptr(0.0)
+	})
+)
+
 // RegisterTools registers the six host-group tools into r.
 func (m *Module) RegisterTools(r base.Registrar) {
 	base.AddTool(r, &mcp.Tool{
 		Name:        "search_host_groups",
 		Description: "Search host groups in CrowdStrike Falcon using host-group FQL (fields: name, group_type, created_by, created_timestamp, modified_by, modified_timestamp). Returns full group records.",
+		InputSchema: searchHostGroupsSchema,
 	}, m.searchHostGroups)
 
 	base.AddTool(r, &mcp.Tool{
 		Name:        "search_host_group_members",
 		Description: "List the member devices of a host group. The filter and sort operate on HOST/DEVICE attributes (e.g. platform_name, hostname), not group attributes — see the hosts FQL guide. Returns full host device records.",
+		InputSchema: searchHostGroupMembersSchema,
 	}, m.searchHostGroupMembers)
 
 	base.AddTool(r, &mcp.Tool{
@@ -126,7 +150,7 @@ func (m *Module) RegisterResources(s *mcp.Server) {
 // SearchInput is the input for falcon_search_host_groups.
 type SearchInput struct {
 	Filter string `json:"filter,omitempty" jsonschema:"host-group FQL filter (e.g. name:'Servers*', group_type:'static')"`
-	Limit  int    `json:"limit,omitempty" jsonschema:"maximum results to return (1-5000, default 100)"`
+	Limit  int    `json:"limit,omitempty" jsonschema:"maximum results to return"`
 	Offset int    `json:"offset,omitempty" jsonschema:"pagination offset"`
 	Sort   string `json:"sort,omitempty" jsonschema:"host-group FQL sort (e.g. name.asc, modified_timestamp.desc); default name.asc"`
 }
@@ -173,7 +197,7 @@ func (m *Module) searchHostGroups(ctx context.Context, _ *mcp.CallToolRequest, i
 type MembersInput struct {
 	ID     string `json:"id" jsonschema:"the host group ID whose members to list (required)"`
 	Filter string `json:"filter,omitempty" jsonschema:"host/device FQL filter on member attributes (e.g. platform_name:'Windows')"`
-	Limit  int    `json:"limit,omitempty" jsonschema:"maximum results to return (1-5000, default 100)"`
+	Limit  int    `json:"limit,omitempty" jsonschema:"maximum results to return"`
 	Offset int    `json:"offset,omitempty" jsonschema:"pagination offset"`
 	Sort   string `json:"sort,omitempty" jsonschema:"host/device FQL sort (e.g. hostname.asc)"`
 }

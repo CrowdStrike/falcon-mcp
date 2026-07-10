@@ -57,9 +57,9 @@ func (m *Module) Description() string {
 }
 
 // Tool and parameter descriptions, kept 1:1 with the Python falcon-mcp hosts
-// module. filterParamDescription and idsParamDescription hold backticks or
-// content that cannot live in a jsonschema struct tag, so they are consts fed
-// into the hand-written schemas below.
+// module. filterParamDescription and sortParamDescription hold backticks or
+// multi-line content that cannot live in a jsonschema struct tag, so they are
+// consts applied to searchHostsSchema by its mutate func below.
 const (
 	searchHostsDescription = `Search for hosts in your CrowdStrike environment.
 
@@ -91,54 +91,20 @@ Sort either asc (ascending) or desc (descending).
 Both formats are supported: 'hostname.desc' or 'hostname|desc'
 
 Examples: 'hostname.asc', 'last_seen.desc', 'platform_name.asc'`
-
-	idsParamDescription = "Host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request."
 )
 
-// searchHostsSchema is the hand-written input schema for falcon_search_hosts.
-// Declaring it explicitly (rather than inferring from SearchInput) lets limit
-// carry min/max/default and offset a minimum — constraints the jsonschema struct
-// tag cannot express.
-var searchHostsSchema = &jsonschema.Schema{
-	Type: "object",
-	Properties: map[string]*jsonschema.Schema{
-		"filter": {
-			Type:        "string",
-			Description: filterParamDescription,
-		},
-		"limit": {
-			Type:        "integer",
-			Description: "The maximum records to return. [1-5000]",
-			Minimum:     jsonschema.Ptr(1.0),
-			Maximum:     jsonschema.Ptr(5000.0),
-			Default:     json.RawMessage(`10`),
-		},
-		"offset": {
-			Type:        "integer",
-			Description: "The offset to start retrieving records from.",
-			Minimum:     jsonschema.Ptr(0.0),
-		},
-		"sort": {
-			Type:        "string",
-			Description: sortParamDescription,
-		},
-	},
-	// All search params are optional, so there is no Required list.
-}
-
-// getHostDetailsSchema is the hand-written input schema for
-// falcon_get_host_details.
-var getHostDetailsSchema = &jsonschema.Schema{
-	Type: "object",
-	Properties: map[string]*jsonschema.Schema{
-		"ids": {
-			Type:        "array",
-			Description: idsParamDescription,
-			Items:       &jsonschema.Schema{Type: "string"},
-		},
-	},
-	Required: []string{"ids"},
-}
+// searchHostsSchema is the input schema for falcon_search_hosts. It is inferred
+// from SearchInput's struct tags, then a mutate func adds the limit/offset
+// bounds and default the tag syntax cannot express, plus the backtick-bearing
+// filter and multi-line sort descriptions that cannot live in a struct tag.
+var searchHostsSchema = base.SchemaFor[SearchInput](func(s *jsonschema.Schema) {
+	s.Properties["filter"].Description = filterParamDescription
+	s.Properties["sort"].Description = sortParamDescription
+	s.Properties["limit"].Minimum = jsonschema.Ptr(1.0)
+	s.Properties["limit"].Maximum = jsonschema.Ptr(5000.0)
+	s.Properties["limit"].Default = json.RawMessage(`10`)
+	s.Properties["offset"].Minimum = jsonschema.Ptr(0.0)
+})
 
 // RegisterTools registers the hosts tools into r.
 func (m *Module) RegisterTools(r base.Registrar) {
@@ -152,7 +118,6 @@ func (m *Module) RegisterTools(r base.Registrar) {
 	detailsTool := &mcp.Tool{
 		Name:        "get_host_details",
 		Description: getHostDetailsDescription,
-		InputSchema: getHostDetailsSchema,
 	}
 	base.AddTool(r, detailsTool, m.getHostDetails)
 }
@@ -169,14 +134,15 @@ func (m *Module) RegisterResources(s *mcp.Server) {
 	)
 }
 
-// SearchInput is the input for falcon_search_hosts. The served schema is
-// hand-written (searchHostsSchema); the json tags drive the SDK's unmarshal into
-// this struct.
+// SearchInput is the input for falcon_search_hosts. The json tags drive the
+// SDK's unmarshal into this struct; the served schema (searchHostsSchema) is
+// inferred from these jsonschema tags, then augmented with the limit/offset
+// bounds and the backtick-bearing filter/sort descriptions.
 type SearchInput struct {
-	Filter string `json:"filter,omitempty"`
-	Limit  int    `json:"limit,omitempty"`
-	Offset int    `json:"offset,omitempty"`
-	Sort   string `json:"sort,omitempty"`
+	Filter string `json:"filter,omitempty" jsonschema:"FQL filter (e.g. platform_name:'Windows', hostname:'PC*')"`
+	Limit  int    `json:"limit,omitempty" jsonschema:"maximum records to return"`
+	Offset int    `json:"offset,omitempty" jsonschema:"the offset to start retrieving records from"`
+	Sort   string `json:"sort,omitempty" jsonschema:"FQL sort (e.g. hostname.asc, last_seen.desc)"`
 }
 
 func (m *Module) searchHosts(ctx context.Context, _ *mcp.CallToolRequest, in SearchInput) (*mcp.CallToolResult, base.SearchResult[*models.DeviceapiDeviceSwagger], error) {
@@ -216,9 +182,10 @@ func (m *Module) searchHosts(ctx context.Context, _ *mcp.CallToolRequest, in Sea
 	return nil, base.Found(devices, in.Filter), nil
 }
 
-// DetailsInput is the input for falcon_get_host_details.
+// DetailsInput is the input for falcon_get_host_details. Its schema is inferred
+// from the jsonschema tag; ids has no omitempty, so inference marks it required.
 type DetailsInput struct {
-	IDs []string `json:"ids"`
+	IDs []string `json:"ids" jsonschema:"Host device IDs to retrieve details for. You can get device IDs from the search_hosts operation, the Falcon console, or the Streaming API. Maximum: 5000 IDs per request."`
 }
 
 func (m *Module) getHostDetails(ctx context.Context, _ *mcp.CallToolRequest, in DetailsInput) (*mcp.CallToolResult, base.EntitiesResult[*models.DeviceapiDeviceSwagger], error) {

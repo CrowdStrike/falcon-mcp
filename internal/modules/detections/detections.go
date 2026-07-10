@@ -6,11 +6,13 @@ package detections
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 
 	"github.com/crowdstrike/gofalcon/falcon/client/alerts"
 	"github.com/crowdstrike/gofalcon/falcon/models"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/crowdstrike/falcon-mcp/internal/modules/base"
@@ -63,11 +65,22 @@ func (m *Module) Description() string {
 	return "Search, retrieve, and triage Falcon detections/alerts (EPP, IDP, XDR, OverWatch, NG-SIEM)"
 }
 
+// searchDetectionsSchema is the input schema for falcon_search_detections. It is
+// inferred from SearchInput's struct tags, then a mutate func adds the limit
+// bounds/default and offset minimum the tag syntax cannot express.
+var searchDetectionsSchema = base.SchemaFor[SearchInput](func(s *jsonschema.Schema) {
+	s.Properties["limit"].Minimum = jsonschema.Ptr(1.0)
+	s.Properties["limit"].Maximum = jsonschema.Ptr(9999.0)
+	s.Properties["limit"].Default = json.RawMessage(`10`)
+	s.Properties["offset"].Minimum = jsonschema.Ptr(0.0)
+})
+
 // RegisterTools registers the three detection tools into r.
 func (m *Module) RegisterTools(r base.Registrar) {
 	base.AddTool(r, &mcp.Tool{
 		Name:        "search_detections",
 		Description: "Search for detections/alerts in CrowdStrike Falcon using FQL. Returns full alert records. Covers EPP, IDP, XDR, OverWatch, and NG-SIEM alerts.",
+		InputSchema: searchDetectionsSchema,
 	}, m.searchDetections)
 
 	base.AddTool(r, &mcp.Tool{
@@ -97,7 +110,7 @@ func (m *Module) RegisterResources(s *mcp.Server) {
 // SearchInput is the input for falcon_search_detections.
 type SearchInput struct {
 	Filter        string `json:"filter,omitempty" jsonschema:"FQL filter (e.g. severity.desc, status:'new')"`
-	Limit         int    `json:"limit,omitempty" jsonschema:"maximum results to return (1-9999, default 10)"`
+	Limit         int    `json:"limit,omitempty" jsonschema:"maximum results to return"`
 	Offset        int    `json:"offset,omitempty" jsonschema:"pagination offset"`
 	Q             string `json:"q,omitempty" jsonschema:"free-text metadata search"`
 	Sort          string `json:"sort,omitempty" jsonschema:"FQL sort (e.g. timestamp.desc)"`
