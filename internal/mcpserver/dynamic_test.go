@@ -1,4 +1,4 @@
-package dynamic
+package mcpserver
 
 import (
 	"context"
@@ -36,20 +36,20 @@ type updateOut struct {
 	Ok bool `json:"ok"`
 }
 
-// fakeModule registers one search tool and (optionally) one mutating/destructive
+// fakeToolModule registers one search tool and (optionally) one mutating/destructive
 // tool, so tests can build a catalog without a live API.
-type fakeModule struct {
+type fakeToolModule struct {
 	name        string
 	withMutator bool
 	withDelete  bool
 }
 
-func (m fakeModule) Name() string                    { return m.name }
-func (m fakeModule) Description() string             { return "fake " + m.name + " module" }
-func (m fakeModule) RegisterResources(_ *mcp.Server) {}
-func (m fakeModule) RegisterPrompts(_ *mcp.Server)   {}
+func (m fakeToolModule) Name() string                    { return m.name }
+func (m fakeToolModule) Description() string             { return "fake " + m.name + " module" }
+func (m fakeToolModule) RegisterResources(_ *mcp.Server) {}
+func (m fakeToolModule) RegisterPrompts(_ *mcp.Server)   {}
 
-func (m fakeModule) RegisterTools(r base.Registrar) {
+func (m fakeToolModule) RegisterTools(r base.Registrar) {
 	base.AddTool(r, &mcp.Tool{
 		Name:        "search_" + m.name,
 		Description: "Search " + m.name + " using FQL.",
@@ -80,7 +80,7 @@ func (m fakeModule) RegisterTools(r base.Registrar) {
 // buildCatalog builds a catalog from the given modules and connects its
 // in-process session (so falcon_execute_tool can dispatch), returning the
 // catalog and a MetaModule over it. The session is closed on test cleanup.
-func buildCatalog(t *testing.T, modules ...fakeModule) (*Catalog, *MetaModule) {
+func buildCatalog(t *testing.T, modules ...fakeToolModule) *MetaModule {
 	t.Helper()
 	cat := NewCatalog()
 	mods := make([]base.Module, 0, len(modules))
@@ -92,7 +92,7 @@ func buildCatalog(t *testing.T, modules ...fakeModule) (*Catalog, *MetaModule) {
 		t.Fatalf("catalog connect: %v", err)
 	}
 	t.Cleanup(func() { _ = cat.Close() })
-	return cat, NewMetaModule(cat, mods)
+	return NewMetaModule(cat, mods)
 }
 
 func callSearch(t *testing.T, m *MetaModule, in SearchToolsInput) SearchToolsResult {
@@ -116,9 +116,9 @@ func toolNames(res SearchToolsResult) []string {
 
 func TestSearchTools(t *testing.T) {
 	t.Parallel()
-	_, m := buildCatalog(t,
-		fakeModule{name: "hosts"},
-		fakeModule{name: "detections", withMutator: true},
+	m := buildCatalog(t,
+		fakeToolModule{name: "hosts"},
+		fakeToolModule{name: "detections", withMutator: true},
 	)
 
 	tests := []struct {
@@ -150,8 +150,8 @@ func TestSearchTools(t *testing.T) {
 func TestSearchToolsLimit(t *testing.T) {
 	t.Parallel()
 	// Build 5 modules => 5 search tools.
-	mods := []fakeModule{{name: "a"}, {name: "b"}, {name: "c"}, {name: "d"}, {name: "e"}}
-	_, m := buildCatalog(t, mods...)
+	mods := []fakeToolModule{{name: "a"}, {name: "b"}, {name: "c"}, {name: "d"}, {name: "e"}}
+	m := buildCatalog(t, mods...)
 
 	tests := []struct {
 		name     string
@@ -179,7 +179,7 @@ func TestSearchToolsLimit(t *testing.T) {
 
 func TestSearchToolsNoMatchIsEmptyNotNil(t *testing.T) {
 	t.Parallel()
-	_, m := buildCatalog(t, fakeModule{name: "hosts"})
+	m := buildCatalog(t, fakeToolModule{name: "hosts"})
 	got := callSearch(t, m, SearchToolsInput{Query: "nonexistent"})
 	if got.Tools == nil {
 		t.Fatal("Tools is nil, want empty slice")
@@ -193,7 +193,7 @@ func TestSearchToolsNoMatchIsEmptyNotNil(t *testing.T) {
 
 func TestSearchToolsAnnotationFlags(t *testing.T) {
 	t.Parallel()
-	_, m := buildCatalog(t, fakeModule{name: "groups", withMutator: true, withDelete: true})
+	m := buildCatalog(t, fakeToolModule{name: "groups", withMutator: true, withDelete: true})
 	got := callSearch(t, m, SearchToolsInput{})
 
 	byName := map[string]ToolSummary{}
@@ -230,7 +230,7 @@ func TestSearchToolsParameterSummaries(t *testing.T) {
 	t.Parallel()
 	// hosts has a search tool (all-optional params) and a mutating tool whose
 	// "id" field is required (no omitempty).
-	_, m := buildCatalog(t, fakeModule{name: "hosts", withMutator: true})
+	m := buildCatalog(t, fakeToolModule{name: "hosts", withMutator: true})
 	got := callSearch(t, m, SearchToolsInput{})
 
 	byName := map[string]ToolSummary{}
@@ -278,7 +278,7 @@ func callExecute(t *testing.T, m *MetaModule, in ExecuteToolInput) *mcp.CallTool
 
 func TestExecuteToolKnown(t *testing.T) {
 	t.Parallel()
-	_, m := buildCatalog(t, fakeModule{name: "hosts"})
+	m := buildCatalog(t, fakeToolModule{name: "hosts"})
 
 	res := callExecute(t, m, ExecuteToolInput{
 		ToolName:   "falcon_search_hosts",
@@ -298,7 +298,7 @@ func TestExecuteToolKnown(t *testing.T) {
 
 func TestExecuteToolAcceptsBareName(t *testing.T) {
 	t.Parallel()
-	_, m := buildCatalog(t, fakeModule{name: "hosts"})
+	m := buildCatalog(t, fakeToolModule{name: "hosts"})
 	res := callExecute(t, m, ExecuteToolInput{ToolName: "search_hosts", Parameters: map[string]any{}})
 	if res.IsError {
 		t.Fatalf("bare name should resolve; got error: %v", res.Content)
@@ -307,7 +307,7 @@ func TestExecuteToolAcceptsBareName(t *testing.T) {
 
 func TestExecuteToolUnknown(t *testing.T) {
 	t.Parallel()
-	_, m := buildCatalog(t, fakeModule{name: "hosts"})
+	m := buildCatalog(t, fakeToolModule{name: "hosts"})
 	res := callExecute(t, m, ExecuteToolInput{ToolName: "falcon_nonexistent"})
 	if !res.IsError {
 		t.Fatal("expected IsError result for unknown tool")
@@ -320,7 +320,7 @@ func TestExecuteToolUnknown(t *testing.T) {
 
 func TestExecuteToolEmptyParametersDefaultsToObject(t *testing.T) {
 	t.Parallel()
-	_, m := buildCatalog(t, fakeModule{name: "hosts"})
+	m := buildCatalog(t, fakeToolModule{name: "hosts"})
 	// No parameters at all: should default to {} and succeed (all fields optional).
 	res := callExecute(t, m, ExecuteToolInput{ToolName: "falcon_search_hosts"})
 	if res.IsError {
@@ -330,7 +330,7 @@ func TestExecuteToolEmptyParametersDefaultsToObject(t *testing.T) {
 
 func TestExecuteToolBadParamsEnriched(t *testing.T) {
 	t.Parallel()
-	_, m := buildCatalog(t, fakeModule{name: "hosts"})
+	m := buildCatalog(t, fakeToolModule{name: "hosts"})
 	// filter should be a string; passing a number fails schema validation.
 	res := callExecute(t, m, ExecuteToolInput{
 		ToolName:   "falcon_search_hosts",
@@ -352,7 +352,7 @@ func TestExecuteToolBadParamsEnriched(t *testing.T) {
 
 func TestListEnabledModules(t *testing.T) {
 	t.Parallel()
-	_, m := buildCatalog(t, fakeModule{name: "hosts"}, fakeModule{name: "detections"})
+	m := buildCatalog(t, fakeToolModule{name: "hosts"}, fakeToolModule{name: "detections"})
 	_, out, err := m.listEnabledModules(context.Background(), nil, struct{}{})
 	if err != nil {
 		t.Fatalf("listEnabledModules: %v", err)
@@ -413,5 +413,68 @@ func assertSameSet(t *testing.T, got, want []string) {
 		if !seen[w] {
 			t.Errorf("missing %q in %v", w, got)
 		}
+	}
+}
+
+// --- through a real server ---------------------------------------------------
+
+// TestExecuteToolThroughServer drives falcon_execute_tool over a real in-memory
+// MCP server. Unlike the direct-call unit tests, this exercises the meta-tool's
+// OWN input-schema validation — the path that rejected an object-typed
+// parameters argument when Parameters was a json.RawMessage. It is the
+// regression guard for that bug.
+func TestExecuteToolThroughServer(t *testing.T) {
+	t.Parallel()
+
+	meta := buildCatalog(t, fakeToolModule{name: "hosts"})
+
+	srv := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "test"}, nil)
+	meta.RegisterTools(base.ServerRegistrar(srv))
+
+	ctx := context.Background()
+	clientT, serverT := mcp.NewInMemoryTransports()
+	ss, err := srv.Connect(ctx, serverT, nil)
+	if err != nil {
+		t.Fatalf("server connect: %v", err)
+	}
+	t.Cleanup(func() { _ = ss.Wait() })
+
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "c", Version: "test"}, nil).Connect(ctx, clientT, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	t.Cleanup(func() { _ = cs.Close() })
+
+	// An object-valued "parameters" must pass falcon_execute_tool's own schema
+	// validation and dispatch to the underlying tool.
+	res, err := cs.CallTool(ctx, &mcp.CallToolParams{
+		Name: "falcon_execute_tool",
+		Arguments: map[string]any{
+			"tool_name":  "falcon_search_hosts",
+			"parameters": map[string]any{"filter": "platform:'Windows'"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("execute through server returned error: %v", res.Content)
+	}
+
+	var out searchOut
+	raw, ok := res.StructuredContent.(json.RawMessage)
+	if !ok {
+		// Over the wire, StructuredContent decodes to a generic value; re-marshal.
+		b, mErr := json.Marshal(res.StructuredContent)
+		if mErr != nil {
+			t.Fatalf("marshal structured content: %v", mErr)
+		}
+		raw = b
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		t.Fatalf("unmarshal output: %v", err)
+	}
+	if out.Total != 1 || len(out.Resources) != 1 || out.Resources[0].Filter != "platform:'Windows'" {
+		t.Errorf("got %+v, want the filter echoed back", out)
 	}
 }

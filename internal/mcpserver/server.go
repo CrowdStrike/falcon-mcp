@@ -14,7 +14,6 @@ import (
 
 	"github.com/crowdstrike/falcon-mcp/internal/config"
 	"github.com/crowdstrike/falcon-mcp/internal/modules/base"
-	"github.com/crowdstrike/falcon-mcp/internal/modules/dynamic"
 	"github.com/crowdstrike/falcon-mcp/internal/modules/registry"
 	"github.com/crowdstrike/falcon-mcp/internal/version"
 )
@@ -35,7 +34,7 @@ const serverInstructions = ""
 type Server struct {
 	mcp     *mcp.Server
 	modules []base.Module
-	catalog *dynamic.Catalog // non-nil only in dynamic mode
+	catalog *Catalog // non-nil only in dynamic mode
 }
 
 // New builds a Server from cfg and the shared Falcon client. It constructs the
@@ -83,7 +82,7 @@ func New(cfg *config.Config, api *client.CrowdStrikeAPISpecification) (*Server, 
 // catalog owns the in-process session (already connected) and must be closed by
 // the caller. Module resources (FQL guides) and prompts are exposed on s in both
 // modes.
-func registerModules(s *mcp.Server, enabled []base.Module, dynamicMode bool) (*dynamic.Catalog, error) {
+func registerModules(s *mcp.Server, enabled []base.Module, dynamicMode bool) (*Catalog, error) {
 	if !dynamicMode {
 		reg := base.ServerRegistrar(s)
 		for _, m := range enabled {
@@ -94,7 +93,7 @@ func registerModules(s *mcp.Server, enabled []base.Module, dynamicMode bool) (*d
 		return nil, nil
 	}
 
-	cat := dynamic.NewCatalog()
+	cat := NewCatalog()
 	for _, m := range enabled {
 		m.RegisterTools(cat.ForModule(m.Name()))
 		m.RegisterResources(s)
@@ -106,7 +105,7 @@ func registerModules(s *mcp.Server, enabled []base.Module, dynamicMode bool) (*d
 	if err := cat.Connect(context.Background()); err != nil {
 		return nil, err
 	}
-	dynamic.NewMetaModule(cat, enabled).RegisterTools(base.ServerRegistrar(s))
+	NewMetaModule(cat, enabled).RegisterTools(base.ServerRegistrar(s))
 	return cat, nil
 }
 

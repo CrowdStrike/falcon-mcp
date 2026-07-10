@@ -1,10 +1,12 @@
-// Package dynamic implements "dynamic mode": instead of registering every
-// module's tools on the served MCP server (each carrying a full schema that
-// costs the client context-window tokens), it registers three fixed meta-tools
-// — falcon_search_tools, falcon_execute_tool, and falcon_list_enabled_modules —
-// backed by an in-process Catalog of the real tools. Clients discover tools on
-// demand via search and invoke them by name via execute, paying each tool's
-// schema cost only when they use it.
+package mcpserver
+
+// Dynamic mode: instead of registering every module's tools on the served MCP
+// server (each carrying a full schema that costs the client context-window
+// tokens), it registers three fixed meta-tools — falcon_search_tools,
+// falcon_execute_tool, and falcon_list_enabled_modules — backed by an in-process
+// Catalog of the real tools. Clients discover tools on demand via search and
+// invoke them by name via execute, paying each tool's schema cost only when they
+// use it.
 //
 // The real tools are registered on a separate internal *mcp.Server that is
 // never served to the client. falcon_execute_tool dispatches to them over an
@@ -17,7 +19,6 @@
 // mode. It does NOT use the MCP notifications/tools/list_changed mechanism: the
 // three meta-tools are the served server's entire tool surface for the process
 // lifetime.
-package dynamic
 
 import (
 	"context"
