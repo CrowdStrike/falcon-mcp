@@ -44,15 +44,30 @@ body:
       description: Which part of falcon-mcp would this feature affect?
       options:
         - Core functionality
-        - Detections module
-        - Intel module
-        - Hosts module
-        - Identity Protection module
+        - Case Management module
         - Cloud Security module
+        - Correlation Rules module
+        - Custom IOA module
+        - Data Protection module
+        - Detections module
         - Discover module
-        - Spotlight (vulnerabilities) module
+        - Exclusions module
+        - Firewall Management module
+        - Hosts module
+        - Host Groups module
+        - Identity Protection module
+        - Intel module
+        - IOC module
+        - NGSIEM module
+        - Policies module
+        - Quarantine module
+        - Real Time Response module
+        - Recon module
+        - Scheduled Reports module
         - Sensor Usage module
         - Serverless module
+        - Shield module
+        - Spotlight (vulnerabilities) module
         - New module needed
         - Documentation/Examples
         - Not sure
