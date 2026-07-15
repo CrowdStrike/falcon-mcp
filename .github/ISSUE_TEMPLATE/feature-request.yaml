@@ -44,7 +44,10 @@ body:
       description: Which part of falcon-mcp would this feature affect?
       options:
         - Core functionality
+        - Case Management module
         - Cloud Security module
+        - Correlation Rules module
+        - Custom IOA module
         - Data Protection module
         - Detections module
         - Discover module
@@ -56,12 +59,14 @@ body:
         - Intel module
         - IOC module
         - NGSIEM module
+        - Policies module
         - Quarantine module
         - Real Time Response module
         - Recon module
         - Scheduled Reports module
         - Sensor Usage module
         - Serverless module
+        - Shield module
         - Spotlight (vulnerabilities) module
         - New module needed
         - Documentation/Examples
