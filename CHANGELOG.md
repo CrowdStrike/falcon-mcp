@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.14.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.13.0...v0.14.0) (2026-07-16)
+
+
+### Features
+
+* **cloud:** add falcon_search_cloud_risks, falcon_search_cloud_groups, and falcon_get_cloud_groups tools ([#467](https://github.com/CrowdStrike/falcon-mcp/issues/467)) ([79f4a18](https://github.com/CrowdStrike/falcon-mcp/commit/79f4a18cba3e4b8208be0c903c09f0083ef6a30b))
+
+
+### Bug Fixes
+
+* **deps:** add cryptography floor constraint for CVE-2026-34180 ([3e43ecb](https://github.com/CrowdStrike/falcon-mcp/commit/3e43ecb9890a501830564f0a88193452f491a4d3))
+* **deps:** bump cryptography minimum version ([#458](https://github.com/CrowdStrike/falcon-mcp/issues/458)) ([3e43ecb](https://github.com/CrowdStrike/falcon-mcp/commit/3e43ecb9890a501830564f0a88193452f491a4d3))
+* **modules/spotlight:** allow facet to accept a list of values ([#460](https://github.com/CrowdStrike/falcon-mcp/issues/460)) ([31cd989](https://github.com/CrowdStrike/falcon-mcp/commit/31cd989877a9f1bc69927c127c627b73f2ab7895))
+* **modules:** restore sort order in two-step search tools ([#463](https://github.com/CrowdStrike/falcon-mcp/issues/463)) ([eff6a6c](https://github.com/CrowdStrike/falcon-mcp/commit/eff6a6c2b9be45d5b9ec67e1cb4cbe8160588819))
+* **scheduled_reports:** send body as array in launch_scheduled_report ([#464](https://github.com/CrowdStrike/falcon-mcp/issues/464)) ([3a5d1c9](https://github.com/CrowdStrike/falcon-mcp/commit/3a5d1c97d0fdad24441e34d234c378f527419db6))
+* **scheduled_reports:** send request body as array in launch_scheduled_report ([#464](https://github.com/CrowdStrike/falcon-mcp/issues/464)) ([#466](https://github.com/CrowdStrike/falcon-mcp/issues/466)) ([3a5d1c9](https://github.com/CrowdStrike/falcon-mcp/commit/3a5d1c97d0fdad24441e34d234c378f527419db6))
+
 ## [0.13.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.12.0...v0.13.0) (2026-06-25)
 
 
