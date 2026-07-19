@@ -1,10 +1,10 @@
 # Stage 1: uv binary (distroless image, COPY only)
 # ghcr.io/astral-sh/uv:0.11.15 (multi-arch: amd64, arm64)
-FROM ghcr.io/astral-sh/uv@sha256:e590846f4776907b254ac0f44b5b380347af5d90d668138ca7938d1b0c2f98d3 AS uv-bin
+FROM ghcr.io/astral-sh/uv@sha256:3d868e555f8f1dbc324afa005066cd11e1053fc4743b9808ca8025283e65efa5 AS uv-bin
 
 # Stage 2: Build dependencies
 # python:3.13-alpine (multi-arch: amd64, arm64)
-FROM python@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc AS builder
+FROM python@sha256:09b29c360b84742bf98eba40b214f7f6b4b53286bb2c8a8b5b1afa188a8d9c0e AS builder
 
 COPY --from=uv-bin /uv /usr/local/bin/uv
 
@@ -41,7 +41,7 @@ RUN find /app/.venv -name '__pycache__' -type d -exec rm -rf {} + && \
 
 # Stage 3: Runtime
 # python:3.13-alpine (multi-arch: amd64, arm64)
-FROM python@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc
+FROM python@sha256:09b29c360b84742bf98eba40b214f7f6b4b53286bb2c8a8b5b1afa188a8d9c0e
 
 LABEL io.modelcontextprotocol.server.name="io.github.CrowdStrike/falcon-mcp"
 
