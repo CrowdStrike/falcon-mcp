@@ -125,21 +125,31 @@ class CloudModule(BaseModule):
         kubernetes_containers_fql_resource = TextResource(
             uri=AnyUrl("falcon://cloud/kubernetes-containers/fql-guide"),
             name="falcon_kubernetes_containers_fql_filter_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_kubernetes_containers` and `falcon_count_kubernetes_containers` tools.",
+            description=(
+                "Contains the guide for the `filter` param of the "
+                "`falcon_search_kubernetes_containers` and `falcon_count_kubernetes_containers` "
+                "tools."
+            ),
             text=KUBERNETES_CONTAINERS_FQL_DOCUMENTATION,
         )
 
         images_vulnerabilities_fql_resource = TextResource(
             uri=AnyUrl("falcon://cloud/images-vulnerabilities/fql-guide"),
             name="falcon_images_vulnerabilities_fql_filter_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_images_vulnerabilities` tool.",
+            description=(
+                "Contains the guide for the `filter` param of the "
+                "`falcon_search_images_vulnerabilities` tool."
+            ),
             text=IMAGES_VULNERABILITIES_FQL_DOCUMENTATION,
         )
 
         cspm_assets_fql_resource = TextResource(
             uri=AnyUrl("falcon://cloud/cspm-assets/fql-guide"),
             name="falcon_search_cspm_assets_fql_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_cspm_assets` tool.",
+            description=(
+                "Contains the guide for the `filter` param of the "
+                "`falcon_search_cspm_assets` tool."
+            ),
             text=SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION,
         )
 
@@ -219,7 +229,7 @@ class CloudModule(BaseModule):
             ).strip(),
             examples={"container_name.desc", "last_seen.desc"},
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for Kubernetes containers in your CrowdStrike container inventory.
 
         Use this to find containers by cluster, namespace, image, or cloud provider.
@@ -227,7 +237,7 @@ class CloudModule(BaseModule):
         expressions. Returns full container details including image, status, and vulnerabilities.
         """
 
-        return self._base_search_api_call(
+        results, pagination = self._base_search_with_meta(
             operation="ReadContainerCombined",
             search_params={
                 "filter": filter,
@@ -237,6 +247,9 @@ class CloudModule(BaseModule):
             },
             error_message="Failed to search Kubernetes containers",
         )
+        if self._is_error(results):
+            return [results]
+        return self._build_pagination_envelope(results or [], pagination, filter)
 
     def count_kubernetes_containers(
         self,
@@ -314,38 +327,31 @@ class CloudModule(BaseModule):
             ).strip(),
             examples={"cvss_score.desc", "cps_current_rating.asc"},
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for container image vulnerabilities in CrowdStrike Image Assessments.
 
         Use this to find CVEs affecting container images by severity, CVSS score, or
         CVE ID. Consult falcon://cloud/images-vulnerabilities/fql-guide before constructing
         filter expressions. Returns vulnerability details including CVE IDs, scores, and
         impacted image counts.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
 
-        # Prepare parameters
-        params = prepare_api_parameters(
-            {
+        result, pagination = self._base_search_with_meta(
+            operation="ReadCombinedVulnerabilities",
+            search_params={
                 "filter": filter,
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
-            }
-        )
-
-        # Define the operation name
-        operation = "ReadCombinedVulnerabilities"
-
-        # Make the API request
-        response = self.client.command(operation, parameters=params)
-
-        # Handle the response
-        return handle_api_response(
-            response,
-            operation=operation,
+            },
             error_message="Failed to perform operation",
-            default_result=[],
         )
+
+        if self._is_error(result):
+            return [result]
+
+        return self._build_pagination_envelope(result, pagination, filter)
 
     def search_cspm_assets(
         self,
@@ -397,9 +403,10 @@ class CloudModule(BaseModule):
         resource type, or tags. Consult falcon://cloud/cspm-assets/fql-guide before
         constructing filter expressions. Returns slimmed asset details with security
         posture context (IOM/IOA counts, exposure, severity).
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
         """
         # Step 1: Query for asset IDs
-        asset_ids = self._base_search_api_call(
+        asset_ids, pagination = self._base_search_with_meta(
             operation="cloud_security_assets_queries",
             search_params={
                 "filter": filter,
@@ -421,7 +428,7 @@ class CloudModule(BaseModule):
 
         # Handle empty results
         if not asset_ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         # Step 2: Batch fetch full details (API limit: 100 IDs per request)
         details = self._batch_get_cspm_assets(asset_ids)
@@ -433,7 +440,9 @@ class CloudModule(BaseModule):
         # endpoint reorders results.
         details = self._reorder_by_ids(asset_ids, details, id_field="id")
 
-        return [self._slim_cspm_asset(asset) for asset in details]
+        return self._build_pagination_envelope(
+            [self._slim_cspm_asset(asset) for asset in details], pagination, filter
+        )
 
     def _batch_get_cspm_assets(self, asset_ids: list[str]) -> list[dict[str, Any]] | dict[str, Any]:
         """Fetch CSPM asset details in batches of 100 (API limit).
@@ -607,9 +616,10 @@ class CloudModule(BaseModule):
         behavioral threats, use falcon_search_detections. Consult
         falcon://cloud/cspm-iom-findings/fql-guide before constructing filter expressions.
         Returns IOM entities with cloud context, evaluation details, and resource information.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
         # Step 1: Query for IOM IDs
-        iom_ids = self._base_search_api_call(
+        iom_ids, pagination = self._base_search_with_meta(
             operation="cspm_evaluations_iom_queries",
             search_params={
                 "filter": filter,
@@ -630,7 +640,7 @@ class CloudModule(BaseModule):
 
         # Handle empty results
         if not iom_ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         # Step 2: Fetch full IOM entity details (GET with query params, max 100 per call)
         details = self._batch_get_iom_entities(iom_ids)
@@ -639,7 +649,8 @@ class CloudModule(BaseModule):
             return [details]
 
         # Restore the query-step sort order in case the entities endpoint reorders results.
-        return self._reorder_by_ids(iom_ids, details, id_field="id")
+        details = self._reorder_by_ids(iom_ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def search_cloud_risks(
         self,
@@ -669,7 +680,7 @@ class CloudModule(BaseModule):
             ),
             examples=["severity|desc", "first_seen|desc", "account_name|asc"],
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for cloud risks in your CrowdStrike environment.
 
         Use this to find risks by severity, status, cloud provider, account, asset, rule,
@@ -679,8 +690,9 @@ class CloudModule(BaseModule):
         falcon://cloud/cloud-risks/fql-guide before constructing filter expressions.
         Returns full risk details including severity, lifecycle status, asset context, and
         threat intelligence attribution.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        return self._base_search_api_call(
+        results, pagination = self._base_search_with_meta(
             operation="combined_cloud_risks",
             search_params={
                 "filter": filter,
@@ -690,6 +702,11 @@ class CloudModule(BaseModule):
             },
             error_message="Failed to search cloud risks",
         )
+
+        if self._is_error(results):
+            return [results]
+
+        return self._build_pagination_envelope(results, pagination, filter)
 
     def search_cloud_groups(
         self,
@@ -717,14 +734,14 @@ class CloudModule(BaseModule):
             description="Sort groups. Default: name|asc. Examples: 'name|asc', 'created_at|desc'",
             examples=["name|asc", "created_at|desc"],
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """List cloud groups in your CrowdStrike environment.
 
         Use this to discover available cloud groups before filtering risks by
         `cloud_group` or `groups.*` FQL fields in `falcon_search_cloud_risks`.
         Returns full group details including name, selectors, and tags.
         """
-        return self._base_search_api_call(
+        results, pagination = self._base_search_with_meta(
             operation="ListCloudGroupsExternal",
             search_params={
                 "filter": filter,
@@ -734,6 +751,11 @@ class CloudModule(BaseModule):
             },
             error_message="Failed to search cloud groups",
         )
+
+        if self._is_error(results):
+            return [results]
+
+        return self._build_pagination_envelope(results, pagination, filter)
 
     def get_cloud_groups(
         self,
@@ -803,6 +825,7 @@ class CloudModule(BaseModule):
         Use this to review existing suppressions before creating new ones. Returns
         suppression rule objects including scope, reason, and expiration details.
         Returns an empty list if no rules exist.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
         # Step 1: Query suppression rule IDs
         params = prepare_api_parameters({"limit": limit, "offset": offset})
@@ -811,6 +834,8 @@ class CloudModule(BaseModule):
             override="GET,/cloud-policies/queries/suppression-rules/v1",
             parameters=params,
         )
+
+        pagination = self._extract_pagination(query_response)
 
         query_result = handle_api_response(
             query_response,
@@ -823,7 +848,7 @@ class CloudModule(BaseModule):
             return query_result
 
         if not query_result:
-            return []
+            return self._build_pagination_envelope([], pagination)
 
         # Step 2: Fetch suppression rule details
         detail_params = prepare_api_parameters({"ids": query_result})
@@ -844,7 +869,8 @@ class CloudModule(BaseModule):
             return [details]
 
         # Preserve the query-step order in case the details endpoint reorders results.
-        return self._reorder_by_ids(query_result, details, id_field="id")
+        details = self._reorder_by_ids(query_result, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination)
 
     def create_cspm_suppression_rule(
         self,

@@ -122,6 +122,7 @@ class TestPoliciesModule(TestModules):
         return {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 50, "total": 2}},
                 "resources": [
                     {"id": "pol-1", "name": "a", "platform_name": "Windows"},
                     {"id": "pol-2", "name": "b", "platform_name": "Windows"},
@@ -132,7 +133,10 @@ class TestPoliciesModule(TestModules):
     def _query_then_get_responses(self):
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["pol-1", "pol-2"]},
+            "body": {
+                "resources": ["pol-1", "pol-2"],
+                "meta": {"pagination": {"offset": 0, "limit": 50, "total": 2}},
+            },
         }
         get_response = {
             "status_code": 200,
@@ -180,8 +184,9 @@ class TestPoliciesModule(TestModules):
                     self.assertEqual(self.mock_client.command.call_count, 1)
                     self.assertEqual(calls[0][0][0], ops[0])  # combined op
 
-                self.assertEqual(len(result), 2)
-                self.assertEqual(result[0]["id"], "pol-1")
+                self.assertIn("results", result)
+                self.assertEqual(len(result["results"]), 2)
+                self.assertEqual(result["results"][0]["id"], "pol-1")
 
     def test_search_device_control_reorders_to_match_sorted_ids(self):
         """When getDeviceControlPoliciesV2 returns policies out of order, the
@@ -209,9 +214,9 @@ class TestPoliciesModule(TestModules):
             sort="name.asc",
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "pol-2")
-        self.assertEqual(result[1]["id"], "pol-1")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "pol-2")
+        self.assertEqual(result["results"][1]["id"], "pol-1")
 
     def test_search_invalid_type(self):
         """An invalid policy_type returns an error and makes no API call."""
@@ -266,13 +271,14 @@ class TestPoliciesModule(TestModules):
         )
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertIn("fql_guide", result)
+        self.assertIn("pagination", result)
+        self.assertIsNone(result["pagination"]["total"])
 
     def test_search_device_control_empty_returns_fql_guide(self):
-        """Empty device_control (two-step) results also include the FQL guide.
+        """Empty device_control (two-step) results return a clean empty envelope.
 
         The two-step path has its own empty-result branch (after the query op
-        returns no IDs); it must return the FQL guide dict, not a bare list.
+        returns no IDs); it must return the pagination envelope, not a bare list.
         """
         self.mock_client.command.return_value = {
             "status_code": 200,
@@ -289,7 +295,7 @@ class TestPoliciesModule(TestModules):
         self.assertEqual(self.mock_client.command.call_count, 1)
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertIn("fql_guide", result)
+        self.assertIn("pagination", result)
 
     def test_search_policy_members_per_type(self):
         """Each type calls its members op and passes the policy id through."""
@@ -300,6 +306,7 @@ class TestPoliciesModule(TestModules):
                 self.mock_client.command.return_value = {
                     "status_code": 200,
                     "body": {
+                        "meta": {"pagination": {"offset": 0, "limit": 50, "total": 1}},
                         "resources": [
                             {"device_id": "h1", "hostname": "host-1"},
                         ]
@@ -316,7 +323,7 @@ class TestPoliciesModule(TestModules):
                 call = self.mock_client.command.call_args_list[0]
                 self.assertEqual(call[0][0], ops[3])  # members op
                 self.assertEqual(call[1]["parameters"]["id"], "pol-123")
-                self.assertEqual(result[0]["device_id"], "h1")
+                self.assertEqual(result["results"][0]["device_id"], "h1")
 
     def test_search_policy_members_missing_id(self):
         """Members search without an id returns a guiding error, no API call."""

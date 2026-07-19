@@ -123,8 +123,9 @@ class IOCModule(BaseModule):
         Use this to find IOCs by type, value, action, severity, or expiration status.
         Consult falcon://ioc/search/fql-guide before constructing filter expressions.
         Returns full indicator records including metadata, platforms, and host groups.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
         """
-        indicator_ids = self._base_search_api_call(
+        indicator_ids, pagination = self._base_search_with_meta(
             operation="indicator_search_v1",
             search_params={
                 "filter": filter,
@@ -143,7 +144,7 @@ class IOCModule(BaseModule):
             )
 
         if not indicator_ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         details = self._base_get_by_ids(
             operation="indicator_get_v1",
@@ -155,7 +156,8 @@ class IOCModule(BaseModule):
             return [details]
 
         # Restore the query-step sort order if the details endpoint reorders results.
-        return self._reorder_by_ids(indicator_ids, details, id_field="id")
+        details = self._reorder_by_ids(indicator_ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def add_ioc(
         self,

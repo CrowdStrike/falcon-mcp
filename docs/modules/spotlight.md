@@ -22,6 +22,7 @@ Use this to find vulnerabilities by CVE severity, status, host, or remediation
 state. Consult falcon://spotlight/vulnerabilities/fql-guide before constructing
 filter expressions. Returns vulnerability details including CVE info, host context,
 and remediation guidance (based on facet selection).
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
 
 **Example prompts:**
 

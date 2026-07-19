@@ -38,7 +38,10 @@ class TestDetectionsModule(TestModules):
         # Setup mock responses for both API calls
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["detection1", "detection2"]},
+            "body": {
+                "resources": ["detection1", "detection2"],
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2}},
+            },
         }
         details_response = {
             "status_code": 200,
@@ -67,15 +70,21 @@ class TestDetectionsModule(TestModules):
             },
         )
 
-        # Verify result is raw empty list (not FQL-wrapped - query succeeded)
-        self.assertEqual(result, [])
+        # Verify result is paginated envelope with empty results
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["results"], [])
+        self.assertIn("pagination", result)
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_detections_with_details(self):
-        """Test searching for detections with details - success returns raw list."""
+        """Test searching for detections with details - success returns envelope."""
         # Setup mock responses
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["detection1", "detection2"]},
+            "body": {
+                "resources": ["detection1", "detection2"],
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2}},
+            },
         }
         details_response = {
             "status_code": 200,
@@ -109,11 +118,13 @@ class TestDetectionsModule(TestModules):
             },
         )
 
-        # Verify result is raw list of detections (no wrapping)
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["composite_id"], "detection1")
-        self.assertEqual(result[1]["composite_id"], "detection2")
+        # Verify result is paginated envelope
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["composite_id"], "detection1")
+        self.assertEqual(result["results"][1]["composite_id"], "detection2")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_detections_reorders_to_match_sorted_ids(self):
         """When PostEntitiesAlertsV2 returns entities out of order, the result is
@@ -140,9 +151,9 @@ class TestDetectionsModule(TestModules):
 
         result = self.module.search_detections(sort="severity.desc")
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["composite_id"], "high-sev")
-        self.assertEqual(result[1]["composite_id"], "low-sev")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["composite_id"], "high-sev")
+        self.assertEqual(result["results"][1]["composite_id"], "low-sev")
 
     def test_search_detections_error(self):
         """Test searching for detections with API error returns FQL guide."""
@@ -183,14 +194,16 @@ class TestDetectionsModule(TestModules):
     def test_search_detections_empty_results(self):
         """Test that an empty query result returns a clean empty response (no FQL guide)."""
         self.mock_client.command.side_effect = [
-            {"status_code": 200, "body": {"resources": []}},
+            {"status_code": 200, "body": {"resources": [], "meta": {"pagination": {"offset": 0, "limit": 100, "total": 0}}}},
         ]
 
         result = self.module.search_detections(filter="status:'new'")
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIn("pagination", result)
+        self.assertEqual(result["pagination"]["total"], 0)
+        self.assertIsNone(result["pagination"]["next"])
         self.assertNotIn("fql_guide", result)
 
     def test_get_detection_details(self):
@@ -233,7 +246,10 @@ class TestDetectionsModule(TestModules):
         # Setup mock responses for both API calls
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["detection1", "detection2"]},
+            "body": {
+                "resources": ["detection1", "detection2"],
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2}},
+            },
         }
         details_response = {
             "status_code": 200,
@@ -258,10 +274,12 @@ class TestDetectionsModule(TestModules):
             },
         )
 
-        # Verify result is raw list (success = no wrapping)
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["composite_id"], "detection1")
+        # Verify result is paginated envelope
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["results"][0]["composite_id"], "detection1")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_get_detection_details_include_hidden_false(self):
         """Test getting detection details with include_hidden=False."""
@@ -285,17 +303,6 @@ class TestDetectionsModule(TestModules):
         expected_result = [{"id": "detection1", "name": "Test Detection 1"}]
         self.assertEqual(result, expected_result)
 
-
-    def test_format_empty_response(self):
-        """Test that empty results return a clean response without FQL guide."""
-        result = self.module._format_empty_response(
-            filter_used="status:'nonexistent'",
-        )
-
-        self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
-        self.assertEqual(result["filter_used"], "status:'nonexistent'")
-        self.assertNotIn("fql_guide", result)
 
     def test_format_fql_error_response_error(self):
         """Test that error responses include FQL guide."""

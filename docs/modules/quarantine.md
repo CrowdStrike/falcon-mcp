@@ -58,6 +58,7 @@ Use this to discover quarantine records by host, hash, user, or state.
 Consult falcon://quarantine/files/search/fql-guide before constructing
 filter expressions. Returns full quarantine details including hostname,
 sha256, paths, state, and associated alert and detection IDs.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

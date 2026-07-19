@@ -35,6 +35,7 @@ class TestSpotlightModule(TestModules):
         mock_response = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [
                     {
                         "cve_id": "CVE-2023-12345",
@@ -60,17 +61,18 @@ class TestSpotlightModule(TestModules):
         self.assertEqual(self.mock_client.command.call_count, 1)
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "combinedQueryVulnerabilities")
-        
+
         # Check that the parameters dictionary contains the expected filter
         params = call_args[1]["parameters"]
         self.assertEqual(params["filter"], "status:'open'")
 
         # Verify result contains expected values
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["cve_id"], "CVE-2023-12345")
-        self.assertEqual(result[0]["severity"], "HIGH")
-        self.assertEqual(result[0]["status"], "open")
-        self.assertEqual(result[0]["cvss_base_score"], 8.5)
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["results"][0]["cve_id"], "CVE-2023-12345")
+        self.assertEqual(result["results"][0]["severity"], "HIGH")
+        self.assertEqual(result["results"][0]["status"], "open")
+        self.assertEqual(result["results"][0]["cvss_base_score"], 8.5)
 
     def test_search_vulnerabilities_forwards_sort(self):
         """The sort parameter is forwarded to combinedQueryVulnerabilities.
@@ -92,12 +94,32 @@ class TestSpotlightModule(TestModules):
         self.assertEqual(call_args[0][0], "combinedQueryVulnerabilities")
         self.assertEqual(call_args[1]["parameters"]["sort"], "created_timestamp|desc")
 
+    def test_search_vulnerabilities_cursor_paging(self):
+        """A cursor response surfaces the `after` token as `pagination.next`.
+
+        Spotlight is the cursor-paged tool: the API returns `meta.pagination.after`,
+        which must round-trip into the envelope's `next` field so a client can page.
+        """
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "meta": {"pagination": {"total": 500, "after": "NEXT_PAGE_TOKEN"}},
+                "resources": [{"cve_id": "CVE-2023-12345", "status": "open"}],
+            },
+        }
+
+        result = self.module.search_vulnerabilities(filter="status:'open'")
+
+        self.assert_pagination(result, total=500, has_next=True)
+        self.assertEqual(result["pagination"]["next"], "NEXT_PAGE_TOKEN")
+
     def test_search_vulnerabilities_no_filter(self):
         """Test searching vulnerabilities with no filter parameter."""
         # Setup mock response with sample vulnerability data
         mock_response = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [
                     {
                         "cve_id": "CVE-2023-12345",
@@ -118,8 +140,8 @@ class TestSpotlightModule(TestModules):
         self.assertEqual(call_args[0][0], "combinedQueryVulnerabilities")
 
         # Verify result contains expected values
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["cve_id"], "CVE-2023-12345")
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["results"][0]["cve_id"], "CVE-2023-12345")
 
     def test_search_vulnerabilities_with_single_facet(self):
         """Test that a single facet string is forwarded unchanged to the API."""
@@ -134,7 +156,7 @@ class TestSpotlightModule(TestModules):
 
         params = call_args[1]["parameters"]
         self.assertEqual(params["facet"], "cve")
-        self.assertEqual(result, [])
+        self.assertEqual(result["results"], [])
 
     def test_search_vulnerabilities_with_multiple_facets(self):
         """Test that a list of facets is forwarded intact (no joining/mangling)."""
@@ -152,7 +174,7 @@ class TestSpotlightModule(TestModules):
 
         params = call_args[1]["parameters"]
         self.assertEqual(params["facet"], ["cve", "host_info", "remediation"])
-        self.assertEqual(result, [])
+        self.assertEqual(result["results"], [])
 
     def test_search_vulnerabilities_facet_empty_list(self):
         """Test that an empty facet list is forwarded as-is (no facets requested)."""
@@ -187,7 +209,13 @@ class TestSpotlightModule(TestModules):
     def test_search_vulnerabilities_empty_response(self):
         """Test searching vulnerabilities with empty response."""
         # Setup mock response with empty resources
-        mock_response = {"status_code": 200, "body": {"resources": []}}
+        mock_response = {
+            "status_code": 200,
+            "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 0}},
+                "resources": [],
+            },
+        }
         self.mock_client.command.return_value = mock_response
 
         # Call search_vulnerabilities
@@ -198,8 +226,9 @@ class TestSpotlightModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "combinedQueryVulnerabilities")
 
-        # Verify result is an empty list
-        self.assertEqual(result, [])
+        # Verify result has empty results list
+        self.assertIn("results", result)
+        self.assertEqual(result["results"], [])
 
     def test_search_vulnerabilities_error(self):
         """Test searching vulnerabilities with API error."""

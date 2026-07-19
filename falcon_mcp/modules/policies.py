@@ -410,6 +410,7 @@ class PoliciesModule(BaseModule):
         filter expressions; the `name` match operator differs per type. Returns
         full policy records including id, name, platform_name, enabled, settings,
         and assigned host groups.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
         type_error = self._validate_policy_type(policy_type)
         if type_error is not None:
@@ -431,7 +432,7 @@ class PoliciesModule(BaseModule):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Dispatch search to the combined op or the device_control two-step flow."""
         if self._SEARCH_MODE[policy_type] == "two_step":
-            ids = self._base_search_api_call(
+            ids, pagination = self._base_search_with_meta(
                 operation=self._OPERATIONS[policy_type]["query"],
                 search_params={
                     "filter": filter,
@@ -448,9 +449,7 @@ class PoliciesModule(BaseModule):
                 )
 
             if not ids:
-                return self._format_fql_error_response(
-                    [], filter, SEARCH_POLICIES_FQL_DOCUMENTATION
-                )
+                return self._build_pagination_envelope([], pagination, filter)
 
             details = self._base_get_by_ids(
                 operation=self._OPERATIONS[policy_type]["get"],
@@ -462,10 +461,11 @@ class PoliciesModule(BaseModule):
                 return [details]
 
             # Restore the query-step sort order in case the get endpoint reorders results.
-            return self._reorder_by_ids(ids, details, id_field="id")
+            details = self._reorder_by_ids(ids, details, id_field="id")
+            return self._build_pagination_envelope(details, pagination, filter)
 
         # Combined single-call path for the other five types.
-        policies = self._base_search_api_call(
+        policies, pagination = self._base_search_with_meta(
             operation=self._OPERATIONS[policy_type]["combined"],
             search_params={
                 "filter": filter,
@@ -481,12 +481,7 @@ class PoliciesModule(BaseModule):
                 [policies], filter, SEARCH_POLICIES_FQL_DOCUMENTATION
             )
 
-        if not policies:
-            return self._format_fql_error_response(
-                [], filter, SEARCH_POLICIES_FQL_DOCUMENTATION
-            )
-
-        return policies
+        return self._build_pagination_envelope(policies or [], pagination, filter)
 
     # ---- Members ------------------------------------------------------------------
 
@@ -531,6 +526,7 @@ class PoliciesModule(BaseModule):
         falcon://hosts/search/fql-guide for the filter syntax. Returns full host
         device entities including device_id, hostname, platform_name, and network
         context.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
         type_error = self._validate_policy_type(policy_type)
         if type_error is not None:
@@ -544,7 +540,7 @@ class PoliciesModule(BaseModule):
                 )
             ]
 
-        members = self._base_search_api_call(
+        members, pagination = self._base_search_with_meta(
             operation=self._OPERATIONS[policy_type]["members"],
             search_params={
                 "id": id,
@@ -559,7 +555,7 @@ class PoliciesModule(BaseModule):
         if self._is_error(members):
             return [members]
 
-        return members
+        return self._build_pagination_envelope(members or [], pagination, filter)
 
     # ---- Body builder -------------------------------------------------------------
 

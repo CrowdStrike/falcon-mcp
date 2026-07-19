@@ -63,7 +63,10 @@ class DetectionsModule(BaseModule):
         search_detections_fql_resource = TextResource(
             uri=AnyUrl("falcon://detections/search/fql-guide"),
             name="falcon_search_detections_fql_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_detections` tool.",
+            description=(
+                "Contains the guide for the `filter` param of the "
+                "`falcon_search_detections` tool."
+            ),
             text=SEARCH_DETECTIONS_FQL_DOCUMENTATION,
         )
 
@@ -76,18 +79,27 @@ class DetectionsModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression. See `falcon://detections/search/fql-guide` for syntax.",
+            description=(
+                "FQL filter expression. See `falcon://detections/search/fql-guide`"
+                " for syntax."
+            ),
             examples=["status:'new'+severity_name:'High'", "device.hostname:'DC*'"],
         ),
         limit: int = Field(
             default=10,
             ge=1,
             le=9999,
-            description="The maximum number of detections to return in this response (default: 10; max: 9999). Use with the offset parameter to manage pagination of results.",
+            description=(
+                "The maximum number of detections to return in this response (default: 10; "
+                "max: 9999). Use with the offset parameter to manage pagination of results."
+            ),
         ),
         offset: int | None = Field(
             default=None,
-            description="The first detection to return, where 0 is the latest detection. Use with the offset parameter to manage pagination of results.",
+            description=(
+                "The first detection to return, where 0 is the latest detection. Use with "
+                "the offset parameter to manage pagination of results."
+            ),
         ),
         q: str | None = Field(
             default=None,
@@ -101,14 +113,16 @@ class DetectionsModule(BaseModule):
                 timestamp: Timestamp when the detection occurred
                 created_timestamp: When the detection was created
                 updated_timestamp: When the detection was last modified
-                severity: Severity level of the detection (1-100, recommended when filtering by severity)
+                severity: Severity level of the detection (1-100, recommended when filtering
+                by severity)
                 confidence: Confidence level of the detection (1-100)
                 agent_id: Agent ID associated with the detection
 
                 Sort either asc (ascending) or desc (descending).
                 Both formats are supported: 'severity.desc' or 'severity|desc'
 
-                When searching for high severity detections, use 'severity.desc' to get the highest severity detections first.
+                When searching for high severity detections, use 'severity.desc' to get the
+                highest severity detections first.
                 For chronological ordering, use 'timestamp.desc' for most recent detections first.
 
                 Examples: 'severity.desc', 'timestamp.desc'
@@ -125,8 +139,9 @@ class DetectionsModule(BaseModule):
         NG-SIEM. Consult falcon://detections/search/fql-guide before constructing filter
         expressions. Returns full alert records including process context, device info,
         tactic/technique details, and threat classification.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        detection_ids = self._base_search_api_call(
+        detection_ids, pagination = self._base_search_with_meta(
             operation="GetQueriesAlertsV2",
             search_params={
                 "filter": filter,
@@ -146,7 +161,7 @@ class DetectionsModule(BaseModule):
 
         # Handle empty results
         if not detection_ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         # Get detection details - past FQL concerns, normal API flow
         details = self._base_get_by_ids(
@@ -161,7 +176,8 @@ class DetectionsModule(BaseModule):
 
         # PostEntitiesAlertsV2 returns entities in arbitrary order; restore the sort
         # applied by the query step (validated against live API: field is composite_id).
-        return self._reorder_by_ids(detection_ids, details, id_field="composite_id")
+        details = self._reorder_by_ids(detection_ids, details, id_field="composite_id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def get_detection_details(
         self,
@@ -170,7 +186,10 @@ class DetectionsModule(BaseModule):
         ),
         include_hidden: bool = Field(
             default=True,
-            description="Whether to include hidden detections (default: True). When True, shows all detections including previously hidden ones for comprehensive visibility.",
+            description=(
+                "Whether to include hidden detections (default: True). When True, shows "
+                "all detections including previously hidden ones for comprehensive visibility."
+            ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Retrieve details for detection IDs you already have.
@@ -195,27 +214,45 @@ class DetectionsModule(BaseModule):
         ),
         status: str | None = Field(
             default=None,
-            description="New status for the detection(s). Allowed values: new, in_progress, reopened, closed.",
+            description=(
+                "New status for the detection(s). Allowed values: new, in_progress, "
+                "reopened, closed."
+            ),
         ),
         assign_to_uuid: str | None = Field(
             default=None,
-            description="UUID of the user to assign the detection(s) to. Example: '00000000-0000-0000-0000-000000000000'.",
+            description=(
+                "UUID of the user to assign the detection(s) to. "
+                "Example: '00000000-0000-0000-0000-000000000000'."
+            ),
         ),
         assign_to_user_id: str | None = Field(
             default=None,
-            description="Email address of the user to assign the detection(s) to. Example: 'analyst@example.com'.",
+            description=(
+                "Email address of the user to assign the detection(s) to. "
+                "Example: 'analyst@example.com'."
+            ),
         ),
         assign_to_name: str | None = Field(
             default=None,
-            description="Full name of the user to assign the detection(s) to. Example: 'Jane Smith'.",
+            description=(
+                "Full name of the user to assign the detection(s) to. "
+                "Example: 'Jane Smith'."
+            ),
         ),
         unassign: bool | None = Field(
             default=None,
-            description="Pass True to remove the current assignee. False is a no-op; only True has any effect.",
+            description=(
+                "Pass True to remove the current assignee. False is a no-op; "
+                "only True has any effect."
+            ),
         ),
         append_comment: str | None = Field(
             default=None,
-            description="Comment to append to the detection(s). Comments are visible in the Falcon console. Must be a non-empty, non-whitespace string.",
+            description=(
+                "Comment to append to the detection(s). Comments are visible in the Falcon "
+                "console. Must be a non-empty, non-whitespace string."
+            ),
         ),
         show_in_ui: bool | None = Field(
             default=None,
@@ -224,19 +261,27 @@ class DetectionsModule(BaseModule):
         add_tags: list[str] | None = Field(
             default=None,
             description=(
-                "Tags to add to the detection(s). Tags are free-form strings; any value is accepted. "
-                "true_positive, false_positive, and ignored are the conventional resolution tags the "
-                "Falcon console surfaces in its Resolution column — use them when recording a resolution, "
+                "Tags to add to the detection(s). Tags are free-form strings; any value is "
+                "accepted. "
+                "true_positive, false_positive, and ignored are the conventional resolution "
+                "tags the "
+                "Falcon console surfaces in its Resolution column — use them when recording "
+                "a resolution, "
                 "but they are guidance, not an enforced set."
             ),
         ),
         remove_tags: list[str] | None = Field(
             default=None,
-            description="Tags to remove from the detection(s). Each value must match an existing tag exactly.",
+            description=(
+                "Tags to remove from the detection(s). Each value must match an existing "
+                "tag exactly."
+            ),
         ),
         remove_tags_by_prefix: str | None = Field(
             default=None,
-            description="Remove all tags on the detection(s) that start with this prefix (e.g. 'fc/').",
+            description=(
+                "Remove all tags on the detection(s) that start with this prefix (e.g. 'fc/')."
+            ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Update the status, assignment, visibility, comments, and tags of one or more detections.
@@ -252,7 +297,11 @@ class DetectionsModule(BaseModule):
         # Validate mutually exclusive assignment parameters
         assignment_params = [assign_to_uuid, assign_to_user_id, assign_to_name]
         if sum(p is not None for p in assignment_params) > 1:
-            return {"error": "Provide at most one of assign_to_uuid, assign_to_user_id, assign_to_name."}
+            return {
+                "error": (
+                    "Provide at most one of assign_to_uuid, assign_to_user_id, assign_to_name."
+                )
+            }
 
         if unassign is True and any(p is not None for p in assignment_params):
             return {"error": "Cannot combine unassign with an assignment parameter."}
@@ -302,7 +351,9 @@ class DetectionsModule(BaseModule):
         for tag in remove_tags or []:
             action_parameters.append({"name": "remove_tag", "value": tag})
         if remove_tags_by_prefix is not None:
-            action_parameters.append({"name": "remove_tags_by_prefix", "value": remove_tags_by_prefix})
+            action_parameters.append(
+                {"name": "remove_tags_by_prefix", "value": remove_tags_by_prefix}
+            )
 
         if not action_parameters:
             return {"error": "At least one update parameter must be provided."}

@@ -37,6 +37,7 @@ Research threat actors and adversary groups tracked by CrowdStrike intelligence.
 Use this to search actors by name, target countries/industries, or activity dates.
 Consult falcon://intel/actors/fql-guide before constructing filter expressions.
 Returns full actor profiles including aliases, motivations, and targeting details.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -51,7 +52,9 @@ Search for threat indicators and IOCs from CrowdStrike intelligence.
 
 Use this to find indicators by type, publish date, malware family, or threat actor
 association. Consult falcon://intel/indicators/fql-guide before constructing filter
-expressions. Returns full indicator details including labels, relations, and kill chain stage.
+expressions. Returns full indicator details including labels, relations, and kill
+chain stage.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -66,6 +69,7 @@ Search CrowdStrike intelligence publications and threat reports.
 Use this to find reports by name, target industry, threat type, or publication date.
 Consult falcon://intel/reports/fql-guide before constructing filter expressions.
 Returns full report metadata including title, description, and target details.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

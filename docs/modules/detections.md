@@ -39,6 +39,7 @@ across all Falcon products: endpoint (EPP), identity (IDP), XDR, OverWatch, and
 NG-SIEM. Consult falcon://detections/search/fql-guide before constructing filter
 expressions. Returns full alert records including process context, device info,
 tactic/technique details, and threat classification.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

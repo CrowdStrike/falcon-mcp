@@ -103,7 +103,10 @@ class TestRTRModule(TestModules):
         """Test searching RTR sessions fetches details after IDs are returned."""
         search_response = {
             "status_code": 200,
-            "body": {"resources": ["session-1", "session-2"]},
+            "body": {
+                "resources": ["session-1", "session-2"],
+                "meta": {"pagination": {"offset": 0, "limit": 25, "total": 2}},
+            },
         }
         details_response = {
             "status_code": 200,
@@ -136,8 +139,10 @@ class TestRTRModule(TestModules):
         self.assertEqual(second_call[0][0], "RTR_ListSessions")
         self.assertEqual(second_call[1]["body"]["ids"], ["session-1", "session-2"])
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "session-1")
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "session-1")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_sessions_reorders_to_match_sorted_ids(self):
         """When RTR_ListSessions returns sessions out of order, the result is
@@ -164,9 +169,9 @@ class TestRTRModule(TestModules):
             sort="created_at.desc",
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "session-b")
-        self.assertEqual(result[1]["id"], "session-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "session-b")
+        self.assertEqual(result["results"][1]["id"], "session-a")
 
     def test_search_audit_sessions(self):
         """Test searching RTR audit sessions."""
@@ -179,7 +184,8 @@ class TestRTRModule(TestModules):
                         "hostname": "BRR-WB-LIB-22",
                         "user_id": "user@example.com",
                     }
-                ]
+                ],
+                "meta": {"pagination": {"offset": 0, "limit": 25, "total": 1}},
             },
         }
 
@@ -201,7 +207,9 @@ class TestRTRModule(TestModules):
                 "with_command_info": True,
             },
         )
-        self.assertEqual(result[0]["id"], "audit-session-1")
+        self.assertIn("results", result)
+        self.assertEqual(result["results"][0]["id"], "audit-session-1")
+        self.assertEqual(result["pagination"]["total"], 1)
 
     def test_search_audit_sessions_error_returns_fql_guide(self):
         """Test audit search with API error returns the RTR audit FQL guide."""
@@ -241,7 +249,7 @@ class TestRTRModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertEqual(result["filter_used"], "created_at:>'2099-01-01T00:00:00Z'")
         self.assertNotIn("fql_guide", result)
 
@@ -593,7 +601,7 @@ class TestRTRModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertEqual(result["filter_used"], "hostname:'nonexistent'")
         self.assertNotIn("fql_guide", result)
 

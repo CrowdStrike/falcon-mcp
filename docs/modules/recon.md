@@ -24,6 +24,7 @@ emails, login IDs, password hashes, domains, and breach metadata. Consult
 expressions. These records are part of the external cyber risk monitoring capability of
 CrowdStrike Counter Adversary Operations (CAO). Returns full records including credential
 fields, location data, and associated notification context.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -35,7 +36,8 @@ fields, location data, and associated notification context.
 
 **Required scopes:** `Monitoring rules (Falcon Intelligence Recon):read`
 
-Search Falcon Intelligence Recon notifications (also called recon alerts) and return their full details.
+Search Falcon Intelligence Recon notifications (also called recon alerts)
+and return their full details.
 
 Use this for dark web matches, leaked credentials, typosquatting matches, and breach
 summaries triggered by your monitoring rules. Consult
@@ -44,6 +46,7 @@ This serves the external cyber risk monitoring capability of CrowdStrike Counter
 Operations (CAO). For endpoint, XDR, or NG-SIEM alerts, use `falcon_search_detections`
 instead. Returns full notification records with a nested `notification` object
 containing status, rule metadata, breach_summary, and item details.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -65,6 +68,7 @@ monitoring is enabled. Consult `falcon://recon/rules/search/fql-guide` before
 constructing filter expressions. These monitoring rules power the external cyber risk
 monitoring capability of CrowdStrike Counter Adversary Operations (CAO). Returns full
 rule definitions including topic, priority, filter expressions, and notification settings.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

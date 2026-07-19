@@ -133,8 +133,8 @@ class TestExclusionsModule(TestModules):
                 second_call = self.mock_client.command.call_args_list[1]
                 self.assertEqual(first_call[0][0], ops[0])
                 self.assertEqual(second_call[0][0], ops[1])
-                self.assertEqual(len(result), 2)
-                self.assertEqual(result[0]["id"], "excl-1")
+                self.assertEqual(len(result["results"]), 2)
+                self.assertEqual(result["results"][0]["id"], "excl-1")
 
     def test_search_exclusions_reorders_to_match_sorted_ids(self):
         """When the get step returns exclusions out of order, the result is
@@ -162,9 +162,9 @@ class TestExclusionsModule(TestModules):
             offset=0,
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "excl-b")
-        self.assertEqual(result[1]["id"], "excl-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "excl-b")
+        self.assertEqual(result["results"][1]["id"], "excl-a")
 
     def test_search_invalid_type(self):
         """An invalid exclusion_type returns an error response, not a crash."""
@@ -181,7 +181,7 @@ class TestExclusionsModule(TestModules):
         self.assertEqual(self.mock_client.command.call_count, 0)
 
     def test_search_empty_returns_fql_guide(self):
-        """Empty query results include the FQL guide context."""
+        """Empty query results include pagination context."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": []},
@@ -195,7 +195,7 @@ class TestExclusionsModule(TestModules):
         )
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertIn("fql_guide", result)
+        self.assertIn("pagination", result)
 
     def test_search_error_returns_fql_guide(self):
         """Query errors include the FQL guide context."""

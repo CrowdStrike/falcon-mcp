@@ -788,5 +788,66 @@ class TestBaseModuleReorderByIds(TestModules):
         self.assertEqual([e["id"] for e in result], ["a", "b", "c"])
 
 
+class TestBuildPaginationEnvelope(TestModules):
+    """Test cases for _build_pagination_envelope, focused on total honesty and cursors."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.setup_module(ConcreteBaseModule)
+
+    def test_offset_pagination_round_trips(self):
+        """offset/limit/total from the API are surfaced verbatim; next is null."""
+        envelope = self.module._build_pagination_envelope(
+            [{"id": "a"}],
+            {"total": 42, "offset": 0, "limit": 10},
+            filter_used="name:'x'",
+        )
+        self.assertEqual(
+            envelope["pagination"],
+            {"total": 42, "offset": 0, "limit": 10, "next": None},
+        )
+        self.assertEqual(envelope["filter_used"], "name:'x'")
+
+    def test_cursor_after_maps_to_next(self):
+        """A non-null `after` cursor round-trips into `next`."""
+        envelope = self.module._build_pagination_envelope(
+            [{"id": "a"}],
+            {"total": 500, "after": "CURSOR_TOKEN"},
+        )
+        self.assertEqual(envelope["pagination"]["next"], "CURSOR_TOKEN")
+        self.assertEqual(envelope["pagination"]["total"], 500)
+        # No offset/limit keys when the API doesn't send them (cursor endpoints).
+        self.assertNotIn("offset", envelope["pagination"])
+        self.assertNotIn("limit", envelope["pagination"])
+
+    def test_missing_total_key_reports_none_not_page_size(self):
+        """A pagination dict without a `total` key reports None, never the page size."""
+        envelope = self.module._build_pagination_envelope(
+            [{"id": "a"}, {"id": "b"}],
+            {"offset": 0, "limit": 2},
+        )
+        self.assertIsNone(envelope["pagination"]["total"])
+
+    def test_no_meta_nonempty_page_reports_none(self):
+        """No pagination meta + a non-empty page: total is unknown, so None (not len)."""
+        envelope = self.module._build_pagination_envelope(
+            [{"id": "a"}, {"id": "b"}, {"id": "c"}],
+            None,
+        )
+        self.assertIsNone(envelope["pagination"]["total"])
+        self.assertIsNone(envelope["pagination"]["next"])
+
+    def test_no_meta_empty_page_reports_none(self):
+        """No pagination meta: the API gave no count, so total is None even when empty."""
+        envelope = self.module._build_pagination_envelope([], None)
+        self.assertIsNone(envelope["pagination"]["total"])
+
+    def test_filter_used_omitted_when_none(self):
+        """Tools with no filter param omit filter_used entirely."""
+        envelope = self.module._build_pagination_envelope([{"id": "a"}], {"total": 1})
+        self.assertNotIn("filter_used", envelope)
+
+
 if __name__ == "__main__":
     unittest.main()
+

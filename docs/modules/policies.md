@@ -87,6 +87,7 @@ queried. Consult falcon://policies/search/fql-guide before constructing
 filter expressions; the `name` match operator differs per type. Returns
 full policy records including id, name, platform_name, enabled, settings,
 and assigned host groups.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -107,6 +108,7 @@ Requires the policy `id`; filters on HOST attributes — consult
 falcon://hosts/search/fql-guide for the filter syntax. Returns full host
 device entities including device_id, hostname, platform_name, and network
 context.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

@@ -38,7 +38,10 @@ class TestIOCModule(TestModules):
         """Test searching IOCs and fetching full details."""
         search_response = {
             "status_code": 200,
-            "body": {"resources": ["ioc-id-1", "ioc-id-2"]},
+            "body": {
+                "resources": ["ioc-id-1", "ioc-id-2"],
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2}},
+            },
         }
         details_response = {
             "status_code": 200,
@@ -71,8 +74,10 @@ class TestIOCModule(TestModules):
         self.assertEqual(second_call[0][0], "indicator_get_v1")
         self.assertEqual(second_call[1]["parameters"]["ids"], ["ioc-id-1", "ioc-id-2"])
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "ioc-id-1")
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "ioc-id-1")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_iocs_reorders_to_match_sorted_ids(self):
         """When indicator_get_v1 returns IOCs out of order, the result is reordered
@@ -99,9 +104,9 @@ class TestIOCModule(TestModules):
             sort="modified_on.desc",
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "ioc-id-b")
-        self.assertEqual(result[1]["id"], "ioc-id-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "ioc-id-b")
+        self.assertEqual(result["results"][1]["id"], "ioc-id-a")
 
     def test_search_iocs_empty_results_returns_fql_guide(self):
         """Test IOC search empty results return clean empty response."""
@@ -114,7 +119,7 @@ class TestIOCModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertEqual(result["filter_used"], "value:'nothing-here'")
         self.assertNotIn("fql_guide", result)
 

@@ -217,7 +217,7 @@ class DynamicMode:
         and mutation risk (read_only / destructive fields). Do not execute destructive
         tools without confirming the user's intent.
         Results are returned in full — use each tool's own limit parameter to control
-        response volume. Empty result sets return a dict with results, total_count, and
+        response volume. Empty result sets return a dict with results, pagination, and
         hint keys rather than a bare empty list.
         """
         entry = self.catalog.get(tool_name)
@@ -247,7 +247,7 @@ class DynamicMode:
         if isinstance(result, list) and len(result) == 0:
             return {
                 "results": [],
-                "total_count": 0,
+                "pagination": {"total": 0, "next": None},
                 "hint": "No records returned. Use falcon_search_tools to review the tool parameters if this is unexpected.",
             }
         return result

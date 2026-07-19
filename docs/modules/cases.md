@@ -121,6 +121,7 @@ Use this to discover cases by status, severity, assignee, time range, or
 evidence attributes. Consult falcon://cases/search/fql-guide before
 constructing filter expressions. Returns full case records including
 status, severity, evidence, assigned user, and analysis results.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

@@ -83,8 +83,8 @@ class TestCustomIOAModule(TestModules):
         self.assertNotIn("offset", call_args[1]["parameters"])
         self.assertNotIn("sort", call_args[1]["parameters"])
         self.assertNotIn("q", call_args[1]["parameters"])
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "rg-001")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "rg-001")
 
     def test_search_ioa_rule_groups_empty_returns_fql_guide(self):
         """Test that empty results return clean empty response."""
@@ -97,7 +97,7 @@ class TestCustomIOAModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertEqual(result["filter_used"], "name:'nonexistent'")
         self.assertNotIn("fql_guide", result)
 

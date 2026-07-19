@@ -76,6 +76,7 @@ Use this to list the devices that belong to a host group. Requires the group
 `id` and filters on HOST attributes (platform, hostname, etc.) — consult
 falcon://hosts/search/fql-guide for the filter syntax. Returns full host device
 entities including device_id, hostname, platform, and network context.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -92,6 +93,7 @@ Use this to find host groups by name, type, creator, or timestamps. Consult
 falcon://host-groups/search/fql-guide before constructing filter expressions.
 Returns full host group details including id, name, group_type, description,
 and audit metadata in a single call.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

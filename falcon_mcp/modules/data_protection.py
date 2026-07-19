@@ -106,8 +106,9 @@ class DataProtectionModule(BaseModule):
         falcon://data-protection/classifications/fql-guide before constructing
         filter expressions. Returns full classification details including content
         pattern references and rule configuration.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        ids = self._base_search_api_call(
+        ids, pagination = self._base_search_with_meta(
             operation="queries_classification_get_v2",
             search_params={
                 "filter": filter,
@@ -116,7 +117,6 @@ class DataProtectionModule(BaseModule):
                 "sort": sort,
             },
             error_message="Failed to search Data Protection classifications",
-            default_result=[],
         )
 
         if self._is_error(ids):
@@ -125,7 +125,7 @@ class DataProtectionModule(BaseModule):
             )
 
         if not ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         details = self._base_get_by_ids(
             "entities_classification_get_v2", ids, use_params=True
@@ -135,7 +135,8 @@ class DataProtectionModule(BaseModule):
             return [details]
 
         # Restore the query-step sort order if the get endpoint reorders results.
-        return self._reorder_by_ids(ids, details, id_field="id")
+        details = self._reorder_by_ids(ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def search_data_protection_policies(
         self,
@@ -169,8 +170,9 @@ class DataProtectionModule(BaseModule):
         falcon://data-protection/policies/fql-guide before constructing filter
         expressions. Returns full policy details including host groups and
         classification assignments.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        ids = self._base_search_api_call(
+        ids, pagination = self._base_search_with_meta(
             operation="queries_policy_get_v2",
             search_params={
                 "platform_name": platform_name,
@@ -180,7 +182,6 @@ class DataProtectionModule(BaseModule):
                 "sort": sort,
             },
             error_message="Failed to search Data Protection policies",
-            default_result=[],
         )
 
         if self._is_error(ids):
@@ -189,7 +190,7 @@ class DataProtectionModule(BaseModule):
             )
 
         if not ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         details = self._base_get_by_ids("entities_policy_get_v2", ids, use_params=True)
 
@@ -197,7 +198,8 @@ class DataProtectionModule(BaseModule):
             return [details]
 
         # Restore the query-step sort order if the get endpoint reorders results.
-        return self._reorder_by_ids(ids, details, id_field="id")
+        details = self._reorder_by_ids(ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def search_data_protection_content_patterns(
         self,
@@ -227,8 +229,9 @@ class DataProtectionModule(BaseModule):
         or region. Consult falcon://data-protection/content-patterns/fql-guide
         before constructing filter expressions. Returns full pattern details
         including regex definitions and match thresholds.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        ids = self._base_search_api_call(
+        ids, pagination = self._base_search_with_meta(
             operation="queries_content_pattern_get_v2",
             search_params={
                 "filter": filter,
@@ -237,7 +240,6 @@ class DataProtectionModule(BaseModule):
                 "sort": sort,
             },
             error_message="Failed to search Data Protection content patterns",
-            default_result=[],
         )
 
         if self._is_error(ids):
@@ -246,7 +248,7 @@ class DataProtectionModule(BaseModule):
             )
 
         if not ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         details = self._base_get_by_ids("entities_content_pattern_get", ids, use_params=True)
 
@@ -254,4 +256,5 @@ class DataProtectionModule(BaseModule):
             return [details]
 
         # Restore the query-step sort order if the get endpoint reorders results.
-        return self._reorder_by_ids(ids, details, id_field="id")
+        details = self._reorder_by_ids(ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)

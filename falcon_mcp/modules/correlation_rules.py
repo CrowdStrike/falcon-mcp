@@ -99,8 +99,9 @@ class CorrelationRulesModule(BaseModule):
         Consult falcon://correlation-rules/search/fql-guide before constructing filter expressions.
         Returns full rule objects; use the `rule_id` field when passing results to update or
         delete tools. Filter with state:'published' to get one result per rule.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        result = self._base_search_api_call(
+        result, pagination = self._base_search_with_meta(
             operation="combined_rules_get_v2",
             search_params={
                 "filter": filter,
@@ -116,10 +117,7 @@ class CorrelationRulesModule(BaseModule):
                 [result], filter, SEARCH_CORRELATION_RULES_FQL_DOCUMENTATION
             )
 
-        if not result:
-            return self._format_empty_response(filter)
-
-        return result
+        return self._build_pagination_envelope(result or [], pagination, filter)
 
     def create_correlation_rule(
         self,

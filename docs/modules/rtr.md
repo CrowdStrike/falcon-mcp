@@ -168,6 +168,7 @@ which host was targeted, or which command activity Falcon recorded.
 This is read-only audit visibility; it does not open sessions or run
 commands. Consult falcon://rtr/audit/sessions/search/fql-guide before
 constructing filter expressions.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -183,6 +184,7 @@ Search RTR sessions and return full session details.
 Use this to find sessions by hostname, agent ID, user, or creation time. Consult
 falcon://rtr/sessions/search/fql-guide before constructing filter expressions.
 Returns session metadata including host info, commands executed, and status.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

@@ -53,6 +53,7 @@ Search for report/search execution history.
 Use this to find executions by status, report ID, or completion date. Consult
 falcon://scheduled-reports/executions/search/fql-guide before constructing filter
 expressions. Returns full execution details including status and timestamps.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -67,6 +68,7 @@ Search for scheduled reports and searches in your CrowdStrike environment.
 Use this to find reports by status, type, creator, or creation date. Consult
 falcon://scheduled-reports/search/fql-guide before constructing filter expressions.
 Returns full report/search entity details including schedule configuration.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

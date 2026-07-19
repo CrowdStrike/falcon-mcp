@@ -110,8 +110,9 @@ class QuarantineModule(BaseModule):
         Consult falcon://quarantine/files/search/fql-guide before constructing
         filter expressions. Returns full quarantine details including hostname,
         sha256, paths, state, and associated alert and detection IDs.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        file_ids = self._base_search_api_call(
+        file_ids, pagination = self._base_search_with_meta(
             operation="QueryQuarantineFiles",
             search_params={
                 "filter": filter,
@@ -120,7 +121,6 @@ class QuarantineModule(BaseModule):
                 "sort": sort,
             },
             error_message="Failed to search quarantined files",
-            default_result=[],
         )
 
         if self._is_error(file_ids):
@@ -129,7 +129,7 @@ class QuarantineModule(BaseModule):
             )
 
         if not file_ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         details = self._base_get_by_ids(
             operation="GetQuarantineFiles",
@@ -140,7 +140,8 @@ class QuarantineModule(BaseModule):
             return [details]
 
         # Restore the query-step sort order if the details endpoint reorders results.
-        return self._reorder_by_ids(file_ids, details, id_field="id")
+        details = self._reorder_by_ids(file_ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def preview_quarantine_actions(
         self,

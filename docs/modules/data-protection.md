@@ -23,6 +23,7 @@ patterns to detect. Consult
 falcon://data-protection/classifications/fql-guide before constructing
 filter expressions. Returns full classification details including content
 pattern references and rule configuration.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -39,6 +40,7 @@ Use this to find regex-based content detection patterns by type, category,
 or region. Consult falcon://data-protection/content-patterns/fql-guide
 before constructing filter expressions. Returns full pattern details
 including regex definitions and match thresholds.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -56,6 +58,7 @@ or precedence. Requires a platform_name ('win' or 'mac'). Consult
 falcon://data-protection/policies/fql-guide before constructing filter
 expressions. Returns full policy details including host groups and
 classification assignments.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

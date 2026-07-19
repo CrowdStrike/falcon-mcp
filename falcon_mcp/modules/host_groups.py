@@ -99,7 +99,10 @@ class HostGroupsModule(BaseModule):
         search_host_groups_fql_resource = TextResource(
             uri=AnyUrl("falcon://host-groups/search/fql-guide"),
             name="falcon_search_host_groups_fql_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_host_groups` tool.",
+            description=(
+                "Contains the guide for the `filter` param of the "
+                "`falcon_search_host_groups` tool."
+            ),
             text=SEARCH_HOST_GROUPS_FQL_DOCUMENTATION,
         )
 
@@ -112,7 +115,10 @@ class HostGroupsModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression. See `falcon://host-groups/search/fql-guide` for syntax.",
+            description=(
+                "FQL filter expression. See `falcon://host-groups/search/fql-guide` "
+                "for syntax."
+            ),
             examples={"group_type:'static'", "name:'Production Servers'"},
         ),
         limit: int = Field(
@@ -151,8 +157,9 @@ class HostGroupsModule(BaseModule):
         falcon://host-groups/search/fql-guide before constructing filter expressions.
         Returns full host group details including id, name, group_type, description,
         and audit metadata in a single call.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        host_groups = self._base_search_api_call(
+        host_groups, pagination = self._base_search_with_meta(
             operation="queryCombinedHostGroups",
             search_params={
                 "filter": filter,
@@ -168,19 +175,22 @@ class HostGroupsModule(BaseModule):
                 [host_groups], filter, SEARCH_HOST_GROUPS_FQL_DOCUMENTATION
             )
 
-        if not host_groups:
-            return self._format_empty_response(filter)
-
-        return host_groups
+        return self._build_pagination_envelope(host_groups or [], pagination, filter)
 
     def search_host_group_members(
         self,
         id: str = Field(
-            description="The host group ID whose members should be retrieved. If you don't already have it, use falcon_search_host_groups to look it up.",
+            description=(
+                "The host group ID whose members should be retrieved. If you don't "
+                "already have it, use falcon_search_host_groups to look it up."
+            ),
         ),
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression on HOST attributes. See `falcon://hosts/search/fql-guide` for syntax.",
+            description=(
+                "FQL filter expression on HOST attributes. See "
+                "`falcon://hosts/search/fql-guide` for syntax."
+            ),
             examples={"platform_name:'Windows'", "hostname:'PC*'"},
         ),
         limit: int = Field(
@@ -205,8 +215,9 @@ class HostGroupsModule(BaseModule):
         `id` and filters on HOST attributes (platform, hostname, etc.) — consult
         falcon://hosts/search/fql-guide for the filter syntax. Returns full host device
         entities including device_id, hostname, platform, and network context.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        members = self._base_search_api_call(
+        members, pagination = self._base_search_with_meta(
             operation="queryCombinedGroupMembers",
             search_params={
                 "id": id,
@@ -221,7 +232,7 @@ class HostGroupsModule(BaseModule):
         if self._is_error(members):
             return [members]
 
-        return members
+        return self._build_pagination_envelope(members or [], pagination, filter)
 
     def create_host_group(
         self,
@@ -229,7 +240,12 @@ class HostGroupsModule(BaseModule):
             description="Name for the new host group.",
         ),
         group_type: str = Field(
-            description="Type of host group. One of: 'static' (hosts added manually by ID via falcon_perform_host_group_action), 'staticByID' (same, populated after creation), or 'dynamic' (hosts matched automatically by an assignment_rule).",
+            description=(
+                "Type of host group. One of: 'static' (hosts added manually by ID "
+                "via falcon_perform_host_group_action), 'staticByID' (same, populated "
+                "after creation), or 'dynamic' (hosts matched automatically by an "
+                "assignment_rule)."
+            ),
         ),
         description: str | None = Field(
             default=None,

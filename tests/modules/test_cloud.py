@@ -49,7 +49,10 @@ class TestCloudModule(TestModules):
         """Test searching for kubernetes containers."""
         mock_response = {
             "status_code": 200,
-            "body": {"resources": ["container_1", "container_2"]},
+            "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 1, "total": 2}},
+                "resources": ["container_1", "container_2"],
+            },
         }
         self.mock_client.command.return_value = mock_response
 
@@ -63,7 +66,9 @@ class TestCloudModule(TestModules):
         self.assertEqual(first_call[0][0], "ReadContainerCombined")
         self.assertEqual(first_call[1]["parameters"]["filter"], "cloud_name:'AWS'")
         self.assertEqual(first_call[1]["parameters"]["limit"], 1)
-        self.assertEqual(result, ["container_1", "container_2"])
+        self.assertIn("results", result)
+        self.assertEqual(result["results"], ["container_1", "container_2"])
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_kubernetes_containers_errors(self):
         """Test searching for kubernetes containers with API error."""
@@ -75,9 +80,8 @@ class TestCloudModule(TestModules):
 
         result = self.module.search_kubernetes_containers(filter="invalid_filter")
 
-        self.assertIsInstance(result, dict)
-        self.assertIn("error", result)
-        self.assertIn("details", result)
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
 
     def test_count_kubernetes_containers(self):
         """Test count for kubernetes containers returns an int."""
@@ -110,7 +114,7 @@ class TestCloudModule(TestModules):
 
     def test_search_images_vulnerabilities(self):
         """Test search for images vulnerabilities."""
-        mock_response = {"status_code": 200, "body": {"resources": ["cve_id_1"]}}
+        mock_response = {"status_code": 200, "body": {"meta": {"pagination": {"offset": 0, "limit": 1, "total": 1}}, "resources": ["cve_id_1"]}}
         self.mock_client.command.return_value = mock_response
 
         result = self.module.search_images_vulnerabilities(
@@ -123,7 +127,9 @@ class TestCloudModule(TestModules):
         self.assertEqual(first_call[0][0], "ReadCombinedVulnerabilities")
         self.assertEqual(first_call[1]["parameters"]["filter"], "cvss_score:>5")
         self.assertEqual(first_call[1]["parameters"]["limit"], 1)
-        self.assertEqual(result, ["cve_id_1"])
+        self.assertIn("results", result)
+        self.assertEqual(result["results"], ["cve_id_1"])
+        self.assertEqual(result["pagination"]["total"], 1)
 
     def test_search_images_vulnerabilities_errors(self):
         """Test search for images vulnerabilities with API error."""
@@ -135,16 +141,15 @@ class TestCloudModule(TestModules):
 
         result = self.module.search_kubernetes_containers(sort="1|1")
 
-        self.assertIsInstance(result, dict)
-        self.assertIn("error", result)
-        self.assertIn("details", result)
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
 
     def test_search_cspm_assets_success(self):
         """Test searching for CSPM assets with two-step pattern."""
         # Mock query response (returns IDs)
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["asset_1", "asset_2", "asset_3"]},
+            "body": {"resources": ["asset_1", "asset_2", "asset_3"], "meta": {"pagination": {"offset": 0, "limit": 10, "total": 3}}},
         }
         # Mock get response (returns full details)
         get_response = {
@@ -182,10 +187,11 @@ class TestCloudModule(TestModules):
         )
 
         # Verify result is full details, not just IDs
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 3)
-        self.assertIn("cloud_provider", result[0])
-        self.assertIn("resource_type", result[0])
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 3)
+        self.assertIn("cloud_provider", result["results"][0])
+        self.assertIn("resource_type", result["results"][0])
+        self.assertEqual(result["pagination"]["total"], 3)
 
     def test_search_cspm_assets_reorders_to_match_sorted_ids(self):
         """When cloud_security_assets_entities_get returns assets out of order,
@@ -209,15 +215,15 @@ class TestCloudModule(TestModules):
             filter=None, limit=10
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "asset-b")
-        self.assertEqual(result[1]["id"], "asset-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "asset-b")
+        self.assertEqual(result["results"][1]["id"], "asset-a")
 
     def test_search_cspm_assets_batching(self):
         """Test CSPM assets search handles >100 IDs with batching."""
         # Mock 250 IDs
         asset_ids = [f"asset_{i}" for i in range(250)]
-        query_response = {"status_code": 200, "body": {"resources": asset_ids}}
+        query_response = {"status_code": 200, "body": {"resources": asset_ids, "meta": {"pagination": {"offset": 0, "limit": 1000, "total": 250}}}}
 
         # Mock 3 batches (100 + 100 + 50)
         batch1_assets = [
@@ -272,11 +278,13 @@ class TestCloudModule(TestModules):
         )
 
         # Verify all 250 assets returned
-        self.assertEqual(len(result), 250)
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 250)
+        self.assertEqual(result["pagination"]["total"], 250)
 
         # Verify reorder restores query-step order across batches even though
         # batch2 was returned reversed.
-        self.assertEqual([r["id"] for r in result], asset_ids)
+        self.assertEqual([r["id"] for r in result["results"]], asset_ids)
 
     def test_search_cspm_assets_error_returns_fql_guide(self):
         """Test CSPM assets search returns FQL guide on error."""
@@ -304,7 +312,7 @@ class TestCloudModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertEqual(result["filter_used"], "cloud_provider:'NonExistent'")
         self.assertNotIn("fql_guide", result)
 
@@ -440,14 +448,14 @@ class TestCloudModule(TestModules):
             },
         }
 
-        query_response = {"status_code": 200, "body": {"resources": ["asset_1"]}}
+        query_response = {"status_code": 200, "body": {"resources": ["asset_1"], "meta": {"pagination": {"offset": 0, "limit": 1, "total": 1}}}}
         get_response = {"status_code": 200, "body": {"resources": [bloated_asset]}}
         self.mock_client.command.side_effect = [query_response, get_response]
 
         result = self.module.search_cspm_assets(limit=1)
 
-        self.assertEqual(len(result), 1)
-        asset = result[0]
+        self.assertEqual(len(result["results"]), 1)
+        asset = result["results"][0]
 
         # Useful fields preserved
         self.assertEqual(asset["id"], "cid|aws|123|us-east-1|AWS::EC2::Instance|i-abc")
@@ -498,14 +506,14 @@ class TestCloudModule(TestModules):
             "region": "us-east-1",
         }
 
-        query_response = {"status_code": 200, "body": {"resources": ["asset_1"]}}
+        query_response = {"status_code": 200, "body": {"resources": ["asset_1"], "meta": {"pagination": {"offset": 0, "limit": 1, "total": 1}}}}
         get_response = {"status_code": 200, "body": {"resources": [minimal_asset]}}
         self.mock_client.command.side_effect = [query_response, get_response]
 
         result = self.module.search_cspm_assets(limit=1)
 
-        self.assertEqual(len(result), 1)
-        asset = result[0]
+        self.assertEqual(len(result["results"]), 1)
+        asset = result["results"][0]
         self.assertEqual(asset["id"], "asset_1")
         self.assertEqual(asset["resource_type"], "AWS::S3::Bucket")
         self.assertNotIn("cloud_context", asset)
@@ -516,7 +524,7 @@ class TestCloudModule(TestModules):
         """Test searching for IOM findings with two-step pattern."""
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["iom_1", "iom_2"]},
+            "body": {"resources": ["iom_1", "iom_2"], "meta": {"pagination": {"offset": 0, "limit": 10, "total": 2}}},
         }
         get_response = {
             "status_code": 200,
@@ -546,9 +554,10 @@ class TestCloudModule(TestModules):
         self.assertEqual(second_call[1]["parameters"]["ids"], ["iom_1", "iom_2"])
 
         # Verify full details returned
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertIn("severity", result[0])
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertIn("severity", result["results"][0])
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_iom_findings_reorders_to_match_sorted_ids(self):
         """When cspm_evaluations_iom_entities returns findings out of order,
@@ -572,9 +581,9 @@ class TestCloudModule(TestModules):
             filter=None, limit=10
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "iom-b")
-        self.assertEqual(result[1]["id"], "iom-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "iom-b")
+        self.assertEqual(result["results"][1]["id"], "iom-a")
 
     def test_search_iom_findings_error_returns_fql_guide(self):
         """Test IOM search returns FQL guide on error."""
@@ -600,14 +609,14 @@ class TestCloudModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertEqual(result["filter_used"], "severity:'nonexistent'")
         self.assertNotIn("fql_guide", result)
 
     def test_search_iom_findings_batching(self):
         """Test IOM search handles >100 IDs with batching."""
         iom_ids = [f"iom_{i}" for i in range(150)]
-        query_response = {"status_code": 200, "body": {"resources": iom_ids}}
+        query_response = {"status_code": 200, "body": {"resources": iom_ids, "meta": {"pagination": {"offset": 0, "limit": 200, "total": 150}}}}
 
         batch1 = {"status_code": 200, "body": {"resources": [{"id": f"iom_{i}"} for i in range(100)]}}
         batch2 = {"status_code": 200, "body": {"resources": [{"id": f"iom_{i}"} for i in reversed(range(100, 150))]}}
@@ -617,9 +626,10 @@ class TestCloudModule(TestModules):
         result = self.module.search_iom_findings(limit=200)
 
         self.assertEqual(self.mock_client.command.call_count, 3)
-        self.assertEqual(len(result), 150)
+        self.assertEqual(len(result["results"]), 150)
+        self.assertEqual(result["pagination"]["total"], 150)
         # Reorder restores query-step order across batches even though batch2 was reversed.
-        self.assertEqual([r["id"] for r in result], iom_ids)
+        self.assertEqual([r["id"] for r in result["results"]], iom_ids)
 
     def test_search_iom_findings_batch_error_fails_fast(self):
         """Test IOM search wraps a step-2 (entities) error in a list."""
@@ -654,7 +664,7 @@ class TestCloudModule(TestModules):
         """Test searching for suppression rules with two-step pattern."""
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["rule_1", "rule_2"]},
+            "body": {"resources": ["rule_1", "rule_2"], "meta": {"pagination": {"offset": 0, "limit": 10, "total": 2}}},
         }
         get_response = {
             "status_code": 200,
@@ -679,8 +689,9 @@ class TestCloudModule(TestModules):
         second_call = self.mock_client.command.call_args_list[1]
         self.assertEqual(second_call[1]["override"], "GET,/cloud-policies/entities/suppression-rules/v1")
 
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_suppression_rules_empty(self):
         """Test suppression rules search with no results."""
@@ -689,7 +700,8 @@ class TestCloudModule(TestModules):
 
         result = self.module.search_cspm_suppression_rules()
 
-        self.assertEqual(result, [])
+        self.assertEqual(result["results"], [])
+        self.assertIsNone(result["pagination"]["total"])
 
     def test_search_suppression_rules_reorders_to_match_sorted_ids(self):
         """When GetSuppressionRules returns rules out of order, the result is
@@ -711,9 +723,9 @@ class TestCloudModule(TestModules):
 
         result = self.module.search_cspm_suppression_rules(limit=10)
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "rule_2")
-        self.assertEqual(result[1]["id"], "rule_1")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "rule_2")
+        self.assertEqual(result["results"][1]["id"], "rule_1")
 
     def test_create_suppression_rule_success(self):
         """Test creating a suppression rule."""
@@ -870,9 +882,9 @@ class TestCloudModule(TestModules):
             filter="severity:'critical'", limit=10, offset=None, sort=None
         )
         self.assertEqual(self.mock_client.command.call_args[0][0], "combined_cloud_risks")
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "risk-1")
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "risk-1")
 
     def test_search_cloud_risks_empty(self):
         """Test search_cloud_risks returns empty list when no results."""
@@ -883,8 +895,8 @@ class TestCloudModule(TestModules):
         result = self.module.search_cloud_risks(
             filter=None, limit=100, offset=None, sort=None
         )
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 0)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result["results"]), 0)
 
     def test_search_cloud_risks_api_error(self):
         """Test search_cloud_risks returns error dict on API failure."""
@@ -895,8 +907,8 @@ class TestCloudModule(TestModules):
         result = self.module.search_cloud_risks(
             filter="invalid!", limit=10, offset=None, sort=None
         )
-        self.assertIsInstance(result, dict)
-        self.assertIn("error", result)
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
 
     def test_search_cloud_risks_passes_all_params(self):
         """Test search_cloud_risks passes filter, sort, limit, offset to API."""
@@ -933,8 +945,8 @@ class TestCloudModule(TestModules):
             "ListCloudGroupsExternal",
             parameters={"limit": 100},
         )
-        self.assertIsInstance(result, list)
-        self.assertEqual(result[0]["id"], "grp-1")
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["results"][0]["id"], "grp-1")
 
     def test_search_cloud_groups_with_filter(self):
         """Test search_cloud_groups passes filter param."""
