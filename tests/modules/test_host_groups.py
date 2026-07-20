@@ -42,6 +42,7 @@ class TestHostGroupsModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2}},
                 "resources": [
                     {
                         "id": "group-1",
@@ -64,15 +65,16 @@ class TestHostGroupsModule(TestModules):
             sort="name.asc",
         )
 
-        # Combined search is a SINGLE command call (no two-step query->get)
         self.assertEqual(self.mock_client.command.call_count, 1)
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "queryCombinedHostGroups")
         self.assertEqual(call_args[1]["parameters"]["filter"], "group_type:'static'")
         self.assertEqual(call_args[1]["parameters"]["sort"], "name.asc")
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "group-1")
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "group-1")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_host_groups_empty_results_returns_fql_guide(self):
         """Test host group search empty results return clean empty response."""
@@ -85,7 +87,7 @@ class TestHostGroupsModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertEqual(result["filter_used"], "name:'nonexistent'")
         self.assertNotIn("fql_guide", result)
 
@@ -109,6 +111,7 @@ class TestHostGroupsModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2}},
                 "resources": [
                     {"device_id": "device-1", "hostname": "PC-1"},
                     {"device_id": "device-2", "hostname": "PC-2"},
@@ -132,8 +135,10 @@ class TestHostGroupsModule(TestModules):
             call_args[1]["parameters"]["filter"], "platform_name:'Windows'"
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["device_id"], "device-1")
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["device_id"], "device-1")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_host_group_members_error(self):
         """Test member search error returns wrapped error."""

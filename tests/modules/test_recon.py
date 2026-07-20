@@ -45,7 +45,10 @@ class TestReconModule(TestModules):
         """Test two-step search pattern: QueryNotificationsV1 → GetNotificationsDetailedV1."""
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["notif1", "notif2"]},
+            "body": {
+                "resources": ["notif1", "notif2"],
+                "meta": {"pagination": {"offset": 0, "limit": 10, "total": 2}},
+            },
         }
         details_response = {
             "status_code": 200,
@@ -73,9 +76,11 @@ class TestReconModule(TestModules):
             parameters={"ids": ["notif1", "notif2"]},
         )
 
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "notif1")
+        self.assertIsInstance(result, dict)
+        self.assertIn("pagination", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "notif1")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_recon_notifications_reorders_to_match_sorted_ids(self):
         """When GetNotificationsDetailedV1 returns notifications out of order, the
@@ -101,9 +106,9 @@ class TestReconModule(TestModules):
 
         result = self.module.search_recon_notifications(sort="created_date.desc")
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "notif-b")
-        self.assertEqual(result[1]["id"], "notif-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "notif-b")
+        self.assertEqual(result["results"][1]["id"], "notif-a")
 
     def test_search_recon_notifications_empty(self):
         """Test that empty query results return the empty-response dict (no fql_guide)."""
@@ -159,7 +164,10 @@ class TestReconModule(TestModules):
         """Test two-step search pattern: QueryRulesV1 → GetRulesV1."""
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["rule1", "rule2"]},
+            "body": {
+                "resources": ["rule1", "rule2"],
+                "meta": {"pagination": {"offset": 0, "limit": 5, "total": 2}},
+            },
         }
         details_response = {
             "status_code": 200,
@@ -185,9 +193,11 @@ class TestReconModule(TestModules):
             parameters={"ids": ["rule1", "rule2"]},
         )
 
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "rule1")
+        self.assertIsInstance(result, dict)
+        self.assertIn("pagination", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "rule1")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_recon_rules_reorders_to_match_sorted_ids(self):
         """When GetRulesV1 returns rules out of order, the result is reordered
@@ -211,9 +221,9 @@ class TestReconModule(TestModules):
             filter=None, limit=5, sort="created_date.desc"
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "rule-b")
-        self.assertEqual(result[1]["id"], "rule-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "rule-b")
+        self.assertEqual(result["results"][1]["id"], "rule-a")
 
     def test_search_recon_rules_empty(self):
         """Test that empty rule query returns the empty-response dict."""
@@ -249,7 +259,10 @@ class TestReconModule(TestModules):
         """Test two-step pattern: QueryNotificationsExposedDataRecordsV1 → GetNotificationsExposedDataRecordsV1."""
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["rec1", "rec2"]},
+            "body": {
+                "resources": ["rec1", "rec2"],
+                "meta": {"pagination": {"offset": 0, "limit": 10, "total": 2}},
+            },
         }
         details_response = {
             "status_code": 200,
@@ -277,9 +290,11 @@ class TestReconModule(TestModules):
             parameters={"ids": ["rec1", "rec2"]},
         )
 
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["email"], "user@example.com")
+        self.assertIsInstance(result, dict)
+        self.assertIn("pagination", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["email"], "user@example.com")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_recon_exposed_data_records_reorders_to_match_sorted_ids(self):
         """When GetNotificationsExposedDataRecordsV1 returns records out of order,
@@ -303,9 +318,9 @@ class TestReconModule(TestModules):
             filter=None, limit=10, sort="created_date.desc"
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "rec-b")
-        self.assertEqual(result[1]["id"], "rec-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "rec-b")
+        self.assertEqual(result["results"][1]["id"], "rec-a")
 
     def test_search_recon_exposed_data_records_empty(self):
         """Test that empty exposed-data query returns the empty-response dict."""

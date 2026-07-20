@@ -144,7 +144,10 @@ class RTRModule(BaseModule):
         search_rtr_sessions_fql_resource = TextResource(
             uri=AnyUrl("falcon://rtr/sessions/search/fql-guide"),
             name="falcon_search_rtr_sessions_fql_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_rtr_sessions` tool.",
+            description=(
+                "Contains the guide for the `filter` param of the "
+                "`falcon_search_rtr_sessions` tool."
+            ),
             text=SEARCH_RTR_SESSIONS_FQL_DOCUMENTATION,
         )
 
@@ -156,7 +159,10 @@ class RTRModule(BaseModule):
         search_rtr_audit_sessions_fql_resource = TextResource(
             uri=AnyUrl("falcon://rtr/audit/sessions/search/fql-guide"),
             name="falcon_search_rtr_audit_sessions_fql_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_rtr_audit_sessions` tool.",
+            description=(
+                "Contains the guide for the `filter` param of the "
+                "`falcon_search_rtr_audit_sessions` tool."
+            ),
             text=SEARCH_RTR_AUDIT_SESSIONS_FQL_DOCUMENTATION,
         )
 
@@ -168,7 +174,10 @@ class RTRModule(BaseModule):
         aggregate_rtr_sessions_resource = TextResource(
             uri=AnyUrl("falcon://rtr/sessions/aggregate-guide"),
             name="falcon_aggregate_rtr_sessions_guide",
-            description="Explains how to summarize RTR session activity with the `falcon_aggregate_rtr_sessions` tool.",
+            description=(
+                "Explains how to summarize RTR session activity with the "
+                "`falcon_aggregate_rtr_sessions` tool."
+            ),
             text=AGGREGATE_RTR_SESSIONS_GUIDE,
         )
 
@@ -193,7 +202,10 @@ class RTRModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression. See `falcon://rtr/sessions/search/fql-guide` for syntax.",
+            description=(
+                "FQL filter expression. See `falcon://rtr/sessions/search/fql-guide` "
+                "for syntax."
+            ),
             examples=["hostname:'BRR-WB-LIB-22'", "aid:'2c5c4e7738...'"],
         ),
         limit: int = Field(
@@ -220,8 +232,9 @@ class RTRModule(BaseModule):
         Use this to find sessions by hostname, agent ID, user, or creation time. Consult
         falcon://rtr/sessions/search/fql-guide before constructing filter expressions.
         Returns session metadata including host info, commands executed, and status.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        session_ids = self._base_search_api_call(
+        session_ids, pagination = self._base_search_with_meta(
             operation="RTR_ListAllSessions",
             search_params={
                 "filter": filter,
@@ -238,7 +251,7 @@ class RTRModule(BaseModule):
             )
 
         if not session_ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         details = self._base_get_by_ids(
             operation="RTR_ListSessions",
@@ -251,7 +264,8 @@ class RTRModule(BaseModule):
             return [details]
 
         # Restore the query-step sort order in case RTR_ListSessions reorders results.
-        return self._reorder_by_ids(session_ids, details, id_field="id")
+        details = self._reorder_by_ids(session_ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def search_audit_sessions(
         self,
@@ -291,8 +305,9 @@ class RTRModule(BaseModule):
         This is read-only audit visibility; it does not open sessions or run
         commands. Consult falcon://rtr/audit/sessions/search/fql-guide before
         constructing filter expressions.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        audit_sessions = self._base_search_api_call(
+        audit_sessions, pagination = self._base_search_with_meta(
             operation="RTRAuditSessions",
             search_params={
                 "filter": filter,
@@ -309,20 +324,23 @@ class RTRModule(BaseModule):
                 [audit_sessions], filter, SEARCH_RTR_AUDIT_SESSIONS_FQL_DOCUMENTATION
             )
 
-        if not audit_sessions:
-            return self._format_empty_response(filter)
-
-        return audit_sessions
+        return self._build_pagination_envelope(audit_sessions or [], pagination, filter)
 
     def aggregate_sessions(
         self,
         field: str = Field(
-            description="RTR session field to aggregate, such as `hostname`, `user_id`, `origin`, `base_command`, or `created_at`.",
+            description=(
+                "RTR session field to aggregate, such as `hostname`, `user_id`, "
+                "`origin`, `base_command`, or `created_at`."
+            ),
             examples=["base_command", "hostname", "user_id", "created_at"],
         ),
         aggregate_type: Literal["terms", "date_range"] = Field(
             default="terms",
-            description="Aggregation type to run. Use `terms` for top values and `date_range` for time buckets.",
+            description=(
+                "Aggregation type to run. Use `terms` for top values and "
+                "`date_range` for time buckets."
+            ),
         ),
         name: str = Field(
             default="rtr_session_aggregation",
@@ -346,7 +364,10 @@ class RTRModule(BaseModule):
         ),
         date_ranges: list[dict[str, str]] | None = Field(
             default=None,
-            description="Date ranges for date_range aggregations, for example `[{'from': 'now-7d', 'to': 'now'}]`.",
+            description=(
+                "Date ranges for date_range aggregations, for example "
+                "`[{'from': 'now-7d', 'to': 'now'}]`."
+            ),
             examples=[[{"from": "now-7d", "to": "now"}]],
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
@@ -479,15 +500,24 @@ class RTRModule(BaseModule):
     def execute_read_only_command(
         self,
         session_id: str = Field(
-            description="RTR session ID returned from falcon_init_rtr_session or falcon_search_rtr_sessions.",
+            description=(
+                "RTR session ID returned from falcon_init_rtr_session or "
+                "falcon_search_rtr_sessions."
+            ),
         ),
         base_command: str = Field(
-            description="Read-only RTR base command to execute, such as `ls`, `ps`, `cat`, `filehash`, or `reg`.",
+            description=(
+                "Read-only RTR base command to execute, such as `ls`, `ps`, `cat`, "
+                "`filehash`, or `reg`."
+            ),
             examples=["ls", "ps", "filehash"],
         ),
         command_string: str | None = Field(
             default=None,
-            description="Optional full command line to execute. Example: `cat C:\\Windows\\win.ini`.",
+            description=(
+                "Optional full command line to execute. Example: "
+                "`cat C:\\Windows\\win.ini`."
+            ),
         ),
         persist: bool = Field(
             default=False,
@@ -539,15 +569,24 @@ class RTRModule(BaseModule):
     def run_read_only_command_and_wait(
         self,
         session_id: str = Field(
-            description="RTR session ID returned from falcon_init_rtr_session or falcon_search_rtr_sessions.",
+            description=(
+                "RTR session ID returned from falcon_init_rtr_session or "
+                "falcon_search_rtr_sessions."
+            ),
         ),
         base_command: str = Field(
-            description="Read-only RTR base command to execute, such as `ls`, `ps`, `cat`, `filehash`, or `reg`.",
+            description=(
+                "Read-only RTR base command to execute, such as `ls`, `ps`, `cat`, "
+                "`filehash`, or `reg`."
+            ),
             examples=["ls", "ps", "filehash"],
         ),
         command_string: str | None = Field(
             default=None,
-            description="Optional full command line to execute. Example: `cat C:\\Windows\\win.ini`.",
+            description=(
+                "Optional full command line to execute. Example: "
+                "`cat C:\\Windows\\win.ini`."
+            ),
         ),
         persist: bool = Field(
             default=False,

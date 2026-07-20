@@ -79,6 +79,17 @@ class BaseIntegrationTest:
             if isinstance(first_item, dict):
                 assert "error" not in first_item, error_msg
 
+    def _unwrap_results(self, result: Any) -> Any:
+        """Unwrap the `{"results": [...], "pagination": {...}}` envelope if present.
+
+        Search tools now return a paginated envelope dict instead of a bare list.
+        Non-search results (plain lists, error dicts without a "results" key) pass
+        through unchanged.
+        """
+        if isinstance(result, dict) and "results" in result:
+            return result["results"]
+        return result
+
     def assert_valid_list_response(
         self,
         result: Any,
@@ -87,12 +98,29 @@ class BaseIntegrationTest:
     ) -> None:
         """Assert that the result is a valid list response.
 
+        Accepts either a bare list or the `{"results": [...], "pagination": {...}}`
+        envelope now returned by search tools; also sanity-checks `pagination.total`
+        when the envelope is present.
+
         Args:
             result: The API response to check
             min_length: Minimum expected length of the list
             context: Optional context string for the error message
         """
         ctx = f" ({context})" if context else ""
+
+        if isinstance(result, dict) and "results" in result:
+            pagination = result.get("pagination")
+            if pagination is not None:
+                # `total` is always present but may be None when the API reports
+                # no count (see _build_pagination_envelope); only sanity-check a
+                # real number so the honest-None case doesn't raise TypeError.
+                total = pagination.get("total")
+                assert (
+                    total is None or total >= 0
+                ), f"Expected pagination.total >= 0{ctx}, got {total}"
+            result = result["results"]
+
         assert isinstance(result, list), f"Expected list response{ctx}, got {type(result)}"
         assert (
             len(result) >= min_length
@@ -110,12 +138,17 @@ class BaseIntegrationTest:
         1. Search returns entity IDs
         2. Get details returns full entity objects
 
+        Accepts either a bare list or the `{"results": [...], "pagination": {...}}`
+        envelope now returned by search tools.
+
         Args:
             result: The search results to check
             expected_fields: List of field names expected in each result
             context: Optional context string for the error message
         """
         ctx = f" ({context})" if context else ""
+
+        result = self._unwrap_results(result)
 
         assert isinstance(result, list), f"Expected list of results{ctx}"
         assert len(result) > 0, f"Expected at least one result to validate{ctx}"
@@ -140,12 +173,17 @@ class BaseIntegrationTest:
     ) -> None:
         """Assert that each result item has an ID field.
 
+        Accepts either a bare list or the `{"results": [...], "pagination": {...}}`
+        envelope now returned by search tools.
+
         Args:
             result: The results to check
             id_field: The name of the ID field to check for
             context: Optional context string for the error message
         """
         ctx = f" ({context})" if context else ""
+
+        result = self._unwrap_results(result)
 
         assert isinstance(result, list), f"Expected list of results{ctx}"
 
@@ -160,6 +198,9 @@ class BaseIntegrationTest:
     ) -> Optional[str]:
         """Extract the first ID from a list of results.
 
+        Accepts either a bare list or the `{"results": [...], "pagination": {...}}`
+        envelope now returned by search tools.
+
         Args:
             result: The results to extract from
             id_field: The name of the ID field
@@ -167,6 +208,8 @@ class BaseIntegrationTest:
         Returns:
             The first ID value, or None if not found
         """
+        result = self._unwrap_results(result)
+
         if not result or not isinstance(result, list):
             return None
 

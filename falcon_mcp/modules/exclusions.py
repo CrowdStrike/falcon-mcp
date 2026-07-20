@@ -148,7 +148,10 @@ class ExclusionsModule(BaseModule):
         search_exclusions_fql_resource = TextResource(
             uri=AnyUrl("falcon://exclusions/search/fql-guide"),
             name="falcon_search_exclusions_fql_guide",
-            description="Contains the guide for the `filter` param of the `falcon_search_exclusions` tool.",
+            description=(
+                "Contains the guide for the `filter` param of the "
+                "`falcon_search_exclusions` tool."
+            ),
             text=SEARCH_EXCLUSIONS_FQL_DOCUMENTATION,
         )
 
@@ -220,17 +223,27 @@ class ExclusionsModule(BaseModule):
         ),
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression. See `falcon://exclusions/search/fql-guide` for syntax (fields vary by type).",
+            description=(
+                "FQL filter expression. See `falcon://exclusions/search/fql-guide` "
+                "for syntax (fields vary by type)."
+            ),
         ),
         limit: int = Field(
             default=100,
             ge=1,
             le=500,
-            description="Maximum number of exclusions to return. Capped at 100 for 'certificate', 500 otherwise.",
+            description=(
+                "Maximum number of exclusions to return. Capped at 100 for "
+                "'certificate', 500 otherwise."
+            ),
         ),
         sort: str | None = Field(
             default=None,
-            description="Sort expression. See `falcon://exclusions/search/fql-guide`. A `.desc` direction is added automatically for ioa/ml/sensor_visibility when omitted.",
+            description=(
+                "Sort expression. See `falcon://exclusions/search/fql-guide`. "
+                "A `.desc` direction is added automatically for "
+                "ioa/ml/sensor_visibility when omitted."
+            ),
         ),
         offset: int | None = Field(
             default=None,
@@ -245,6 +258,7 @@ class ExclusionsModule(BaseModule):
         Consult falcon://exclusions/search/fql-guide before constructing filter
         expressions — the available fields differ per type. Returns full
         exclusion records including id, scope, and timestamps.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
         type_error = self._validate_exclusion_type(exclusion_type)
         if type_error is not None:
@@ -261,7 +275,7 @@ class ExclusionsModule(BaseModule):
         offset: int | None,
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Shared two-step search (query IDs -> fetch details) for an exclusion type."""
-        ids = self._base_search_api_call(
+        ids, pagination = self._base_search_with_meta(
             operation=self._OPERATIONS[exclusion_type]["query"],
             search_params={
                 "filter": filter,
@@ -278,9 +292,7 @@ class ExclusionsModule(BaseModule):
             )
 
         if not ids:
-            return self._format_fql_error_response(
-                [], filter, SEARCH_EXCLUSIONS_FQL_DOCUMENTATION
-            )
+            return self._build_pagination_envelope([], pagination, filter)
 
         details = self._base_get_by_ids(
             operation=self._OPERATIONS[exclusion_type]["get"],
@@ -292,7 +304,8 @@ class ExclusionsModule(BaseModule):
             return [details]
 
         # Restore the query-step sort order in case the get endpoint reorders results.
-        return self._reorder_by_ids(ids, details, id_field="id")
+        details = self._reorder_by_ids(ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     # ---- Body builders ------------------------------------------------------------
 
@@ -574,7 +587,10 @@ class ExclusionsModule(BaseModule):
         ),
         pattern_id: str | None = Field(
             default=None,
-            description="IOA rule pattern ID to exclude (a real existing pattern). Required for 'ioa'.",
+            description=(
+                "IOA rule pattern ID to exclude (a real existing pattern). "
+                "Required for 'ioa'."
+            ),
         ),
         ifn_regex: str | None = Field(
             default=None,
@@ -602,11 +618,17 @@ class ExclusionsModule(BaseModule):
         ),
         certificate: dict[str, Any] | None = Field(
             default=None,
-            description="Certificate dict (issuer, subject, serial, thumbprint, valid_from, valid_to). Required for 'certificate'.",
+            description=(
+                "Certificate dict (issuer, subject, serial, thumbprint, "
+                "valid_from, valid_to). Required for 'certificate'."
+            ),
         ),
         status: str | None = Field(
             default=None,
-            description="Certificate exclusion status: 'enabled' or 'disabled'. Required for 'certificate'.",
+            description=(
+                "Certificate exclusion status: 'enabled' or 'disabled'. "
+                "Required for 'certificate'."
+            ),
         ),
         excluded_from: list[str] | None = Field(
             default=None,
@@ -614,11 +636,17 @@ class ExclusionsModule(BaseModule):
         ),
         is_descendant_process: bool | None = Field(
             default=None,
-            description="Whether the ML exclusion applies to descendant processes. Optional, 'ml' only.",
+            description=(
+                "Whether the ML exclusion applies to descendant processes. "
+                "Optional, 'ml' only."
+            ),
         ),
         host_groups: list[str] | None = Field(
             default=None,
-            description="Host group IDs to scope the exclusion. Required (non-empty) for 'sensor_visibility'; optional for other types.",
+            description=(
+                "Host group IDs to scope the exclusion. Required (non-empty) for "
+                "'sensor_visibility'; optional for other types."
+            ),
         ),
         applied_globally: bool | None = Field(
             default=None,
@@ -736,7 +764,10 @@ class ExclusionsModule(BaseModule):
         ),
         status: str | None = Field(
             default=None,
-            description="Certificate exclusion status: 'enabled' or 'disabled'. Required for 'certificate'.",
+            description=(
+                "Certificate exclusion status: 'enabled' or 'disabled'. "
+                "Required for 'certificate'."
+            ),
         ),
         excluded_from: list[str] | None = Field(
             default=None,
@@ -744,11 +775,17 @@ class ExclusionsModule(BaseModule):
         ),
         is_descendant_process: bool | None = Field(
             default=None,
-            description="Whether the ML exclusion applies to descendant processes. Optional, 'ml' only.",
+            description=(
+                "Whether the ML exclusion applies to descendant processes. "
+                "Optional, 'ml' only."
+            ),
         ),
         host_groups: list[str] | None = Field(
             default=None,
-            description="Host group IDs to scope the exclusion. Required (non-empty) for 'sensor_visibility'; optional for other types.",
+            description=(
+                "Host group IDs to scope the exclusion. Required (non-empty) for "
+                "'sensor_visibility'; optional for other types."
+            ),
         ),
         applied_globally: bool | None = Field(
             default=None,

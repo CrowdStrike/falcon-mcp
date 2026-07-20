@@ -688,6 +688,47 @@ def extract_registered_tool_names(module_cls: type) -> dict[str, str]:
     return registered
 
 
+def _extract_kwarg_string(block: str, kwarg: str) -> str:
+    """Extract a string-valued kwarg, joining adjacent/parenthesized literals.
+
+    Handles both `description="..."` single literals and reflowed
+    `description=(\n    "part one "\n    "part two"\n)` concatenations, which
+    Python joins into one string at runtime.
+    """
+    m = re.search(rf"{kwarg}\s*=\s*", block)
+    if not m:
+        return ""
+    rest = block[m.end() :]
+
+    # Parenthesized group: capture everything up to the matching close paren,
+    # then join every quoted literal inside it.
+    if rest.startswith("("):
+        depth = 0
+        for i, ch in enumerate(rest):
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth == 0:
+                    inner = rest[1:i]
+                    break
+        else:
+            inner = rest
+        pairs = re.findall(r'"([^"]*)"|\'([^\']*)\'', inner)
+        return "".join(dq or sq for dq, sq in pairs)
+
+    # Bare value: join only the leading run of adjacent string literals
+    # (implicit concatenation), stopping at the first non-literal token so we
+    # don't swallow later kwargs' strings.
+    literals: list[str] = []
+    scan = rest
+    lit = re.compile(r'^\s*(?:"([^"]*)"|\'([^\']*)\')')
+    while match := lit.match(scan):
+        literals.append(match.group(1) if match.group(1) is not None else match.group(2))
+        scan = scan[match.end() :]
+    return "".join(literals)
+
+
 def extract_resource_info(module_cls: type) -> list[dict[str, str]]:
     """Extract resource URIs and descriptions by inspecting register_resources."""
     try:
@@ -712,14 +753,14 @@ def extract_resource_info(module_cls: type) -> list[dict[str, str]]:
 
         uri_m = re.search(r'uri=AnyUrl\(["\']([^"\']+)["\']\)', block)
         name_m = re.search(r'name=["\']([^"\']+)["\']', block)
-        desc_m = re.search(r'description=["\']([^"\']+)["\']', block)
+        description = _extract_kwarg_string(block, "description")
 
         if uri_m:
             resources.append(
                 {
                     "uri": uri_m.group(1),
                     "name": name_m.group(1) if name_m else "",
-                    "description": desc_m.group(1) if desc_m else "",
+                    "description": description,
                 }
             )
 

@@ -11,16 +11,11 @@ from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from pydantic import AnyUrl, Field
 
-from falcon_mcp.common.errors import handle_api_response
-from falcon_mcp.common.logging import get_logger
-from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.discover import (
     SEARCH_APPLICATIONS_FQL_DOCUMENTATION,
     SEARCH_UNMANAGED_ASSETS_FQL_DOCUMENTATION,
 )
-
-logger = get_logger(__name__)
 
 
 class DiscoverModule(BaseModule):
@@ -106,45 +101,29 @@ class DiscoverModule(BaseModule):
             description="Property used to sort the results. All properties can be used to sort unless otherwise noted in their property descriptions.",
             examples={"name.asc", "vendor.desc", "last_updated_timestamp.desc"},
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for applications discovered in your CrowdStrike environment.
 
         Use this to find applications by name, vendor, or installation details. Consult
         falcon://discover/applications/fql-guide before constructing filter expressions.
         Returns application entities with optional host info and usage data (based on facet).
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        # Prepare parameters for combined_applications
-        params = prepare_api_parameters(
-            {
+        applications, pagination = self._base_search_with_meta(
+            operation="combined_applications",
+            search_params={
                 "filter": filter,
                 "facet": facet,
                 "limit": limit,
                 "sort": sort,
-            }
-        )
-
-        # Define the operation name
-        operation = "combined_applications"
-
-        logger.debug("Searching applications with params: %s", params)
-
-        # Make the API request
-        response = self.client.command(operation, parameters=params)
-
-        # Use handle_api_response to get application data
-        applications = handle_api_response(
-            response,
-            operation=operation,
+            },
             error_message="Failed to search applications",
-            default_result=[],
         )
 
-        # If handle_api_response returns an error dict instead of a list,
-        # it means there was an error, so we return it wrapped in a list
         if self._is_error(applications):
             return [applications]
 
-        return applications
+        return self._build_pagination_envelope(applications, pagination, filter)
 
     def search_unmanaged_assets(
         self,
@@ -184,13 +163,14 @@ class DiscoverModule(BaseModule):
             """).strip(),
             examples={"hostname.asc", "last_seen_timestamp.desc", "criticality.desc"},
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for unmanaged assets (hosts without Falcon sensor) in your environment.
 
         Finds systems discovered by Falcon-managed hosts that lack a sensor themselves.
         Consult falcon://discover/hosts/fql-guide before constructing filter expressions.
         The tool automatically adds entity_type:'unmanaged' to all queries. Returns full
         asset details including platform, network, and criticality information.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
         # Always enforce entity_type:'unmanaged' filter
         base_filter = "entity_type:'unmanaged'"
@@ -201,35 +181,18 @@ class DiscoverModule(BaseModule):
         else:
             combined_filter = base_filter
 
-        # Prepare parameters for combined_hosts
-        params = prepare_api_parameters(
-            {
+        assets, pagination = self._base_search_with_meta(
+            operation="combined_hosts",
+            search_params={
                 "filter": combined_filter,
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
-            }
-        )
-
-        # Define the operation name
-        operation = "combined_hosts"
-
-        logger.debug("Searching unmanaged assets with params: %s", params)
-
-        # Make the API request
-        response = self.client.command(operation, parameters=params)
-
-        # Use handle_api_response to get unmanaged asset data
-        assets = handle_api_response(
-            response,
-            operation=operation,
+            },
             error_message="Failed to search unmanaged assets",
-            default_result=[],
         )
 
-        # If handle_api_response returns an error dict instead of a list,
-        # it means there was an error, so we return it wrapped in a list
         if self._is_error(assets):
             return [assets]
 
-        return assets
+        return self._build_pagination_envelope(assets, pagination, filter)

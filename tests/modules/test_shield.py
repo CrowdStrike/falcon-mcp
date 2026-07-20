@@ -158,6 +158,7 @@ class TestShieldModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [
                     {"id": "check-1", "name": "MFA Enabled", "status": "Failed", "impact": 3}
                 ]
@@ -171,8 +172,8 @@ class TestShieldModule(TestModules):
         self.assertEqual(call_args[0][0], "GetSecurityChecksV3")
         self.assertEqual(call_args[1]["parameters"]["status"], "Failed")
         self.assertEqual(call_args[1]["parameters"]["impact"], "High")
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["id"], "check-1")
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["results"][0]["id"], "check-1")
 
     def test_search_shield_checks_empty_results(self):
         self.mock_client.command.return_value = {
@@ -205,6 +206,7 @@ class TestShieldModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [
                     {"entity_name": "user@example.com", "type": "user", "dismissed": False}
                 ]
@@ -216,7 +218,7 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetSecurityCheckAffectedV3")
         self.assertEqual(call_args[1]["parameters"]["id"], "check-1")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     def test_get_shield_check_affected_entities_empty(self):
         self.mock_client.command.return_value = {
@@ -235,6 +237,7 @@ class TestShieldModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [{"total_security_checks_count": 50, "total_score_percentage": 72}]
             },
         }
@@ -244,7 +247,7 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetMetricsV3")
         self.assertEqual(call_args[1]["parameters"]["impact"], "Medium")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     # --- Functional tests: get_shield_check_compliance ---
 
@@ -252,6 +255,7 @@ class TestShieldModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [
                     {"standard": "SOC 2", "control": "CC6.1", "requirement": "Logical access"}
                 ]
@@ -263,7 +267,7 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetSecurityCheckComplianceV3")
         self.assertEqual(call_args[1]["parameters"]["id"], "check-1")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     # --- Functional tests: search_shield_alerts ---
 
@@ -278,7 +282,7 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetAlertsV3")
         self.assertEqual(call_args[1]["parameters"]["type"], "configuration_drift")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     def test_search_shield_alerts_threat_type(self):
         self.mock_client.command.return_value = {
@@ -290,7 +294,7 @@ class TestShieldModule(TestModules):
 
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[1]["parameters"]["type"], "Threat")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     def test_search_shield_alerts_empty(self):
         self.mock_client.command.return_value = {
@@ -316,7 +320,7 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetActivityMonitorV3")
         self.assertEqual(call_args[1]["parameters"]["category"], "Events")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     # --- Functional tests: search_shield_users ---
 
@@ -331,7 +335,7 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetUserInventoryV3")
         self.assertEqual(call_args[1]["parameters"]["privileged_only"], True)
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     # --- Functional tests: search_shield_devices ---
 
@@ -339,6 +343,7 @@ class TestShieldModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [
                     {"device_name": "laptop-01", "os": "macOS", "globally_compliant": True}
                 ]
@@ -349,7 +354,7 @@ class TestShieldModule(TestModules):
 
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetDeviceInventoryV3")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     # --- Functional tests: search_shield_apps ---
 
@@ -357,6 +362,7 @@ class TestShieldModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [{"app_name": "Slack", "app_type": "oauth", "access_level": "high"}]
             },
         }
@@ -366,12 +372,13 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetAppInventory")
         self.assertEqual(call_args[1]["parameters"]["type"], "oauth")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     def test_search_shield_apps_with_offset(self):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [{"app_name": "Slack", "app_type": "oauth", "access_level": "high"}]
             },
         }
@@ -381,7 +388,7 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetAppInventory")
         self.assertEqual(call_args[1]["parameters"]["offset"], 10)
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     # --- Functional tests: get_shield_app_users ---
 
@@ -389,6 +396,7 @@ class TestShieldModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [{"username": "user@example.com", "permission_grant_id": "grant-1"}]
             },
         }
@@ -398,7 +406,7 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetAppInventoryUsers")
         self.assertEqual(call_args[1]["parameters"]["item_id"], "integration-1|||app-1")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     # --- Functional tests: search_shield_data_shares ---
 
@@ -413,7 +421,7 @@ class TestShieldModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetAssetInventoryV3")
         self.assertEqual(call_args[1]["parameters"]["resource_type"], "XLSX")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     # --- Functional tests: get_shield_integrations ---
 
@@ -421,6 +429,7 @@ class TestShieldModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [
                     {"id": "int-1", "alias": "Production Google", "saas_name": "Google Workspace"}
                 ]
@@ -431,7 +440,7 @@ class TestShieldModule(TestModules):
 
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetIntegrationsV3")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     # --- Functional tests: get_shield_system_users ---
 
@@ -439,6 +448,7 @@ class TestShieldModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [{"email": "admin@cs.com", "role": "admin", "mfa_enabled": True}]
             },
         }
@@ -447,7 +457,7 @@ class TestShieldModule(TestModules):
 
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetSystemUsersV3")
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     # --- Functional tests: get_shield_supported_saas ---
 
@@ -455,6 +465,7 @@ class TestShieldModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [{"id": "google", "name": "Google Workspace"}]
             },
         }
@@ -463,8 +474,8 @@ class TestShieldModule(TestModules):
 
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "GetSupportedSaasV3")
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["id"], "google")
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["results"][0]["id"], "google")
 
     def test_get_shield_supported_saas_empty(self):
         self.mock_client.command.return_value = {
@@ -483,6 +494,7 @@ class TestShieldModule(TestModules):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
                 "resources": [
                     {"timestamp": "2026-04-29T10:00:00Z", "event_type": "integration_created"}
                 ]
@@ -498,7 +510,7 @@ class TestShieldModule(TestModules):
         self.assertEqual(call_args[1]["parameters"]["from_date"], "2026-04-01")
         self.assertEqual(call_args[1]["parameters"]["to_date"], "2026-04-30")
         self.assertEqual(call_args[1]["parameters"]["limit"], 50)
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
     def test_get_shield_system_logs_empty(self):
         self.mock_client.command.return_value = {
@@ -635,7 +647,7 @@ class TestShieldModule(TestModules):
         self.assertEqual(
             call_args[1]["parameters"]["check_type"], "Falcon Shield Security Check"
         )
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result["results"]), 1)
 
 
 if __name__ == "__main__":

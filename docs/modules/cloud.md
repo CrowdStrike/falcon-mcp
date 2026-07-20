@@ -111,6 +111,7 @@ violations on specific resources, use falcon_search_iom_findings instead. Consul
 falcon://cloud/cloud-risks/fql-guide before constructing filter expressions.
 Returns full risk details including severity, lifecycle status, asset context, and
 threat intelligence attribution.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -130,6 +131,7 @@ Use this to find cloud resources (EC2, VPCs, S3, etc.) by provider, region,
 resource type, or tags. Consult falcon://cloud/cspm-assets/fql-guide before
 constructing filter expressions. Returns slimmed asset details with security
 posture context (IOM/IOA counts, exposure, severity).
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
 
 **Example prompts:**
 
@@ -144,6 +146,7 @@ Search for CSPM IOM suppression rules.
 Use this to review existing suppressions before creating new ones. Returns
 suppression rule objects including scope, reason, and expiration details.
 Returns an empty list if no rules exist.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -160,6 +163,7 @@ Use this to find CVEs affecting container images by severity, CVSS score, or
 CVE ID. Consult falcon://cloud/images-vulnerabilities/fql-guide before constructing
 filter expressions. Returns vulnerability details including CVE IDs, scores, and
 impacted image counts.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
@@ -178,6 +182,7 @@ IOMs and IOAs across assets, use falcon_search_cloud_risks instead. For runtime
 behavioral threats, use falcon_search_detections. Consult
 falcon://cloud/cspm-iom-findings/fql-guide before constructing filter expressions.
 Returns IOM entities with cloud context, evaluation details, and resource information.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

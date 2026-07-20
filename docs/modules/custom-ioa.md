@@ -115,6 +115,7 @@ Search Custom IOA rule groups and return full details including their rules.
 Use this to find rule groups by platform, name, or enabled state. Consult
 falcon://custom-ioa/rule-groups/fql-guide before constructing filter expressions.
 Returns rule group objects with their contained behavioral detection rules.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 

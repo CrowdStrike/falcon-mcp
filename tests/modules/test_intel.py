@@ -70,9 +70,9 @@ class TestIntelModule(TestModules):
         )
 
         # Verify result contains expected values
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "actor1")
-        self.assertEqual(result[1]["id"], "actor2")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "actor1")
+        self.assertEqual(result["results"][1]["id"], "actor2")
 
     def test_search_actors_empty_response(self):
         """Test searching actors with empty response."""
@@ -88,8 +88,9 @@ class TestIntelModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "QueryIntelActorEntities")
 
-        # Verify result is an empty list
-        self.assertEqual(result, [])
+        # Verify result is an empty envelope
+        self.assertIn("results", result)
+        self.assertEqual(result["results"], [])
 
     def test_search_actors_error(self):
         """Test searching actors with API error."""
@@ -158,9 +159,9 @@ class TestIntelModule(TestModules):
         )
 
         # Verify result contains expected values
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "indicator1")
-        self.assertEqual(result[1]["id"], "indicator2")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "indicator1")
+        self.assertEqual(result["results"][1]["id"], "indicator2")
 
     def test_query_indicator_entities_empty_response(self):
         """Test querying indicator entities with empty response."""
@@ -176,8 +177,9 @@ class TestIntelModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "QueryIntelIndicatorEntities")
 
-        # Verify result is an empty list
-        self.assertEqual(result, [])
+        # Verify result is an empty envelope
+        self.assertIn("results", result)
+        self.assertEqual(result["results"], [])
 
     def test_query_indicator_entities_error(self):
         """Test querying indicator entities with API error."""
@@ -242,9 +244,9 @@ class TestIntelModule(TestModules):
         )
 
         # Verify result contains expected values
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "report1")
-        self.assertEqual(result[1]["id"], "report2")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "report1")
+        self.assertEqual(result["results"][1]["id"], "report2")
 
     def test_query_report_entities_empty_response(self):
         """Test querying report entities with empty response."""
@@ -260,8 +262,9 @@ class TestIntelModule(TestModules):
         call_args = self.mock_client.command.call_args
         self.assertEqual(call_args[0][0], "QueryIntelReportEntities")
 
-        # Verify result is an empty list
-        self.assertEqual(result, [])
+        # Verify result is an empty envelope
+        self.assertIn("results", result)
+        self.assertEqual(result["results"], [])
 
     def test_query_report_entities_error(self):
         """Test querying report entities with API error."""

@@ -83,3 +83,18 @@ class TestModules(unittest.TestCase):
                 self.assertEqual(call.kwargs.get("annotations"), expected_annotations)
                 return
         self.fail(f"Tool {tool_name} not found in registered tools")
+
+    def assert_pagination(self, result, total, has_next=False):
+        """Verify the `pagination` key of a search-tool response envelope.
+
+        Args:
+            result: The dict returned by a search tool (must contain "pagination")
+            total: Expected value of pagination["total"]
+            has_next: Whether pagination["next"] is expected to be non-None
+        """
+        self.assertIn("pagination", result)
+        self.assertEqual(result["pagination"]["total"], total)
+        if has_next:
+            self.assertIsNotNone(result["pagination"].get("next"))
+        else:
+            self.assertIsNone(result["pagination"].get("next"))

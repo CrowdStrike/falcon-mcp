@@ -64,7 +64,10 @@ class TestQuarantineModule(TestModules):
         """Test search flow returns full quarantine metadata."""
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["qf-1", "qf-2"]},
+            "body": {
+                "resources": ["qf-1", "qf-2"],
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2}},
+            },
         }
         get_response = {
             "status_code": 200,
@@ -101,8 +104,9 @@ class TestQuarantineModule(TestModules):
 
         self.assertEqual(second_call[0][0], "GetQuarantineFiles")
         self.assertEqual(second_call[1]["body"], {"ids": ["qf-1", "qf-2"]})
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[1]["status"], "quarantined")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][1]["status"], "quarantined")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_quarantined_files_reorders_to_match_sorted_ids(self):
         """When GetQuarantineFiles returns files out of order, the result is
@@ -129,9 +133,9 @@ class TestQuarantineModule(TestModules):
             sort="date_updated|desc",
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "qf-b")
-        self.assertEqual(result[1]["id"], "qf-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "qf-b")
+        self.assertEqual(result["results"][1]["id"], "qf-a")
 
     def test_search_quarantined_files_error_returns_fql_guide(self):
         """Test quarantine search returns FQL guide on filter error."""
@@ -159,7 +163,7 @@ class TestQuarantineModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertEqual(result["filter_used"], "status:'nonexistent'")
         self.assertNotIn("fql_guide", result)
 

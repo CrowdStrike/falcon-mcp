@@ -116,15 +116,16 @@ class SpotlightModule(BaseModule):
             """).strip(),
             examples=["cve", ["cve", "host_info"], ["cve", "host_info", "remediation", "evaluation_logic"]],
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for vulnerabilities in your CrowdStrike environment.
 
         Use this to find vulnerabilities by CVE severity, status, host, or remediation
         state. Consult falcon://spotlight/vulnerabilities/fql-guide before constructing
         filter expressions. Returns vulnerability details including CVE info, host context,
         and remediation guidance (based on facet selection).
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
         """
-        vulnerabilities = self._base_search_api_call(
+        vulnerabilities, pagination = self._base_search_with_meta(
             operation="combinedQueryVulnerabilities",
             search_params={
                 "filter": filter,
@@ -137,9 +138,7 @@ class SpotlightModule(BaseModule):
             error_message="Failed to search vulnerabilities",
         )
 
-        # If handle_api_response returns an error dict instead of a list,
-        # it means there was an error, so we return it wrapped in a list
         if self._is_error(vulnerabilities):
             return [vulnerabilities]
 
-        return vulnerabilities
+        return self._build_pagination_envelope(vulnerabilities or [], pagination, filter)

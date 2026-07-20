@@ -115,14 +115,15 @@ class ScheduledReportsModule(BaseModule):
             default=None,
             description="Free-text search for terms in id, name, description, type, status fields",
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for scheduled reports and searches in your CrowdStrike environment.
 
         Use this to find reports by status, type, creator, or creation date. Consult
         falcon://scheduled-reports/search/fql-guide before constructing filter expressions.
         Returns full report/search entity details including schedule configuration.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        report_ids = self._base_search_api_call(
+        report_ids, pagination = self._base_search_with_meta(
             operation="scheduled_reports_query",
             search_params={
                 "filter": filter,
@@ -132,27 +133,26 @@ class ScheduledReportsModule(BaseModule):
                 "q": q,
             },
             error_message="Failed to search for scheduled reports",
-            default_result=[],
         )
 
         if self._is_error(report_ids):
             return [report_ids]
 
-        # If we have report IDs, get the full details for each one
-        if report_ids:
-            details = self._base_get_by_ids(
-                operation="scheduled_reports_get",
-                ids=report_ids,
-                use_params=True,
-            )
+        if not report_ids:
+            return self._build_pagination_envelope([], pagination, filter)
 
-            if self._is_error(details):
-                return [details]
+        details = self._base_get_by_ids(
+            operation="scheduled_reports_get",
+            ids=report_ids,
+            use_params=True,
+        )
 
-            # Restore the query-step sort order if the get endpoint reorders results.
-            return self._reorder_by_ids(report_ids, details, id_field="id")
+        if self._is_error(details):
+            return [details]
 
-        return []
+        # Restore the query-step sort order if the get endpoint reorders results.
+        details = self._reorder_by_ids(report_ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def launch_scheduled_report(
         self,
@@ -207,14 +207,15 @@ class ScheduledReportsModule(BaseModule):
             default=None,
             description="Property to sort by. Ex: created_on.asc, last_updated_on.desc",
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for report/search execution history.
 
         Use this to find executions by status, report ID, or completion date. Consult
         falcon://scheduled-reports/executions/search/fql-guide before constructing filter
         expressions. Returns full execution details including status and timestamps.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        execution_ids = self._base_search_api_call(
+        execution_ids, pagination = self._base_search_with_meta(
             operation="report_executions_query",
             search_params={
                 "filter": filter,
@@ -223,27 +224,26 @@ class ScheduledReportsModule(BaseModule):
                 "sort": sort,
             },
             error_message="Failed to search for report executions",
-            default_result=[],
         )
 
         if self._is_error(execution_ids):
             return [execution_ids]
 
-        # If we have execution IDs, get the full details for each one
-        if execution_ids:
-            details = self._base_get_by_ids(
-                operation="report_executions_get",
-                ids=execution_ids,
-                use_params=True,
-            )
+        if not execution_ids:
+            return self._build_pagination_envelope([], pagination, filter)
 
-            if self._is_error(details):
-                return [details]
+        details = self._base_get_by_ids(
+            operation="report_executions_get",
+            ids=execution_ids,
+            use_params=True,
+        )
 
-            # Restore the query-step sort order if the get endpoint reorders results.
-            return self._reorder_by_ids(execution_ids, details, id_field="id")
+        if self._is_error(details):
+            return [details]
 
-        return []
+        # Restore the query-step sort order if the get endpoint reorders results.
+        details = self._reorder_by_ids(execution_ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def download_report_execution(
         self,

@@ -96,15 +96,16 @@ class HostsModule(BaseModule):
             """).strip(),
             examples={"hostname.asc", "last_seen.desc"},
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for hosts in your CrowdStrike environment.
 
         Use this to find devices by hostname, platform, IP, sensor version, or other
         attributes. Consult falcon://hosts/search/fql-guide before constructing filter
         expressions. Returns full host details including device info, OS, and network
         context.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
-        device_ids = self._base_search_api_call(
+        device_ids, pagination = self._base_search_with_meta(
             operation="QueryDevicesByFilter",
             search_params={
                 "filter": filter,
@@ -115,29 +116,25 @@ class HostsModule(BaseModule):
             error_message="Failed to search hosts",
         )
 
-        # If handle_api_response returns an error dict instead of a list,
-        # it means there was an error, so we return it wrapped in a list
         if self._is_error(device_ids):
             return [device_ids]
 
-        # If we have device IDs, get the details for each one
-        if device_ids:
-            details = self._base_get_by_ids(
-                operation="PostDeviceDetailsV2",
-                ids=device_ids,
-                id_key="ids",
-            )
+        if not device_ids:
+            return self._build_pagination_envelope([], pagination, filter)
 
-            # If handle_api_response returns an error dict instead of a list,
-            # it means there was an error, so we return it wrapped in a list
-            if self._is_error(details):
-                return [details]
+        details = self._base_get_by_ids(
+            operation="PostDeviceDetailsV2",
+            ids=device_ids,
+            id_key="ids",
+        )
 
-            # Restore the query-step sort order in case the details endpoint
-            # returns entities in a different order (validated field: device_id).
-            return self._reorder_by_ids(device_ids, details, id_field="device_id")
+        if self._is_error(details):
+            return [details]
 
-        return []
+        # Restore the query-step sort order in case the details endpoint
+        # returns entities in a different order (validated field: device_id).
+        details = self._reorder_by_ids(device_ids, details, id_field="device_id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def get_host_details(
         self,

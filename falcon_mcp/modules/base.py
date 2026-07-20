@@ -331,23 +331,89 @@ class BaseModule(ABC):
             default_result=[],
         )
 
+    def _base_search_with_meta(
+        self,
+        operation: str,
+        search_params: dict[str, Any],
+        error_message: str = "Search operation failed",
+    ) -> tuple[list[dict[str, Any]] | dict[str, Any], dict[str, Any] | None]:
+        """Like _base_search_api_call but also returns the response's pagination metadata.
+
+        Hydration (fetching full entity details by ID) discards `body.meta.pagination`
+        from the query-step response, so callers that need `total`/`after` must capture
+        it here, before calling `_base_get_by_ids`.
+
+        Args:
+            operation: The API operation name (e.g., "QueryDevicesByFilter")
+            search_params: Dictionary of search parameters (filter, limit, offset, sort, etc.)
+            error_message: Custom error message for failed operations
+
+        Returns:
+            Tuple of (resources or error dict, pagination dict or None)
+        """
+        prepared_params = prepare_api_parameters(search_params)
+
+        logger.debug("Executing %s with params: %s", operation, prepared_params)
+
+        response = self.client.command(operation, parameters=prepared_params)
+
+        result = handle_api_response(
+            response,
+            operation=operation,
+            error_message=error_message,
+            default_result=[],
+        )
+
+        if self._is_error(result):
+            return result, None
+
+        pagination = self._extract_pagination(response)
+        return result, pagination
+
+    @staticmethod
+    def _extract_pagination(response: dict[str, Any]) -> dict[str, Any] | None:
+        """Pull `body.meta.pagination` out of a raw API response, if present."""
+        return ((response.get("body") or {}).get("meta") or {}).get("pagination")
+
+    def _build_pagination_envelope(
+        self,
+        results: list[dict[str, Any]],
+        pagination: dict[str, Any] | None,
+        filter_used: str | None = None,
+    ) -> dict[str, Any]:
+        """Assemble the standard search-tool response envelope.
+
+        Args:
+            results: The full entity details to return to the caller
+            pagination: The raw `body.meta.pagination` dict from the API response, if any
+            filter_used: The FQL filter string that was used, if applicable
+
+        Returns:
+            Dict with `results`, `pagination` (total/offset/limit/next), and
+            optionally `filter_used`
+        """
+        pag: dict[str, Any] = {}
+        if pagination:
+            # `total` may be absent (some endpoints omit it) — report None rather
+            # than inventing a count, so a caller can tell "unknown" from a real total.
+            pag["total"] = pagination.get("total")
+            if "offset" in pagination:
+                pag["offset"] = pagination["offset"]
+            if "limit" in pagination:
+                pag["limit"] = pagination["limit"]
+            pag["next"] = pagination.get("after") or None
+        else:
+            # No pagination metadata: the API gave us no count, so report None rather
+            # than synthesizing one. A non-null `total` always means the API returned it.
+            pag = {"total": None, "next": None}
+
+        envelope: dict[str, Any] = {"results": results, "pagination": pag}
+        if filter_used is not None:
+            envelope["filter_used"] = filter_used
+        return envelope
+
     def _is_error(self, response: Any) -> bool:
         return isinstance(response, dict) and "error" in response
-
-    def _format_empty_response(
-        self,
-        filter_used: str | None,
-    ) -> dict[str, Any]:
-        """Format response for a successful search that returned zero results.
-
-        Use when the API returned HTTP 200 but zero matching resources.
-        Does NOT include FQL documentation — the filter was accepted by the API.
-        """
-        return {
-            "results": [],
-            "total": 0,
-            "filter_used": filter_used,
-        }
 
     def _format_fql_error_response(
         self,
@@ -359,7 +425,8 @@ class BaseModule(ABC):
 
         Use ONLY when the API returned an error (400+) that suggests the FQL
         filter syntax is incorrect. Do NOT use for empty results (200 with 0
-        resources) — use _format_empty_response for that case.
+        resources) — empty results use the standard pagination envelope, not
+        this FQL-error shape.
 
         Args:
             errors: List containing the error dict from the API

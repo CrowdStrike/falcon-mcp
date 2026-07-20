@@ -40,7 +40,8 @@ Get events from the Falcon Shield (SaaS Security) activity monitor; data is reta
 Use this to investigate user activity, threats, or IoC events across connected SaaS platforms;
 when filtering by integration_id, category, or actor, the date range must be within 24 hours.
 Returns activity event objects including timestamp, event name, actor identity, integration,
-category, and location details.
+category, and location details. This endpoint does not report a total count, so `pagination.total`
+is always null — page through results with `pagination.next`/`skip` rather than asking "how many".
 
 **Example prompts:**
 

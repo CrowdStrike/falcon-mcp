@@ -86,7 +86,10 @@ class TestCasesModule(TestModules):
         """Test two-step search: query for IDs then fetch full details."""
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["case-id-1", "case-id-2"]},
+            "body": {
+                "resources": ["case-id-1", "case-id-2"],
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2}},
+            },
         }
         details_response = {
             "status_code": 200,
@@ -111,10 +114,11 @@ class TestCasesModule(TestModules):
         second_call = self.mock_client.command.call_args_list[1]
         self.assertEqual(second_call[0][0], "entities_cases_post_v2")
 
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "case-id-1")
-        self.assertEqual(result[1]["id"], "case-id-2")
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "case-id-1")
+        self.assertEqual(result["results"][1]["id"], "case-id-2")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_cases_reorders_to_match_sorted_ids(self):
         """When entities_cases_post_v2 returns cases out of order, the result is
@@ -140,9 +144,9 @@ class TestCasesModule(TestModules):
 
         result = self.module.search_cases(sort="created_timestamp.desc")
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "case-b")
-        self.assertEqual(result[1]["id"], "case-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "case-b")
+        self.assertEqual(result["results"][1]["id"], "case-a")
 
     def test_search_cases_empty_results(self):
         """Test that empty query results return clean empty response."""
@@ -155,7 +159,7 @@ class TestCasesModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertEqual(result["filter_used"], "status:'nonexistent'")
         self.assertNotIn("fql_guide", result)
 

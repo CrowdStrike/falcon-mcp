@@ -50,7 +50,10 @@ class TestDataProtectionModule(TestModules):
         """Test searching classifications with successful two-step response."""
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["cls-id-1", "cls-id-2"]},
+            "body": {
+                "resources": ["cls-id-1", "cls-id-2"],
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2}},
+            },
         }
         get_response = {
             "status_code": 200,
@@ -76,9 +79,10 @@ class TestDataProtectionModule(TestModules):
         )
 
         self.assertEqual(self.mock_client.command.call_count, 2)
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["name"], "Credit Card Detection")
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["name"], "Credit Card Detection")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_classifications_reorders_to_match_sorted_ids(self):
         """When the get step returns classifications out of order, the result is
@@ -102,9 +106,9 @@ class TestDataProtectionModule(TestModules):
             filter=None, limit=100, offset=0, sort="created_at.desc"
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "cls-id-b")
-        self.assertEqual(result[1]["id"], "cls-id-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "cls-id-b")
+        self.assertEqual(result["results"][1]["id"], "cls-id-a")
 
     def test_search_classifications_empty_results(self):
         """Test that empty search returns clean empty response."""
@@ -120,7 +124,7 @@ class TestDataProtectionModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertEqual(result["filter_used"], "name:~'nonexistent'")
         self.assertNotIn("fql_guide", result)
 
@@ -149,7 +153,10 @@ class TestDataProtectionModule(TestModules):
         """Test searching policies with platform_name and two-step response."""
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["pol-id-1"]},
+            "body": {
+                "resources": ["pol-id-1"],
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
+            },
         }
         get_response = {
             "status_code": 200,
@@ -171,9 +178,10 @@ class TestDataProtectionModule(TestModules):
         )
 
         self.assertEqual(self.mock_client.command.call_count, 2)
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["platform_name"], "win")
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["results"][0]["platform_name"], "win")
+        self.assertEqual(result["pagination"]["total"], 1)
 
     def test_search_policies_reorders_to_match_sorted_ids(self):
         """When the get step returns policies out of order, the result is
@@ -197,9 +205,9 @@ class TestDataProtectionModule(TestModules):
             platform_name="win", filter=None, limit=100, offset=0, sort="created_at.desc"
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "pol-id-b")
-        self.assertEqual(result[1]["id"], "pol-id-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "pol-id-b")
+        self.assertEqual(result["results"][1]["id"], "pol-id-a")
 
     def test_search_policies_passes_platform_name(self):
         """Test that platform_name is sent to the query API."""
@@ -231,7 +239,7 @@ class TestDataProtectionModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertNotIn("fql_guide", result)
 
     def test_search_policies_error_response(self):
@@ -259,7 +267,10 @@ class TestDataProtectionModule(TestModules):
         """Test searching content patterns with successful two-step response."""
         query_response = {
             "status_code": 200,
-            "body": {"resources": ["cp-id-1", "cp-id-2"]},
+            "body": {
+                "resources": ["cp-id-1", "cp-id-2"],
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2}},
+            },
         }
         get_response = {
             "status_code": 200,
@@ -287,9 +298,10 @@ class TestDataProtectionModule(TestModules):
         )
 
         self.assertEqual(self.mock_client.command.call_count, 2)
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["type"], "predefined")
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["type"], "predefined")
+        self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_content_patterns_reorders_to_match_sorted_ids(self):
         """When the get step returns content patterns out of order, the result is
@@ -313,9 +325,9 @@ class TestDataProtectionModule(TestModules):
             filter=None, limit=100, offset=0, sort="created_at.desc"
         )
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "cp-id-b")
-        self.assertEqual(result[1]["id"], "cp-id-a")
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["id"], "cp-id-b")
+        self.assertEqual(result["results"][1]["id"], "cp-id-a")
 
     def test_search_content_patterns_empty_results(self):
         """Test that empty content pattern search returns clean empty response."""
@@ -331,7 +343,7 @@ class TestDataProtectionModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertNotIn("fql_guide", result)
 
     def test_search_content_patterns_error_response(self):

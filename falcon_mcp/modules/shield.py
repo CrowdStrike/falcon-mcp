@@ -34,16 +34,16 @@ class ShieldModule(BaseModule):
     def _format_empty_or_error(
         self,
         results: list[Any],
+        pagination: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if results and "error" in results[0]:
             hint = "Query error occurred. Review your parameters using the query guide."
         else:
             hint = "No results matched your query. Review available parameters in the query guide."
-        return {
-            "results": results,
-            "query_guide": SHIELD_QUERY_DOCUMENTATION,
-            "hint": hint,
-        }
+        envelope = self._build_pagination_envelope(results, pagination)
+        envelope["query_guide"] = SHIELD_QUERY_DOCUMENTATION
+        envelope["hint"] = hint
+        return envelope
 
     def _search_with_docs(
         self,
@@ -51,16 +51,16 @@ class ShieldModule(BaseModule):
         search_params: dict[str, Any],
         error_message: str,
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        result = self._base_search_api_call(
+        result, pagination = self._base_search_with_meta(
             operation=operation,
             search_params=search_params,
             error_message=error_message,
         )
         if self._is_error(result):
-            return self._format_empty_or_error([result])
+            return self._format_empty_or_error([result], pagination)
         if not result:
-            return self._format_empty_or_error([])
-        return result
+            return self._format_empty_or_error([], pagination)
+        return self._build_pagination_envelope(result, pagination)
 
     def register_tools(self, server: FastMCP) -> None:
         self._add_tool(
@@ -217,7 +217,8 @@ class ShieldModule(BaseModule):
 
         Use this to find specific failing checks by status, impact, integration, or type; consult
         falcon://shield/search/query-guide for valid filter values. Returns check records containing
-        id, name, status, impact level, affected entity count, and remediation plan."""
+        id, name, status, impact level, affected entity count, and remediation plan.
+        """
         return self._search_with_docs(
             operation="GetSecurityChecksV3",
             search_params={
@@ -255,7 +256,8 @@ class ShieldModule(BaseModule):
         """Retrieve the specific entities (users, apps, or devices) that are violating a given Falcon Shield posture check.
 
         Use this after `search_shield_checks` to drill into which entities are failing a specific check. Returns entity
-        objects with entity name, type, and relevant security details."""
+        objects with entity name, type, and relevant security details.
+        """
         return self._search_with_docs(
             operation="GetSecurityCheckAffectedV3",
             search_params={"id": id, "limit": limit, "offset": offset},
@@ -307,7 +309,8 @@ class ShieldModule(BaseModule):
 
         Use this for a high-level overview of your SaaS security posture; for individual check records
         with remediation details, use `search_shield_checks` instead. Returns total check counts, overall
-        score percentage, and a breakdown of checks by status across connected SaaS applications."""
+        score percentage, and a breakdown of checks by status across connected SaaS applications.
+        """
         return self._search_with_docs(
             operation="GetMetricsV3",
             search_params={
@@ -332,7 +335,8 @@ class ShieldModule(BaseModule):
 
         Use this after `search_shield_checks` to understand the regulatory impact of a failing check.
         Returns compliance objects identifying the framework (e.g., SOC 2, CIS, NIST, PCI DSS),
-        control ID, and control description that the check satisfies."""
+        control ID, and control description that the check satisfies.
+        """
         return self._search_with_docs(
             operation="GetSecurityCheckComplianceV3",
             search_params={"id": id},
@@ -389,7 +393,8 @@ class ShieldModule(BaseModule):
 
         Use this to find configuration drift, degraded checks, integration failures, or active threats;
         use last_id from the last result for cursor-based pagination or offset for offset-based pagination.
-        Returns alert objects containing id, type, integration details, timestamp, and severity."""
+        Returns alert objects containing id, type, integration details, timestamp, and severity.
+        """
         return self._search_with_docs(
             operation="GetAlertsV3",
             search_params={
@@ -462,7 +467,8 @@ class ShieldModule(BaseModule):
         Use this to investigate user activity, threats, or IoC events across connected SaaS platforms;
         when filtering by integration_id, category, or actor, the date range must be within 24 hours.
         Returns activity event objects including timestamp, event name, actor identity, integration,
-        category, and location details."""
+        category, and location details. This endpoint does not report a total count, so `pagination.total`
+        is always null — page through results with `pagination.next`/`skip` rather than asking "how many"."""
         return self._search_with_docs(
             operation="GetActivityMonitorV3",
             search_params={
@@ -513,7 +519,8 @@ class ShieldModule(BaseModule):
         Use this to audit user access across your SaaS estate or identify over-privileged or stale accounts;
         for Shield platform administrators instead of SaaS app end-users, use `get_shield_system_users`.
         Returns user objects containing email, display name, connected application details, privilege status,
-        and exposure metrics."""
+        and exposure metrics.
+        """
         return self._search_with_docs(
             operation="GetUserInventoryV3",
             search_params={
@@ -564,7 +571,8 @@ class ShieldModule(BaseModule):
 
         Use this to identify unmanaged or unassociated devices in your SaaS estate; note that this returns
         devices from SaaS provider records, not Falcon sensor inventory — use `search_hosts` for that.
-        Returns device objects containing device name, owner email, compliance posture, and management status."""
+        Returns device objects containing device name, owner email, compliance posture, and management status.
+        """
         return self._search_with_docs(
             operation="GetDeviceInventoryV3",
             search_params={
@@ -640,7 +648,8 @@ class ShieldModule(BaseModule):
 
         Use this to audit app access across your SaaS estate; use the item_id from results with
         `get_shield_app_users` to see who authorized a specific app. Returns app objects containing
-        item_id, name, type, status, access_level, granted scopes, and user count."""
+        item_id, name, type, status, access_level, granted scopes, and user count.
+        """
         return self._search_with_docs(
             operation="GetAppInventory",
             search_params={
@@ -670,7 +679,8 @@ class ShieldModule(BaseModule):
         """Retrieve the users who have authorized or are associated with a specific third-party app in Falcon Shield.
 
         Use this after `search_shield_apps` to drill into a specific app's user population.
-        Returns user objects including email, display name, and granted permissions."""
+        Returns user objects including email, display name, and granted permissions.
+        """
         return self._search_with_docs(
             operation="GetAppInventoryUsers",
             search_params={"item_id": item_id},
@@ -756,7 +766,8 @@ class ShieldModule(BaseModule):
 
         Use this to identify overshared or externally exposed files such as Google Drive documents shared
         outside the organization. Returns resource objects containing resource name, type, owner, sharing
-        access level, password protection status, and last access/modification timestamps."""
+        access level, password protection status, and last access/modification timestamps.
+        """
         return self._search_with_docs(
             operation="GetAssetInventoryV3",
             search_params={
@@ -787,7 +798,8 @@ class ShieldModule(BaseModule):
 
         Call this first when starting a Shield investigation to discover available integration IDs,
         which are required as input to most other Shield tools. Returns integration objects containing
-        integration_id, SaaS platform name, connection health, and last sync time."""
+        integration_id, SaaS platform name, connection health, and last sync time.
+        """
         return self._search_with_docs(
             operation="GetIntegrationsV3",
             search_params={"saas_id": saas_id},
@@ -799,7 +811,8 @@ class ShieldModule(BaseModule):
 
         Use this to audit console-level admin accounts; for end-users of connected SaaS applications,
         use `search_shield_users` instead. Returns system-level user objects including email, role,
-        and MFA status."""
+        and MFA status.
+        """
         return self._search_with_docs(
             operation="GetSystemUsersV3",
             search_params={},
@@ -810,7 +823,8 @@ class ShieldModule(BaseModule):
         """List SaaS platforms supported by Falcon Shield for integration.
 
         Use this to discover which SaaS applications can be connected before setting up new integrations.
-        Returns supported SaaS platform objects including platform name and ID."""
+        Returns supported SaaS platform objects including platform name and ID.
+        """
         return self._search_with_docs(
             operation="GetSupportedSaasV3",
             search_params={},
@@ -847,7 +861,8 @@ class ShieldModule(BaseModule):
         """Retrieve Falcon Shield (SaaS Security) system audit logs; data is retained for 90 days.
 
         Use date range filters to narrow results, covering events such as integration creates, check
-        dismissals, and data syncs. Returns log objects containing timestamp, event type, actor, and details."""
+        dismissals, and data syncs. Returns log objects containing timestamp, event type, actor, and details.
+        """
         return self._search_with_docs(
             operation="GetSystemLogsV3",
             search_params={

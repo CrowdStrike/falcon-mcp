@@ -118,10 +118,10 @@ class TestCorrelationRulesModule(TestModules):
         self.assertEqual(call_args[1]["parameters"]["offset"], 0)
         self.assertEqual(call_args[1]["parameters"]["sort"], "last_updated_on.desc")
 
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["rule_id"], "r1")
-        self.assertEqual(result[1]["rule_id"], "r2")
+        self.assertIn("results", result)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["rule_id"], "r1")
+        self.assertEqual(result["results"][1]["rule_id"], "r2")
 
     def test_search_with_filter(self):
         """Test that filter param is passed through to the API call."""
@@ -148,7 +148,7 @@ class TestCorrelationRulesModule(TestModules):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total"], 0)
+        self.assertIsNone(result["pagination"]["total"])
         self.assertEqual(result["filter_used"], "name:'nonexistent'")
         self.assertNotIn("fql_guide", result)
 

@@ -61,7 +61,10 @@ class ReconModule(BaseModule):
             TextResource(
                 uri=AnyUrl("falcon://recon/notifications/search/fql-guide"),
                 name="falcon_search_recon_notifications_fql_guide",
-                description="Contains the guide for the `filter` param of the `falcon_search_recon_notifications` tool.",
+                description=(
+                    "Contains the guide for the `filter` param of the "
+                    "`falcon_search_recon_notifications` tool."
+                ),
                 text=SEARCH_RECON_NOTIFICATIONS_FQL_DOCUMENTATION,
             ),
         )
@@ -71,7 +74,10 @@ class ReconModule(BaseModule):
             TextResource(
                 uri=AnyUrl("falcon://recon/rules/search/fql-guide"),
                 name="falcon_search_recon_rules_fql_guide",
-                description="Contains the guide for the `filter` param of the `falcon_search_recon_rules` tool.",
+                description=(
+                    "Contains the guide for the `filter` param of the "
+                    "`falcon_search_recon_rules` tool."
+                ),
                 text=SEARCH_RECON_RULES_FQL_DOCUMENTATION,
             ),
         )
@@ -81,7 +87,10 @@ class ReconModule(BaseModule):
             TextResource(
                 uri=AnyUrl("falcon://recon/exposed-data-records/search/fql-guide"),
                 name="falcon_search_recon_exposed_data_records_fql_guide",
-                description="Contains the guide for the `filter` param of the `falcon_search_recon_exposed_data_records` tool.",
+                description=(
+                    "Contains the guide for the `filter` param of the "
+                    "`falcon_search_recon_exposed_data_records` tool."
+                ),
                 text=SEARCH_RECON_EXPOSED_DATA_RECORDS_FQL_DOCUMENTATION,
             ),
         )
@@ -90,7 +99,10 @@ class ReconModule(BaseModule):
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression. See `falcon://recon/notifications/search/fql-guide` for syntax.",
+            description=(
+                "FQL filter expression. See "
+                "`falcon://recon/notifications/search/fql-guide` for syntax."
+            ),
             examples=[
                 "status:'new'+rule_priority:'high'",
                 "item_site:'telegram.org'",
@@ -105,7 +117,10 @@ class ReconModule(BaseModule):
             default=10,
             ge=1,
             le=500,
-            description="Maximum number of notifications to return (default: 10; max: 500). offset + limit must not exceed 10,000.",
+            description=(
+                "Maximum number of notifications to return (default: 10; max: 500). "
+                "offset + limit must not exceed 10,000."
+            ),
         ),
         offset: int | None = Field(
             default=None,
@@ -124,7 +139,8 @@ class ReconModule(BaseModule):
             examples=["created_date|desc", "updated_date|asc"],
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search Falcon Intelligence Recon notifications (also called recon alerts) and return their full details.
+        """Search Falcon Intelligence Recon notifications (also called recon alerts)
+        and return their full details.
 
         Use this for dark web matches, leaked credentials, typosquatting matches, and breach
         summaries triggered by your monitoring rules. Consult
@@ -133,13 +149,14 @@ class ReconModule(BaseModule):
         Operations (CAO). For endpoint, XDR, or NG-SIEM alerts, use `falcon_search_detections`
         instead. Returns full notification records with a nested `notification` object
         containing status, rule metadata, breach_summary, and item details.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
         logger.debug(
             "Searching recon notifications with filter=%s, q=%s, limit=%s, offset=%s, sort=%s",
             filter, q, limit, offset, sort,
         )
 
-        notification_ids = self._base_search_api_call(
+        notification_ids, pagination = self._base_search_with_meta(
             operation="QueryNotificationsV1",
             search_params={
                 "filter": filter,
@@ -157,7 +174,7 @@ class ReconModule(BaseModule):
             )
 
         if not notification_ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         details = self._base_get_by_ids(
             operation="GetNotificationsDetailedV1",
@@ -169,13 +186,17 @@ class ReconModule(BaseModule):
             return [details]
 
         # Restore the query-step sort order; GetNotificationsDetailedV1 may reorder.
-        return self._reorder_by_ids(notification_ids, details, id_field="id")
+        details = self._reorder_by_ids(notification_ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def search_recon_rules(
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression. See `falcon://recon/rules/search/fql-guide` for syntax.",
+            description=(
+                "FQL filter expression. See `falcon://recon/rules/search/fql-guide` "
+                "for syntax."
+            ),
             examples=[
                 "status:'active'+priority:'high'",
                 "topic:'SA_TYPOSQUATTING'",
@@ -190,7 +211,10 @@ class ReconModule(BaseModule):
             default=10,
             ge=1,
             le=500,
-            description="Maximum number of rules to return (default: 10; max: 500). offset + limit must not exceed 10,000.",
+            description=(
+                "Maximum number of rules to return (default: 10; max: 500). "
+                "offset + limit must not exceed 10,000."
+            ),
         ),
         offset: int | None = Field(
             default=None,
@@ -219,13 +243,14 @@ class ReconModule(BaseModule):
         constructing filter expressions. These monitoring rules power the external cyber risk
         monitoring capability of CrowdStrike Counter Adversary Operations (CAO). Returns full
         rule definitions including topic, priority, filter expressions, and notification settings.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
         logger.debug(
             "Searching recon rules with filter=%s, q=%s, limit=%s, offset=%s, sort=%s",
             filter, q, limit, offset, sort,
         )
 
-        rule_ids = self._base_search_api_call(
+        rule_ids, pagination = self._base_search_with_meta(
             operation="QueryRulesV1",
             search_params={
                 "filter": filter,
@@ -243,7 +268,7 @@ class ReconModule(BaseModule):
             )
 
         if not rule_ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         details = self._base_get_by_ids(
             operation="GetRulesV1",
@@ -255,13 +280,17 @@ class ReconModule(BaseModule):
             return [details]
 
         # Restore the query-step sort order in case GetRulesV1 reorders results.
-        return self._reorder_by_ids(rule_ids, details, id_field="id")
+        details = self._reorder_by_ids(rule_ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)
 
     def search_recon_exposed_data_records(
         self,
         filter: str | None = Field(
             default=None,
-            description="FQL filter expression. See `falcon://recon/exposed-data-records/search/fql-guide` for syntax.",
+            description=(
+                "FQL filter expression. See "
+                "`falcon://recon/exposed-data-records/search/fql-guide` for syntax."
+            ),
             examples=[
                 "domain:'example.com'+credential_status:'confirmed_active'",
                 "notification_id:'abc123def456'",
@@ -276,7 +305,10 @@ class ReconModule(BaseModule):
             default=10,
             ge=1,
             le=500,
-            description="Maximum number of records to return (default: 10; max: 500). offset + limit must not exceed 10,000.",
+            description=(
+                "Maximum number of records to return (default: 10; max: 500). "
+                "offset + limit must not exceed 10,000."
+            ),
         ),
         offset: int | None = Field(
             default=None,
@@ -303,13 +335,15 @@ class ReconModule(BaseModule):
         expressions. These records are part of the external cyber risk monitoring capability of
         CrowdStrike Counter Adversary Operations (CAO). Returns full records including credential
         fields, location data, and associated notification context.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
         logger.debug(
-            "Searching recon exposed-data records with filter=%s, q=%s, limit=%s, offset=%s, sort=%s",
+            "Searching recon exposed-data records with filter=%s, q=%s, limit=%s, "
+            "offset=%s, sort=%s",
             filter, q, limit, offset, sort,
         )
 
-        record_ids = self._base_search_api_call(
+        record_ids, pagination = self._base_search_with_meta(
             operation="QueryNotificationsExposedDataRecordsV1",
             search_params={
                 "filter": filter,
@@ -327,7 +361,7 @@ class ReconModule(BaseModule):
             )
 
         if not record_ids:
-            return self._format_empty_response(filter)
+            return self._build_pagination_envelope([], pagination, filter)
 
         details = self._base_get_by_ids(
             operation="GetNotificationsExposedDataRecordsV1",
@@ -339,4 +373,5 @@ class ReconModule(BaseModule):
             return [details]
 
         # Restore the query-step sort order; the exposed-data details endpoint may reorder.
-        return self._reorder_by_ids(record_ids, details, id_field="id")
+        details = self._reorder_by_ids(record_ids, details, id_field="id")
+        return self._build_pagination_envelope(details, pagination, filter)

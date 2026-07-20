@@ -261,7 +261,7 @@ class TestExecuteFalconTool(unittest.TestCase):
         self.assertEqual(len(result), 20)
 
     def test_execute_empty_list_returns_normalized_dict(self):
-        """Empty list results are returned as {results:[], total_count:0, hint:...}."""
+        """Empty list results are returned as {results:[], pagination:{total:0,next:None}, hint:...}."""
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": []},
@@ -276,7 +276,8 @@ class TestExecuteFalconTool(unittest.TestCase):
         self.assertIsInstance(result, dict)
         assert isinstance(result, dict)  # narrow type for Pyright
         self.assertEqual(result["results"], [])
-        self.assertEqual(result["total_count"], 0)
+        self.assertEqual(result["pagination"]["total"], 0)
+        self.assertIsNone(result["pagination"]["next"])
         self.assertIn("hint", result)
         self.assertIn("No records returned", result["hint"])
 
