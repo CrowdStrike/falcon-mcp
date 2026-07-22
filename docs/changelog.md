@@ -3,6 +3,13 @@
 
 # Changelog
 
+## [0.15.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.14.0...v0.15.0) (2026-07-20)
+
+
+### Features
+
+* **modules:** add pagination envelope to search tools ([#470](https://github.com/CrowdStrike/falcon-mcp/issues/470)) ([df8b191](https://github.com/CrowdStrike/falcon-mcp/commit/df8b19182a0833ac9d800937fc5661595d87aa5d))
+
 ## [0.14.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.13.0...v0.14.0) (2026-07-16)
 
 
