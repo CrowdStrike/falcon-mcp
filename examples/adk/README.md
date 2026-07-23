@@ -140,7 +140,7 @@ Here are the deployment instructions
 
 ```bash
 # while in exaples/adk directory
-# if using uv use uv run adk
+# if using uv; use uv run adk
 
 adk deploy agent_engine --display_name falcon_adk_agent falcon_agent/
 
@@ -158,7 +158,7 @@ If you updated the agent code for some reason (like for optimizing for cost / pe
 ```bash
 
 # while in exaples/adk directory
-# if using uv use uv run adk
+# if using uv; use uv run adk
 # you should have agent engine Id of the agent getting updated e.g. projects/12345678910/locations/europe-west2/reasoningEngines/12345678910
 
 adk deploy agent_engine --display_name falcon_adk_agent --agent_engine_id <use full resourse name> falcon_agent/
@@ -193,8 +193,8 @@ Here are the steps
 
 #### Securing access
 
-  1. For local runs make sure that you are not using a shared machine
-  1. For agent accessed from Gemini Enterprise the access is granted using step 6 from [Accessing the Agent as a Gemini Enterprise Agent Application](#accessing-the-agent-as-a-gemini-enterprise-agent-application). 
+  1. For local runs, make sure that you are not using a shared machine.
+  1. For agent accessed from Gemini Enterprise - the access is granted using step 6 from [Accessing the Agent as a Gemini Enterprise Agent Application](#accessing-the-agent-as-a-gemini-enterprise-agent-application). 
 
 #### Evaluating
 
@@ -204,7 +204,7 @@ It is advised to evaluate the agent for the trajectory it takes and the output i
 
 Various native performance improvements are included in the codebase:
 
-- **Event Compaction & Context Caching**: The values `EVENT_COMPACTION=Y` and `CONTEXT_CACHING=Y` in `.env` enable ADK [event compaction](https://adk.dev/context/compaction/)  and [context caching](https://adk.dev/context/caching/). They are on by default you can change them in `.env` file and also change finer configuration details in `agent.py` file.
+- **Event Compaction & Context Caching**: The values `EVENT_COMPACTION=Y` and `CONTEXT_CACHING=Y` in `.env` enable ADK [event compaction](https://adk.dev/context/compaction/) and [context caching](https://adk.dev/context/caching/). They are on by default; you can change them in `.env` file and also change finer configuration details in `agent.py` file.
 - **Gemini Model Selection**: Refer to [Gemini Developer API pricing](https://ai.google.dev/gemini-api/docs/pricing) before choosing a Gemini model.
 
 ### FQL Guide Resources
