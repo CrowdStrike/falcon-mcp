@@ -19,6 +19,8 @@ _falcon_agent_prompt = os.environ.get("FALCON_AGENT_PROMPT", "")
 _falcon_client_id = os.environ.get("FALCON_CLIENT_ID", "")
 _falcon_client_secret = os.environ.get("FALCON_CLIENT_SECRET", "")
 _falcon_base_url = os.environ.get("FALCON_BASE_URL", "")
+_event_compaction = os.environ.get("EVENT_COMPACTION", "")
+_context_caching = os.environ.get("CONTEXT_CACHING", "")
 
 root_agent = LlmAgent(
     model=_google_model,
@@ -42,25 +44,32 @@ root_agent = LlmAgent(
 )
 
 # Documentation - https://adk.dev/context/compaction/
-events_compaction_config=EventsCompactionConfig(
-    compaction_interval=5,  # Trigger compaction every 5 new invocations.
-    overlap_size=1          # Include last invocation from the previous window.
+events_compaction_config = (
+    EventsCompactionConfig(
+        compaction_interval=5,  # Trigger compaction every 5 new invocations.
+        overlap_size=1  # Include last invocation from the previous window.
+    )
+    if _event_compaction == "Y"
+    else None
 )
 
 # Documentation - https://adk.dev/context/caching/
-context_cache_config=ContextCacheConfig(
-    min_tokens=4096,    # Minimum tokens to trigger caching
-    ttl_seconds=600,    # Store for up to 10 minutes
-    cache_intervals=5,  # Refresh after 5 uses
+context_cache_config = (
+    ContextCacheConfig(
+        min_tokens=4096,  # Minimum tokens to trigger caching
+        ttl_seconds=600,  # Store for up to 10 minutes
+        cache_intervals=5  # Refresh after 5 uses
+    )
+    if _context_caching == "Y"
+    else None
 )
 
-# Context caching and event compression configuration
+# Context caching and event compression configuration requires an ADK App.
 app = App(
-    name='falcon_agent',
+    name="falcon_agent",
     root_agent=root_agent,
     # Context Caching
-    context_cache_config = context_cache_config,
+    context_cache_config=context_cache_config,
     # context compaction
-    events_compaction_config=events_compaction_config
-
+    events_compaction_config=events_compaction_config,
 )
