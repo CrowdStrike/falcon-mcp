@@ -372,8 +372,28 @@ class BaseModule(ABC):
 
     @staticmethod
     def _extract_pagination(response: dict[str, Any]) -> dict[str, Any] | None:
-        """Pull `body.meta.pagination` out of a raw API response, if present."""
-        return ((response.get("body") or {}).get("meta") or {}).get("pagination")
+        """Pull the pagination cursor and counts out of a raw API response.
+
+        The next-page cursor lives in one of three mutually-exclusive spots
+        depending on the endpoint: nested `meta.pagination.next` (Shield), nested
+        `meta.pagination.after` (IOC/Spotlight), or top-level `meta.next` (CSPM
+        assets/IOM). The nested `meta.pagination` block also carries
+        `total`/`offset`/`limit`. Fold the top-level `meta.next` into the nested
+        dict — at lowest precedence — so the envelope builder sees one source.
+        """
+        meta = (response.get("body") or {}).get("meta") or {}
+        pagination = meta.get("pagination")
+        top_level_next = meta.get("next")
+
+        if pagination is None and not top_level_next:
+            return None
+
+        result = dict(pagination) if pagination else {}
+        # Top-level `meta.next` is the lowest-precedence cursor: only use it when
+        # the nested block has no cursor of its own.
+        if top_level_next and not result.get("next") and not result.get("after"):
+            result["next"] = top_level_next
+        return result
 
     def _build_pagination_envelope(
         self,
@@ -401,7 +421,10 @@ class BaseModule(ABC):
                 pag["offset"] = pagination["offset"]
             if "limit" in pagination:
                 pag["limit"] = pagination["limit"]
-            pag["next"] = pagination.get("after") or None
+            # The next-page cursor may arrive as `next` (Shield, or a folded-in
+            # top-level `meta.next` from CSPM) or as `after` (IOC/Spotlight);
+            # `_extract_pagination` normalizes so `next` takes precedence.
+            pag["next"] = pagination.get("next") or pagination.get("after") or None
         else:
             # No pagination metadata: the API gave us no count, so report None rather
             # than synthesizing one. A non-null `total` always means the API returned it.
