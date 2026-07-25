@@ -56,10 +56,16 @@ class NGSIEMModule(BaseModule):
         self,
         query_string: str = Field(
             description=(
-                "The CQL query string to execute. "
-                "This tool executes pre-written CQL queries - it does NOT help construct queries. "
-                "Users must provide a complete, valid CQL query. "
-                "Example: '#event_simpleName=ProcessRollup2' or 'source=firewall | count()'"
+                "The CQL (CrowdStrike Query Language) query string to execute. "
+                "CQL is a pipe-based language: `filter | command | command`. "
+                "Ex: '#event_simpleName=ProcessRollup2 | head(5)' or "
+                "'#event_simpleName=ProcessRollup2 | groupBy([ComputerName], function=count()) "
+                "| sort(_count, order=desc)'. "
+                "For CQL syntax and functions, consult the LogScale references: "
+                "grammar subset for generating queries "
+                "(https://library.humio.com/lql-grammar/syntax-grammar-guide.html), "
+                "syntax (https://library.humio.com/data-analysis/syntax.html), and "
+                "functions (https://library.humio.com/data-analysis/functions.html)."
             ),
         ),
         start: str = Field(
@@ -90,12 +96,18 @@ class NGSIEMModule(BaseModule):
             examples={"2025-01-01T00:00:00Z"},
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Execute a CQL query against CrowdStrike Next-Gen SIEM.
+        """Execute a CQL (CrowdStrike Query Language) query against CrowdStrike Next-Gen SIEM.
 
-        Use this to search security events, logs, and telemetry; callers must supply
-        a complete, valid CQL query — this tool does not assist with query construction.
-        Returns matching event records, or an error dict if the job fails or times out.
-        Search times out after FALCON_MCP_NGSIEM_TIMEOUT seconds (default: 300).
+        Use this to search security events, logs, and telemetry. CQL is a pipe-based
+        language (`filter | command | command`); build the query from the LogScale
+        references cited in the query_string parameter. Start from a tag or field
+        filter (e.g. `#event_simpleName=ProcessRollup2`, `UserName=*`) and keep the
+        time range tight before adding pipes like `groupBy([...], function=count())`
+        or `sort()`. Returns matching event records, or an error dict if the job fails
+        or times out. Note: the API does not return detailed CQL parser diagnostics on
+        a malformed query, so get the query structure right from the references rather
+        than relying on error feedback. Search times out after FALCON_MCP_NGSIEM_TIMEOUT
+        seconds (default: 300).
         """
         # Step 1: Start the search job
         # Note: FalconPy uber class passes body unchanged; API expects camelCase keys
