@@ -19,18 +19,25 @@ Running search queries against CrowdStrike's Next-Gen SIEM via the asynchronous 
 
 Execute a CQL (CrowdStrike Query Language) query against CrowdStrike Next-Gen SIEM.
 
-Use this to search security events, logs, and telemetry. CQL is a pipe-based
-language (`filter | command | command`); build the query from the LogScale
-references cited in the query_string parameter. Start from a tag or field
-filter (e.g. `#event_simpleName=ProcessRollup2`, `UserName=*`) and keep the
-time range tight before adding pipes like `groupBy([...], function=count())`
-or `sort()`. Returns matching event records, or an error dict if the job fails
-or times out. Note: the API does not return detailed CQL parser diagnostics on
-a malformed query, so get the query structure right from the references rather
-than relying on error feedback. Search times out after FALCON_MCP_NGSIEM_TIMEOUT
-seconds (default: 300).
+Use this to search security events, logs, and telemetry with CQL. CQL is a
+pipe-based language (`filter | command | command`): start from a tag or field
+filter (e.g. `#event_simpleName=ProcessRollup2`, `UserName=*`) and pipe into
+commands like `groupBy([...], function=count())` and `sort()`; keep the time
+range tight. Consult `falcon://ngsiem/search/cql-guide` to construct the query —
+it has the pipe model, core commands, and working examples (distinct count, time
+bucketing, regex match, filtering on an aggregate). Returns matching event
+records, or an error/empty dict carrying the CQL guide when the job fails,
+times out, or returns no rows. Note: the API does not return detailed CQL parser
+diagnostics — a malformed query may error or silently return unexpected/empty
+results rather than a helpful message, so a result is not proof the query parsed
+as intended. Search times out after FALCON_MCP_NGSIEM_TIMEOUT seconds
+(default: 300).
 
 **Example prompts:**
 
 - "Run this CQL query for the last 24 hours: #event_simpleName=ProcessRollup2"
 - "Search NGSIEM for DNS events from January 2025"
+
+## Resources
+
+- **`falcon://ngsiem/search/cql-guide`**: Contains the CQL authoring guide for the `query_string` param of the `falcon_search_ngsiem` tool.

@@ -10,10 +10,11 @@ from unittest.mock import MagicMock, patch
 
 from falcon_mcp import registry
 from falcon_mcp.dynamic import DynamicMode, DynamicToolCatalog
-from falcon_mcp.filter_hints import FILTER_HINTS
+from falcon_mcp.filter_hints import FILTER_HINTS, QUERY_STRING_HINTS
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.modules.detections import DetectionsModule
 from falcon_mcp.modules.hosts import HostsModule
+from falcon_mcp.modules.ngsiem import NGSIEMModule
 
 _T = TypeVar("_T")
 
@@ -145,6 +146,43 @@ class TestDynamicToolCatalog(unittest.TestCase):
         detail_result = next(r for r in results if r["name"] == "falcon_get_detection_details")
         ids_param = detail_result["parameters"]["ids"]
         self.assertNotIn("examples", ids_param)
+
+    def test_format_entry_appends_cql_hint_to_query_string(self):
+        """The NGSIEM CQL hint is injected onto the query_string param, not filter."""
+        modules: dict[str, BaseModule] = {"ngsiem": NGSIEMModule(self.mock_client)}
+        catalog = DynamicToolCatalog(modules)
+        results = catalog.search(query="search_ngsiem")
+        ngsiem_result = next(r for r in results if r["name"] == "falcon_search_ngsiem")
+        params = ngsiem_result["parameters"]
+        # NGSIEM has no FQL filter param — the hint lands on query_string.
+        self.assertNotIn("filter", params)
+        query_desc = params["query_string"]["description"]
+        self.assertIn("pipe-based", query_desc)
+        self.assertIn("falcon://ngsiem/search/cql-guide", query_desc)
+
+    def test_query_string_hints_no_orphan_keys(self):
+        """Every QUERY_STRING_HINTS key maps to a tool with a query_string param."""
+        from falcon_mcp.client import FalconClient
+
+        mock_client = MagicMock(spec=FalconClient)
+        all_modules = {
+            name: cls(mock_client)
+            for name, cls in registry.get_available_modules().items()
+        }
+        catalog = DynamicToolCatalog(all_modules)
+        for hint_key in QUERY_STRING_HINTS:
+            entry = catalog.entries.get(hint_key)
+            self.assertIsNotNone(
+                entry,
+                f"QUERY_STRING_HINTS has orphan key '{hint_key}' — no matching tool found.",
+            )
+            assert entry is not None  # narrow for type checker
+            properties = entry.tool.parameters.get("properties", {})
+            self.assertIn(
+                "query_string",
+                properties,
+                f"QUERY_STRING_HINTS key '{hint_key}' maps to a tool without a query_string param.",
+            )
 
     def test_filter_hints_registry_covers_search_tools(self):
         """Verify that all tools with FQL filter params have hints registered."""

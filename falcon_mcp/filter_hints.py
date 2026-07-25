@@ -269,3 +269,20 @@ FILTER_HINTS: dict[str, str] = {
         "cve.exploit_status, created_timestamp (UTC datetime)."
     ),
 }
+
+
+# Curated inline CQL hints for tools that take a `query_string` (CQL) parameter
+# instead of an FQL `filter`. Injected onto the query_string param description in
+# dynamic mode, mirroring FILTER_HINTS for FQL filters.
+QUERY_STRING_HINTS: dict[str, str] = {
+    # === NGSIEM ===
+    "falcon_search_ngsiem": (
+        "CQL is pipe-based: `filter | command | command` — not SQL or Splunk SPL "
+        "(no SELECT/WHERE/stats/`| limit`). Start from a tag filter "
+        "`#event_simpleName=ProcessRollup2`, then pipe into `groupBy([field], "
+        "function=count())`, `sort(_count, order=desc)`, and `head(n)` to cap raw "
+        "events. For distinct count, time bucketing, regex/contains match, or "
+        "filtering on an aggregate, see `falcon://ngsiem/search/cql-guide`."
+    ),
+}
+

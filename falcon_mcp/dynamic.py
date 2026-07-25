@@ -15,7 +15,7 @@ from pydantic import Field
 
 from falcon_mcp.common.fql import FQL_FILTER_HINT_SUFFIX
 from falcon_mcp.common.logging import get_logger
-from falcon_mcp.filter_hints import FILTER_HINTS
+from falcon_mcp.filter_hints import FILTER_HINTS, QUERY_STRING_HINTS
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS, BaseModule
 
 logger = get_logger(__name__)
@@ -117,6 +117,14 @@ class DynamicToolCatalog:
             desc = params_summary["filter"]["description"]
             separator = " " if desc.endswith(".") else ". "
             params_summary["filter"]["description"] = desc + separator + FQL_FILTER_HINT_SUFFIX
+
+        # CQL tools use a `query_string` param instead of an FQL `filter`; inject the
+        # curated CQL hint there so dynamic mode reaches the model the same way.
+        cql_hint = QUERY_STRING_HINTS.get(entry.tool.name)
+        if cql_hint and "query_string" in params_summary:
+            desc = params_summary["query_string"]["description"]
+            separator = " " if desc.endswith(".") else ". "
+            params_summary["query_string"]["description"] = desc + separator + cql_hint
 
         annotations = entry.tool.annotations
         return {
