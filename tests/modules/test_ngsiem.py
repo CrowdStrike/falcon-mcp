@@ -25,6 +25,13 @@ class TestNGSIEMModule(TestModules):
         ]
         self.assert_tools_registered(expected_tools)
 
+    def test_register_resources(self):
+        """Test registering resources with the server."""
+        expected_resources = [
+            "falcon_search_ngsiem_cql_guide",
+        ]
+        self.assert_resources_registered(expected_resources)
+
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
     def test_search_ngsiem_success(self, mock_sleep):
         """Test search that completes on first poll returns events list."""
@@ -138,6 +145,11 @@ class TestNGSIEMModule(TestModules):
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)
         self.assertIn("Failed to start NGSIEM search", result["error"])
+        # Verify the CQL guide + repair hint reach the model on failure
+        self.assertIn("cql_guide", result)
+        self.assertIn("CQL", result["cql_guide"])
+        self.assertIn("hint", result)
+        self.assertEqual(result["query_used"], "aid=abc123")
 
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
     def test_search_ngsiem_poll_error(self, mock_sleep):
@@ -163,6 +175,10 @@ class TestNGSIEMModule(TestModules):
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)
         self.assertIn("Failed to poll NGSIEM search status", result["error"])
+        # Verify the CQL guide + repair hint reach the model on failure
+        self.assertIn("cql_guide", result)
+        self.assertIn("hint", result)
+        self.assertEqual(result["query_used"], "aid=abc123")
 
     @patch("falcon_mcp.modules.ngsiem.TIMEOUT_SECONDS", 10)
     @patch("falcon_mcp.modules.ngsiem.POLL_INTERVAL_SECONDS", 5)
@@ -210,6 +226,10 @@ class TestNGSIEMModule(TestModules):
         self.assertIn("details", result)
         self.assertEqual(result["details"]["job_id"], "job-timeout")
         self.assertEqual(result["details"]["timeout_seconds"], 10)
+        # Verify the CQL guide + repair hint reach the model on timeout
+        self.assertIn("cql_guide", result)
+        self.assertIn("hint", result)
+        self.assertEqual(result["query_used"], "aid=abc123")
 
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
     def test_search_ngsiem_with_optional_params(self, mock_sleep):
@@ -242,9 +262,12 @@ class TestNGSIEMModule(TestModules):
         params = first_call[1]
         self.assertEqual(params["repository"], "investigate_view")
 
-        # Verify result
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 0)
+        # Verify empty result returns the dict envelope carrying the CQL guide + hint
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["results"], [])
+        self.assertIn("cql_guide", result)
+        self.assertIn("hint", result)
+        self.assertEqual(result["query_used"], "aid=abc123")
 
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
     def test_search_ngsiem_default_repository(self, mock_sleep):
@@ -310,8 +333,9 @@ class TestNGSIEMModule(TestModules):
         first_call = self.mock_client.command.call_args_list[0]
         self.assertEqual(first_call[1]["body"]["queryString"], special_query)
 
-        # Should still return valid result
-        self.assertIsInstance(result, list)
+        # Empty events now return the dict envelope; the query is echoed back verbatim
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["query_used"], special_query)
 
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
     def test_search_ngsiem_missing_job_id(self, mock_sleep):
@@ -336,6 +360,10 @@ class TestNGSIEMModule(TestModules):
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)
         self.assertIn("no job ID", result["error"])
+        # Verify the CQL guide + repair hint reach the model on failure
+        self.assertIn("cql_guide", result)
+        self.assertIn("hint", result)
+        self.assertEqual(result["query_used"], "aid=abc123")
 
 
 class TestNGSIEMModuleConfig(unittest.TestCase):
