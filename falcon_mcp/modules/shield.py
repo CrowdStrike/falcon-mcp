@@ -377,22 +377,15 @@ class ShieldModule(BaseModule):
             ge=1,
             description="Maximum number of results to return (default: 10).",
         ),
-        offset: int | None = Field(
-            default=None,
-            description=(
-                "Zero-based offset for pagination. Omit or set to 0 for the first page."
-                " Increment by limit for subsequent pages."
-            ),
-        ),
         last_id: str | None = Field(
             default=None,
-            description="Cursor-based pagination token from the last result (alternative to offset).",
+            description="Cursor-based pagination token. Pass `pagination.next` from the previous result to fetch the next page.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search Falcon Shield (SaaS Security) alerts for monitored SaaS applications.
 
         Use this to find configuration drift, degraded checks, integration failures, or active threats;
-        use last_id from the last result for cursor-based pagination or offset for offset-based pagination.
+        paginate by passing `pagination.next` from the previous result as the `last_id` parameter.
         Returns alert objects containing id, type, integration details, timestamp, and severity.
         """
         return self._search_with_docs(
@@ -405,7 +398,6 @@ class ShieldModule(BaseModule):
                 "to_date": to_date,
                 "ascending": ascending,
                 "limit": limit,
-                "offset": offset,
                 "last_id": last_id,
             },
             error_message="Failed to search Shield alerts",

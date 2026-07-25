@@ -96,10 +96,6 @@ class FirewallModule(BaseModule):
             le=5000,
             description="Maximum number of rule IDs to return. (Max: 5000)",
         ),
-        offset: int | None = Field(
-            default=None,
-            description="Starting index of overall result set from which to return IDs.",
-        ),
         sort: str | None = Field(
             default=None,
             description=dedent("""
@@ -130,7 +126,6 @@ class FirewallModule(BaseModule):
             search_params={
                 "filter": filter,
                 "limit": limit,
-                "offset": offset,
                 "sort": sort,
                 "q": q,
                 "after": after,
@@ -174,10 +169,6 @@ class FirewallModule(BaseModule):
             le=5000,
             description="Maximum number of rule group IDs to return. (Max: 5000)",
         ),
-        offset: int | None = Field(
-            default=None,
-            description="Starting index of overall result set from which to return IDs.",
-        ),
         sort: str | None = Field(
             default=None,
             description="Sort expression in FQL syntax (e.g., modified_on.desc).",
@@ -203,7 +194,6 @@ class FirewallModule(BaseModule):
             search_params={
                 "filter": filter,
                 "limit": limit,
-                "offset": offset,
                 "sort": sort,
                 "q": q,
                 "after": after,

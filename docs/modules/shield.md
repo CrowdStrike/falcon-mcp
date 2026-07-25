@@ -162,7 +162,7 @@ and MFA status.
 Search Falcon Shield (SaaS Security) alerts for monitored SaaS applications.
 
 Use this to find configuration drift, degraded checks, integration failures, or active threats;
-use last_id from the last result for cursor-based pagination or offset for offset-based pagination.
+paginate by passing `pagination.next` from the previous result as the `last_id` parameter.
 Returns alert objects containing id, type, integration details, timestamp, and severity.
 
 **Example prompts:**

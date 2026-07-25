@@ -364,11 +364,7 @@ class CloudModule(BaseModule):
             default=100,
             ge=1,
             le=1000,
-            description="The maximum number of assets to return in this response (default: 100; max: 1000). Use with the offset or after parameter to manage pagination of results.",
-        ),
-        offset: int | None = Field(
-            default=None,
-            description="Starting index of overall result set from which to return assets.",
+            description="The maximum number of assets to return in this response (default: 100; max: 1000). Use with the after parameter to manage pagination of results.",
         ),
         after: str | None = Field(
             default=None,
@@ -411,7 +407,6 @@ class CloudModule(BaseModule):
             search_params={
                 "filter": filter,
                 "limit": limit,
-                "offset": offset,
                 "after": after,
                 "sort": sort,
             },

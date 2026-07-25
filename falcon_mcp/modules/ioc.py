@@ -91,10 +91,6 @@ class IOCModule(BaseModule):
             le=500,
             description="Maximum number of IOC IDs to return from search. (Max: 500)",
         ),
-        offset: int | None = Field(
-            default=None,
-            description="Starting index of overall result set from which to return IDs.",
-        ),
         sort: str | None = Field(
             default=None,
             description=dedent("""
@@ -130,7 +126,6 @@ class IOCModule(BaseModule):
             search_params={
                 "filter": filter,
                 "limit": limit,
-                "offset": offset,
                 "sort": sort,
                 "after": after,
                 "from_parent": from_parent,

@@ -820,6 +820,30 @@ class TestBuildPaginationEnvelope(TestModules):
         self.assertNotIn("offset", envelope["pagination"])
         self.assertNotIn("limit", envelope["pagination"])
 
+    def test_cursor_nested_next_maps_to_next(self):
+        """A nested `meta.pagination.next` cursor (Shield) round-trips into `next`."""
+        envelope = self.module._build_pagination_envelope(
+            [{"id": "a"}],
+            {"total": 30, "next": "SHIELD_CURSOR"},
+        )
+        self.assertEqual(envelope["pagination"]["next"], "SHIELD_CURSOR")
+
+    def test_cursor_nested_next_wins_over_after(self):
+        """Precedence: nested `next` beats nested `after` when both are present."""
+        envelope = self.module._build_pagination_envelope(
+            [{"id": "a"}],
+            {"next": "NESTED_NEXT", "after": "NESTED_AFTER"},
+        )
+        self.assertEqual(envelope["pagination"]["next"], "NESTED_NEXT")
+
+    def test_empty_string_cursor_reports_none(self):
+        """An empty-string cursor is not a real next page, so `next` is None."""
+        envelope = self.module._build_pagination_envelope(
+            [{"id": "a"}],
+            {"total": 1, "next": "", "after": ""},
+        )
+        self.assertIsNone(envelope["pagination"]["next"])
+
     def test_missing_total_key_reports_none_not_page_size(self):
         """A pagination dict without a `total` key reports None, never the page size."""
         envelope = self.module._build_pagination_envelope(
@@ -846,6 +870,57 @@ class TestBuildPaginationEnvelope(TestModules):
         """Tools with no filter param omit filter_used entirely."""
         envelope = self.module._build_pagination_envelope([{"id": "a"}], {"total": 1})
         self.assertNotIn("filter_used", envelope)
+
+
+class TestExtractPagination(TestModules):
+    """Cursor lives in three mutually-exclusive spots across endpoints; all fold to `next`."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.setup_module(ConcreteBaseModule)
+
+    def _envelope_next(self, response: dict) -> str | None:
+        pagination = self.module._extract_pagination(response)
+        return self.module._build_pagination_envelope([], pagination)["pagination"]["next"]
+
+    def test_nested_after_folds_into_next(self):
+        """IOC/Spotlight place the cursor at `meta.pagination.after`."""
+        response = {"body": {"meta": {"pagination": {"total": 5, "after": "AFTER_TOK"}}}}
+        self.assertEqual(self._envelope_next(response), "AFTER_TOK")
+
+    def test_nested_next_folds_into_next(self):
+        """Shield places the cursor at `meta.pagination.next`."""
+        response = {"body": {"meta": {"pagination": {"total": 5, "next": "NEXT_TOK"}}}}
+        self.assertEqual(self._envelope_next(response), "NEXT_TOK")
+
+    def test_top_level_meta_next_folds_into_next(self):
+        """CSPM assets/IOM place the cursor at the top-level `meta.next`."""
+        response = {
+            "body": {"meta": {"next": "TOP_TOK", "pagination": {"limit": 100, "total": 500}}}
+        }
+        pagination = self.module._extract_pagination(response)
+        envelope = self.module._build_pagination_envelope([], pagination)
+        self.assertEqual(envelope["pagination"]["next"], "TOP_TOK")
+        # The nested limit/total still surface alongside the top-level cursor.
+        self.assertEqual(envelope["pagination"]["limit"], 100)
+        self.assertEqual(envelope["pagination"]["total"], 500)
+
+    def test_top_level_meta_next_without_nested_pagination(self):
+        """CSPM can return `meta.next` with no nested `pagination` block at all."""
+        response = {"body": {"meta": {"next": "TOP_TOK"}}}
+        self.assertEqual(self._envelope_next(response), "TOP_TOK")
+
+    def test_nested_cursor_wins_over_top_level_meta_next(self):
+        """Precedence: a nested cursor beats top-level `meta.next` when both exist."""
+        response = {
+            "body": {"meta": {"next": "TOP_TOK", "pagination": {"after": "AFTER_TOK"}}}
+        }
+        self.assertEqual(self._envelope_next(response), "AFTER_TOK")
+
+    def test_no_meta_yields_no_cursor(self):
+        """Empty-result / no-meta path: no cursor, `next` is None."""
+        self.assertIsNone(self.module._extract_pagination({"body": {}}))
+        self.assertIsNone(self._envelope_next({"body": {}}))
 
 
 if __name__ == "__main__":
