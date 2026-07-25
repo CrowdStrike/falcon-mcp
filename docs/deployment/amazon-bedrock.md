@@ -48,11 +48,10 @@ The MCP Server requires internet connectivity to communicate with CrowdStrike's 
 > [!CAUTION]
 > `FALCON_MCP_STATELESS_HTTP` must be set to `true` for proper operation in AgentCore's stateless container environment.
 
-> [!NOTE]
-> `FALCON_MCP_HOST=0.0.0.0` is correct here: AgentCore runs the container behind its own managed network
-> security layer, so the server is not directly exposed to the public internet the way a self-managed
-> `0.0.0.0` bind would be. `FALCON_MCP_API_KEY` is optional in this environment and adds defense in depth
-> if you want callers to present an `x-api-key` header as well.
+`FALCON_MCP_HOST=0.0.0.0` is correct here: AgentCore runs the container behind its own managed network
+security layer, so the server is not directly exposed to the public internet the way a self-managed
+`0.0.0.0` bind would be. `FALCON_MCP_API_KEY` is optional in this environment and adds defense in depth
+if you want callers to present an `x-api-key` header as well.
 
 ## Verify Deployment
 

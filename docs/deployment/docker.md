@@ -74,19 +74,18 @@ docker run -i --rm \
 >
 > The `-i` flag is required when using the default stdio transport.
 
-> [!CAUTION]
-> The HTTP transports have no authentication by default. Whenever the published port is reachable
-> beyond the local host, set `--api-key` (or the `FALCON_MCP_API_KEY` environment variable) so callers
-> must send a matching `x-api-key` header — otherwise anyone who can reach the port can drive the server
-> with your CrowdStrike credentials:
->
-> ```bash
-> docker run --rm -p 8000:8000 --env-file /path/to/.env \
->   quay.io/crowdstrike/falcon-mcp:latest \
->   --transport streamable-http --host 0.0.0.0 --api-key your-secret-key
-> ```
->
-> See [HTTP Transport Security](/falcon-mcp/getting-started/configuration/#http-transport-security).
+The HTTP transports have no authentication by default. Whenever the published port is reachable beyond
+the local host, set `--api-key` (or the `FALCON_MCP_API_KEY` environment variable) so callers must send
+a matching `x-api-key` header, otherwise anyone who can reach the port can drive the server with your
+CrowdStrike credentials:
+
+```bash
+docker run --rm -p 8000:8000 --env-file /path/to/.env \
+  quay.io/crowdstrike/falcon-mcp:latest \
+  --transport streamable-http --host 0.0.0.0 --api-key your-secret-key
+```
+
+See [HTTP Transport Security](/falcon-mcp/getting-started/configuration/#http-transport-security).
 
 ## Building Locally (Development)
 
