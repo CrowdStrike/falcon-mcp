@@ -40,7 +40,7 @@ class TestIOCModule(TestModules):
             "status_code": 200,
             "body": {
                 "resources": ["ioc-id-1", "ioc-id-2"],
-                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2}},
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 2, "next": "cursor-xyz"}},
             },
         }
         details_response = {
@@ -57,7 +57,6 @@ class TestIOCModule(TestModules):
         result = self.module.search_iocs(
             filter="type:'domain'",
             limit=25,
-            offset=0,
             sort="modified_on.desc",
         )
 
@@ -68,7 +67,7 @@ class TestIOCModule(TestModules):
         self.assertEqual(first_call[0][0], "indicator_search_v1")
         self.assertEqual(first_call[1]["parameters"]["filter"], "type:'domain'")
         self.assertEqual(first_call[1]["parameters"]["limit"], 25)
-        self.assertEqual(first_call[1]["parameters"]["offset"], 0)
+        self.assertNotIn("offset", first_call[1]["parameters"])
         self.assertEqual(first_call[1]["parameters"]["sort"], "modified_on.desc")
 
         self.assertEqual(second_call[0][0], "indicator_get_v1")
@@ -78,6 +77,7 @@ class TestIOCModule(TestModules):
         self.assertEqual(len(result["results"]), 2)
         self.assertEqual(result["results"][0]["id"], "ioc-id-1")
         self.assertEqual(result["pagination"]["total"], 2)
+        self.assertEqual(result["pagination"]["next"], "cursor-xyz")
 
     def test_search_iocs_reorders_to_match_sorted_ids(self):
         """When indicator_get_v1 returns IOCs out of order, the result is reordered
@@ -100,7 +100,6 @@ class TestIOCModule(TestModules):
         result = self.module.search_iocs(
             filter=None,
             limit=25,
-            offset=0,
             sort="modified_on.desc",
         )
 

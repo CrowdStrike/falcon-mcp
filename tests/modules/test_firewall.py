@@ -66,7 +66,7 @@ class TestFirewallModule(TestModules):
             "status_code": 200,
             "body": {
                 "resources": ["rule-id-1", "rule-id-2"],
-                "meta": {"pagination": {"offset": 0, "limit": 20, "total": 2}},
+                "meta": {"pagination": {"offset": 0, "limit": 20, "total": 2, "next": "cursor-abc"}},
             },
         }
         details_response = {
@@ -83,7 +83,6 @@ class TestFirewallModule(TestModules):
         result = self.module.search_firewall_rules(
             filter="enabled:true",
             limit=20,
-            offset=0,
             sort="modified_on.desc",
             q=None,
             after=None,
@@ -96,7 +95,7 @@ class TestFirewallModule(TestModules):
         self.assertEqual(first_call[0][0], "query_rules")
         self.assertEqual(first_call[1]["parameters"]["filter"], "enabled:true")
         self.assertEqual(first_call[1]["parameters"]["limit"], 20)
-        self.assertEqual(first_call[1]["parameters"]["offset"], 0)
+        self.assertNotIn("offset", first_call[1]["parameters"])
         self.assertEqual(first_call[1]["parameters"]["sort"], "modified_on.desc")
 
         self.assertEqual(second_call[0][0], "get_rules")
@@ -104,6 +103,7 @@ class TestFirewallModule(TestModules):
         self.assertIn("results", result)
         self.assertEqual(len(result["results"]), 2)
         self.assertEqual(result["pagination"]["total"], 2)
+        self.assertEqual(result["pagination"]["next"], "cursor-abc")
 
     def test_search_firewall_rules_reorders_to_match_sorted_ids(self):
         """When get_rules returns rules out of order, the result is reordered
@@ -126,7 +126,6 @@ class TestFirewallModule(TestModules):
         result = self.module.search_firewall_rules(
             filter=None,
             limit=20,
-            offset=0,
             sort="modified_on.desc",
             q=None,
             after=None,
@@ -146,7 +145,6 @@ class TestFirewallModule(TestModules):
         result = self.module.search_firewall_rules(
             filter="name:'DoesNotExist*'",
             limit=10,
-            offset=None,
             sort=None,
             q=None,
             after=None,
@@ -180,7 +178,6 @@ class TestFirewallModule(TestModules):
         result = self.module.search_firewall_rule_groups(
             filter="enabled:true",
             limit=10,
-            offset=0,
             sort="modified_on.desc",
             q=None,
             after=None,
@@ -189,6 +186,7 @@ class TestFirewallModule(TestModules):
         self.assertEqual(self.mock_client.command.call_count, 2)
         self.assertEqual(self.mock_client.command.call_args_list[0][0][0], "query_rule_groups")
         self.assertEqual(self.mock_client.command.call_args_list[1][0][0], "get_rule_groups")
+        self.assertNotIn("offset", self.mock_client.command.call_args_list[0][1]["parameters"])
         self.assertEqual(len(result["results"]), 1)
         self.assertEqual(result["results"][0]["id"], "group-id-1")
         self.assertEqual(result["pagination"]["total"], 1)
@@ -214,7 +212,6 @@ class TestFirewallModule(TestModules):
         result = self.module.search_firewall_rule_groups(
             filter=None,
             limit=10,
-            offset=0,
             sort="modified_on.desc",
             q=None,
             after=None,
@@ -400,7 +397,6 @@ class TestFirewallModule(TestModules):
         result = self.module.search_firewall_rules(
             filter="bad_field:'value'",
             limit=10,
-            offset=None,
             sort=None,
             q=None,
             after=None,
@@ -421,7 +417,6 @@ class TestFirewallModule(TestModules):
         result = self.module.search_firewall_rules(
             filter=None,
             limit=10,
-            offset=None,
             sort=None,
             q=None,
             after=None,
@@ -446,7 +441,6 @@ class TestFirewallModule(TestModules):
         result = self.module.search_firewall_rules(
             filter="enabled:true",
             limit=10,
-            offset=None,
             sort=None,
             q=None,
             after=None,
@@ -466,7 +460,6 @@ class TestFirewallModule(TestModules):
         result = self.module.search_firewall_rule_groups(
             filter="bad_field:'value'",
             limit=10,
-            offset=None,
             sort=None,
             q=None,
             after=None,

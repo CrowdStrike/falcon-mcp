@@ -65,10 +65,6 @@ class SpotlightModule(BaseModule):
             le=5000,
             description="Maximum number of results to return. (Max: 5000, Default: 10)",
         ),
-        offset: int | None = Field(
-            default=None,
-            description="Starting index of overall result set from which to return results.",
-        ),
         sort: str | None = Field(
             default=None,
             description=dedent("""
@@ -130,7 +126,6 @@ class SpotlightModule(BaseModule):
             search_params={
                 "filter": filter,
                 "limit": limit,
-                "offset": offset,
                 "sort": sort,
                 "after": after,
                 "facet": facet,
