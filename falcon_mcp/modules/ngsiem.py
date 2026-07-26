@@ -188,7 +188,7 @@ class NGSIEMModule(BaseModule):
 
         logger.debug("Starting NGSIEM search with query: %s", query_string)
 
-        start_response = self.client.command(
+        start_response = await self.client.command_async(
             operation="StartSearchV1",
             repository=repository,
             body=body_params,
@@ -221,7 +221,7 @@ class NGSIEMModule(BaseModule):
             await asyncio.sleep(POLL_INTERVAL_SECONDS)
             elapsed += POLL_INTERVAL_SECONDS
 
-            poll_response = self.client.command(
+            poll_response = await self.client.command_async(
                 operation="GetSearchStatusV1",
                 repository=repository,
                 search_id=job_id,
@@ -255,7 +255,7 @@ class NGSIEMModule(BaseModule):
 
         # Step 3: Timeout — attempt cleanup
         logger.warning("NGSIEM search job timed out: %s", job_id)
-        self.client.command(
+        await self.client.command_async(
             operation="StopSearchV1",
             repository=repository,
             id=job_id,

@@ -18,6 +18,14 @@ class TestNGSIEMModule(TestModules):
         """Set up test fixtures."""
         self.setup_module(NGSIEMModule)
 
+        # search_ngsiem is async and calls the async offload wrapper command_async.
+        # Route it through the sync `command` mock so the existing side_effect /
+        # call_args_list assertions (which inspect `command`) keep working.
+        async def _command_async(*args, **kwargs):
+            return self.mock_client.command(*args, **kwargs)
+
+        self.mock_client.command_async = AsyncMock(side_effect=_command_async)
+
     def test_register_tools(self):
         """Test registering tools with the server."""
         expected_tools = [

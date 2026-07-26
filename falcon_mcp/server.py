@@ -23,7 +23,7 @@ from falcon_mcp.common.auth import (
     strip_trailing_slash_middleware,
 )
 from falcon_mcp.common.logging import configure_logging, get_logger
-from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
+from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS, offload_to_thread
 
 logger = get_logger(__name__)
 
@@ -154,7 +154,7 @@ class FalconMCPServer:
         # falcon_list_enabled_modules is always registered — dynamic mode's no-results
         # hint references it by name, and it's useful in both modes.
         self.server.add_tool(
-            self.list_enabled_modules,
+            offload_to_thread(self.list_enabled_modules),
             name="falcon_list_enabled_modules",
             annotations=READ_ONLY_ANNOTATIONS,
             structured_output=False,
@@ -172,14 +172,14 @@ class FalconMCPServer:
         else:
             # Normal mode: register all three core tools and then each module's tools.
             self.server.add_tool(
-                self.falcon_check_connectivity,
+                offload_to_thread(self.falcon_check_connectivity),
                 name="falcon_check_connectivity",
                 annotations=READ_ONLY_ANNOTATIONS,
                 structured_output=False,
             )
 
             self.server.add_tool(
-                self.list_modules,
+                offload_to_thread(self.list_modules),
                 name="falcon_list_modules",
                 annotations=READ_ONLY_ANNOTATIONS,
                 structured_output=False,
@@ -209,6 +209,12 @@ class FalconMCPServer:
     def falcon_check_connectivity(self) -> dict[str, bool]:
         """Check connectivity to the Falcon API."""
         try:
+            # Deliberately bypasses FalconClient._token_lock: this is a stateless
+            # probe (stateful=False) that never mutates the shared token, so it
+            # cannot corrupt a concurrent refresh. It may fire its own throwaway
+            # /oauth2/token POST alongside a real refresh, which is acceptable for
+            # a diagnostic tool — the lock guards the shared-state refresh path,
+            # not every possible token request.
             result = self.falcon_client.client._login_handler(stateful=False)
             return {"connected": result.get("status_code") == 201}
         except Exception:

@@ -5,8 +5,11 @@ This module provides the base class for all Falcon MCP server modules.
 """
 
 from abc import ABC, abstractmethod
+from functools import partial, wraps
+from inspect import iscoroutinefunction
 from typing import Any, Callable
 
+import anyio
 from mcp import Resource
 from mcp.server import FastMCP
 from mcp.types import ToolAnnotations
@@ -25,6 +28,40 @@ READ_ONLY_ANNOTATIONS = ToolAnnotations(
     idempotentHint=True,
     openWorldHint=True,
 )
+
+
+def offload_to_thread(method: Callable[..., Any]) -> Callable[..., Any]:
+    """Wrap a sync tool handler so it runs on a worker thread, not the event loop.
+
+    Falcon tool handlers are synchronous and call blocking, ``requests``-based
+    FalconPy. Run inline on the asyncio loop, one ~6s Falcon call freezes the loop
+    and serializes every other in-flight request. Wrapping the handler in an
+    ``async def`` that offloads via ``anyio.to_thread.run_sync`` lets a single
+    server instance interleave concurrent Falcon calls.
+
+    FastMCP builds each tool's arg schema with ``inspect.signature`` (which follows
+    ``functools.wraps``' ``__wrapped__``), so the wrapper exposes the original
+    handler's ``Field(...)`` parameters unchanged; but it detects async by
+    inspecting the object directly (not ``__wrapped__``), so the wrapper is awaited
+    off-loop. Already-async handlers (e.g. ngsiem) are returned untouched.
+
+    Args:
+        method: The tool handler to wrap.
+
+    Returns:
+        The original method if it is already a coroutine function, otherwise an
+        async wrapper that offloads the call to a thread.
+    """
+    if iscoroutinefunction(method):
+        return method
+
+    @wraps(method)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return await anyio.to_thread.run_sync(
+            partial(method, *args, **kwargs)
+        )
+
+    return wrapper
 
 
 class BaseModule(ABC):
@@ -72,7 +109,7 @@ class BaseModule(ABC):
         """
         prefixed_name = f"falcon_{name}"
         server.add_tool(
-            method,
+            offload_to_thread(method),
             name=prefixed_name,
             annotations=annotations or READ_ONLY_ANNOTATIONS,
             structured_output=False,
