@@ -67,9 +67,26 @@ docker run -i --rm \
 ```
 
 > [!NOTE]
-> When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
+> When using HTTP transports in Docker, always set `--host 0.0.0.0` so the server accepts connections
+> from outside the container. This binds to all interfaces *inside* the container; what the endpoint is
+> actually reachable from is controlled by how you publish the port (`-p`), the container network, and
+> any load balancer in front of it.
 >
 > The `-i` flag is required when using the default stdio transport.
+
+> [!CAUTION]
+> The HTTP transports have no authentication by default. Whenever the published port is reachable
+> beyond the local host, set `--api-key` (or the `FALCON_MCP_API_KEY` environment variable) so callers
+> must send a matching `x-api-key` header — otherwise anyone who can reach the port can drive the server
+> with your CrowdStrike credentials:
+>
+> ```bash
+> docker run --rm -p 8000:8000 --env-file /path/to/.env \
+>   quay.io/crowdstrike/falcon-mcp:latest \
+>   --transport streamable-http --host 0.0.0.0 --api-key your-secret-key
+> ```
+>
+> See [HTTP Transport Security](/falcon-mcp/getting-started/configuration/#http-transport-security).
 
 ## Building Locally (Development)
 

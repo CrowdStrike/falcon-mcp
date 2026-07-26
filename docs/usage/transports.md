@@ -5,6 +5,13 @@
 
 The Falcon MCP Server supports three transport methods. Choose based on your deployment scenario.
 
+> [!CAUTION]
+> The HTTP transports (`sse` and `streamable-http`) have no authentication by default. Binding to a
+> non-loopback address such as `--host 0.0.0.0` exposes an unauthenticated server — anyone who can
+> reach the port can invoke every tool using your CrowdStrike credentials. Bind to loopback
+> (`127.0.0.1`, the default) for local use, and set `--api-key` whenever you bind wider. See
+> [HTTP Transport Security](/falcon-mcp/getting-started/configuration/#http-transport-security).
+
 ## stdio (Default)
 
 The simplest transport. The MCP client manages the server process directly via stdin/stdout.
@@ -30,8 +37,11 @@ falcon-mcp --transport sse
 Custom host/port:
 
 ```bash
-falcon-mcp --transport sse --host 0.0.0.0 --port 8080
+falcon-mcp --transport sse --host 0.0.0.0 --port 8080 --api-key your-secret-key
 ```
+
+Binding to `0.0.0.0` reaches the network, so pair it with `--api-key` to require callers to send a
+matching `x-api-key` header.
 
 **Best for:** Web-based clients and environments where subprocess management isn't available.
 
@@ -49,8 +59,11 @@ falcon-mcp --transport streamable-http
 Custom host/port:
 
 ```bash
-falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8080
+falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8080 --api-key your-secret-key
 ```
+
+Binding to `0.0.0.0` reaches the network, so pair it with `--api-key` to require callers to send a
+matching `x-api-key` header.
 
 Stateless mode (required for AWS AgentCore and other scalable deployments):
 
@@ -63,7 +76,14 @@ falcon-mcp --transport streamable-http --stateless-http
 **Client compatibility:** Claude Desktop, MCP Inspector.
 
 > [!NOTE]
-> When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to the container.
+> When using HTTP transports in Docker, always set `--host 0.0.0.0` to allow external connections to
+> the container. The container port is still only reachable by whatever you expose it to (a published
+> `-p` port, another container, a load balancer), so control that exposure and add `--api-key` when the
+> endpoint is reachable beyond the local host.
+>
+> Managed runtimes such as AWS Bedrock AgentCore and Google Cloud Run sit behind their own network
+> security layer (IAM, private networking), so the open-bind concern above does not apply to them —
+> `--api-key` remains available there as optional defense in depth.
 
 ## Client Compatibility
 

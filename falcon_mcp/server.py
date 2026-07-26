@@ -30,6 +30,10 @@ logger = get_logger(__name__)
 # Type alias for transport options
 TransportType = Literal["stdio", "sse", "streamable-http"]
 
+# Hosts that keep the server reachable only from the local machine. Binding to
+# anything else exposes it on the network, where an unauthenticated endpoint is a risk.
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
 
 class FalconMCPServer:
     """Main server class for the Falcon MCP server."""
@@ -244,6 +248,16 @@ class FalconMCPServer:
         if self.api_key:
             app = auth_middleware(app, self.api_key)
             logger.info("API key authentication enabled")
+        elif self.host not in _LOOPBACK_HOSTS:
+            logger.warning(
+                "Server is binding to %s without --api-key: the endpoint is reachable "
+                "on the network and has no authentication. Anyone who can reach %s:%d can "
+                "invoke every tool using your Falcon credentials. Set --api-key "
+                "(or FALCON_MCP_API_KEY) when binding beyond loopback.",
+                self.host,
+                self.host,
+                self.port,
+            )
         uvicorn.run(
             app,
             host=self.host,

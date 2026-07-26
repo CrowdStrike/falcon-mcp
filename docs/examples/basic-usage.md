@@ -93,11 +93,14 @@ from falcon_mcp.server import FalconMCPServer
 def main() -> None:
     load_dotenv()
 
-    # Custom host/port for external access
+    # Custom host/port for external access.
+    # Binding to 0.0.0.0 exposes the server on the network with no auth by default,
+    # so set api_key to require an x-api-key header from callers.
     server = FalconMCPServer(
         debug=os.environ.get("DEBUG", "").lower() == "true",
         host="0.0.0.0",
         port=8080,
+        api_key=os.environ.get("FALCON_MCP_API_KEY"),
     )
 
     # Run — listens at http://0.0.0.0:8080/mcp
