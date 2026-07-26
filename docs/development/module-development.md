@@ -297,7 +297,7 @@ git commit -m "test(modules): add comprehensive tests for [module-name] module"
 git commit -m "docs(modules): update [module-name] module documentation"
 ```
 
-See the main [CONTRIBUTING.md](../../.github/CONTRIBUTING.md) guide for complete conventional commits guidelines.
+See the main [Contributing Guide](https://github.com/CrowdStrike/falcon-mcp/blob/main/.github/CONTRIBUTING.md) for complete conventional commits guidelines.
 
 ## Best Practices
 
