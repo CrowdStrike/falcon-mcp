@@ -126,13 +126,17 @@ For clients that connect via URL (SSE or streamable-http), start the server firs
 
 ```bash
 # SSE
-falcon-mcp --transport sse --host 0.0.0.0 --port 8000
+falcon-mcp --transport sse --host 0.0.0.0 --port 8000 --api-key your-secret-key
 ```
 
 ```bash
 # Streamable HTTP
-falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8000
+falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8000 --api-key your-secret-key
 ```
+
+`--host 0.0.0.0` exposes the server on the network, so set `--api-key` and send it as the `x-api-key`
+header from your client. Omit both to keep the server on the default loopback bind for local-only use.
+See [HTTP Transport Security](/falcon-mcp/getting-started/configuration/#http-transport-security).
 
 Then configure your client with:
 

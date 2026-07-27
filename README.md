@@ -156,10 +156,19 @@ docker pull quay.io/crowdstrike/falcon-mcp:latest
 # Run with .env file (stdio transport)
 docker run -i --rm --env-file /path/to/.env quay.io/crowdstrike/falcon-mcp:latest
 
-# Run with streamable-http transport
+# Run with streamable-http transport (add --api-key when the port is reachable beyond localhost)
 docker run --rm -p 8000:8000 --env-file /path/to/.env \
-  quay.io/crowdstrike/falcon-mcp:latest --transport streamable-http --host 0.0.0.0
+  quay.io/crowdstrike/falcon-mcp:latest \
+  --transport streamable-http --host 0.0.0.0 --api-key your-secret-key
 ```
+
+> [!CAUTION]
+> HTTP transports have no authentication by default. Binding to a non-loopback address (`--host 0.0.0.0`)
+> exposes an unauthenticated server that anyone who can reach the port can drive with your CrowdStrike
+> credentials. Keep the default loopback bind for local use and set `--api-key` whenever you bind wider.
+> Managed runtimes such as AWS Bedrock AgentCore and Google Cloud Run sit behind their own network
+> security layer, so this does not apply to them. See the
+> [Configuration guide](https://developer.crowdstrike.com/falcon-mcp/getting-started/configuration/#http-transport-security).
 
 See the [Docker Deployment guide](https://developer.crowdstrike.com/falcon-mcp/deployment/docker/) for building locally, custom ports, and advanced configurations.
 

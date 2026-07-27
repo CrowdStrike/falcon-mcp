@@ -227,6 +227,84 @@ class TestLogging:
         assert not auth_log_found, f"Unexpected auth log found: {info_calls}"
 
 
+class TestOpenBindWarning:
+    """Test the non-loopback bind warning emitted when no API key is set."""
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.registry")
+    @patch("falcon_mcp.server.uvicorn")
+    @patch("falcon_mcp.server.logger")
+    def test_warns_on_non_loopback_without_api_key(
+        self, mock_logger, _mock_uvicorn, mock_registry, mock_client_class
+    ):
+        """Binding to 0.0.0.0 with no api_key logs a warning (but does not halt)."""
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client = MagicMock()
+        mock_client.authenticate.return_value = True
+        mock_client_class.return_value = mock_client
+        mock_registry.get_module_names.return_value = []
+        mock_registry.get_available_modules.return_value = {}
+
+        server = FalconMCPServer(host="0.0.0.0")
+        server.run(transport="streamable-http")
+
+        warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
+        assert any("no authentication" in call for call in warning_calls), (
+            f"Expected open-bind warning, got: {warning_calls}"
+        )
+        # Warning path must not prevent the server from starting.
+        _mock_uvicorn.run.assert_called_once()
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.registry")
+    @patch("falcon_mcp.server.uvicorn")
+    @patch("falcon_mcp.server.logger")
+    def test_no_warning_on_loopback(
+        self, mock_logger, _mock_uvicorn, mock_registry, mock_client_class
+    ):
+        """The default loopback bind does not trigger the open-bind warning."""
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client = MagicMock()
+        mock_client.authenticate.return_value = True
+        mock_client_class.return_value = mock_client
+        mock_registry.get_module_names.return_value = []
+        mock_registry.get_available_modules.return_value = {}
+
+        server = FalconMCPServer()  # default host 127.0.0.1, no api_key
+        server.run(transport="streamable-http")
+
+        warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
+        assert not any("no authentication" in call for call in warning_calls), (
+            f"Unexpected open-bind warning on loopback: {warning_calls}"
+        )
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.registry")
+    @patch("falcon_mcp.server.uvicorn")
+    @patch("falcon_mcp.server.logger")
+    def test_no_warning_on_non_loopback_with_api_key(
+        self, mock_logger, _mock_uvicorn, mock_registry, mock_client_class
+    ):
+        """Setting api_key suppresses the open-bind warning even on 0.0.0.0."""
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client = MagicMock()
+        mock_client.authenticate.return_value = True
+        mock_client_class.return_value = mock_client
+        mock_registry.get_module_names.return_value = []
+        mock_registry.get_available_modules.return_value = {}
+
+        server = FalconMCPServer(host="0.0.0.0", api_key="test-key")
+        server.run(transport="streamable-http")
+
+        warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
+        assert not any("no authentication" in call for call in warning_calls), (
+            f"Unexpected open-bind warning when api_key set: {warning_calls}"
+        )
+
+
 class TestTrailingSlashMiddlewareApplication:
     """Test that trailing slash middleware is correctly applied to HTTP transports."""
 

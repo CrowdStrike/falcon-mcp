@@ -26,7 +26,7 @@ falcon-mcp --transport streamable-http
 Run with streamable-http on a custom port:
 
 ```bash
-falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8080
+falcon-mcp --transport streamable-http --host 0.0.0.0 --port 8080 --api-key your-secret-key
 ```
 
 Run with stateless HTTP mode (for scalable deployments like AWS AgentCore):
@@ -40,6 +40,13 @@ Run with API key authentication:
 ```bash
 falcon-mcp --transport streamable-http --api-key your-secret-key
 ```
+
+> [!CAUTION]
+> HTTP transports have no authentication by default. Binding to a non-loopback address such as
+> `--host 0.0.0.0` exposes an unauthenticated server that anyone who can reach the port can drive with
+> your CrowdStrike credentials. Keep the default loopback bind (`127.0.0.1`) for local use, and set
+> `--api-key` whenever you bind wider. See
+> [HTTP Transport Security](/falcon-mcp/getting-started/configuration/#http-transport-security).
 
 ## Module Selection
 
