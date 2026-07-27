@@ -159,14 +159,23 @@ class FalconClient:
         return result
 
     def _ensure_token_fresh(self) -> None:
-        """Refresh a stale bearer token exactly once across concurrent callers.
+        """Collapse concurrent stale-token refreshes into a single login.
 
-        FalconPy refreshes lazily inside ``command`` (it reads ``auth_headers``,
-        which calls ``login()`` when the token is stale). Under concurrency several
+        FalconPy refreshes lazily inside `command` (it reads `auth_headers`,
+        which calls `login()` when the token is stale). Under concurrency several
         offloaded threads can see a stale token simultaneously and each POST
-        ``/oauth2/token``. This serializes the refresh with a double-checked lock:
+        `/oauth2/token`. This serializes the refresh with a double-checked lock:
         the fast path takes no lock when the token is valid, and only the first
-        thread through the lock performs the login while the rest reuse its result.
+        thread through the lock logs in while the rest observe the fresh token and
+        skip.
+
+        The collapse depends on `login()` clearing `token_stale`, so it holds only
+        when the refresh succeeds. If login fails (revoked or wrong credentials,
+        network failure) the token stays stale and each waiting thread retries in
+        turn — N serial attempts rather than N parallel ones. That trades added
+        latency for not hammering the token endpoint; the credentials are already
+        broken in that state, and `command` still returns the API's 401 to the
+        caller.
         """
         client = self.client
         # Fast path: a valid token needs no lock. `refreshable` guards clients that
@@ -200,9 +209,11 @@ class FalconClient:
 
         Runs the blocking FalconPy call on a worker thread so the asyncio event
         loop stays free to service other in-flight requests. Async handlers (e.g.
-        ngsiem) should await this instead of calling the sync ``command`` directly;
+        ngsiem) should await this instead of calling the sync `command` directly;
         sync handlers are offloaded automatically by the tool wrapper in
-        ``BaseModule._add_tool``.
+        `BaseModule._add_tool`. The thread-pool cap and cancellation semantics
+        described on `offload_to_thread` apply here too — both share the same
+        default anyio limiter.
 
         Args:
             operation: The API operation to execute

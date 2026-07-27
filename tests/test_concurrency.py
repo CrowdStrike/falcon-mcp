@@ -19,6 +19,7 @@ from inspect import iscoroutinefunction
 from typing import Any, TypeVar
 from unittest.mock import MagicMock, patch
 
+import anyio
 from mcp.server.fastmcp import FastMCP
 
 from falcon_mcp.client import FalconClient
@@ -34,6 +35,11 @@ SLEEP_SECONDS = 0.3
 CONCURRENCY = 8
 SERIAL_TOTAL = SLEEP_SECONDS * CONCURRENCY
 CONCURRENT_THRESHOLD = SLEEP_SECONDS * 3  # 0.9s << serial 2.4s
+
+# anyio's default CapacityLimiter for to_thread.run_sync, i.e. the ceiling on how
+# many offloaded handlers run at once. Asserted (not just referenced) in
+# TestThreadPoolBackpressure so an upstream change surfaces as a clear failure.
+DEFAULT_THREAD_LIMIT = 40
 
 
 def run_async(coro: Coroutine[Any, Any, _T]) -> _T:
@@ -154,13 +160,32 @@ class TestDynamicModeConcurrency(unittest.TestCase):
 class TestTokenRefreshLock(unittest.TestCase):
     """Only one thread refreshes a stale token; the rest reuse it."""
 
-    @patch("falcon_mcp.client.os.environ.get")
-    @patch("falcon_mcp.client.APIHarnessV2")
-    def test_concurrent_stale_token_refreshes_once(self, mock_apiharness, mock_environ_get):
+    @staticmethod
+    def _stub_env(mock_environ_get) -> None:
         mock_environ_get.side_effect = lambda key, default=None: {
             "FALCON_CLIENT_ID": "id",
             "FALCON_CLIENT_SECRET": "secret",
         }.get(key, default)
+
+    @staticmethod
+    def _fire_concurrently(client: FalconClient) -> None:
+        """Release CONCURRENCY threads into client.command() simultaneously."""
+        barrier = threading.Barrier(CONCURRENCY)
+
+        def _call() -> None:
+            barrier.wait()  # release all threads at once
+            client.command("SomeOperation")
+
+        threads = [threading.Thread(target=_call) for _ in range(CONCURRENCY)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
+    def test_concurrent_stale_token_refreshes_once(self, mock_apiharness, mock_environ_get):
+        self._stub_env(mock_environ_get)
 
         underlying = MagicMock()
         underlying.refreshable = True
@@ -179,18 +204,7 @@ class TestTokenRefreshLock(unittest.TestCase):
         mock_apiharness.return_value = underlying
 
         client = FalconClient()
-
-        barrier = threading.Barrier(CONCURRENCY)
-
-        def _call() -> None:
-            barrier.wait()  # release all threads at once
-            client.command("SomeOperation")
-
-        threads = [threading.Thread(target=_call) for _ in range(CONCURRENCY)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
+        self._fire_concurrently(client)
 
         self.assertEqual(
             underlying.login.call_count,
@@ -201,11 +215,60 @@ class TestTokenRefreshLock(unittest.TestCase):
 
     @patch("falcon_mcp.client.os.environ.get")
     @patch("falcon_mcp.client.APIHarnessV2")
+    def test_failed_refresh_retries_serially_not_in_parallel(
+        self, mock_apiharness, mock_environ_get
+    ):
+        """A failing login degrades to serial retries, never a parallel stampede.
+
+        The double-check collapses callers only because a successful login clears
+        `token_stale`. When login fails the token stays stale, so each waiting
+        thread retries in turn. That is the documented trade-off (see
+        `_ensure_token_fresh`): N serial attempts instead of N simultaneous ones,
+        so a broken credential cannot fan out into a burst against the token
+        endpoint. This pins that behavior — and that the lock is still released on
+        the failure path rather than deadlocking the remaining callers.
+        """
+        self._stub_env(mock_environ_get)
+
+        underlying = MagicMock()
+        underlying.refreshable = True
+        underlying.token_stale = True  # login never clears it: bad credentials
+
+        overlap = []
+        in_login = 0
+        overlap_guard = threading.Lock()
+
+        def _login() -> bool:
+            nonlocal in_login
+            with overlap_guard:
+                in_login += 1
+                overlap.append(in_login)
+            time.sleep(0.02)
+            with overlap_guard:
+                in_login -= 1
+            return False
+
+        underlying.login.side_effect = _login
+        underlying.command.return_value = {"status_code": 401, "body": {}}
+        mock_apiharness.return_value = underlying
+
+        client = FalconClient()
+        self._fire_concurrently(client)
+
+        # Never two logins in flight at once — the lock serializes the retries.
+        self.assertEqual(
+            max(overlap),
+            1,
+            f"token logins overlapped ({max(overlap)} concurrent); the refresh lock "
+            "must serialize retries even when login fails",
+        )
+        # Every caller still reaches the API and gets the 401 back.
+        self.assertEqual(underlying.command.call_count, CONCURRENCY)
+
+    @patch("falcon_mcp.client.os.environ.get")
+    @patch("falcon_mcp.client.APIHarnessV2")
     def test_valid_token_skips_refresh(self, mock_apiharness, mock_environ_get):
-        mock_environ_get.side_effect = lambda key, default=None: {
-            "FALCON_CLIENT_ID": "id",
-            "FALCON_CLIENT_SECRET": "secret",
-        }.get(key, default)
+        self._stub_env(mock_environ_get)
 
         underlying = MagicMock()
         underlying.refreshable = True
@@ -217,6 +280,96 @@ class TestTokenRefreshLock(unittest.TestCase):
         client.command("SomeOperation")
 
         underlying.login.assert_not_called()
+
+
+class TestThreadPoolBackpressure(unittest.TestCase):
+    """The offload path is bounded by anyio's default thread limiter, not unbounded."""
+
+    def test_offload_shares_default_limiter(self):
+        """Offloaded handlers borrow from the 40-token default limiter.
+
+        Concurrency is capped rather than unbounded: calls past the limit queue for
+        a worker instead of opening a thread (and a Falcon connection) per request.
+        This pins both the cap's existence and that our wrapper uses the shared
+        default limiter rather than an unbounded pool.
+        """
+        peak = 0
+        current = 0
+        guard = threading.Lock()
+        released = threading.Event()
+
+        def handler() -> int:
+            nonlocal peak, current
+            with guard:
+                current += 1
+                peak = max(peak, current)
+            released.wait(timeout=5)
+            with guard:
+                current -= 1
+            return 1
+
+        wrapped = offload_to_thread(handler)
+        oversubscribe = 2 * DEFAULT_THREAD_LIMIT + 5
+
+        async def fire_all() -> None:
+            async with anyio.create_task_group() as tg:
+                limiter = anyio.to_thread.current_default_thread_limiter()
+                self.assertEqual(
+                    limiter.total_tokens,
+                    DEFAULT_THREAD_LIMIT,
+                    "anyio's default thread limiter changed; revisit the cap "
+                    "documented on offload_to_thread",
+                )
+                for _ in range(oversubscribe):
+                    tg.start_soon(wrapped)
+                # Let the first wave saturate the pool, then drain everything.
+                await anyio.sleep(0.2)
+                released.set()
+
+        anyio.run(fire_all)
+
+        self.assertEqual(
+            peak,
+            DEFAULT_THREAD_LIMIT,
+            f"{oversubscribe} concurrent calls ran {peak} handlers at once; expected "
+            f"the pool to cap at {DEFAULT_THREAD_LIMIT} and queue the rest",
+        )
+
+    def test_cancelled_call_still_completes_its_thread(self):
+        """Cancellation does not abandon the worker mid-call.
+
+        We keep anyio's default `abandon_on_cancel=False`, so a client disconnect
+        or the MCP 60s timeout waits for the in-flight blocking call instead of
+        orphaning the thread. Abandoning would free the slot sooner but leak
+        threads without bound under repeated timeouts.
+        """
+        finished = threading.Event()
+
+        def handler() -> int:
+            time.sleep(SLEEP_SECONDS)
+            finished.set()
+            return 1
+
+        wrapped = offload_to_thread(handler)
+
+        async def cancel_early() -> float:
+            start = time.monotonic()
+            with anyio.move_on_after(SLEEP_SECONDS / 10):
+                await wrapped()
+            return time.monotonic() - start
+
+        elapsed = anyio.run(cancel_early)
+
+        self.assertTrue(
+            finished.is_set(),
+            "handler should run to completion even though the caller cancelled",
+        )
+        self.assertGreaterEqual(
+            elapsed,
+            SLEEP_SECONDS,
+            "cancel scope should wait for the blocking call rather than abandon it; "
+            f"returned after {elapsed:.2f}s",
+        )
 
 
 class TestCommandAsync(unittest.TestCase):
