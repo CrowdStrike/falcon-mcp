@@ -18,6 +18,47 @@ class TestNGSIEMModule(TestModules):
         """Set up test fixtures."""
         self.setup_module(NGSIEMModule)
 
+        # search_ngsiem is async and calls the async offload wrapper command_async.
+        # Route it through the sync `command` mock so the existing side_effect /
+        # call_args_list assertions (which inspect `command`) keep working. Because
+        # every routed call passes through both mocks, `command.call_count` above
+        # `command_async.await_count` means the module reached the blocking sync
+        # client directly — see test_search_ngsiem_offloads_every_api_call.
+        async def _command_async(*args, **kwargs):
+            return self.mock_client.command(*args, **kwargs)
+
+        self.mock_client.command_async = AsyncMock(side_effect=_command_async)
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_search_ngsiem_offloads_every_api_call(self, mock_sleep):
+        """Every NGSIEM API call must go through command_async, never sync command.
+
+        search_ngsiem is an async handler, so `offload_to_thread` returns it
+        untouched — nothing else moves its Falcon calls off the event loop. A
+        direct `self.client.command(...)` here would block the loop and undo the
+        concurrency fix, so this fails if any call site reverts to the sync path.
+        """
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"id": "job-123", "hashedQueryOnView": "abc"}},
+            {"status_code": 200, "body": {"done": True, "events": [{"aid": "agent-1"}]}},
+        ]
+
+        asyncio.run(
+            self.module.search_ngsiem(
+                query_string="#event_simpleName=ProcessRollup2",
+                start="2025-01-01T00:00:00Z",
+                repository="search-all",
+            )
+        )
+
+        self.assertEqual(
+            self.mock_client.command_async.await_count,
+            self.mock_client.command.call_count,
+            "every Falcon call in search_ngsiem must be awaited via command_async; "
+            "a count mismatch means a call site uses the blocking sync client",
+        )
+        self.assertEqual(self.mock_client.command_async.await_count, 2)
+
     def test_register_tools(self):
         """Test registering tools with the server."""
         expected_tools = [

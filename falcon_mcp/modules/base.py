@@ -5,8 +5,11 @@ This module provides the base class for all Falcon MCP server modules.
 """
 
 from abc import ABC, abstractmethod
+from functools import partial, wraps
+from inspect import iscoroutinefunction
 from typing import Any, Callable
 
+import anyio
 from mcp import Resource
 from mcp.server import FastMCP
 from mcp.types import ToolAnnotations
@@ -25,6 +28,52 @@ READ_ONLY_ANNOTATIONS = ToolAnnotations(
     idempotentHint=True,
     openWorldHint=True,
 )
+
+
+def offload_to_thread(method: Callable[..., Any]) -> Callable[..., Any]:
+    """Wrap a sync tool handler so it runs on a worker thread, not the event loop.
+
+    Falcon tool handlers are synchronous and call blocking, `requests`-based
+    FalconPy. Run inline on the asyncio loop, one ~6s Falcon call freezes the loop
+    and serializes every other in-flight request. Wrapping the handler in an
+    `async def` that offloads via `anyio.to_thread.run_sync` lets a single
+    server instance interleave concurrent Falcon calls.
+
+    FastMCP builds each tool's arg schema with `inspect.signature` (which follows
+    `functools.wraps`' `__wrapped__`), so the wrapper exposes the original
+    handler's `Field(...)` parameters unchanged; but it detects async by
+    inspecting the object directly (not `__wrapped__`), so the wrapper is awaited
+    off-loop. Already-async handlers (e.g. ngsiem) are returned untouched.
+
+    Two properties of the default anyio thread pool are load-bearing here:
+
+    - **Concurrency caps at 40.** `anyio.to_thread.run_sync` shares one
+      `CapacityLimiter` of 40 tokens per event loop, so calls 41+ queue until a
+      worker frees up (60 concurrent callers of a 1s handler take ~2s, not ~1s).
+      This is deliberate backpressure, not a bug: it bounds both thread count and
+      the request rate we aim at the Falcon API. Raising it means passing an
+      explicit `limiter=`.
+    - **A cancelled request still occupies its worker.** We keep the default
+      `abandon_on_cancel=False`, so when a client disconnects or the MCP 60s
+      timeout fires, the thread is held until the blocking FalconPy call returns
+      rather than being abandoned. Abandoning would free the slot sooner but leaks
+      threads without bound under repeated timeouts, which is the worse failure.
+
+    Args:
+        method: The tool handler to wrap.
+
+    Returns:
+        The original method if it is already a coroutine function, otherwise an
+        async wrapper that offloads the call to a thread.
+    """
+    if iscoroutinefunction(method):
+        return method
+
+    @wraps(method)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return await anyio.to_thread.run_sync(partial(method, *args, **kwargs))
+
+    return wrapper
 
 
 class BaseModule(ABC):
@@ -72,7 +121,7 @@ class BaseModule(ABC):
         """
         prefixed_name = f"falcon_{name}"
         server.add_tool(
-            method,
+            offload_to_thread(method),
             name=prefixed_name,
             annotations=annotations or READ_ONLY_ANNOTATIONS,
             structured_output=False,
@@ -146,9 +195,9 @@ class BaseModule(ABC):
         Search tools query entity IDs first (honoring the requested sort) and then
         hydrate full details by ID. Some "get entities by IDs" endpoints return
         resources in arbitrary order, discarding the sort. This restores the order
-        of ``ordered_ids``. It is a no-op for endpoints that already preserve order.
+        of `ordered_ids`. It is a no-op for endpoints that already preserve order.
 
-        Entities whose ID is not in ``ordered_ids`` are appended in their original
+        Entities whose ID is not in `ordered_ids` are appended in their original
         order (never dropped); IDs with no matching entity are skipped.
 
         Args:
