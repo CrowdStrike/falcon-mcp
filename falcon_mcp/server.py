@@ -251,8 +251,7 @@ class FalconMCPServer:
         elif self.host not in _LOOPBACK_HOSTS:
             logger.warning(
                 "Server is binding to %s without --api-key: the endpoint is reachable "
-                "on the network and has no authentication. Anyone who can reach %s:%d can "
-                "invoke every tool using your Falcon credentials. Set --api-key "
+                "on the network and has no authentication. Set --api-key "
                 "(or FALCON_MCP_API_KEY) when binding beyond loopback.",
                 self.host,
                 self.host,
