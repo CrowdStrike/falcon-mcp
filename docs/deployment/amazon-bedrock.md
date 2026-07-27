@@ -48,6 +48,8 @@ The MCP Server requires internet connectivity to communicate with CrowdStrike's 
 > [!CAUTION]
 > `FALCON_MCP_STATELESS_HTTP` must be set to `true` for proper operation in AgentCore's stateless container environment.
 
+<!-- -->
+
 > [!NOTE]
 > `FALCON_MCP_HOST=0.0.0.0`: AgentCore runs the container behind its own managed network
 > security layer, so the server is not directly exposed to the public internet the way a self-managed
