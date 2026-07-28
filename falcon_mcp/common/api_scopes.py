@@ -152,6 +152,12 @@ API_SCOPE_REQUIREMENTS = {
     # Case Templates operations
     "queries_templates_get_v1": ["Case Templates:read"],
     "entities_templates_get_v1": ["Case Templates:read"],
+    # Case Management aggregate operations
+    "aggregates_slas_post_v1": ["Case Templates:read"],
+    "aggregates_templates_post_v1": ["Case Templates:read"],
+    "aggregates_access_tags_post_v1": ["Case Templates:read"],
+    "aggregates_notification_groups_post_v2": ["Case Templates:read"],
+    "aggregates_file_details_post_v1": ["Cases:read"],
     # Correlation Rules operations
     "combined_rules_get_v2": ["Correlation Rules:read"],
     "entities_rules_post_v1": ["Correlation Rules:write"],

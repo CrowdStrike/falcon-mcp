@@ -42,6 +42,39 @@ FILTER_HINTS: dict[str, str] = {
         "severity (Integer 1-100: Informational=1, Low~25, Medium~50, High~75, Critical=100), "
         "name, assigned_to_name, created_timestamp (UTC datetime), tags."
     ),
+    "falcon_aggregate_case_slas": (
+        "Common fields: name, id, cid, created_by_name, updated_by_name, "
+        "created_timestamp, updated_timestamp. "
+        "Substring match uses :* (name:*'*Corp*'); ~ and 'val*' return nothing. "
+        "Date filters: created_timestamp:>'now-30d' (relative). "
+        "Ex: created_timestamp:>'now-30d'"
+    ),
+    "falcon_aggregate_case_templates": (
+        "Common fields: name, id, cid, created_by_name, updated_by_name, "
+        "created_timestamp, updated_timestamp. "
+        "Substring match uses :* (name:*'*Case*'); ~ and 'val*' return nothing. "
+        "Date filters: created_timestamp:>'now-30d' (relative). "
+        "Ex: created_by_name:'analyst@example.com'"
+    ),
+    "falcon_aggregate_case_access_tags": (
+        "Common fields: key, id, cid — access tags accept no other field. "
+        "Substring match uses :* (key:*'*ANALYST*'); ~ and 'val*' return nothing. "
+        "Ex: key:'ANALYST1'"
+    ),
+    "falcon_aggregate_case_notification_groups": (
+        "Common fields: name, id, cid, created_by_name, updated_by_name, "
+        "created_timestamp, updated_timestamp. "
+        "Substring match uses :* (name:*'*Analyst*'); ~ and 'val*' return nothing. "
+        "Date filters: created_timestamp:>'now-90d' (relative). "
+        "Ex: name:*'*Analyst*'"
+    ),
+    "falcon_aggregate_case_file_details": (
+        "Common fields: name (file name), case_id, id (file id), cid, "
+        "file_size (a string such as '114.8 KB', not a number). "
+        "Substring match uses :* (name:*'*.png'); ~ returns nothing. "
+        "Prefer the case_ids parameter over a case_id filter. "
+        "Ex: name:*'*.png'"
+    ),
     # === Cloud: Kubernetes Containers ===
     "falcon_search_kubernetes_containers": (
         "Common fields: cluster_name, namespace, container_name, "
