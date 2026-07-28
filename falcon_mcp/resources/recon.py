@@ -977,3 +977,227 @@ rule.topic:'SA_DOMAIN'+created_date:>'now-7d'
 credential_status:'newly_reported',credential_status:'confirmed_active'
 """
 )
+
+# ---------------------------------------------------------------------------
+# Aggregation guides
+# ---------------------------------------------------------------------------
+
+_SHARED_AGGREGATION_SYNTAX = """
+=== AGGREGATION TYPES ===
+• terms: Top values of a field, ranked by document count. The default.
+• date_histogram: Evenly spaced time buckets. Set `interval` to hour, day, week,
+  month, quarter, or year.
+• date_range: Explicit time windows. Set `date_ranges`, e.g.
+  [{"from": "now-30d", "to": "now"}]
+• range: Explicit numeric windows. Set `ranges`, e.g. [{"From": 0, "To": 100}]
+• cardinality: Distinct-value count for a field.
+• max / min: Largest and smallest value of a numeric field.
+
+`date_histogram`, `date_range`, and `range` each fail without their companion
+argument — `interval`, `date_ranges`, and `ranges` respectively. Always supply it
+when choosing those types.
+
+Not supported on either recon aggregate endpoint: sum, avg, and percentiles all
+return a 400, including on numeric date fields.
+
+=== READING THE RESPONSE ===
+Each aggregation returns `{"name": ..., "buckets": [...]}`, where `name` echoes the
+`name` you passed — use it to tell results apart. Bucket entries key on `label` and
+`count`, not `key`.
+
+For cardinality, max, and min the single bucket looks like `{"count": 0, "value": N}`.
+The answer is `value`; the `count: 0` is an artifact of the shape and does NOT mean
+"no data".
+
+Date fields bucket as epoch-millisecond integers. `date_histogram` also returns
+`key_as_string` with a readable ISO timestamp.
+
+=== NARROWING AND NESTING ===
+• `filter` accepts the same FQL as the matching search tool, applied before aggregating.
+• `q` does a free-text search across the record.
+• `size` caps the number of terms buckets returned.
+• `sort` orders buckets, e.g. `_count|asc`.
+• `sub_aggregates` nests a second aggregation inside every bucket of the first, which
+  is how you get a breakdown-within-a-breakdown.
+
+A filter that references an unknown field returns an empty `resources` list with HTTP
+200 — indistinguishable from a filter that legitimately matched nothing. Malformed FQL
+syntax returns a 400. Stick to the fields in the matching search FQL guide.
+"""
+
+AGGREGATE_RECON_NOTIFICATIONS_GUIDE = (
+    """Recon Notification Aggregation Guide
+
+Use `falcon_aggregate_recon_notifications` to answer "how many" and "which are the top"
+questions about recon notifications without pulling individual records. For the records
+themselves, use `falcon_search_recon_notifications`.
+
+=== VERIFIED AGGREGATION FIELDS ===
+Notification attributes:
+• status — new, in-progress, pending-review, closed-true-positive,
+  closed-false-positive, closed-no-action-true-positive
+• rule_topic — SA_TYPOSQUATTING, SA_THIRD_PARTY, SA_CUSTOM, SA_DOMAIN, SA_IP,
+  SA_BRAND_PRODUCT, SA_ALIAS, SA_VIP, SA_EMAIL, SA_CVE, SA_AUTHOR, SA_BIN
+• rule_priority — low, medium, high, critical
+• rule_id, item_type, item_site, source_category, cid, user_uuid, id
+• assigned_to_uuid — unassigned, or a user UUID
+• created_date, updated_date — epoch millis; use with date_histogram or date_range
+
+Breach and typosquatting detail:
+• breach_summary.credential_statuses, breach_summary.is_retroactively_deduped
+• typosquatting.id, typosquatting.unicode_format, typosquatting.punycode_format
+• typosquatting.parent_domain.{id,unicode_format,punycode_format}
+• typosquatting.base_domain.{id,unicode_format,punycode_format,is_registered}
+• typosquatting.base_domain.whois.registrar.{name,status}
+• typosquatting.base_domain.whois.registrant.{email,name,org}
+• typosquatting.base_domain.whois.name_servers
+
+Do not aggregate on `rule_name` — it returns a server error on this endpoint. Aggregate
+on `rule_id` instead, then resolve names with `falcon_search_recon_rules`. The fields
+`notification_id`, `site`, and `author` belong to the exposed-data-record schema and
+return no buckets here.
+"""
+    + _SHARED_AGGREGATION_SYNTAX
+    + """
+=== EXAMPLES ===
+
+# Notification volume by status
+field: status, aggregate_type: terms
+
+# Busiest monitoring rules in the past 30 days
+field: rule_id, aggregate_type: terms, size: 10, filter: created_date:>'now-30d'
+
+# Daily notification trend
+field: created_date, aggregate_type: date_histogram, interval: day
+
+# Priority mix for typosquatting only
+field: rule_priority, aggregate_type: terms, filter: rule_topic:'SA_TYPOSQUATTING'
+
+# How many distinct rules have fired
+field: rule_id, aggregate_type: cardinality
+
+# Which registrars host the most typosquatting domains
+field: typosquatting.base_domain.whois.registrar.name, aggregate_type: terms, size: 10
+"""
+)
+
+AGGREGATE_RECON_EXPOSED_DATA_RECORDS_GUIDE = (
+    """Recon Exposed-Data Record Aggregation Guide
+
+Use `falcon_aggregate_recon_exposed_data_records` to summarize leaked credential and PII
+records — top breach sites, credential-status mix, volume over time — without pulling
+individual rows. For the rows themselves, use `falcon_search_recon_exposed_data_records`.
+
+=== AGGREGATION FIELDS: A STRICT LIST ===
+This endpoint accepts only the fourteen fields below and rejects anything else with a
+400. That is a much narrower set than the tool's `filter` parameter accepts, so a field
+you can filter on is not necessarily a field you can aggregate on.
+
+• cid
+• notification_id
+• notification_group_id
+• created_date — epoch millis; use with date_histogram or date_range
+• rule.id
+• rule.name
+• rule.topic — SA_DOMAIN, SA_EMAIL
+• source_category — chat_medium, other, and similar
+• site — telegram.org, stealer_logs, malware_logs, and similar
+• author
+• file.name
+• credential_status — newly_reported, previously_reported, confirmed_active
+• bot.operating_system.hardware_id
+• bot.bot_id
+
+Note the dotted spellings: this endpoint uses `rule.topic` and `rule.name`, whereas
+`falcon_aggregate_recon_notifications` uses `rule_topic`. They are not interchangeable.
+Commonly attempted but rejected here: id, email, domain, login_id, exposure_date,
+hash_type, user_uuid, site_id, author_id, status, rule_topic, and any location.*,
+financial.*, or social.* field.
+"""
+    + _SHARED_AGGREGATION_SYNTAX
+    + """
+=== EXAMPLES ===
+
+# Credential-status mix across all exposed data
+field: credential_status, aggregate_type: terms
+
+# Top sites leaking your credentials
+field: site, aggregate_type: terms, size: 10
+
+# Newly reported exposures by site
+field: site, aggregate_type: terms, size: 10, filter: credential_status:'newly_reported'
+
+# Exposure volume per day
+field: created_date, aggregate_type: date_histogram, interval: day
+
+# Which monitoring rules surface the most exposed records
+field: rule.name, aggregate_type: terms, size: 10
+
+# Credential-status breakdown within each rule topic
+field: rule.topic, aggregate_type: terms, sub_aggregates:
+  [{"type": "terms", "field": "credential_status", "name": "by_status"}]
+"""
+)
+
+PREVIEW_RECON_RULE_GUIDE = """Recon Rule Preview Guide
+
+Use `falcon_preview_recon_rule` to estimate how noisy a prospective monitoring rule would
+be before creating it. You supply a candidate rule definition and Falcon reports how many
+notifications it would have produced, broken down by channel and site.
+
+This tool takes a rule definition, not a notification search filter. To aggregate
+notifications that already exist, use `falcon_aggregate_recon_notifications`.
+
+=== THE FILTER IS RULE FQL, NOT SEARCH FQL ===
+`filter` is the prospective rule's own match expression, written in the monitoring-rule
+dialect and parenthesized per condition. It is a different language from the FQL used by
+`falcon_search_recon_notifications` — fields like `status` or `created_date` are invalid
+here. A bare value such as `example.com` is rejected as invalid FQL.
+
+Verified expressions by topic:
+| Topic            | Example filter                                    |
+|------------------|---------------------------------------------------|
+| SA_DOMAIN        | (domain:'example.com')                            |
+| SA_EMAIL         | (email:'user@example.com')                        |
+| SA_IP            | (ip:'1.2.3.4')                                    |
+| SA_AUTHOR        | (author:'handle')                                 |
+| SA_BRAND_PRODUCT | (phrase:'BrandName')+(keyword:'BrandName')        |
+| SA_THIRD_PARTY   | (phrase:'VendorName')                             |
+| SA_CUSTOM        | (keyword:'term')                                  |
+| SA_VIP           | (keyword:'term')                                  |
+| SA_CVE           | (keyword:'term')                                  |
+| SA_ALIAS         | (keyword:'term')                                  |
+
+Combine conditions with `+`. Using a condition word the topic does not support returns a
+400 naming `filter.expressions[0]`.
+
+=== TOPIC AND LOOKBACK CONSTRAINTS ===
+`topic` must be one of the topics above. SA_TYPOSQUATTING is rejected — typosquatting
+rules cannot be previewed. SA_BIN is accepted as a topic but has no supported condition
+word, so it cannot be previewed in practice either.
+
+`lookback_days` accepts only 7, 30, 180, and 365. Any other value, including 1, 14, or 90,
+returns a 400. Omitting it previews against the full retained window and returns a single
+`Total` count; supplying it adds a separate `Total - EDR` count for exposed-data matches.
+
+=== READING THE RESPONSE ===
+The breakdown is fixed — you cannot choose the aggregation fields. Three aggregations come
+back, each with `label`/`count` buckets:
+• channel — the kinds of sources that matched, e.g. public_repo, chat_medium, forum
+• count — total matches; `Total`, plus `Total - EDR` when lookback_days is set
+• site — the specific sites that matched, e.g. github.com, telegram.org
+
+`sum_other_doc_count` on channel and site reports matches beyond the returned buckets.
+A high total means the rule would be noisy; tighten the filter and preview again.
+
+=== EXAMPLES ===
+
+# How noisy would monitoring this domain be over the past 30 days?
+topic: SA_DOMAIN, filter: (domain:'example.com'), lookback_days: 30
+
+# Brand mention volume for the past week
+topic: SA_BRAND_PRODUCT, filter: (phrase:'Acme')+(keyword:'Acme'), lookback_days: 7
+
+# Full-window estimate for watching an executive's email
+topic: SA_EMAIL, filter: (email:'ceo@example.com')
+"""
