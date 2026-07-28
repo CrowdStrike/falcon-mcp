@@ -523,7 +523,8 @@ class BaseModule(ABC):
             name: Label echoed back on the result, identifying it in a
                 multi-spec response
             size: Max buckets to return
-            sort: Bucket sort in pipe form only, e.g. "_count|desc"
+            sort: Bucket sort, e.g. "_count|desc". Accepted forms vary by
+                endpoint; each tool documents what its own endpoint takes
             interval: Bucket width for `date_histogram`, as a bare unit name
                 ("hour", "day", "week", "month", "quarter", "year")
             time_zone: Numeric UTC offset, e.g. "+00:00"
