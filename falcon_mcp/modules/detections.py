@@ -5,7 +5,7 @@ This module provides tools for accessing and analyzing CrowdStrike Falcon detect
 """
 
 from textwrap import dedent
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -40,6 +40,12 @@ class DetectionsModule(BaseModule):
             server=server,
             method=self.get_detection_details,
             name="get_detection_details",
+        )
+
+        self._add_tool(
+            server=server,
+            method=self.aggregate_detections,
+            name="aggregate_alerts",
         )
 
         self._add_tool(
@@ -205,6 +211,158 @@ class DetectionsModule(BaseModule):
             ids=ids,
             id_key="composite_ids",
             include_hidden=include_hidden,
+        )
+
+    def aggregate_detections(
+        self,
+        field: str = Field(
+            description=(
+                "Alert field to aggregate on, such as `severity_name`, `status`, "
+                "`tactic`, `technique`, `product`, `device.hostname`, or `timestamp`. "
+                "See `falcon://detections/search/fql-guide` for the aggregatable fields."
+            ),
+            examples=["severity_name", "status", "tactic", "device.hostname"],
+        ),
+        type: Literal[
+            "terms",
+            "date_histogram",
+            "date_range",
+            "range",
+            "cardinality",
+            "max",
+            "min",
+            "avg",
+            "sum",
+            "percentiles",
+        ] = Field(
+            default="terms",
+            description=(
+                "Aggregation to run. Use `terms` to count alerts per distinct value, "
+                "`date_histogram` for a time series, `date_range` or `range` for "
+                "explicit buckets, and `cardinality` for a distinct-value count."
+            ),
+        ),
+        filter: str | None = Field(
+            default=None,
+            description=(
+                "FQL filter expression narrowing which alerts are counted. See "
+                "`falcon://detections/search/fql-guide` for syntax."
+            ),
+            examples=["status:'new'", "severity_name:'Critical'+product:'epp'"],
+        ),
+        size: int | None = Field(
+            default=10,
+            ge=1,
+            le=1000,
+            description="Maximum number of buckets to return for `terms` aggregations.",
+        ),
+        sort: str | None = Field(
+            default=None,
+            description=(
+                "Bucket ordering, using the pipe form only: `_count|desc` (most "
+                "alerts first), `_count|asc`, `_key|asc`, or `_key|desc`. The dot "
+                "form accepted by search sorts is rejected here."
+            ),
+            examples=["_count|desc", "_key|asc"],
+        ),
+        interval: Literal["hour", "day", "week", "month", "quarter", "year"] | None = Field(
+            default=None,
+            description=(
+                "Bucket width for `date_histogram` aggregations. Required whenever "
+                "`type` is `date_histogram`."
+            ),
+        ),
+        date_ranges: list[dict[str, str]] | None = Field(
+            default=None,
+            description=(
+                "Explicit time buckets for `date_range` aggregations, for example "
+                "`[{'from': 'now-7d', 'to': 'now'}]`. Required whenever `type` is "
+                "`date_range`."
+            ),
+            examples=[[{"from": "now-7d", "to": "now"}]],
+        ),
+        ranges: list[dict[str, Any]] | None = Field(
+            default=None,
+            description=(
+                "Numeric buckets for `range` aggregations, for example "
+                "`[{'From': 0, 'To': 50}]`. Required whenever `type` is `range`."
+            ),
+            examples=[[{"From": 0, "To": 50}, {"From": 50, "To": 100}]],
+        ),
+        percents: list[float] | None = Field(
+            default=None,
+            description="Percentiles to compute for `percentiles` aggregations.",
+            examples=[[50.0, 95.0]],
+        ),
+        missing: str | None = Field(
+            default=None,
+            description=(
+                "Label used for alerts that have no value for `field`, so they are "
+                "counted instead of dropped."
+            ),
+            examples=["Unassigned"],
+        ),
+        include: str | None = Field(
+            default=None,
+            description=(
+                "Keep only buckets whose key matches this regular expression, e.g. "
+                "`High|Critical`."
+            ),
+            examples=["High|Critical"],
+        ),
+        name: str = Field(
+            default="alert_aggregation",
+            description="Label echoed back on the returned aggregation.",
+        ),
+        time_zone: str | None = Field(
+            default=None,
+            description="UTC offset applied to date buckets, e.g. `+00:00`.",
+            examples=["+00:00"],
+        ),
+        sub_aggregates: list[dict[str, Any]] | None = Field(
+            default=None,
+            description=(
+                "Nested aggregations applied within each bucket, each shaped like a "
+                "top-level spec, e.g. `[{'type': 'terms', 'field': 'status'}]`."
+            ),
+            examples=[[{"type": "terms", "field": "status", "size": 3}]],
+        ),
+        include_hidden: bool = Field(
+            default=True,
+            description=(
+                "Whether to count hidden alerts (default: True). Set False to match "
+                "the alert totals shown in the Falcon console."
+            ),
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Count and summarize detections (also called alerts) without retrieving each record.
+
+        Use this for "how many" and "top N" questions — alerts per severity, status,
+        tactic, or host, distinct host counts, and alert volume over time — instead of
+        paging through falcon_search_detections. Consult
+        falcon://detections/search/fql-guide before constructing filter expressions.
+        Returns one aggregation per request holding `buckets`, which key on `label`
+        with a `count`; single-value aggregations (`cardinality`, `max`, `min`, `avg`,
+        `sum`) report their answer as `value` instead.
+        """
+        return self._base_aggregate(
+            operation="PostAggregatesAlertsV2",
+            agg_type=type,
+            field=field,
+            filter=filter,
+            name=name,
+            size=size,
+            sort=sort,
+            interval=interval,
+            date_ranges=date_ranges,
+            ranges=ranges,
+            percents=percents,
+            missing=missing,
+            include=include,
+            time_zone=time_zone,
+            sub_aggregates=sub_aggregates,
+            parameters={"include_hidden": include_hidden},
+            error_message="Failed to aggregate detections",
         )
 
     def update_detections(

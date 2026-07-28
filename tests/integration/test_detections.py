@@ -107,6 +107,151 @@ class TestDetectionsIntegration(BaseIntegrationTest):
         # If operation name is wrong, this will be an error response
         self.assert_no_error(result, context="operation name validation")
 
+        # PostAggregatesAlertsV2 is only exercised by aggregate_detections.
+        aggregated = self.call_method(
+            self.module.aggregate_detections, field="severity_name"
+        )
+        self.assert_no_error(aggregated, context="PostAggregatesAlertsV2 name validation")
+
+    def test_aggregate_detections_terms_returns_labelled_buckets(self):
+        """A terms aggregation returns buckets keyed on `label` with a count."""
+        result = self.call_method(
+            self.module.aggregate_detections,
+            field="severity_name",
+            type="terms",
+            sort="_count|desc",
+        )
+
+        self.assert_no_error(result, context="aggregate_detections terms")
+        self.assert_valid_list_response(
+            result, min_length=1, context="aggregate_detections terms"
+        )
+
+        buckets = result[0].get("buckets")
+        if not buckets:
+            self.skip_with_warning(
+                "No alerts to aggregate", "aggregate_detections terms buckets"
+            )
+            return
+
+        # Buckets key on `label`, not `key` — asserted so a shape change is caught.
+        assert "label" in buckets[0], f"expected `label` in bucket, got {buckets[0]}"
+        assert "count" in buckets[0], f"expected `count` in bucket, got {buckets[0]}"
+
+    def test_aggregate_detections_sort_pipe_format_is_accepted(self):
+        """Aggregate sorts use the pipe form; the dot form is rejected upstream.
+
+        Locks in the live behavior that `_count|desc` works here, unlike the
+        `severity.desc` form accepted by search sorts.
+        """
+        result = self.call_method(
+            self.module.aggregate_detections,
+            field="severity_name",
+            type="terms",
+            sort="_count|desc",
+        )
+        self.assert_no_error(result, context="aggregate_detections sort=_count|desc")
+
+        buckets = result[0].get("buckets") or []
+        if len(buckets) > 1:
+            counts = [b.get("count", 0) for b in buckets]
+            assert counts == sorted(counts, reverse=True), (
+                f"_count|desc did not order buckets by descending count: {counts}"
+            )
+
+    def test_aggregate_detections_cardinality_reports_value(self):
+        """Single-value aggregations report their answer as `value`, not `count`."""
+        result = self.call_method(
+            self.module.aggregate_detections,
+            field="device.hostname",
+            type="cardinality",
+        )
+
+        self.assert_no_error(result, context="aggregate_detections cardinality")
+        buckets = result[0].get("buckets") or []
+        if not buckets:
+            self.skip_with_warning(
+                "No alerts to aggregate", "aggregate_detections cardinality"
+            )
+            return
+
+        assert "value" in buckets[0], f"expected `value` in bucket, got {buckets[0]}"
+
+    def test_aggregate_detections_date_histogram_buckets_by_interval(self):
+        """A date_histogram over timestamp accepts a bare interval unit."""
+        result = self.call_method(
+            self.module.aggregate_detections,
+            field="timestamp",
+            type="date_histogram",
+            interval="day",
+            filter="timestamp:>'now-7d'",
+        )
+
+        self.assert_no_error(result, context="aggregate_detections date_histogram")
+        self.assert_valid_list_response(
+            result, min_length=1, context="aggregate_detections date_histogram"
+        )
+
+    def test_aggregate_detections_include_hidden_changes_totals(self):
+        """include_hidden=False counts no more alerts than the default."""
+        shown = self.call_method(
+            self.module.aggregate_detections,
+            field="severity_name",
+            include_hidden=False,
+        )
+        everything = self.call_method(
+            self.module.aggregate_detections,
+            field="severity_name",
+            include_hidden=True,
+        )
+
+        self.assert_no_error(shown, context="aggregate_detections include_hidden=False")
+        self.assert_no_error(everything, context="aggregate_detections include_hidden=True")
+
+        def total(result):
+            return sum(b.get("count", 0) for b in (result[0].get("buckets") or []))
+
+        # Hidden alerts are a superset, so excluding them cannot raise the count.
+        assert total(shown) <= total(everything), (
+            f"include_hidden=False counted more ({total(shown)}) "
+            f"than include_hidden=True ({total(everything)})"
+        )
+
+    def test_aggregate_detections_missing_companion_is_caught_locally(self):
+        """A type missing its companion argument is rejected before the API call.
+
+        The live API answers these with an opaque 500, so the tool must catch them.
+        """
+        result = self.call_method(
+            self.module.aggregate_detections,
+            field="timestamp",
+            type="date_histogram",
+        )
+
+        assert isinstance(result, dict) and "error" in result, (
+            f"expected a local validation error, got {result!r}"
+        )
+        assert "interval" in result["error"], (
+            f"error should name the missing argument, got {result['error']!r}"
+        )
+
+    def test_aggregate_detections_unsupported_field_returns_empty(self):
+        """An unsupported aggregation field returns empty buckets, not an error.
+
+        Documents the silent-ignore behavior that makes a bad field
+        indistinguishable from a genuine zero count.
+        """
+        result = self.call_method(
+            self.module.aggregate_detections,
+            field="not_a_real_alert_field_xyz",
+        )
+
+        self.assert_no_error(result, context="aggregate_detections unsupported field")
+        assert not (result[0].get("buckets") or []), (
+            "expected no buckets for an unsupported aggregation field, "
+            f"got {result[0].get('buckets')}"
+        )
+
     def test_update_detections_status(self):
         """Test updating a detection status using PatchEntitiesAlertsV3.
 

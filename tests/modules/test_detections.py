@@ -22,6 +22,7 @@ class TestDetectionsModule(TestModules):
         expected_tools = [
             "falcon_search_detections",
             "falcon_get_detection_details",
+            "falcon_aggregate_alerts",
             "falcon_update_detections",
         ]
         self.assert_tools_registered(expected_tools)
@@ -319,6 +320,284 @@ class TestDetectionsModule(TestModules):
         self.assertIn("fql_guide", result)
         self.assertEqual(result["fql_guide"], SEARCH_DETECTIONS_FQL_DOCUMENTATION)
         self.assertIn("error", result["hint"].lower())
+
+    def test_aggregate_detections_builds_minimal_body(self):
+        """Aggregating sends a list-wrapped spec and omits unset keys."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {
+                        "name": "alert_aggregation",
+                        "buckets": [{"label": "Critical", "count": 7}],
+                    }
+                ]
+            },
+        }
+
+        result = self.module.aggregate_detections(
+            field="severity_name",
+            type="terms",
+            filter=None,
+            size=10,
+            sort=None,
+            interval=None,
+            date_ranges=None,
+            ranges=None,
+            percents=None,
+            missing=None,
+            include=None,
+            name="alert_aggregation",
+            time_zone=None,
+            sub_aggregates=None,
+            include_hidden=True,
+        )
+
+        operation, kwargs = (
+            self.mock_client.command.call_args[0][0],
+            self.mock_client.command.call_args[1],
+        )
+        self.assertEqual(operation, "PostAggregatesAlertsV2")
+
+        # The API rejects a bare object, so the body must be list-wrapped.
+        self.assertEqual(
+            kwargs["body"],
+            [
+                {
+                    "type": "terms",
+                    "field": "severity_name",
+                    "name": "alert_aggregation",
+                    "size": 10,
+                }
+            ],
+        )
+        self.assertEqual(result[0]["buckets"], [{"label": "Critical", "count": 7}])
+
+    def test_aggregate_detections_forwards_include_hidden_as_query_param(self):
+        """include_hidden travels as a query parameter, not inside the body spec."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"name": "alert_aggregation", "buckets": []}]},
+        }
+
+        self.module.aggregate_detections(
+            field="status",
+            type="terms",
+            filter=None,
+            size=None,
+            sort=None,
+            interval=None,
+            date_ranges=None,
+            ranges=None,
+            percents=None,
+            missing=None,
+            include=None,
+            name="alert_aggregation",
+            time_zone=None,
+            sub_aggregates=None,
+            include_hidden=False,
+        )
+
+        kwargs = self.mock_client.command.call_args[1]
+        self.assertEqual(kwargs["parameters"], {"include_hidden": False})
+        self.assertNotIn("include_hidden", kwargs["body"][0])
+
+    def test_aggregate_detections_passes_through_optional_spec_fields(self):
+        """Optional aggregation controls reach the body under their wire names."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"name": "daily", "buckets": []}]},
+        }
+
+        self.module.aggregate_detections(
+            field="timestamp",
+            type="date_histogram",
+            filter="status:'new'",
+            size=None,
+            sort="_count|desc",
+            interval="day",
+            date_ranges=None,
+            ranges=None,
+            percents=None,
+            missing="Unassigned",
+            include="High|Critical",
+            name="daily",
+            time_zone="+00:00",
+            sub_aggregates=[{"type": "terms", "field": "status"}],
+            include_hidden=True,
+        )
+
+        spec = self.mock_client.command.call_args[1]["body"][0]
+        self.assertEqual(spec["type"], "date_histogram")
+        self.assertEqual(spec["interval"], "day")
+        self.assertEqual(spec["filter"], "status:'new'")
+        self.assertEqual(spec["sort"], "_count|desc")
+        self.assertEqual(spec["missing"], "Unassigned")
+        self.assertEqual(spec["include"], "High|Critical")
+        self.assertEqual(spec["time_zone"], "+00:00")
+        self.assertEqual(spec["sub_aggregates"], [{"type": "terms", "field": "status"}])
+
+    def test_aggregate_detections_error(self):
+        """A failed aggregation surfaces an error rather than empty buckets."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "failed to validate aggregates query(s)"}]},
+        }
+
+        result = self.module.aggregate_detections(
+            field="severity_name",
+            type="terms",
+            filter=None,
+            size=10,
+            sort=None,
+            interval=None,
+            date_ranges=None,
+            ranges=None,
+            percents=None,
+            missing=None,
+            include=None,
+            name="alert_aggregation",
+            time_zone=None,
+            sub_aggregates=None,
+            include_hidden=True,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result)
+
+    def test_aggregate_detections_handles_null_buckets(self):
+        """A zero-match aggregation returns buckets: null, which must pass through."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"name": "alert_aggregation", "buckets": None, "sum_other_doc_count": 0}
+                ]
+            },
+        }
+
+        result = self.module.aggregate_detections(
+            field="severity_name",
+            type="terms",
+            filter="status:'nonexistent'",
+            size=10,
+            sort=None,
+            interval=None,
+            date_ranges=None,
+            ranges=None,
+            percents=None,
+            missing=None,
+            include=None,
+            name="alert_aggregation",
+            time_zone=None,
+            sub_aggregates=None,
+            include_hidden=True,
+        )
+
+        self.assertIsNone(result[0]["buckets"])
+
+    def test_aggregate_detections_requires_type_specific_companion(self):
+        """Types needing a companion argument fail fast instead of 500ing upstream."""
+        cases = [
+            ("date_histogram", "interval"),
+            ("date_range", "date_ranges"),
+            ("range", "ranges"),
+        ]
+        for agg_type, companion in cases:
+            with self.subTest(agg_type=agg_type):
+                self.mock_client.command.reset_mock()
+
+                result = self.module.aggregate_detections(
+                    field="timestamp",
+                    type=agg_type,
+                    filter=None,
+                    size=None,
+                    sort=None,
+                    interval=None,
+                    date_ranges=None,
+                    ranges=None,
+                    percents=None,
+                    missing=None,
+                    include=None,
+                    name="alert_aggregation",
+                    time_zone=None,
+                    sub_aggregates=None,
+                    include_hidden=True,
+                )
+
+                self.assertIn("error", result)
+                self.assertIn(companion, result["error"])
+                # The point of the guard: no request is sent at all.
+                self.mock_client.command.assert_not_called()
+
+    def test_aggregate_detections_accepts_type_with_its_companion(self):
+        """Supplying the companion argument lets the request through."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"name": "daily", "buckets": []}]},
+        }
+
+        result = self.module.aggregate_detections(
+            field="timestamp",
+            type="date_histogram",
+            filter=None,
+            size=None,
+            sort=None,
+            interval="day",
+            date_ranges=None,
+            ranges=None,
+            percents=None,
+            missing=None,
+            include=None,
+            name="daily",
+            time_zone=None,
+            sub_aggregates=None,
+            include_hidden=True,
+        )
+
+        self.assertEqual(result[0]["name"], "daily")
+        self.mock_client.command.assert_called_once()
+
+    def test_aggregate_detections_checks_nested_spec_companions(self):
+        """A nested spec missing its companion argument is caught too.
+
+        The API validates sub_aggregates the same way, so a nested
+        date_histogram without an interval must not reach it.
+        """
+        result = self.module.aggregate_detections(
+            field="status",
+            type="terms",
+            filter=None,
+            size=None,
+            sort=None,
+            interval=None,
+            date_ranges=None,
+            ranges=None,
+            percents=None,
+            missing=None,
+            include=None,
+            name="alert_aggregation",
+            time_zone=None,
+            sub_aggregates=[{"type": "date_histogram", "field": "timestamp"}],
+            include_hidden=True,
+        )
+
+        self.assertIn("error", result)
+        self.assertIn("interval", result["error"])
+        self.mock_client.command.assert_not_called()
+
+    def test_aggregate_alerts_is_read_only(self):
+        """falcon_aggregate_alerts must advertise itself as read-only."""
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations(
+            "falcon_aggregate_alerts",
+            ToolAnnotations(
+                readOnlyHint=True,
+                destructiveHint=False,
+                idempotentHint=True,
+                openWorldHint=True,
+            ),
+        )
 
     def test_update_detections_has_write_annotations(self):
         """Verify falcon_update_detections has correct non-read-only annotations."""
