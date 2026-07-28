@@ -513,67 +513,38 @@ class BaseModule(ABC):
     ) -> dict[str, Any]:
         """Build one aggregation spec for a Falcon aggregate endpoint.
 
-        Pure function — no I/O. Covers the full `msa.AggregateQueryRequest`
-        superset; the narrower dialects need no separate code path because they
-        are strict subsets and unset keys are omitted:
-
-        | Dialect | Fields | Notes |
-        |---|---|---|
-        | `msa.AggregateQueryRequest` | all 21 | live-verified |
-        | `fwmgr.msa.AggregateQueryRequest` | all 21 | field-identical to `msa`; NOT live-verified |
-        | `detectsapi.AggregateAlertQueryRequest` | 18 | no filters_spec/percents/extended_bounds |
-        | `api.MSAAggregateQueryRequest` | 8 | type/field/filter/name/size/sort/from/date_ranges |
-
-        Passing an out-of-dialect field is the caller's error, but the API will
-        **not** tell you: live, sending `percents`/`filters_spec`/`extended_bounds`
-        — or even a fabricated `totally_made_up_field` — to the 8-field
-        `api.MSAAggregateQueryRequest` endpoint returns HTTP 200 with buckets
-        identical to the clean request. Unknown keys are silently dropped, so a
-        successful response is no evidence the field was honored. Verify a field
-        actually changes the result before documenting it downstream.
-
-        Only `agg_type` and `field` are genuinely required — swagger marks 16
-        fields `required`, which is a spec artifact. Omitting either of these two
-        returns HTTP 500. `name` is optional and echoes back as `""`.
-
-        Note `filter=""` and `size=0`/`from_=0`/`min_doc_count=0` are kept: only
-        `None` counts as unset, so a caller-supplied falsy value survives.
-
-        Nested values (`date_ranges`, `ranges`, `filters_spec`, `extended_bounds`,
-        `sub_aggregates`) are forwarded by reference, not copied — treat the
-        returned spec as owned by the caller and do not mutate it in place.
+        Only `agg_type` and `field` are required. Unset keys are omitted, so
+        passing a subset produces a body valid for the narrower dialects.
 
         Args:
-            agg_type: Aggregation type, sent as the wire key `type`. Support is
-                per-operation — see `_base_aggregate` for the live-verified vocabulary.
-            field: The document field to aggregate on. Required.
-            filter: FQL filter narrowing the documents aggregated.
-            name: Label echoed back on the result, used to identify it in a
-                multi-spec response.
-            size: Max buckets to return. Unbounded up to at least 100000 live.
-            sort: Bucket sort, e.g. `_count.desc`.
-            interval: Bucket width for `date_histogram`. Bare unit names only.
-            time_zone: Numeric UTC offset, e.g. `+00:00`.
-            from_: Bucket offset, sent as the wire key `from`.
-            q: Free-text query.
-            missing: Value substituted for documents missing `field`.
-            include: Bucket-key include pattern.
-            exclude: Bucket-key exclude pattern.
-            date_ranges: `[{"from": ..., "to": ...}, ...]` for `date_range`.
-            ranges: `[{"From": ..., "To": ...}, ...]` for `range`.
-            percents: Percentiles to compute, e.g. `[50.0, 95.0]`.
-            filters_spec: Named sub-filters for the `filters` type.
-            extended_bounds: Forces histogram bounds beyond the matched data.
-            min_doc_count: Drop buckets with fewer than this many documents.
-            max_doc_count: Drop buckets with more than this many documents.
-            sub_aggregates: Nested specs (build each with this same method).
+            agg_type: Aggregation type, sent as the wire key `type`
+            field: The document field to aggregate on
+            filter: FQL filter narrowing the documents aggregated
+            name: Label echoed back on the result, identifying it in a
+                multi-spec response
+            size: Max buckets to return
+            sort: Bucket sort, e.g. "_count.desc"
+            interval: Bucket width for `date_histogram`, as a bare unit name
+                ("hour", "day", "week", "month", "quarter", "year")
+            time_zone: Numeric UTC offset, e.g. "+00:00"
+            from_: Bucket offset, sent as the wire key `from`
+            q: Free-text query
+            missing: Value substituted for documents missing `field`
+            include: Bucket-key include pattern
+            exclude: Bucket-key exclude pattern
+            date_ranges: [{"from": ..., "to": ...}, ...] for `date_range`
+            ranges: [{"From": ..., "To": ...}, ...] for `range`
+            percents: Percentiles to compute, e.g. [50.0, 95.0]
+            filters_spec: Named sub-filters for the `filters` type
+            extended_bounds: Forces histogram bounds beyond the matched data
+            min_doc_count: Drop buckets with fewer than this many documents
+            max_doc_count: Drop buckets with more than this many documents
+            sub_aggregates: Nested specs, each built with this same method
 
         Returns:
-            The aggregation spec dict, with every unset key omitted.
+            The aggregation spec dict, with every unset key omitted
         """
         spec: dict[str, Any] = {
-            # `type` and `from` are renamed: `type` shadows a builtin and `from`
-            # is a Python keyword, so the kwargs are `agg_type` / `from_`.
             "type": agg_type,
             "field": field,
             "from": from_,
@@ -607,75 +578,24 @@ class BaseModule(ABC):
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Run one or more aggregation specs against a Falcon aggregate endpoint.
 
-        Pass either `specs` (a pre-built list, for batching) or the single-spec
-        kwargs accepted by `_build_aggregate_spec` — not both.
-
-        **The body is always a list, even for one spec.** Every dialect rejects a
-        bare object live: `cannot unmarshal object into Go value of type
-        []*msa.AggregateQueryRequest`. Swagger marks 6 operations as bare objects;
-        that is wrong, confirmed across 5 operations in 3 dialects with zero
-        counter-examples. Do not "simplify" this to `body={...}`.
-
-        Response shape: `resources: [{name, buckets, sum_other_doc_count}]`, returned
-        here as a bare list — aggregate responses carry no `meta.pagination`, so
-        there is no envelope to build. `sum_other_doc_count` is not universal (the
-        case-management SLA endpoint omits it). Buckets key on **`label`**, not
-        `key` (swagger's item schema omits `label` entirely); for `date_histogram`
-        that `label` is epoch milliseconds as an integer, alongside a
-        `key_as_string` ISO timestamp. Sub-aggregate results nest as
-        `buckets[].sub_aggregates[]`, recursively the same shape. With multiple
-        specs, **response order is not preserved** — identify each result by its
-        `name`, which echoes back as `""` when omitted.
-
-        Live-verified `type` values on alerts: `terms`, `date_histogram`, `range`,
-        `date_range`, `cardinality`, `percentiles`, `avg`, `sum`, `min`, `max`,
-        `filters`, `value_count`. Not accepted there, and the failure mode differs
-        by type: `stats`, `extended_stats`, and `missing` return HTTP 500 with only
-        a trace-id, while `histogram` returns a clean HTTP 400. Do not assume a
-        uniform 400 when handling an unsupported type. **Support is per-operation**
-        — casemgmt rejects `date_histogram` that alerts accepts — so there is
-        deliberately no hardcoded allowlist here; types pass through to the API.
-
-        Two traps worth knowing before trusting a result:
-
-        - **A bad FQL filter or bogus `field` is silent**: HTTP 200 with
-          `buckets: null` and no error. An empty result never proves the query
-          was right.
-        - **HTTP 200 can carry a body-level 400.** `handle_api_response` only
-          inspects the HTTP status, so this method checks `body.errors` on a
-          success status and formats the error itself; otherwise
-          `invalid aggregate type` would silently become `[]`. The returned
-          `details.status_code` stays the true transport status (e.g. 200), and the
-          message quotes the API's own text rather than borrowing the generic 400
-          advice about FQL syntax. That check is deliberately scoped to 2xx: a real
-          4xx/5xx also carries `errors[]`, and routing those here would skip
-          `handle_api_response`'s 403 branch and lose the `required_scopes` hint.
-          Note the more common failure is a real HTTP 500 carrying only a trace-id
-          — a bogus `type` and an omitted `type`/`field` both land there.
-
-        A 403 here means one of two different things, and the message string is
-        what distinguishes them: `access denied, scope not permitted` is a genuine
-        missing scope that adding the scope fixes, whereas `authorization failed`
-        is **not** scope-fixable (read siblings return 200 on the same scope) and
-        should not be chased with scope changes.
-
-        Format constraints (both are clean 400s when violated): `time_zone` needs a
-        numeric offset (`+00:00`, `-05:00`) — IANA names and `UTC`/`Z` are
-        rejected; `interval` accepts bare unit names only (`hour`, `day`, `week`,
-        `month`, `quarter`, `year`) — `1d`/`30m` are 400s, while `minute` is a 500.
+        Pass either `specs` or the single-spec kwargs accepted by
+        `_build_aggregate_spec`, not both.
 
         Args:
-            operation: The API operation name (e.g. "PostAggregatesAlertsV2").
-            specs: Pre-built aggregation specs, for batching several in one call.
-            error_message: Custom error message for failed operations.
-            **spec_kwargs: Single-spec arguments forwarded to `_build_aggregate_spec`.
+            operation: The API operation name (e.g. "PostAggregatesAlertsV2")
+            specs: Pre-built aggregation specs, for batching several in one call
+            error_message: Custom error message for failed operations
+            **spec_kwargs: Single-spec arguments forwarded to
+                `_build_aggregate_spec`
 
         Returns:
-            The API's `resources` list (one entry per aggregation), or an error dict.
+            The API's resources list, one entry per aggregation, or an error dict.
+            Each entry holds the aggregation `name` and its `buckets`, which key
+            on `label` rather than `key`. Order does not track `specs`.
 
         Raises:
-            ValueError: If both `specs` and single-spec kwargs are given, if neither
-                is, or if `specs` is an empty list.
+            ValueError: If both `specs` and single-spec kwargs are given, if
+                neither is, or if `specs` is an empty list
         """
         if specs is not None and spec_kwargs:
             raise ValueError(
@@ -687,29 +607,23 @@ class BaseModule(ABC):
                 raise ValueError("Provide `specs` or the single-spec kwargs (agg_type, field)")
             specs = [self._build_aggregate_spec(**spec_kwargs)]
         elif not specs:
-            # `[]` is falsy but not None, so it would otherwise reach the API as a
-            # zero-spec POST. Never useful, and usually an upstream comprehension
-            # that filtered down to nothing.
+            # Falsy but not None, so it would otherwise reach the API as a
+            # zero-spec POST.
             raise ValueError("`specs` is empty: provide at least one aggregation spec")
 
         logger.debug("Executing %s with %d aggregate spec(s)", operation, len(specs))
 
-        # Always list-wrapped — see the docstring; a bare dict is rejected live.
+        # List-wrapped even for one spec; the API 400s on a bare object.
         response = self.client.command(operation, body=specs)
 
-        # A 2xx can still carry a body-level error (e.g. `invalid aggregate type`
-        # arrives as HTTP 200 + errors[] + resources: null). handle_api_response
-        # only looks at the HTTP status, so surface it here or the cause is lost.
-        # Scoped to success statuses on purpose: a real 4xx/5xx also carries
-        # `errors[]`, and routing those here would skip handle_api_response's 403
-        # branch, losing `required_scopes`.
+        # A 2xx can still carry a body-level error, which handle_api_response would
+        # read as success and discard. Only 2xx: a real 4xx/5xx also carries
+        # `errors[]` and needs that function's 403 handling.
         status_code = response.get("status_code")
         body = response.get("body") or {}
         if status_code is not None and status_code < 300 and body.get("errors"):
-            # Format directly rather than forcing a synthetic 4xx through
-            # handle_api_response: that would report a fabricated `status_code` in
-            # `details` and prepend its 400 blurb about FQL syntax, which has
-            # nothing to do with a body-level `invalid aggregate type`.
+            # Formatted here rather than via handle_api_response, which would
+            # report a status the transport never returned.
             api_messages = [
                 message
                 for error in body["errors"]
