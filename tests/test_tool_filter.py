@@ -2,8 +2,11 @@
 Tests for tool-level filtering (read-only mode, allow-list, deny-list).
 """
 
+import argparse
 import asyncio
+import os
 import re
+import sys
 import unittest
 from collections.abc import Coroutine
 from typing import Any, TypeVar
@@ -12,7 +15,7 @@ from unittest.mock import MagicMock, patch
 from mcp.types import ToolAnnotations
 
 from falcon_mcp import registry
-from falcon_mcp.server import FalconMCPServer, parse_tools_list
+from falcon_mcp.server import FalconMCPServer, parse_args, parse_tools_list
 from falcon_mcp.tool_filter import ToolPolicy, ToolRecord
 
 _T = TypeVar("_T")
@@ -202,6 +205,67 @@ class TestParseToolsList(unittest.TestCase):
     def test_strips_whitespace_and_blanks(self):
         self.assertEqual(
             parse_tools_list(" falcon_a , falcon_b ,, "), ["falcon_a", "falcon_b"]
+        )
+
+
+class TestCLIDefaultsReachTheServer(unittest.TestCase):
+    """The CLI must hand the server the same thing the tests construct directly.
+
+    Unit tests call FalconMCPServer(allowed_tools=...) with enabled_modules unset,
+    but argparse supplies a default for --modules. If that default is a fully
+    expanded module list, `--tools X` alone silently serves every tool: the server
+    sees a truthy enabled_modules and never takes the "--tools alone" branch. Caught
+    by an agent-level run, invisible to every direct-construction test.
+    """
+
+    def setUp(self):
+        self._saved = {
+            k: os.environ.pop(k, None)
+            for k in ("FALCON_MCP_MODULES", "FALCON_MCP_TOOLS", "FALCON_MCP_EXCLUDE_TOOLS")
+        }
+
+    def tearDown(self):
+        for k, v in self._saved.items():
+            if v is not None:
+                os.environ[k] = v
+
+    def _args(self, argv: list[str]) -> argparse.Namespace:
+        with patch.object(sys, "argv", ["falcon-mcp", *argv]):
+            return parse_args()
+
+    def test_tools_alone_does_not_preselect_every_module(self):
+        args = self._args(["--tools", "falcon_search_detections"])
+        self.assertEqual(args.tools, ["falcon_search_detections"])
+        self.assertFalse(
+            args.modules,
+            "--modules defaulted to a populated list, so --tools alone cannot "
+            f"restrict the surface: {args.modules}",
+        )
+
+    def test_no_flags_still_means_all_modules(self):
+        """The default must stay 'everything' when no restriction is requested."""
+        args = self._args([])
+        mock = MagicMock()
+        mock.return_value.authenticate.return_value = True
+        with patch("falcon_mcp.server.FalconClient", mock):
+            server = FalconMCPServer(enabled_modules=set(args.modules))
+        self.assertEqual(server.enabled_modules, set(registry.get_module_names()))
+
+    def test_explicit_modules_are_honored(self):
+        args = self._args(["--modules", "detections"])
+        self.assertEqual(args.modules, ["detections"])
+
+    def test_tools_alone_through_the_cli_path_registers_only_that_tool(self):
+        """End-to-end through argparse: the surface must be just the named tool."""
+        args = self._args(["--tools", _FOREIGN_TOOL])
+        mock = MagicMock()
+        mock.return_value.authenticate.return_value = True
+        with patch("falcon_mcp.server.FalconClient", mock):
+            server = FalconMCPServer(
+                enabled_modules=set(args.modules), allowed_tools=set(args.tools)
+            )
+        self.assertEqual(
+            set(server.server._tool_manager._tools) - _META_TOOLS, {_FOREIGN_TOOL}
         )
 
 

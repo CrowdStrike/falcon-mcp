@@ -410,17 +410,13 @@ def parse_modules_list(modules_string: str) -> list[str]:
         modules_string: Comma-separated string of module names
 
     Returns:
-        List of validated module names (returns all available modules if empty string)
+        List of validated module names, empty if the string is empty
 
     Raises:
         argparse.ArgumentTypeError: If any module names are invalid
     """
     # Get available modules
     available_modules = registry.get_module_names()
-
-    # If empty string, return all available modules (default behavior)
-    if not modules_string:
-        return available_modules
 
     # Split by comma and clean up whitespace
     modules = [m.strip() for m in modules_string.split(",") if m.strip()]
