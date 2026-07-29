@@ -64,3 +64,31 @@ def get_module_names() -> list[str]:
         List of module names
     """
     return list(get_available_modules().keys())
+
+
+def get_tool_module_map() -> dict[str, str]:
+    """Resolve which module to load for a given tool name, before any module loads.
+
+    Serves the two startup decisions that must happen before a client exists:
+    rejecting allow/deny-list names that match no tool, and pulling in the modules
+    that own the names an operator allow-listed. Not a filtering input — which of a
+    loaded module's tools survive is decided after registration, from the tools the
+    server actually holds.
+
+    Registration only wires bound methods onto a throwaway server, so this makes no
+    Falcon API calls and needs no authenticated client.
+
+    Returns:
+        Dict mapping prefixed tool names to module names
+    """
+    # Imported here to keep registry out of the modules -> BaseModule -> client cycle.
+    from mcp.server.fastmcp import FastMCP
+
+    scratch = FastMCP("tool-name-probe")
+    mapping: dict[str, str] = {}
+    for module_name, module_class in get_available_modules().items():
+        module = module_class(None)  # type: ignore[arg-type]
+        module.register_tools(scratch)
+        for tool_name in module.tools:
+            mapping[tool_name] = module_name
+    return mapping

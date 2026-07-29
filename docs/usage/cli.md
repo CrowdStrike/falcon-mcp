@@ -82,6 +82,57 @@ falcon-mcp --help
 | `--member-cid` | `FALCON_MEMBER_CID` | — | Flight Control child CID |
 | `--proxy` | `FALCON_PROXY_URL` | — | HTTP/HTTPS proxy for outbound API connections |
 | `--dynamic` | `FALCON_MCP_DYNAMIC` | `false` | [Dynamic mode](/falcon-mcp/usage/dynamic-mode/): expose three tools instead of all module tools to reduce context usage |
+| `--read-only` | `FALCON_MCP_READ_ONLY` | `false` | Register only read-only tools, disabling every tool that mutates tenant state |
+| `--tools` | `FALCON_MCP_TOOLS` | — | Comma-separated allow-list of tool names, added to the enabled modules |
+| `--exclude-tools` | `FALCON_MCP_EXCLUDE_TOOLS` | — | Comma-separated deny-list of tool names to withhold |
+
+## Restricting the Tool Surface
+
+`--modules` gates whole modules, so enabling one to reach its search tools also exposes its
+mutating tools. The three tool-level options narrow that surface further:
+
+```bash
+# Investigation-only server
+falcon-mcp --read-only
+
+# Expose exactly two tools, nothing else
+falcon-mcp --tools falcon_search_detections,falcon_search_hosts
+
+# Keep the module, drop one tool
+falcon-mcp --modules hostgroups --exclude-tools falcon_delete_host_groups
+
+# All of detections, plus one tool from a module you did not enable
+falcon-mcp --modules detections --tools falcon_search_applications
+```
+
+Tool names are the `falcon_`-prefixed names clients display. An unrecognized name aborts startup
+instead of being ignored, so a typo in a deny-list cannot silently leave a tool exposed.
+
+`--tools` is **additive**, not a narrowing filter. It grants individual tools on top of whatever
+`--modules` already enabled, reaching across the module boundary:
+
+- `--tools X` on its own registers **only** X — no modules are loaded by default.
+- `--modules detections --tools X` registers every `detections` tool **plus** X, even when X belongs
+  to a module that is not enabled. That module contributes only X, not its whole surface, and
+  `falcon_list_enabled_modules` does not list it.
+
+To *subtract*, use `--exclude-tools` or `--read-only`. All four options compose and resolve in a
+fixed order:
+
+1. `--exclude-tools` removes a tool unconditionally, even if `--tools` names it.
+2. `--read-only` removes every mutating tool unconditionally, even if `--tools` names it.
+3. `--tools` adds the tools it names, bypassing the module gate.
+4. `--modules` decides which tools are candidates by default.
+
+Since the first two rules always win, they work as a deployment-wide floor that an additive
+`--tools` list cannot widen past. The restrictions also hold in dynamic mode: a withheld tool is
+absent from `falcon_search_tools` results and rejected by `falcon_execute_tool`. The startup log
+reports which rules are active and how many tools `--read-only` and `--exclude-tools` withheld; add
+`--debug` to see those tools by name. A tool that was simply never requested is not counted as
+withheld — only `--tools` grants and the two subtracting rules are decisions worth reporting.
+
+These options filter tools, not resources. A withheld tool's FQL guide resource stays available,
+since guides are static field documentation carrying no tenant data.
 
 ## Using as a Library
 

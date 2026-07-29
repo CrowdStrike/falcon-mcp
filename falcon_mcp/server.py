@@ -24,6 +24,7 @@ from falcon_mcp.common.auth import (
 )
 from falcon_mcp.common.logging import configure_logging, get_logger
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS, offload_to_thread
+from falcon_mcp.tool_filter import Resolution, ToolPolicy, ToolRecord
 
 logger = get_logger(__name__)
 
@@ -53,6 +54,9 @@ class FalconMCPServer:
         member_cid: str | None = None,
         proxy: str | None = None,
         dynamic: bool = False,
+        read_only: bool = False,
+        allowed_tools: set[str] | None = None,
+        excluded_tools: set[str] | None = None,
     ):
         """Initialize the Falcon MCP server.
 
@@ -69,6 +73,13 @@ class FalconMCPServer:
             port: Port to listen on for HTTP transports (default: 8000)
             member_cid: Child CID for Flight Control (MSSP) support (defaults to FALCON_MEMBER_CID env var)
             proxy: HTTP/HTTPS proxy URL for outbound Falcon API connections (defaults to FALCON_PROXY_URL env var)
+            dynamic: Enable dynamic mode (discovery meta-tools instead of the full surface)
+            read_only: Register only read-only tools, overriding allowed_tools
+            allowed_tools: Additive allow-list of prefixed tool names.
+            excluded_tools: Deny-list of prefixed tool names; wins over allowed_tools
+
+        Raises:
+            ValueError: If allowed_tools or excluded_tools name unknown tools
         """
         # Store configuration
         self.base_url = base_url
@@ -80,7 +91,38 @@ class FalconMCPServer:
         self.port = port
         self.dynamic = dynamic
 
-        self.enabled_modules = enabled_modules or set(registry.get_module_names())
+        allowed_tools = allowed_tools or set()
+        excluded_tools = excluded_tools or set()
+
+        tool_module_map = (
+            registry.get_tool_module_map() if (allowed_tools or excluded_tools) else {}
+        )
+        self._validate_filter_tool_names(allowed_tools, excluded_tools, tool_module_map)
+
+        # Resolve which modules to load. The allow-list is additive: it pulls in the
+        # modules owning the tools it names, gated so they contribute only those
+        # tools.
+        if enabled_modules:
+            self.enabled_modules = set(enabled_modules)
+        elif allowed_tools:
+            # --tools alone supplies the whole surface, so start from no modules.
+            self.enabled_modules = set()
+        else:
+            self.enabled_modules = set(registry.get_module_names())
+
+        allow_list_modules = {
+            tool_module_map[name] for name in allowed_tools if name in tool_module_map
+        }
+        # Modules pulled in solely for the allow-list get loaded but not reported as
+        # enabled: they contribute only their named tools.
+        self.loaded_modules = self.enabled_modules | allow_list_modules
+
+        self.tool_policy = ToolPolicy(
+            read_only=read_only,
+            allowed=allowed_tools,
+            excluded=excluded_tools,
+            enabled_modules=self.enabled_modules,
+        )
 
         # Configure logging
         configure_logging(debug=self.debug)
@@ -120,7 +162,7 @@ class FalconMCPServer:
         # Initialize and register modules
         self.modules = {}
         available_modules = registry.get_available_modules()
-        for module_name in self.enabled_modules:
+        for module_name in self.loaded_modules:
             if module_name in available_modules:
                 module_class = available_modules[module_name]
                 self.modules[module_name] = module_class(self.falcon_client)
@@ -134,7 +176,7 @@ class FalconMCPServer:
         resource_word = "resource" if resource_count == 1 else "resources"
 
         # Count modules and tools with proper grammar
-        module_count = len(self.modules)
+        module_count = len(self.enabled_modules & set(self.modules))
         module_word = "module" if module_count == 1 else "modules"
 
         logger.info(
@@ -149,14 +191,61 @@ class FalconMCPServer:
             " (dynamic mode)" if self.dynamic else "",
         )
 
+        if self.tool_policy.active:
+            # Counts only what the operator asked to remove. Run with --debug to
+            # see the names.
+            withheld = len(self._resolution.withheld_by_rule)
+            logger.info(
+                "Tool policy active (%s) — %d %s withheld",
+                self.tool_policy.describe(),
+                withheld,
+                "tool" if withheld == 1 else "tools",
+            )
+
+    def _validate_filter_tool_names(
+        self,
+        allowed: set[str],
+        excluded: set[str],
+        tool_module_map: dict[str, str],
+    ) -> None:
+        """Reject allow/deny-list entries that name no known tool.
+
+        Runs before authentication so a typo costs no Falcon round-trip. Matters most
+        for the deny-list, where an ignored name would leave a tool exposed.
+
+        Args:
+            allowed: Allow-list names supplied by the operator.
+            excluded: Deny-list names supplied by the operator.
+            tool_module_map: Every known tool name mapped to its module.
+
+        Raises:
+            ValueError: If any named tool is unrecognized.
+        """
+        named = allowed | excluded
+        if not named:
+            return
+
+        unknown = sorted(named - set(tool_module_map))
+        if unknown:
+            raise ValueError(
+                f"Unrecognized tool names: {', '.join(unknown)}. "
+                "Names must be the falcon_-prefixed names clients see "
+                "(e.g. falcon_search_hosts)."
+            )
+
     def _register_tools(self) -> int:
-        """Register tools from all modules.
+        """Register tools from all modules, then subtract the ones policy withholds.
+
+        Registration runs first so the policy resolves against the tools the server
+        actually holds — module ownership and annotations are then facts, not
+        something to predict ahead of time.
 
         Returns:
-            int: Number of tools registered
+            int: Number of tools left registered
         """
         # falcon_list_enabled_modules is always registered — dynamic mode's no-results
-        # hint references it by name, and it's useful in both modes.
+        # hint references it by name, and it's useful in both modes. Meta-tools are
+        # exempt from the policy: withholding them leaves dynamic mode undiscoverable.
         self.server.add_tool(
             offload_to_thread(self.list_enabled_modules),
             name="falcon_list_enabled_modules",
@@ -167,12 +256,13 @@ class FalconMCPServer:
         if self.dynamic:
             # Dynamic mode: expose only the discovery/execution meta-tools plus
             # falcon_list_enabled_modules above (3 tools total) so the context window
-            # stays minimal.
+            # stays minimal. The catalog applies the policy while building, so a
+            # withheld tool is absent from search and 404s in the executor.
             from falcon_mcp.dynamic import DynamicMode
 
-            dynamic_mode = DynamicMode(self.modules, self.server)
+            dynamic_mode = DynamicMode(self.modules, self.server, self.tool_policy)
             dynamic_mode.register()
-            tool_count = 3  # falcon_list_enabled_modules + falcon_search_tools + falcon_execute_tool
+            self._resolution = dynamic_mode.catalog.resolution
         else:
             # Normal mode: register all three core tools and then each module's tools.
             self.server.add_tool(
@@ -192,9 +282,40 @@ class FalconMCPServer:
             for module in self.modules.values():
                 module.register_tools(self.server)
 
-            tool_count = 3 + sum(len(getattr(m, "tools", [])) for m in self.modules.values())
+            self._resolution = self._apply_policy()
 
-        return tool_count
+        # Count what the tool manager holds; arithmetic would overcount when the
+        # policy withholds a tool.
+        return len(self.server._tool_manager._tools)
+
+    def _apply_policy(self) -> Resolution:
+        """Remove the tools the policy withholds from the already-registered surface.
+
+        Returns:
+            The policy's keep/removed partition of this server's module tools.
+        """
+        registered = self.server._tool_manager._tools
+        catalog = {
+            name: ToolRecord(module=module_name, annotations=tool.annotations)
+            for module_name, module in self.modules.items()
+            for name in module.tools
+            if (tool := registered.get(name)) is not None
+        }
+        resolution = self.tool_policy.resolve(catalog)
+
+        for name in resolution.removed:
+            # remove_tool raises on an unknown name, and ToolManager.add_tool skips
+            # duplicates silently, so a repeated registration pass reaches here with
+            # the tool already gone.
+            if name in registered:
+                self.server.remove_tool(name)
+                logger.debug("Withheld tool: %s", name)
+
+        # Keep module.tools mirroring what the server serves.
+        for module in self.modules.values():
+            module.tools = [name for name in module.tools if name not in resolution.removed]
+
+        return resolution
 
     def _register_resources(self) -> int:
         """Register resources from all modules.
@@ -202,13 +323,14 @@ class FalconMCPServer:
         Returns:
             int: Number of resources registered
         """
-        # Register resources from modules
+        # Deliberately not gated by the tool policy: tool descriptions name their
+        # guide by URI, so dropping one strands a live tool. See
+        # TestGuideReferencesResolve.
         for module in self.modules.values():
-            # Check if the module has a register_resources method
             if hasattr(module, "register_resources") and callable(module.register_resources):
                 module.register_resources(self.server)
 
-        return sum(len(getattr(m, "resources", [])) for m in self.modules.values())
+        return len(self.server._resource_manager._resources)
 
     def falcon_check_connectivity(self) -> dict[str, bool]:
         """Check connectivity to the Falcon API."""
@@ -231,7 +353,7 @@ class FalconMCPServer:
         These modules are determined by the --modules flag when starting the server.
         If no modules are specified, all available modules are enabled.
         """
-        return {"modules": list(self.modules.keys())}
+        return {"modules": sorted(self.enabled_modules & set(self.modules))}
 
     def list_modules(self) -> dict[str, list[str]]:
         """Lists all available modules in the falcon-mcp server."""
@@ -312,6 +434,21 @@ def parse_modules_list(modules_string: str) -> list[str]:
         )
 
     return modules
+
+
+def parse_tools_list(tools_string: str) -> list[str]:
+    """Parse a comma-separated tool-name list.
+
+    Names are not validated here: the set of valid tool names is only known after
+    module registration, so FalconMCPServer rejects unknown names at startup.
+
+    Args:
+        tools_string: Comma-separated string of prefixed tool names
+
+    Returns:
+        List of tool names, empty if the string is empty
+    """
+    return [t.strip() for t in tools_string.split(",") if t.strip()]
 
 
 def parse_args() -> argparse.Namespace:
@@ -424,6 +561,36 @@ def parse_args() -> argparse.Namespace:
         "all module tools (env: FALCON_MCP_DYNAMIC)",
     )
 
+    # Blast-radius controls. These compose with --modules and with each other;
+    # --read-only and --exclude-tools both override --tools.
+    parser.add_argument(
+        "--read-only",
+        action="store_true",
+        default=os.environ.get("FALCON_MCP_READ_ONLY", "").lower() == "true",
+        help="Register only read-only tools, disabling every tool that mutates tenant state. "
+        "Takes precedence over --tools (env: FALCON_MCP_READ_ONLY)",
+    )
+
+    parser.add_argument(
+        "--tools",
+        type=parse_tools_list,
+        default=parse_tools_list(os.environ.get("FALCON_MCP_TOOLS", "")),
+        metavar="TOOL1,TOOL2,...",
+        help="Comma-separated allow-list of tool names to register (e.g. "
+        "falcon_search_hosts,falcon_search_detections). Additive: added to the tools from "
+        "--modules, and may name tools from modules that are not enabled. Set alone, only "
+        "these tools load. Unknown names abort startup (env: FALCON_MCP_TOOLS)",
+    )
+
+    parser.add_argument(
+        "--exclude-tools",
+        type=parse_tools_list,
+        default=parse_tools_list(os.environ.get("FALCON_MCP_EXCLUDE_TOOLS", "")),
+        metavar="TOOL1,TOOL2,...",
+        help="Comma-separated deny-list of tool names to withhold. Overrides --tools. "
+        "Unknown names abort startup (env: FALCON_MCP_EXCLUDE_TOOLS)",
+    )
+
     return parser.parse_args()
 
 
@@ -449,6 +616,9 @@ def main() -> None:
             member_cid=args.member_cid,
             proxy=args.proxy,
             dynamic=args.dynamic,
+            read_only=args.read_only,
+            allowed_tools=set(args.tools),
+            excluded_tools=set(args.exclude_tools),
         )
         logger.info("Starting server with %s transport", args.transport)
         server.run(args.transport)

@@ -17,6 +17,7 @@ from falcon_mcp.common.fql import FQL_FILTER_HINT_SUFFIX
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.filter_hints import FILTER_HINTS, QUERY_STRING_HINTS
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS, BaseModule
+from falcon_mcp.tool_filter import Resolution, ToolPolicy, ToolRecord
 
 logger = get_logger(__name__)
 
@@ -39,8 +40,14 @@ class ToolEntry:
 class DynamicToolCatalog:
     """Builds a searchable catalog of tools from modules via a scratch FastMCP instance."""
 
-    def __init__(self, modules: dict[str, BaseModule]) -> None:
+    def __init__(
+        self, modules: dict[str, BaseModule], policy: ToolPolicy | None = None
+    ) -> None:
         self._entries: dict[str, ToolEntry] = {}
+        self._policy = policy or ToolPolicy()
+        self.resolution = Resolution(
+            keep=frozenset(), removed=frozenset(), withheld_by_rule=frozenset()
+        )
         self._build(modules)
 
     def _build(self, modules: dict[str, BaseModule]) -> None:
@@ -56,7 +63,25 @@ class DynamicToolCatalog:
             for tool_name in module.tools:
                 module_tool_names[tool_name] = module_name
 
+        self.resolution = self._policy.resolve(
+            {
+                tool_name: ToolRecord(
+                    module=module_tool_names.get(tool_name, "unknown"),
+                    annotations=tool_obj.annotations,
+                )
+                for tool_name, tool_obj in all_tools.items()
+            }
+        )
+
         for tool_name, tool_obj in all_tools.items():
+            # Omitting a withheld tool here is the whole enforcement: it is then
+            # absent from falcon_search_tools and 404s in falcon_execute_tool, so the
+            # executor is not a bypass.
+            if tool_name in self.resolution.removed:
+                # Named here because this path never calls server.remove_tool, so
+                # --debug would otherwise report a count with no names behind it.
+                logger.debug("Withheld tool: %s", tool_name)
+                continue
             module_name = module_tool_names.get(tool_name, "unknown")
             self._entries[tool_name] = ToolEntry(tool=tool_obj, module=module_name)
 
@@ -158,9 +183,14 @@ class DynamicMode:
     dynamic mode 3 tools total in the client-visible surface.
     """
 
-    def __init__(self, modules: dict[str, BaseModule], server: FastMCP) -> None:
+    def __init__(
+        self,
+        modules: dict[str, BaseModule],
+        server: FastMCP,
+        policy: ToolPolicy | None = None,
+    ) -> None:
         self.server = server
-        self.catalog = DynamicToolCatalog(modules)
+        self.catalog = DynamicToolCatalog(modules, policy)
 
     def register(self) -> None:
         self.server.add_tool(
