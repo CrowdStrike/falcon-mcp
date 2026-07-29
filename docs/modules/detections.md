@@ -13,6 +13,27 @@ Accessing and analyzing CrowdStrike Falcon detections
 
 ## Tools
 
+### `falcon_aggregate_alerts`
+
+**Required scopes:** `Alerts:read`
+
+Count and summarize detections (also called alerts) without retrieving each record.
+
+Use this for "how many" and "top N" questions — alerts per severity, status,
+tactic, or host, distinct host counts, and alert volume over time — instead of
+paging through falcon_search_detections. Consult
+falcon://detections/search/fql-guide before constructing filter expressions.
+Returns one aggregation per request holding `buckets`, which key on `label`
+with a `count`; single-value aggregations (`cardinality`, `max`, `min`, `avg`,
+`sum`) report their answer as `value` instead.
+
+**Example prompts:**
+
+- "How many detections do we have by severity?"
+- "What are the top 10 hosts by alert count this week?"
+- "Show me alert volume per day for the last 30 days"
+- "How many distinct hosts have critical alerts?"
+
 ### `falcon_get_detection_details`
 
 **Required scopes:** `Alerts:read`

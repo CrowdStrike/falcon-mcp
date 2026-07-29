@@ -523,7 +523,8 @@ class BaseModule(ABC):
             name: Label echoed back on the result, identifying it in a
                 multi-spec response
             size: Max buckets to return
-            sort: Bucket sort, e.g. "_count.desc"
+            sort: Bucket sort, e.g. "_count|desc". Accepted forms vary by
+                endpoint; each tool documents what its own endpoint takes
             interval: Bucket width for `date_histogram`, as a bare unit name
                 ("hour", "day", "week", "month", "quarter", "year")
             time_zone: Numeric UTC offset, e.g. "+00:00"
@@ -569,11 +570,52 @@ class BaseModule(ABC):
         }
         return filter_none_values(spec)
 
+    # Aggregation types that need a companion key in the same spec. The API answers a
+    # spec missing its companion with an opaque 500 rather than a validation error.
+    _AGGREGATE_REQUIRED_COMPANIONS: dict[str, str] = {
+        "date_histogram": "interval",
+        "date_range": "date_ranges",
+        "range": "ranges",
+    }
+
+    @classmethod
+    def _find_missing_aggregate_companion(
+        cls, specs: list[dict[str, Any]]
+    ) -> tuple[str, str] | None:
+        """Find the first aggregation spec missing a required companion key.
+
+        Recurses into `sub_aggregates`, which the API validates the same way.
+
+        Args:
+            specs: Aggregation specs to check
+
+        Returns:
+            A (type, missing key) pair, or None if every spec is complete
+        """
+        for spec in specs:
+            if not isinstance(spec, dict):
+                # Malformed input is the API's to reject, not this check's to crash on.
+                continue
+
+            agg_type = spec.get("type")
+            if isinstance(agg_type, str):
+                companion = cls._AGGREGATE_REQUIRED_COMPANIONS.get(agg_type)
+                if companion and not spec.get(companion):
+                    return agg_type, companion
+
+            nested = spec.get("sub_aggregates")
+            if isinstance(nested, list):
+                found = cls._find_missing_aggregate_companion(nested)
+                if found:
+                    return found
+        return None
+
     def _base_aggregate(
         self,
         operation: str,
         specs: list[dict[str, Any]] | None = None,
         error_message: str = "Aggregate operation failed",
+        parameters: dict[str, Any] | None = None,
         **spec_kwargs: Any,
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Run one or more aggregation specs against a Falcon aggregate endpoint.
@@ -585,6 +627,8 @@ class BaseModule(ABC):
             operation: The API operation name (e.g. "PostAggregatesAlertsV2")
             specs: Pre-built aggregation specs, for batching several in one call
             error_message: Custom error message for failed operations
+            parameters: Query-string parameters for endpoints that take them
+                alongside the body (e.g. `include_hidden`)
             **spec_kwargs: Single-spec arguments forwarded to
                 `_build_aggregate_spec`
 
@@ -611,10 +655,21 @@ class BaseModule(ABC):
             # zero-spec POST.
             raise ValueError("`specs` is empty: provide at least one aggregation spec")
 
+        missing = self._find_missing_aggregate_companion(specs)
+        if missing:
+            agg_type, companion = missing
+            return _format_error_response(
+                f"`{companion}` is required when type is `{agg_type}`",
+                operation=operation,
+            )
+
         logger.debug("Executing %s with %d aggregate spec(s)", operation, len(specs))
 
         # List-wrapped even for one spec; the API 400s on a bare object.
-        response = self.client.command(operation, body=specs)
+        command_kwargs: dict[str, Any] = {"body": specs}
+        if parameters:
+            command_kwargs["parameters"] = parameters
+        response = self.client.command(operation, **command_kwargs)
 
         # A 2xx can still carry a body-level error, which handle_api_response would
         # read as success and discard. Only 2xx: a real 4xx/5xx also carries

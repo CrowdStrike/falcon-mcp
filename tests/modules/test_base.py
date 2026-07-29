@@ -1271,6 +1271,7 @@ class TestBaseAggregate(TestModules):
             "AggregateCases",
             agg_type="date_histogram",
             field="created_timestamp",
+            interval="day",
             error_message="Failed to aggregate cases",
         )
 
@@ -1368,6 +1369,93 @@ class TestBaseAggregate(TestModules):
             self.module._base_aggregate("PostAggregatesAlertsV2", specs=[])
         self.mock_client.command.assert_not_called()
 
+    def test_missing_type_companion_short_circuits(self):
+        """A spec missing its type's companion key never reaches the API.
+
+        The API answers these with an opaque 500, so they are caught locally.
+        """
+        cases = [
+            ({"type": "date_histogram", "field": "timestamp"}, "interval"),
+            ({"type": "date_range", "field": "timestamp"}, "date_ranges"),
+            ({"type": "range", "field": "severity"}, "ranges"),
+        ]
+        for spec, companion in cases:
+            with self.subTest(agg_type=spec["type"]):
+                self.mock_client.command.reset_mock()
+                result = self.module._base_aggregate(
+                    "PostAggregatesAlertsV2", specs=[spec]
+                )
+                self.assertIn("error", result)
+                self.assertIn(companion, result["error"])
+                self.mock_client.command.assert_not_called()
+
+    def test_missing_companion_found_in_nested_specs(self):
+        """The companion check recurses into `sub_aggregates` at any depth."""
+        deep = {
+            "type": "terms",
+            "field": "status",
+            "sub_aggregates": [
+                {
+                    "type": "terms",
+                    "field": "product",
+                    "sub_aggregates": [{"type": "range", "field": "severity"}],
+                }
+            ],
+        }
+
+        result = self.module._base_aggregate("PostAggregatesAlertsV2", specs=[deep])
+
+        self.assertIn("error", result)
+        self.assertIn("ranges", result["error"])
+        self.mock_client.command.assert_not_called()
+
+    def test_complete_companions_reach_the_api(self):
+        """Supplying each companion key lets the request through untouched."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"name": "ok", "buckets": []}]},
+        }
+        spec = {
+            "type": "date_histogram",
+            "field": "timestamp",
+            "interval": "day",
+            "sub_aggregates": [
+                {"type": "range", "field": "severity", "ranges": [{"From": 0, "To": 50}]}
+            ],
+        }
+
+        result = self.module._base_aggregate("PostAggregatesAlertsV2", specs=[spec])
+
+        self.assertEqual(result[0]["name"], "ok")
+        self.mock_client.command.assert_called_once()
+
+    def test_malformed_nested_specs_do_not_crash_the_check(self):
+        """Malformed `sub_aggregates` values reach the API instead of raising.
+
+        The check inspects caller-supplied dicts whose values are untyped, so a
+        non-dict entry must not turn into an AttributeError.
+        """
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"name": "ok", "buckets": []}]},
+        }
+        malformed = [
+            "not-a-list",
+            [123],
+            [{"type": "terms", "field": "x", "sub_aggregates": "nope"}],
+            [{"type": ["terms"], "field": "x"}],
+            [{"type": {"a": 1}, "field": "x"}],
+        ]
+        for nested in malformed:
+            with self.subTest(nested=nested):
+                self.mock_client.command.reset_mock()
+                result = self.module._base_aggregate(
+                    "PostAggregatesAlertsV2",
+                    specs=[{"type": "terms", "field": "status", "sub_aggregates": nested}],
+                )
+                self.assertEqual(result[0]["name"], "ok")
+                self.mock_client.command.assert_called_once()
+
     def test_body_errors_with_no_status_code_does_not_crash(self):
         """A missing `status_code` skips the 2xx gate and still yields an error dict.
 
@@ -1408,6 +1496,7 @@ class TestBaseAggregate(TestModules):
             "aggregates.slas.post.v1",
             agg_type="date_histogram",
             field="created_timestamp",
+            interval="day",
             error_message="Failed to aggregate SLAs",
         )
 

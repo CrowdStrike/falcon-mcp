@@ -17,6 +17,15 @@ FILTER_HINTS: dict[str, str] = {
         "Sort by timestamp.desc for latest. "
         "Ex: status:'new'+severity_name:'Critical'"
     ),
+    "falcon_aggregate_alerts": (
+        "Common fields: severity_name (Critical|High|Medium|Low|Informational), "
+        "status (new|in_progress|closed|reopened), product (epp|idp|xdr|overwatch), "
+        "device.hostname, tactic, technique_id, assigned_to_name, filename. "
+        "The filter narrows which alerts are counted; the aggregated field is set "
+        "separately by the field param. "
+        "Date filters: timestamp:>'now-24h' (relative). "
+        "Ex: status:'new'+severity_name:'Critical'"
+    ),
     # === Hosts ===
     "falcon_search_hosts": (
         "Common fields: hostname, platform_name (Windows|Linux|Mac), "

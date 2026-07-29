@@ -31,7 +31,7 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | [Correlation Rules](https://developer.crowdstrike.com/falcon-mcp/modules/correlationrules/) | Search, create, update, and manage NG-SIEM correlation rules |
 | [Custom IOA](https://developer.crowdstrike.com/falcon-mcp/modules/custom-ioa/) | Create and manage Custom IOA behavioral detection rules and rule groups |
 | [Data Protection](https://developer.crowdstrike.com/falcon-mcp/modules/data-protection/) | Search Data Protection classifications, policies, and content patterns |
-| [Detections](https://developer.crowdstrike.com/falcon-mcp/modules/detections/) | Find and analyze detections to understand malicious activity |
+| [Detections](https://developer.crowdstrike.com/falcon-mcp/modules/detections/) | Find, aggregate, and analyze detections to understand malicious activity |
 | [Discover](https://developer.crowdstrike.com/falcon-mcp/modules/discover/) | Search application inventory and discover unmanaged assets |
 | [Exclusions](https://developer.crowdstrike.com/falcon-mcp/modules/exclusions/) | Search, create, update, and delete IOA, machine learning, sensor visibility, and certificate-based exclusions |
 | [Firewall Management](https://developer.crowdstrike.com/falcon-mcp/modules/firewall/) | Search and manage firewall rules and rule groups |
