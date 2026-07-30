@@ -410,7 +410,12 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "String",
         "No",
         """
-        Falcon grouping tags
+        Falcon grouping tags. Must be filtered on the fully-qualified value;
+        a bare tag name matches nothing. A newly applied tag takes roughly 10
+        seconds to become searchable. Sensor grouping tags are stored in this
+        same field under the SensorGroupingTags/ namespace.
+
+        Ex: FalconGroupingTags/Quarantined
         """
     ),
 ]
