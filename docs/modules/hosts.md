@@ -9,6 +9,7 @@ Accessing and managing CrowdStrike Falcon hosts/devices
 ## API Scopes
 
 - `Hosts:read`
+- `Hosts:write`
 
 ## Tools
 
@@ -25,6 +26,21 @@ falcon_search_hosts instead. Returns comprehensive host details.
 **Example prompts:**
 
 - "Get the full details for host device abc123"
+
+### `falcon_manage_host_grouping_tags`
+
+> [!NOTE]
+> This tool modifies data.
+
+**Required scopes:** `Hosts:write`
+
+Add or remove Falcon Grouping Tags on one or more hosts.
+
+Set action to 'add' to attach tags, or 'remove' to detach them, on every device
+in `ids`. Grouping tags can drive dynamic host group assignment and therefore
+policy assignment, so changing them may change a host's security posture.
+Adding a tag a host already has, or removing one it lacks, is a no-op. Returns
+one record per device, each with `device_id` and `updated`.
 
 ### `falcon_search_hosts`
 

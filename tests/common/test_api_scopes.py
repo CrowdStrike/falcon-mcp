@@ -195,8 +195,9 @@ class TestApiScopes(unittest.TestCase):
                 scope_patterns[resource].add(permission)
 
         # Validate that most resources use consistent permission patterns
+        # "Hosts" is deliberately absent: UpdateDeviceTags needs Hosts:write.
         read_only_resources = [
-            "Hosts", "Vulnerabilities",
+            "Vulnerabilities",
             "Assets", "Sensor Usage", "Scheduled Reports"
         ]
 

@@ -2,8 +2,13 @@
 
 import pytest
 
-from falcon_mcp.modules.hosts import HostsModule
+from falcon_mcp.modules.hosts import GROUPING_PREFIX, HostsModule
 from tests.integration.utils.base_integration_test import BaseIntegrationTest
+
+# Deliberately synthetic so a tag leaked by a crashed run is obvious and cannot
+# collide with a real one. Passed to the tool unprefixed to exercise normalization.
+PROBE_TAG = "falcon-mcp-probe"
+QUALIFIED_PROBE_TAG = f"{GROUPING_PREFIX}{PROBE_TAG}"
 
 
 @pytest.mark.integration
@@ -94,6 +99,112 @@ class TestHostsIntegration(BaseIntegrationTest):
             expected_fields=["device_id", "hostname"],
             context="get_host_details",
         )
+
+    def test_manage_host_grouping_tags_round_trip(self):
+        """Add and remove a Falcon Grouping Tag on a real host.
+
+        This is the only test that can catch a wrong request body. `FalconClient`
+        uses APIHarnessV2, so the body must use the Uber-class model
+        ({"action", "device_ids", "tags"}) rather than the action_name/ids keyword
+        names of FalconPy's Hosts.update_device_tags(). A mocked test would assert
+        whatever shape we chose to send and pass regardless.
+
+        Also validates two behaviours the tool's design assumes: bare tags are sent
+        fully qualified, and a duplicate add is a no-op (which is what justifies
+        annotating the tool idempotentHint=True).
+
+        Skips gracefully if Hosts:write scope is not available.
+        """
+        search_result = self.call_method(self.module.search_hosts, limit=1)
+        device_id = self.get_first_id(search_result, id_field="device_id")
+        if not device_id:
+            self.skip_with_warning(
+                "No hosts available to test manage_host_grouping_tags",
+                context="test_manage_host_grouping_tags_round_trip",
+            )
+            return
+
+        add_result = self.call_method(
+            self.module.manage_host_grouping_tags,
+            ids=[device_id],
+            action="add",
+            tags=[PROBE_TAG],
+        )
+
+        # Skip on 401/403 — the caller lacks Hosts:write
+        if isinstance(add_result, list) and add_result and isinstance(add_result[0], dict):
+            error = add_result[0]
+            if "error" in error:
+                details = error.get("details", {})
+                status_code = details.get("status_code", 0) if isinstance(details, dict) else 0
+                if status_code in (401, 403):
+                    self.skip_with_warning(
+                        f"Insufficient scope for manage_host_grouping_tags "
+                        f"(Hosts:write required): {add_result}",
+                        context="test_manage_host_grouping_tags_round_trip",
+                    )
+                    return
+                pytest.fail(f"manage_host_grouping_tags add failed unexpectedly: {add_result}")
+
+        try:
+            # The bare tag we sent should come back fully qualified.
+            updated = self.call_method(self.module.get_host_details, ids=[device_id])
+            self.assert_no_error(updated, context="read-back after tag add")
+            assert updated, f"get_host_details returned empty after tag add for {device_id}"
+            tags = updated[0].get("tags") or []
+            assert QUALIFIED_PROBE_TAG in tags, (
+                f"Expected {QUALIFIED_PROBE_TAG!r} in tags after add, got: {tags}"
+            )
+
+            # Adding again must be a no-op — the tool documents add/remove as
+            # idempotent and is annotated idempotentHint=True on that basis.
+            repeat_result = self.call_method(
+                self.module.manage_host_grouping_tags,
+                ids=[device_id],
+                action="add",
+                tags=[PROBE_TAG],
+            )
+            self.assert_no_error(repeat_result, context="duplicate tag add")
+            after_repeat = self.call_method(self.module.get_host_details, ids=[device_id])
+            repeat_tags = after_repeat[0].get("tags") or []
+            assert repeat_tags.count(QUALIFIED_PROBE_TAG) == 1, (
+                f"Duplicate add should be a no-op, got: {repeat_tags}"
+            )
+
+            # Deliberately NOT asserting that search_hosts can find the host by
+            # tags:'<qualified tag>' here. That filter form is correct — verified
+            # against long-standing tags in a live tenant — but a freshly written
+            # tag takes ~10s to become searchable, so asserting it immediately
+            # after the write is a guaranteed flake. The lag is documented on the
+            # tool instead.
+        finally:
+            remove_result = self.call_method(
+                self.module.manage_host_grouping_tags,
+                ids=[device_id],
+                action="remove",
+                tags=[PROBE_TAG],
+            )
+            self.assert_no_error(remove_result, context="manage_host_grouping_tags remove")
+
+        after_remove = self.call_method(self.module.get_host_details, ids=[device_id])
+        self.assert_no_error(after_remove, context="read-back after tag remove")
+        assert after_remove, f"get_host_details returned empty after tag remove for {device_id}"
+        remaining_tags = after_remove[0].get("tags") or []
+        assert QUALIFIED_PROBE_TAG not in remaining_tags, (
+            f"Expected {QUALIFIED_PROBE_TAG!r} to be removed, still present: {remaining_tags}"
+        )
+
+    def test_manage_host_grouping_tags_rejects_sensor_tag(self):
+        """Sensor grouping tags are rejected locally, before any API call."""
+        result = self.call_method(
+            self.module.manage_host_grouping_tags,
+            ids=["does-not-need-to-exist"],
+            action="add",
+            tags=["SensorGroupingTags/Production"],
+        )
+
+        assert isinstance(result, list) and result, f"Expected an error list, got: {result}"
+        assert "error" in result[0], f"Expected sensor tag rejection, got: {result}"
 
     def test_operation_names_are_correct(self):
         """Validate that FalconPy operation names are correct.
