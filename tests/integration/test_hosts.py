@@ -171,12 +171,10 @@ class TestHostsIntegration(BaseIntegrationTest):
                 f"Duplicate add should be a no-op, got: {repeat_tags}"
             )
 
-            # Deliberately NOT asserting that search_hosts can find the host by
-            # tags:'<qualified tag>' here. That filter form is correct — verified
-            # against long-standing tags in a live tenant — but a freshly written
-            # tag takes ~10s to become searchable, so asserting it immediately
-            # after the write is a guaranteed flake. The lag is documented on the
-            # tool instead.
+            # Not asserting that search_hosts finds the host by tags:'<qualified
+            # tag>' here. The filter form is correct, but it reads a separate
+            # search index from the entity read-back above, so a write-then-search
+            # assertion is timing-dependent in a way the round-trip is not.
         finally:
             remove_result = self.call_method(
                 self.module.manage_host_grouping_tags,
@@ -205,6 +203,28 @@ class TestHostsIntegration(BaseIntegrationTest):
 
         assert isinstance(result, list) and result, f"Expected an error list, got: {result}"
         assert "error" in result[0], f"Expected sensor tag rejection, got: {result}"
+
+    def test_manage_host_grouping_tags_rejects_miscased_sensor_tag(self):
+        """A miscased sensor prefix is rejected rather than written as a junk tag.
+
+        Guards the case-insensitive prefix check against regression. If the check
+        goes back to matching exactly, this input is prefixed into the real tag
+        'FalconGroupingTags/sensorgroupingtags/Production', which the API accepts
+        with updated=true — so the regression shows up as a stray tag on a live
+        host, not as a failure. No cleanup needed while the check holds, because
+        nothing is sent.
+        """
+        result = self.call_method(
+            self.module.manage_host_grouping_tags,
+            ids=["does-not-need-to-exist"],
+            action="add",
+            tags=["sensorgroupingtags/Production"],
+        )
+
+        assert isinstance(result, list) and result, f"Expected an error list, got: {result}"
+        assert "error" in result[0], (
+            f"Miscased sensor prefix must be rejected, not prefixed into a junk tag: {result}"
+        )
 
     def test_operation_names_are_correct(self):
         """Validate that FalconPy operation names are correct.

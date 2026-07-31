@@ -523,6 +523,81 @@ class TestHostsModule(TestModules):
         self.assertIn("SensorGroupingTags/Production", result[0]["error"])
         self.mock_client.command.assert_not_called()
 
+    def test_manage_host_grouping_tags_rejects_miscased_sensor_tags(self):
+        """The sensor guard is case-insensitive.
+
+        Matching the prefix exactly would let 'sensorgroupingtags/x' through to be
+        prefixed into 'FalconGroupingTags/sensorgroupingtags/x' — a tag the API
+        accepts, so the junk lands on the host instead of erroring.
+        """
+        for spelling in (
+            "sensorgroupingtags/Production",
+            "SENSORGROUPINGTAGS/Production",
+            "SensorGroupingtags/Production",
+        ):
+            with self.subTest(spelling=spelling):
+                self.mock_client.command.reset_mock()
+                result = self.module.manage_host_grouping_tags(
+                    ids=["device1"], action="add", tags=[spelling]
+                )
+
+                self.assertIn("error", result[0])
+                self.mock_client.command.assert_not_called()
+
+    def test_manage_host_grouping_tags_canonicalizes_miscased_prefix(self):
+        """A miscased grouping prefix is rewritten to canonical casing.
+
+        The API compares the prefix exactly and 400s on anything else, so passing
+        it through unchanged fails and blindly prepending doubles it up. Only
+        rewriting the prefix reaches the tag the caller meant. The tag name after
+        the prefix keeps its casing, which the API is case-sensitive about.
+        """
+        self.mock_client.command.return_value = self._tag_success_response()
+
+        self.module.manage_host_grouping_tags(
+            ids=["device1"],
+            action="add",
+            tags=[
+                "falcongroupingtags/Quarantined",
+                "FALCONGROUPINGTAGS/IR-2026-07",
+                "FalconGroupingTags/Already-Fine",
+            ],
+        )
+
+        body = self.mock_client.command.call_args[1]["body"]
+        self.assertEqual(
+            body["tags"],
+            [
+                "FalconGroupingTags/Quarantined",
+                "FalconGroupingTags/IR-2026-07",
+                "FalconGroupingTags/Already-Fine",
+            ],
+        )
+
+    def test_manage_host_grouping_tags_rejects_too_many_ids(self):
+        """Over 5000 device IDs is a 400 from the API; catch it before the call."""
+        result = self.module.manage_host_grouping_tags(
+            ids=[f"device{i}" for i in range(5001)],
+            action="add",
+            tags=["Quarantined"],
+        )
+
+        self.assertIn("error", result[0])
+        self.assertIn("5000", result[0]["error"])
+        self.mock_client.command.assert_not_called()
+
+    def test_manage_host_grouping_tags_rejects_too_many_tags(self):
+        """Over 50 tags in one call returns an opaque 500 with nothing applied."""
+        result = self.module.manage_host_grouping_tags(
+            ids=["device1"],
+            action="add",
+            tags=[f"bulk-{i}" for i in range(51)],
+        )
+
+        self.assertIn("error", result[0])
+        self.assertIn("50", result[0]["error"])
+        self.mock_client.command.assert_not_called()
+
     def test_manage_host_grouping_tags_rejects_invalid_action(self):
         """Only add and remove are valid actions."""
         result = self.module.manage_host_grouping_tags(

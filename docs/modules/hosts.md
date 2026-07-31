@@ -40,7 +40,9 @@ Set action to 'add' to attach tags, or 'remove' to detach them, on every device
 in `ids`. Grouping tags can drive dynamic host group assignment and therefore
 policy assignment, so changing them may change a host's security posture.
 Adding a tag a host already has, or removing one it lacks, is a no-op. Returns
-one record per device, each with `device_id` and `updated`.
+one record per device, each with `device_id`, `updated`, and `code`. Tag names
+are case-sensitive, so removing a tag requires the exact casing it was created
+with.
 
 ### `falcon_search_hosts`
 

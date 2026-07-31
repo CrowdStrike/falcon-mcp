@@ -27,10 +27,26 @@ SENSOR_PREFIX = "SensorGroupingTags/"
 
 VALID_TAG_ACTIONS = ("add", "remove")
 
+# Caps the API enforces, checked here because it reports neither cleanly
+MAX_TAG_DEVICE_IDS = 5000
+MAX_TAGS_PER_REQUEST = 50
+
 
 def _tag_error(message: str) -> list[dict[str, Any]]:
     """Wrap a tag validation failure in the module's standard error shape."""
     return [_format_error_response(message, operation="UpdateDeviceTags")]
+
+
+def _has_prefix(tag: str, prefix: str) -> bool:
+    """Check for a namespace prefix without regard to how the caller cased it.
+
+    The API compares the prefix exactly, so a miscased one is not a prefix to it:
+    `falcongroupingtags/x` is rejected outright, and blindly prepending the
+    canonical prefix would instead build the real-but-meaningless
+    `FalconGroupingTags/falcongroupingtags/x`. Recognizing prefixes
+    case-insensitively lets the caller's intent be honored either way.
+    """
+    return tag.casefold().startswith(prefix.casefold())
 
 
 class HostsModule(BaseModule):
@@ -62,8 +78,6 @@ class HostsModule(BaseModule):
             annotations=ToolAnnotations(
                 readOnlyHint=False,
                 destructiveHint=False,
-                # Tag add/remove has set semantics, so repeating a call has no
-                # additional effect and a retry after a timeout is safe.
                 idempotentHint=True,
                 openWorldHint=True,
             ),
@@ -194,7 +208,8 @@ class HostsModule(BaseModule):
         ids: list[str] = Field(
             description=(
                 "Host device IDs (AIDs) to tag. You can get device IDs from the "
-                "falcon_search_hosts operation, the Falcon console, or the Streaming API."
+                "falcon_search_hosts operation, the Falcon console, or the Streaming API. "
+                "Maximum: 5000 IDs per request."
             ),
         ),
         action: str = Field(
@@ -205,7 +220,7 @@ class HostsModule(BaseModule):
                 "Falcon Grouping Tags to add or remove. The 'FalconGroupingTags/' "
                 "prefix is optional and is added automatically. Sensor grouping tags "
                 "('SensorGroupingTags/') are applied by the sensor installer and "
-                "cannot be changed through this API."
+                "cannot be changed through this API. Maximum: 50 tags per request."
             ),
         ),
     ) -> list[dict[str, Any]]:
@@ -215,7 +230,9 @@ class HostsModule(BaseModule):
         in `ids`. Grouping tags can drive dynamic host group assignment and therefore
         policy assignment, so changing them may change a host's security posture.
         Adding a tag a host already has, or removing one it lacks, is a no-op. Returns
-        one record per device, each with `device_id` and `updated`.
+        one record per device, each with `device_id`, `updated`, and `code`. Tag names
+        are case-sensitive, so removing a tag requires the exact casing it was created
+        with.
         """
         if action not in VALID_TAG_ACTIONS:
             return _tag_error(f"Invalid action {action!r}. Must be 'add' or 'remove'.")
@@ -223,8 +240,20 @@ class HostsModule(BaseModule):
         if not ids:
             return _tag_error("`ids` must be provided to manage host grouping tags.")
 
+        if len(ids) > MAX_TAG_DEVICE_IDS:
+            return _tag_error(
+                f"Too many device IDs: {len(ids)}. The API accepts at most "
+                f"{MAX_TAG_DEVICE_IDS} per request."
+            )
+
         if not tags:
             return _tag_error("`tags` must be provided to manage host grouping tags.")
+
+        if len(tags) > MAX_TAGS_PER_REQUEST:
+            return _tag_error(
+                f"Too many tags: {len(tags)}. The API accepts at most "
+                f"{MAX_TAGS_PER_REQUEST} per request and fails the whole call above that."
+            )
 
         normalized_tags: list[str] = []
         for tag in tags:
@@ -238,14 +267,16 @@ class HostsModule(BaseModule):
             # Reject before prefixing. Prefixing a sensor tag would build a real but
             # meaningless 'FalconGroupingTags/SensorGroupingTags/...' tag rather than
             # failing, so the guard has to come first.
-            if stripped.startswith(SENSOR_PREFIX):
+            if _has_prefix(stripped, SENSOR_PREFIX):
                 return _tag_error(
                     f"{stripped!r} is a sensor grouping tag. Those are applied by "
                     "the sensor installer and cannot be changed through the API."
                 )
 
-            if stripped.startswith(GROUPING_PREFIX):
-                normalized_tags.append(stripped)
+            if _has_prefix(stripped, GROUPING_PREFIX):
+                # Re-apply the canonical prefix so a miscased one still lands on the
+                # tag the caller meant, rather than being rejected by the API.
+                normalized_tags.append(GROUPING_PREFIX + stripped[len(GROUPING_PREFIX):])
             else:
                 normalized_tags.append(GROUPING_PREFIX + stripped)
 
