@@ -203,7 +203,7 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_get_detection_details": [
         "Get me the details for this detection",
     ],
-    "falcon_aggregate_alerts": [
+    "falcon_aggregate_detections": [
         "How many detections do we have by severity?",
         "What are the top 10 hosts by alert count this week?",
         "Show me alert volume per day for the last 30 days",

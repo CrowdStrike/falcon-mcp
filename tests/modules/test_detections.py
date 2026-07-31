@@ -22,7 +22,7 @@ class TestDetectionsModule(TestModules):
         expected_tools = [
             "falcon_search_detections",
             "falcon_get_detection_details",
-            "falcon_aggregate_alerts",
+            "falcon_aggregate_detections",
             "falcon_update_detections",
         ]
         self.assert_tools_registered(expected_tools)
@@ -586,11 +586,11 @@ class TestDetectionsModule(TestModules):
         self.assertIn("interval", result["error"])
         self.mock_client.command.assert_not_called()
 
-    def test_aggregate_alerts_is_read_only(self):
-        """falcon_aggregate_alerts must advertise itself as read-only."""
+    def test_aggregate_detections_is_read_only(self):
+        """falcon_aggregate_detections must advertise itself as read-only."""
         self.module.register_tools(self.mock_server)
         self.assert_tool_annotations(
-            "falcon_aggregate_alerts",
+            "falcon_aggregate_detections",
             ToolAnnotations(
                 readOnlyHint=True,
                 destructiveHint=False,

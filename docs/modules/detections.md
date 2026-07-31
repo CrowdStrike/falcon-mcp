@@ -13,7 +13,7 @@ Accessing and analyzing CrowdStrike Falcon detections
 
 ## Tools
 
-### `falcon_aggregate_alerts`
+### `falcon_aggregate_detections`
 
 **Required scopes:** `Alerts:read`
 

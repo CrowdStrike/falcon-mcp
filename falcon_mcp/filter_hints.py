@@ -17,7 +17,7 @@ FILTER_HINTS: dict[str, str] = {
         "Sort by timestamp.desc for latest. "
         "Ex: status:'new'+severity_name:'Critical'"
     ),
-    "falcon_aggregate_alerts": (
+    "falcon_aggregate_detections": (
         "Common fields: severity_name (Critical|High|Medium|Low|Informational), "
         "status (new|in_progress|closed|reopened), product (epp|idp|xdr|overwatch), "
         "device.hostname, tactic, technique_id, assigned_to_name, filename. "
