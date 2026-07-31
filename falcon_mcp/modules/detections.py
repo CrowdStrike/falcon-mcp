@@ -45,7 +45,7 @@ class DetectionsModule(BaseModule):
         self._add_tool(
             server=server,
             method=self.aggregate_detections,
-            name="aggregate_alerts",
+            name="aggregate_detections",
         )
 
         self._add_tool(

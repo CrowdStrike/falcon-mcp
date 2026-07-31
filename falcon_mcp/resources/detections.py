@@ -989,9 +989,9 @@ assigned_to_name:!'*'+severity_name:!'Informational'
 # All unassigned alerts except informational (numeric approach)
 assigned_to_name:!'*'+severity:>=20
 
-=== falcon_aggregate_alerts AGGREGATION FIELDS ===
+=== falcon_aggregate_detections AGGREGATION FIELDS ===
 
-The `filter` syntax above applies unchanged to falcon_aggregate_alerts, where it narrows
+The `filter` syntax above applies unchanged to falcon_aggregate_detections, where it narrows
 which alerts are counted. The `field` parameter, which chooses what to group by, accepts a
 different and narrower set of fields than `filter` does. These fields are verified
 aggregatable:
