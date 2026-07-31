@@ -4,6 +4,8 @@ Tests for the Hosts module.
 
 import unittest
 
+from mcp.types import ToolAnnotations
+
 from falcon_mcp.modules.hosts import HostsModule
 from tests.modules.utils.test_modules import TestModules
 
@@ -20,8 +22,22 @@ class TestHostsModule(TestModules):
         expected_tools = [
             "falcon_search_hosts",
             "falcon_get_host_details",
+            "falcon_manage_host_grouping_tags",
         ]
         self.assert_tools_registered(expected_tools)
+
+    def test_manage_host_grouping_tags_annotations(self):
+        """The tag tool is mutating but safe to retry (set semantics)."""
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations(
+            "falcon_manage_host_grouping_tags",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=True,
+                openWorldHint=True,
+            ),
+        )
 
     def test_register_resources(self):
         """Test registering resources with the server."""
@@ -423,6 +439,214 @@ class TestHostsModule(TestModules):
         # Verify filter was applied correctly
         first_call = self.mock_client.command.call_args_list[0]
         self.assertEqual(first_call[1]["parameters"]["filter"], "platform_name:'Mac'")
+
+    # ----------------------------------------------------------------- #
+    # manage_host_grouping_tags
+    # ----------------------------------------------------------------- #
+    def _tag_success_response(self):
+        return {
+            "status_code": 202,
+            "body": {"resources": [{"device_id": "device1", "updated": True}]},
+        }
+
+    def test_manage_host_grouping_tags_add(self):
+        """Add sends the Uber-class body shape: action/device_ids/tags."""
+        self.mock_client.command.return_value = self._tag_success_response()
+
+        result = self.module.manage_host_grouping_tags(
+            ids=["device1"],
+            action="add",
+            tags=["FalconGroupingTags/Quarantined"],
+        )
+
+        self.mock_client.command.assert_called_once_with(
+            "UpdateDeviceTags",
+            body={
+                "action": "add",
+                "device_ids": ["device1"],
+                "tags": ["FalconGroupingTags/Quarantined"],
+            },
+        )
+        self.assertEqual(result, [{"device_id": "device1", "updated": True}])
+
+    def test_manage_host_grouping_tags_remove(self):
+        """Remove passes action through unchanged."""
+        self.mock_client.command.return_value = self._tag_success_response()
+
+        self.module.manage_host_grouping_tags(
+            ids=["device1", "device2"],
+            action="remove",
+            tags=["FalconGroupingTags/Quarantined"],
+        )
+
+        body = self.mock_client.command.call_args[1]["body"]
+        self.assertEqual(body["action"], "remove")
+        self.assertEqual(body["device_ids"], ["device1", "device2"])
+
+    def test_manage_host_grouping_tags_normalizes_bare_tags(self):
+        """Bare tag names get the FalconGroupingTags/ prefix added."""
+        self.mock_client.command.return_value = self._tag_success_response()
+
+        self.module.manage_host_grouping_tags(
+            ids=["device1"],
+            action="add",
+            tags=["Quarantined", "FalconGroupingTags/IR-2026-07"],
+        )
+
+        body = self.mock_client.command.call_args[1]["body"]
+        self.assertEqual(
+            body["tags"],
+            ["FalconGroupingTags/Quarantined", "FalconGroupingTags/IR-2026-07"],
+        )
+
+    def test_manage_host_grouping_tags_strips_whitespace(self):
+        """Surrounding whitespace is trimmed before prefixing."""
+        self.mock_client.command.return_value = self._tag_success_response()
+
+        self.module.manage_host_grouping_tags(
+            ids=["device1"], action="add", tags=["  Quarantined  "]
+        )
+
+        body = self.mock_client.command.call_args[1]["body"]
+        self.assertEqual(body["tags"], ["FalconGroupingTags/Quarantined"])
+
+    def test_manage_host_grouping_tags_rejects_sensor_tags(self):
+        """Sensor grouping tags are read-only and must not be silently re-prefixed."""
+        result = self.module.manage_host_grouping_tags(
+            ids=["device1"],
+            action="add",
+            tags=["SensorGroupingTags/Production"],
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertIn("SensorGroupingTags/Production", result[0]["error"])
+        self.mock_client.command.assert_not_called()
+
+    def test_manage_host_grouping_tags_rejects_miscased_sensor_tags(self):
+        """The sensor guard is case-insensitive.
+
+        Matching the prefix exactly would let 'sensorgroupingtags/x' through to be
+        prefixed into 'FalconGroupingTags/sensorgroupingtags/x' — a tag the API
+        accepts, so the junk lands on the host instead of erroring.
+        """
+        for spelling in (
+            "sensorgroupingtags/Production",
+            "SENSORGROUPINGTAGS/Production",
+            "SensorGroupingtags/Production",
+        ):
+            with self.subTest(spelling=spelling):
+                self.mock_client.command.reset_mock()
+                result = self.module.manage_host_grouping_tags(
+                    ids=["device1"], action="add", tags=[spelling]
+                )
+
+                self.assertIn("error", result[0])
+                self.mock_client.command.assert_not_called()
+
+    def test_manage_host_grouping_tags_canonicalizes_miscased_prefix(self):
+        """A miscased grouping prefix is rewritten to canonical casing.
+
+        The API compares the prefix exactly and 400s on anything else, so passing
+        it through unchanged fails and blindly prepending doubles it up. Only
+        rewriting the prefix reaches the tag the caller meant. The tag name after
+        the prefix keeps its casing, which the API is case-sensitive about.
+        """
+        self.mock_client.command.return_value = self._tag_success_response()
+
+        self.module.manage_host_grouping_tags(
+            ids=["device1"],
+            action="add",
+            tags=[
+                "falcongroupingtags/Quarantined",
+                "FALCONGROUPINGTAGS/IR-2026-07",
+                "FalconGroupingTags/Already-Fine",
+            ],
+        )
+
+        body = self.mock_client.command.call_args[1]["body"]
+        self.assertEqual(
+            body["tags"],
+            [
+                "FalconGroupingTags/Quarantined",
+                "FalconGroupingTags/IR-2026-07",
+                "FalconGroupingTags/Already-Fine",
+            ],
+        )
+
+    def test_manage_host_grouping_tags_rejects_too_many_ids(self):
+        """Over 5000 device IDs is a 400 from the API; catch it before the call."""
+        result = self.module.manage_host_grouping_tags(
+            ids=[f"device{i}" for i in range(5001)],
+            action="add",
+            tags=["Quarantined"],
+        )
+
+        self.assertIn("error", result[0])
+        self.assertIn("5000", result[0]["error"])
+        self.mock_client.command.assert_not_called()
+
+    def test_manage_host_grouping_tags_rejects_too_many_tags(self):
+        """Over 50 tags in one call returns an opaque 500 with nothing applied."""
+        result = self.module.manage_host_grouping_tags(
+            ids=["device1"],
+            action="add",
+            tags=[f"bulk-{i}" for i in range(51)],
+        )
+
+        self.assertIn("error", result[0])
+        self.assertIn("50", result[0]["error"])
+        self.mock_client.command.assert_not_called()
+
+    def test_manage_host_grouping_tags_rejects_invalid_action(self):
+        """Only add and remove are valid actions."""
+        result = self.module.manage_host_grouping_tags(
+            ids=["device1"], action="update", tags=["Quarantined"]
+        )
+
+        self.assertIn("error", result[0])
+        self.mock_client.command.assert_not_called()
+
+    def test_manage_host_grouping_tags_rejects_empty_ids(self):
+        """An empty id list would PATCH nothing; fail loudly instead."""
+        result = self.module.manage_host_grouping_tags(
+            ids=[], action="add", tags=["Quarantined"]
+        )
+
+        self.assertIn("error", result[0])
+        self.mock_client.command.assert_not_called()
+
+    def test_manage_host_grouping_tags_rejects_empty_tags(self):
+        """An empty tag list would report success while changing nothing."""
+        result = self.module.manage_host_grouping_tags(
+            ids=["device1"], action="add", tags=[]
+        )
+
+        self.assertIn("error", result[0])
+        self.mock_client.command.assert_not_called()
+
+    def test_manage_host_grouping_tags_rejects_blank_tag(self):
+        """A whitespace-only tag normalizes to a bare prefix; reject it."""
+        result = self.module.manage_host_grouping_tags(
+            ids=["device1"], action="add", tags=["   "]
+        )
+
+        self.assertIn("error", result[0])
+        self.mock_client.command.assert_not_called()
+
+    def test_manage_host_grouping_tags_api_error(self):
+        """API failures come back in the module's standard error shape."""
+        self.mock_client.command.return_value = {
+            "status_code": 403,
+            "body": {"errors": [{"message": "access denied"}]},
+        }
+
+        result = self.module.manage_host_grouping_tags(
+            ids=["device1"], action="add", tags=["Quarantined"]
+        )
+
+        self.assertIn("error", result[0])
+        self.assertIn("required_scopes", result[0])
 
 
 if __name__ == "__main__":

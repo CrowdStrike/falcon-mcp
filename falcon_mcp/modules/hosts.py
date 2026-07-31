@@ -9,13 +9,44 @@ from typing import Any
 
 from mcp.server import FastMCP
 from mcp.server.fastmcp.resources import TextResource
+from mcp.types import ToolAnnotations
 from pydantic import AnyUrl, Field
 
+from falcon_mcp.common.errors import _format_error_response
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.hosts import SEARCH_HOSTS_FQL_DOCUMENTATION
 
 logger = get_logger(__name__)
+
+# A host's `tags` array mixes two namespaces that are not interchangeable:
+# FalconGroupingTags are set cloud-side and are what UpdateDeviceTags edits;
+# SensorGroupingTags are baked in by the sensor installer and are read-only.
+GROUPING_PREFIX = "FalconGroupingTags/"
+SENSOR_PREFIX = "SensorGroupingTags/"
+
+VALID_TAG_ACTIONS = ("add", "remove")
+
+# Caps the API enforces, checked here because it reports neither cleanly
+MAX_TAG_DEVICE_IDS = 5000
+MAX_TAGS_PER_REQUEST = 50
+
+
+def _tag_error(message: str) -> list[dict[str, Any]]:
+    """Wrap a tag validation failure in the module's standard error shape."""
+    return [_format_error_response(message, operation="UpdateDeviceTags")]
+
+
+def _has_prefix(tag: str, prefix: str) -> bool:
+    """Check for a namespace prefix without regard to how the caller cased it.
+
+    The API compares the prefix exactly, so a miscased one is not a prefix to it:
+    `falcongroupingtags/x` is rejected outright, and blindly prepending the
+    canonical prefix would instead build the real-but-meaningless
+    `FalconGroupingTags/falcongroupingtags/x`. Recognizing prefixes
+    case-insensitively lets the caller's intent be honored either way.
+    """
+    return tag.casefold().startswith(prefix.casefold())
 
 
 class HostsModule(BaseModule):
@@ -38,6 +69,18 @@ class HostsModule(BaseModule):
             server=server,
             method=self.get_host_details,
             name="get_host_details",
+        )
+
+        self._add_tool(
+            server=server,
+            method=self.manage_host_grouping_tags,
+            name="manage_host_grouping_tags",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=True,
+                openWorldHint=True,
+            ),
         )
 
     def register_resources(self, server: FastMCP) -> None:
@@ -159,3 +202,103 @@ class HostsModule(BaseModule):
             ids=ids,
             id_key="ids",
         )
+
+    def manage_host_grouping_tags(
+        self,
+        ids: list[str] = Field(
+            description=(
+                "Host device IDs (AIDs) to tag. You can get device IDs from the "
+                "falcon_search_hosts operation, the Falcon console, or the Streaming API. "
+                "Maximum: 5000 IDs per request."
+            ),
+        ),
+        action: str = Field(
+            description="Action to perform. Values: 'add' or 'remove'.",
+        ),
+        tags: list[str] = Field(
+            description=(
+                "Falcon Grouping Tags to add or remove. The 'FalconGroupingTags/' "
+                "prefix is optional and is added automatically. Sensor grouping tags "
+                "('SensorGroupingTags/') are applied by the sensor installer and "
+                "cannot be changed through this API. Maximum: 50 tags per request."
+            ),
+        ),
+    ) -> list[dict[str, Any]]:
+        """Add or remove Falcon Grouping Tags on one or more hosts.
+
+        Set action to 'add' to attach tags, or 'remove' to detach them, on every device
+        in `ids`. Grouping tags can drive dynamic host group assignment and therefore
+        policy assignment, so changing them may change a host's security posture.
+        Adding a tag a host already has, or removing one it lacks, is a no-op. Returns
+        one record per device, each with `device_id`, `updated`, and `code`. Tag names
+        are case-sensitive, so removing a tag requires the exact casing it was created
+        with.
+        """
+        if action not in VALID_TAG_ACTIONS:
+            return _tag_error(f"Invalid action {action!r}. Must be 'add' or 'remove'.")
+
+        if not ids:
+            return _tag_error("`ids` must be provided to manage host grouping tags.")
+
+        if len(ids) > MAX_TAG_DEVICE_IDS:
+            return _tag_error(
+                f"Too many device IDs: {len(ids)}. The API accepts at most "
+                f"{MAX_TAG_DEVICE_IDS} per request."
+            )
+
+        if not tags:
+            return _tag_error("`tags` must be provided to manage host grouping tags.")
+
+        if len(tags) > MAX_TAGS_PER_REQUEST:
+            return _tag_error(
+                f"Too many tags: {len(tags)}. The API accepts at most "
+                f"{MAX_TAGS_PER_REQUEST} per request and fails the whole call above that."
+            )
+
+        normalized_tags: list[str] = []
+        for tag in tags:
+            # Trim before prefixing: ' Quarantined' would otherwise become the
+            # distinct (and real) tag 'FalconGroupingTags/ Quarantined'.
+            stripped = tag.strip()
+
+            if not stripped:
+                return _tag_error("Tag values cannot be empty.")
+
+            # Reject before prefixing. Prefixing a sensor tag would build a real but
+            # meaningless 'FalconGroupingTags/SensorGroupingTags/...' tag rather than
+            # failing, so the guard has to come first.
+            if _has_prefix(stripped, SENSOR_PREFIX):
+                return _tag_error(
+                    f"{stripped!r} is a sensor grouping tag. Those are applied by "
+                    "the sensor installer and cannot be changed through the API."
+                )
+
+            if _has_prefix(stripped, GROUPING_PREFIX):
+                # Re-apply the canonical prefix so a miscased one still lands on the
+                # tag the caller meant, rather than being rejected by the API.
+                normalized_tags.append(GROUPING_PREFIX + stripped[len(GROUPING_PREFIX):])
+            else:
+                normalized_tags.append(GROUPING_PREFIX + stripped)
+
+        logger.debug(
+            "Performing tag %s on %d host(s): %s", action, len(ids), normalized_tags
+        )
+
+        result = self._base_query_api_call(
+            operation="UpdateDeviceTags",
+            # The Uber class (APIHarnessV2) takes the raw swagger body, so these are
+            # `action`/`device_ids` — not the `action_name`/`ids` keyword names used
+            # by FalconPy's Hosts.update_device_tags() service-class method.
+            body_params={
+                "action": action,
+                "device_ids": ids,
+                "tags": normalized_tags,
+            },
+            error_message="Failed to manage host grouping tags",
+            default_result=[],
+        )
+
+        if self._is_error(result):
+            return [result]
+
+        return result

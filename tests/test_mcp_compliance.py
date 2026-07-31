@@ -35,6 +35,8 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     # firewall module
     "falcon_create_firewall_rule_group",
     "falcon_delete_firewall_rule_groups",
+    # hosts module
+    "falcon_manage_host_grouping_tags",
     # host_groups module
     "falcon_create_host_group",
     "falcon_update_host_group",

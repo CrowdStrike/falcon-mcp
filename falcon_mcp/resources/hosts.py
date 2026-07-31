@@ -410,7 +410,13 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "String",
         "No",
         """
-        Falcon grouping tags
+        Falcon grouping tags. Must be filtered on the fully-qualified value, with
+        the exact casing the tag was created with; a bare or miscased tag name
+        matches nothing. A newly applied tag may take a moment to become
+        searchable. Sensor grouping tags are stored in this same field under the
+        SensorGroupingTags/ namespace.
+
+        Ex: FalconGroupingTags/Quarantined
         """
     ),
 ]

@@ -19,6 +19,7 @@ API_SCOPE_REQUIREMENTS = {
     # Hosts operations
     "QueryDevicesByFilter": ["Hosts:read"],
     "PostDeviceDetailsV2": ["Hosts:read"],
+    "UpdateDeviceTags": ["Hosts:write"],
     # Host Groups operations
     "queryCombinedHostGroups": ["Host Groups:read"],
     "queryCombinedGroupMembers": ["Host Groups:read"],
