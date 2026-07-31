@@ -8,7 +8,7 @@ and serves as the entry point for the application.
 import argparse
 import os
 import sys
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import uvicorn
 from dotenv import load_dotenv
@@ -25,6 +25,9 @@ from falcon_mcp.common.auth import (
 from falcon_mcp.common.logging import configure_logging, get_logger
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS, offload_to_thread
 from falcon_mcp.tool_filter import Resolution, ToolPolicy, ToolRecord
+
+if TYPE_CHECKING:
+    from falcon_mcp.dynamic import DynamicMode
 
 logger = get_logger(__name__)
 
@@ -161,6 +164,9 @@ class FalconMCPServer:
 
         # Initialize and register modules
         self.modules = {}
+        # Set before _register_tools so list_enabled_tools can tell the two catalog
+        # sources apart.
+        self._dynamic_mode: DynamicMode | None = None
         available_modules = registry.get_available_modules()
         for module_name in self.loaded_modules:
             if module_name in available_modules:
@@ -243,28 +249,29 @@ class FalconMCPServer:
         Returns:
             int: Number of tools left registered
         """
-        # falcon_list_enabled_modules is always registered — dynamic mode's no-results
-        # hint references it by name, and it's useful in both modes. Meta-tools are
-        # exempt from the policy: withholding them leaves dynamic mode undiscoverable.
+        # falcon_list_enabled_tools is always registered: it is the cheap way to see
+        # the whole served surface, and dynamic mode's zero-hit hint points here.
+        # Meta-tools are exempt from the policy — withholding them leaves the server
+        # undiscoverable.
         self.server.add_tool(
-            offload_to_thread(self.list_enabled_modules),
-            name="falcon_list_enabled_modules",
+            offload_to_thread(self.list_enabled_tools),
+            name="falcon_list_enabled_tools",
             annotations=READ_ONLY_ANNOTATIONS,
             structured_output=False,
         )
 
         if self.dynamic:
             # Dynamic mode: expose only the discovery/execution meta-tools plus
-            # falcon_list_enabled_modules above (3 tools total) so the context window
+            # falcon_list_enabled_tools above (3 tools total) so the context window
             # stays minimal. The catalog applies the policy while building, so a
             # withheld tool is absent from search and 404s in the executor.
             from falcon_mcp.dynamic import DynamicMode
 
-            dynamic_mode = DynamicMode(self.modules, self.server, self.tool_policy)
-            dynamic_mode.register()
-            self._resolution = dynamic_mode.catalog.resolution
+            self._dynamic_mode = DynamicMode(self.modules, self.server, self.tool_policy)
+            self._dynamic_mode.register()
+            self._resolution = self._dynamic_mode.catalog.resolution
         else:
-            # Normal mode: register all three core tools and then each module's tools.
+            # Normal mode: register the other two core tools and then each module's tools.
             self.server.add_tool(
                 offload_to_thread(self.falcon_check_connectivity),
                 name="falcon_check_connectivity",
@@ -273,8 +280,8 @@ class FalconMCPServer:
             )
 
             self.server.add_tool(
-                offload_to_thread(self.list_modules),
-                name="falcon_list_modules",
+                offload_to_thread(self.list_enabled_modules),
+                name="falcon_list_enabled_modules",
                 annotations=READ_ONLY_ANNOTATIONS,
                 structured_output=False,
             )
@@ -355,9 +362,23 @@ class FalconMCPServer:
         """
         return {"modules": sorted(self.enabled_modules & set(self.modules))}
 
-    def list_modules(self) -> dict[str, list[str]]:
-        """Lists all available modules in the falcon-mcp server."""
-        return {"modules": registry.get_module_names()}
+    def list_enabled_tools(self) -> dict[str, Any]:
+        """Lists every Falcon capability tool this server serves.
+
+        Call this to see the complete inventory before hunting for a capability: a
+        name absent from this list is not available on this server, whether because
+        its module is not enabled or because a tool filter withholds it. Returns the
+        sorted tool names plus their total count. Excludes this server's own
+        meta-tools, which are always present and visible in tools/list.
+        """
+        if self._dynamic_mode is not None:
+            # Building the catalog clears module.tools, so it is the only record of
+            # what falcon_execute_tool accepts.
+            names = set(self._dynamic_mode.catalog.entries)
+        else:
+            # _apply_policy() prunes module.tools to the served surface.
+            names = {name for module in self.modules.values() for name in module.tools}
+        return {"tools": sorted(names), "total": len(names)}
 
     def _run_http_transport(self, app: ASGIApp) -> None:
         """Apply middleware and start uvicorn for an HTTP transport.
@@ -553,8 +574,8 @@ def parse_args() -> argparse.Namespace:
         "--dynamic",
         action="store_true",
         default=os.environ.get("FALCON_MCP_DYNAMIC", "").lower() == "true",
-        help="Enable dynamic mode: exposes 3 tools (list-modules + search + execute) instead of "
-        "all module tools (env: FALCON_MCP_DYNAMIC)",
+        help="Enable dynamic mode: exposes 3 tools (list-enabled-tools + search + execute) "
+        "instead of all module tools (env: FALCON_MCP_DYNAMIC)",
     )
 
     # Blast-radius controls. These compose with --modules and with each other;

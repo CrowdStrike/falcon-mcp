@@ -33,7 +33,7 @@ _FOREIGN_TOOL = "falcon_search_applications"
 # Always registered regardless of filtering, so tests subtract them out.
 _META_TOOLS = {
     "falcon_list_enabled_modules",
-    "falcon_list_modules",
+    "falcon_list_enabled_tools",
     "falcon_check_connectivity",
 }
 
@@ -559,6 +559,51 @@ class TestServerToolFiltering(unittest.TestCase):
         self.assertNotIn(_MUTATING_TOOL, tracked)
         self.assertEqual(tracked, tracked & set(server.server._tool_manager._tools))
 
+    def _list_enabled_tools(self, server: FalconMCPServer) -> list[str]:
+        tool = server.server._tool_manager._tools["falcon_list_enabled_tools"]
+        return run_async(tool.run({}))["tools"]
+
+    def test_list_enabled_tools_is_exactly_the_served_module_tools(self, mock_client):
+        """Regression guard for the falcon_list_modules bug: it reported every
+        installed module regardless of filtering."""
+        server = self._server(mock_client)
+        self.assertEqual(
+            set(self._list_enabled_tools(server)), self._module_tools(server)
+        )
+
+    def test_list_enabled_tools_omits_read_only_withheld(self, mock_client):
+        names = self._list_enabled_tools(self._server(mock_client, read_only=True))
+        self.assertIn(_READ_ONLY_TOOL, names)
+        self.assertNotIn(_MUTATING_TOOL, names)
+
+    def test_list_enabled_tools_omits_denied_tool(self, mock_client):
+        names = self._list_enabled_tools(
+            self._server(mock_client, excluded_tools={_READ_ONLY_TOOL})
+        )
+        self.assertNotIn(_READ_ONLY_TOOL, names)
+
+    def test_list_enabled_tools_omits_absent_sibling_of_allowed_tool(self, mock_client):
+        """Both live in `discover`, so allow-listing one must not imply the other."""
+        names = self._list_enabled_tools(
+            self._server(mock_client, allowed_tools={_FOREIGN_TOOL})
+        )
+        self.assertIn(_FOREIGN_TOOL, names)
+        self.assertNotIn("falcon_search_unmanaged_assets", names)
+
+    def test_list_enabled_tools_reports_a_matching_total(self, mock_client):
+        server = self._server(mock_client, read_only=True)
+        tool = server.server._tool_manager._tools["falcon_list_enabled_tools"]
+        result = run_async(tool.run({}))
+        self.assertEqual(result["total"], len(result["tools"]))
+        self.assertEqual(result["tools"], sorted(result["tools"]))
+
+    def test_list_enabled_tools_excludes_meta_tools(self, mock_client):
+        """Capability tools only, as the docstring promises — meta-tools are always
+        present and would be noise in a capability inventory."""
+        names = set(self._list_enabled_tools(self._server(mock_client)))
+        self.assertEqual(names & _META_TOOLS, set())
+        self.assertIn(_READ_ONLY_TOOL, names)
+
     def test_fql_resources_survive_tool_level_filtering(self, mock_client):
         """A withheld tool's guide stays readable.
 
@@ -668,9 +713,11 @@ class TestDynamicModeToolFiltering(unittest.TestCase):
     def _search(self, server: FalconMCPServer, query: str = "") -> list[str]:
         tool = server.server._tool_manager._tools["falcon_search_tools"]
         result = run_async(tool.run({"query": query, "limit": 100}))
-        if isinstance(result, dict):
-            return []
-        return [entry["name"] for entry in result]
+        return [entry["name"] for entry in result["results"]]
+
+    def _list_enabled_tools(self, server: FalconMCPServer) -> list[str]:
+        tool = server.server._tool_manager._tools["falcon_list_enabled_tools"]
+        return run_async(tool.run({}))["tools"]
 
     def _execute(self, server: FalconMCPServer, tool_name: str) -> Any:
         tool = server.server._tool_manager._tools["falcon_execute_tool"]
@@ -680,8 +727,72 @@ class TestDynamicModeToolFiltering(unittest.TestCase):
         server = self._dynamic_server(mock_client)
         self.assertEqual(
             set(server.server._tool_manager._tools),
-            {"falcon_list_enabled_modules", "falcon_search_tools", "falcon_execute_tool"},
+            {"falcon_list_enabled_tools", "falcon_search_tools", "falcon_execute_tool"},
         )
+
+    def test_dynamic_mode_omits_list_enabled_modules(self, mock_client):
+        """Module info stays reachable via falcon_search_tools' module field/filter."""
+        server = self._dynamic_server(mock_client)
+        self.assertNotIn(
+            "falcon_list_enabled_modules", server.server._tool_manager._tools
+        )
+
+    def test_list_enabled_tools_matches_dynamic_catalog(self, mock_client):
+        """The enumeration must equal what falcon_execute_tool will actually accept."""
+        server = self._dynamic_server(mock_client)
+        served = self._list_enabled_tools(server)
+        self.assertIn(_READ_ONLY_TOOL, served)
+        self.assertIn(_MUTATING_TOOL, served)
+        # Not enabled here, so it must not be advertised.
+        self.assertNotIn(_FOREIGN_TOOL, served)
+
+    def test_list_enabled_tools_omits_absent_sibling_of_allowed_tool(self, mock_client):
+        """Both live in `discover`, so allow-listing one must not imply the other."""
+        server = self._dynamic_server(mock_client, allowed_tools={_FOREIGN_TOOL})
+        served = self._list_enabled_tools(server)
+        self.assertIn(_FOREIGN_TOOL, served)
+        self.assertNotIn("falcon_search_unmanaged_assets", served)
+
+    def test_list_enabled_tools_omits_read_only_withheld(self, mock_client):
+        names = self._list_enabled_tools(self._dynamic_server(mock_client, read_only=True))
+        self.assertIn(_READ_ONLY_TOOL, names)
+        self.assertNotIn(_MUTATING_TOOL, names)
+
+    def test_list_enabled_tools_omits_denied_tool(self, mock_client):
+        names = self._list_enabled_tools(
+            self._dynamic_server(mock_client, excluded_tools={_READ_ONLY_TOOL})
+        )
+        self.assertNotIn(_READ_ONLY_TOOL, names)
+
+    def test_search_tools_reports_total_and_truncation(self, mock_client):
+        """A capped result set must say so rather than silently dropping matches."""
+        server = self._dynamic_server(mock_client)
+        tool = server.server._tool_manager._tools["falcon_search_tools"]
+        served = len(self._list_enabled_tools(server))
+
+        capped = run_async(tool.run({"query": "", "limit": 2}))
+        self.assertEqual(capped["total"], served)
+        self.assertEqual(len(capped["results"]), 2)
+        self.assertTrue(capped["truncated"])
+        self.assertIn("falcon_list_enabled_tools", capped["hint"])
+
+        full = run_async(tool.run({"query": "", "limit": 500}))
+        self.assertEqual(full["total"], served)
+        self.assertEqual(len(full["results"]), served)
+        self.assertFalse(full["truncated"])
+
+    def test_search_tools_zero_hit_hint_names_the_absent_capability(self, mock_client):
+        """The dead-end hint must steer to enumeration and to telling the user."""
+        server = self._dynamic_server(mock_client)
+        tool = server.server._tool_manager._tools["falcon_search_tools"]
+        result = run_async(tool.run({"query": "unmanaged assets", "limit": 20}))
+
+        self.assertEqual(result["results"], [])
+        self.assertEqual(result["total"], 0)
+        self.assertFalse(result["truncated"])
+        self.assertIn("unmanaged assets", result["hint"])
+        self.assertIn("falcon_list_enabled_tools", result["hint"])
+        self.assertIn("tell the user", result["hint"])
 
     def test_read_only_hides_mutating_tool_from_search(self, mock_client):
         names = self._search(self._dynamic_server(mock_client, read_only=True))

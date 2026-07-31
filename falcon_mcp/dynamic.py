@@ -1,7 +1,7 @@
 """
 Dynamic mode for Falcon MCP Server.
 
-Wraps the full tool surface behind 3 tools (falcon_list_enabled_modules +
+Wraps the full tool surface behind 3 tools (falcon_list_enabled_tools +
 falcon_search_tools + falcon_execute_tool) to reduce context window consumption
 while keeping all functionality accessible on-demand.
 """
@@ -103,6 +103,17 @@ class DynamicToolCatalog:
         module: str | None = None,
         limit: int = 20,
     ) -> list[dict[str, Any]]:
+        return [self._format_entry(e) for e in self._matches(query, module)[:limit]]
+
+    def count_matches(self, query: str = "", module: str | None = None) -> int:
+        """Count every matching entry, ignoring the result limit.
+
+        Shares _matches with search() so the reported total cannot drift from the
+        results returned.
+        """
+        return len(self._matches(query, module))
+
+    def _matches(self, query: str, module: str | None) -> list[ToolEntry]:
         candidates: list[ToolEntry] = list(self._entries.values())
 
         if module:
@@ -114,7 +125,7 @@ class DynamicToolCatalog:
                 e for e in candidates if all(t in e.search_corpus for t in tokens)
             ]
 
-        return [self._format_entry(e) for e in candidates[:limit]]
+        return candidates
 
     def _format_entry(self, entry: ToolEntry) -> dict[str, Any]:
         params_summary = {}
@@ -179,8 +190,8 @@ class DynamicToolCatalog:
 class DynamicMode:
     """Registers the 2 discovery meta-tools (falcon_search_tools + falcon_execute_tool).
 
-    falcon_list_enabled_modules is registered separately by the server, giving
-    dynamic mode 3 tools total in the client-visible surface.
+    falcon_list_enabled_tools is registered separately by the server, giving dynamic
+    mode 3 tools total in the client-visible surface.
     """
 
     def __init__(
@@ -219,25 +230,43 @@ class DynamicMode:
         limit: int = Field(
             default=20,
             ge=1,
-            le=100,
+            le=500,
             description="Maximum number of results to return (default: 20).",
         ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Discover available Falcon tools by keyword search.
+    ) -> dict[str, Any]:
+        """Look up full parameter schemas for tools matching a keyword.
 
-        Use this to find tools by name, description, module, or parameter keywords.
-        Returns tool schemas with parameter details so you can call falcon_execute_tool.
-        Consult this before executing any tool to understand its parameters.
+        Call falcon_list_enabled_tools first when you need the complete inventory of
+        what this server serves; use this to get a tool's parameters before calling
+        falcon_execute_tool. Returns matching tools with full schemas, plus total and
+        truncated so you can tell when results were capped.
         """
         results = self.catalog.search(query=query, module=module, limit=limit)
+        total = self.catalog.count_matches(query=query, module=module)
+        truncated = total > len(results)
+
         if not results:
-            available_modules = sorted({e.module for e in self.catalog.entries.values()})
             return {
                 "results": [],
-                "hint": f"No tools found matching your query. Available modules: {', '.join(available_modules)}. "
-                "Try a broader search or check falcon_list_enabled_modules.",
+                "total": 0,
+                "truncated": False,
+                "hint": f"No tool matching '{query}' is served by this server. Call "
+                "falcon_list_enabled_tools for the full inventory. If the capability "
+                "you need is genuinely absent, it was not enabled on this server — "
+                "tell the user rather than trying more searches.",
             }
-        return results
+
+        envelope: dict[str, Any] = {
+            "results": results,
+            "total": total,
+            "truncated": truncated,
+        }
+        if truncated:
+            envelope["hint"] = (
+                f"Showing {len(results)} of {total}. Call falcon_list_enabled_tools "
+                "for all names, or narrow with query."
+            )
+        return envelope
 
     async def _execute_tool(
         self,

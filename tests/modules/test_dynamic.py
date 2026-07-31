@@ -331,21 +331,21 @@ class TestExecuteFalconTool(unittest.TestCase):
                 query="hosts nonexistent", module=None, limit=20
             )
         )
-        self.assertIsInstance(result, dict)
-        assert isinstance(result, dict)  # narrow for Pyright
         self.assertEqual(result["results"], [])
-        self.assertIn("hint", result)
-        self.assertIn("detections", result["hint"])
-        self.assertIn("No tools found", result["hint"])
+        self.assertEqual(result["total"], 0)
+        self.assertFalse(result["truncated"])
+        self.assertIn("hosts nonexistent", result["hint"])
+        self.assertIn("falcon_list_enabled_tools", result["hint"])
 
-    def test_search_tools_with_results_returns_list(self):
+    def test_search_tools_with_results_returns_envelope(self):
         result = run_async(
             self.dynamic._search_tools(
                 query="search_detections", module=None, limit=20
             )
         )
-        self.assertIsInstance(result, list)
-        self.assertGreater(len(result), 0)
+        self.assertGreater(len(result["results"]), 0)
+        self.assertEqual(result["total"], len(result["results"]))
+        self.assertFalse(result["truncated"])
 
 
 class TestDynamicServerIntegration(unittest.TestCase):
@@ -375,12 +375,12 @@ class TestDynamicServerIntegration(unittest.TestCase):
             call.kwargs["name"] for call in mock_server_instance.add_tool.call_args_list
         ]
         self.assertEqual(len(tool_names), 3)
-        self.assertIn("falcon_list_enabled_modules", tool_names)
+        self.assertIn("falcon_list_enabled_tools", tool_names)
         self.assertIn("falcon_search_tools", tool_names)
         self.assertIn("falcon_execute_tool", tool_names)
         # These must NOT be registered in dynamic mode
         self.assertNotIn("falcon_check_connectivity", tool_names)
-        self.assertNotIn("falcon_list_modules", tool_names)
+        self.assertNotIn("falcon_list_enabled_modules", tool_names)
 
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
@@ -408,7 +408,7 @@ class TestDynamicServerIntegration(unittest.TestCase):
         # All three core tools must be present in normal mode
         self.assertIn("falcon_check_connectivity", tool_names)
         self.assertIn("falcon_list_enabled_modules", tool_names)
-        self.assertIn("falcon_list_modules", tool_names)
+        self.assertIn("falcon_list_enabled_tools", tool_names)
         # Module tools must be registered directly
         self.assertIn("falcon_search_detections", tool_names)
 

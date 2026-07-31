@@ -1,5 +1,5 @@
 <!-- meta:title Dynamic Mode -->
-<!-- meta:description Reduce context usage by exposing two meta-tools instead of all module tools. -->
+<!-- meta:description Reduce context usage by exposing three meta-tools instead of all module tools. -->
 <!-- meta:section usage -->
 <!-- meta:link-base /falcon-mcp/ -->
 
@@ -8,10 +8,11 @@ set grows, this balloons the context window that AI clients must hold in every c
 for tools that will never be called in that session.
 
 Dynamic mode solves this by replacing the full tool surface with two meta-tools:
-`falcon_search_tools` to discover tools on demand and `falcon_execute_tool` to run them. The agent
-fetches the schema for exactly the tools it needs, paying a short discovery round-trip instead of a
-large up-front context cost. A third always-on tool, `falcon_list_enabled_modules`, remains
-available to help orient the agent before it starts searching.
+`falcon_search_tools` to look up a tool's parameter schema and `falcon_execute_tool` to run it. The
+agent fetches the schema for exactly the tools it needs, paying a short discovery round-trip instead
+of a large up-front context cost. A third always-on tool, `falcon_list_enabled_tools`, returns the
+complete inventory of served tool names cheaply — every name costs a few kilobytes, against roughly
+ten times that for a 20-result schema search.
 
 > [!NOTE]
 > Dynamic mode is in public preview. The feature flag and behavior are stable, but feedback is
@@ -43,20 +44,27 @@ are loaded into the catalog and `--transport` to choose the server transport.
 
 ## How It Works
 
-With dynamic mode enabled, the server exposes two meta-tools plus the `falcon_list_enabled_modules`
+With dynamic mode enabled, the server exposes two meta-tools plus the `falcon_list_enabled_tools`
 core tool, instead of the full module surface:
 
 | Tool | Purpose |
 |------|---------|
-| `falcon_search_tools` | Discover tools by keyword, module name, or parameter name |
+| `falcon_list_enabled_tools` | List every capability tool this server serves (meta-tools excluded) |
+| `falcon_search_tools` | Look up full parameter schemas for tools matching a keyword or module |
 | `falcon_execute_tool` | Execute a discovered tool by name with the given parameters |
-| `falcon_list_enabled_modules` | List which modules are loaded in the current server |
 
 The typical agent workflow is:
 
-1. Call `falcon_search_tools` with a keyword or module name to find relevant tools and their
-   parameter schemas.
-2. Call `falcon_execute_tool` with the tool name and parameters to run it.
+1. Call `falcon_list_enabled_tools` when you need to know what the server serves at all — a name
+   absent from that list is not available, whether because its module is off or a tool filter
+   withholds it.
+2. Call `falcon_search_tools` with a keyword or module name to get the parameter schemas for the
+   tools you intend to use.
+3. Call `falcon_execute_tool` with the tool name and parameters to run it.
+
+`falcon_list_enabled_modules` is not registered in dynamic mode: module information stays reachable
+through `falcon_search_tools`, which carries a `module` field on every result and accepts a `module`
+filter. It remains available in normal mode.
 
 Because `falcon_execute_tool` is a general dispatcher, it carries no read-only safety annotation by
 default — the agent must rely on the `read_only` and `destructive` fields returned by
@@ -77,7 +85,8 @@ default — the agent must rely on the `read_only` and `destructive` fields retu
 ```
 
 The response includes the tool name, a description, and its full parameter schema with FQL field
-hints already inlined for filter parameters.
+hints already inlined for filter parameters, wrapped in a `results` list alongside `total` and
+`truncated`.
 
 **Step 2 — Execute it:**
 
@@ -113,7 +122,12 @@ avoid large responses.
 { "query": "quarantine release" }
 ```
 
-If no tools match, the response lists available module names so the agent can narrow its query.
+Every response carries `total` (the number of tools matching the query, before any limit) and
+`truncated`, so a capped result set is never mistaken for the complete set. When results are
+truncated, raise `limit` (up to 500) or narrow the query.
+
+If no tools match, the response says so and points at `falcon_list_enabled_tools`. A capability with
+no matching tool is not served by that server — report that rather than searching again.
 
 ## When to Use Dynamic Mode
 
