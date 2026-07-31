@@ -149,9 +149,14 @@ class BaseModule(ABC):
         ids: list[str],
         id_key: str = "ids",
         use_params: bool = False,
+        parameters: dict[str, Any] | None = None,
         **additional_params: Any,
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Helper method for API operations that retrieve entities by IDs.
+
+        Whether a given option belongs in the body or the query string varies by
+        operation; check the endpoint definition and pass it accordingly. An
+        option sent in the wrong place is often ignored without an error.
 
         Args:
             operation: The API operation name
@@ -159,7 +164,10 @@ class BaseModule(ABC):
             id_key: The key name for IDs in the request (default: "ids")
             use_params: If True, send IDs as query parameters (GET).
                        If False, send as request body (POST). Default: False
-            **additional_params: Additional parameters to include in the request
+            parameters: Query-string parameters, for operations that declare an
+                option `in: query` even when the IDs travel in a POST body
+            **additional_params: Additional parameters to include alongside the
+                IDs, in the body or query string per `use_params`
 
         Returns:
             List of entity details or error dict
@@ -169,10 +177,13 @@ class BaseModule(ABC):
         request_params.update(additional_params)
 
         prepared = prepare_api_parameters(request_params)
+        query_params = prepare_api_parameters(parameters) if parameters else {}
 
         # Make the API request using either parameters (GET) or body (POST)
         if use_params:
-            response = self.client.command(operation, parameters=prepared)
+            response = self.client.command(operation, parameters={**prepared, **query_params})
+        elif query_params:
+            response = self.client.command(operation, body=prepared, parameters=query_params)
         else:
             response = self.client.command(operation, body=prepared)
 

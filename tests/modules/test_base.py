@@ -154,6 +154,68 @@ class TestBaseModule(TestModules):
         expected_result = [{"composite_id": "alert1", "status": "new", "hidden": False}]
         self.assertEqual(result, expected_result)
 
+    def test_base_get_by_ids_with_query_parameters(self):
+        """Test _base_get_by_ids sends `parameters` as query params, separate from the body."""
+        mock_response = {
+            "status_code": 200,
+            "body": {"resources": [{"composite_id": "alert1", "status": "new"}]},
+        }
+        self.mock_client.command.return_value = mock_response
+
+        result = self.module._base_get_by_ids(
+            "PostEntitiesAlertsV2",
+            ["alert1"],
+            id_key="composite_ids",
+            parameters={"include_hidden": False},
+        )
+
+        # The query param must not be folded into the POST body — some endpoints
+        # declare it `in: query` and silently ignore a body copy.
+        self.mock_client.command.assert_called_once_with(
+            "PostEntitiesAlertsV2",
+            body={"composite_ids": ["alert1"]},
+            parameters={"include_hidden": False},
+        )
+        self.assertEqual(result, [{"composite_id": "alert1", "status": "new"}])
+
+    def test_base_get_by_ids_omits_empty_parameters(self):
+        """Test that no `parameters` argument leaves existing callers' calls unchanged."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "test1"}]},
+        }
+
+        for parameters in (None, {}):
+            with self.subTest(parameters=parameters):
+                self.mock_client.command.reset_mock()
+
+                self.module._base_get_by_ids(
+                    "TestOperation", ["test1"], parameters=parameters
+                )
+
+                self.mock_client.command.assert_called_once_with(
+                    "TestOperation", body={"ids": ["test1"]}
+                )
+
+    def test_base_get_by_ids_query_parameters_with_use_params(self):
+        """Test that `parameters` merges into the query string when use_params=True."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "test1"}]},
+        }
+
+        self.module._base_get_by_ids(
+            "TestGetOperation",
+            ["test1"],
+            use_params=True,
+            parameters={"include_hidden": False},
+        )
+
+        self.mock_client.command.assert_called_once_with(
+            "TestGetOperation",
+            parameters={"ids": ["test1"], "include_hidden": False},
+        )
+
     def test_base_get_by_ids_error_handling(self):
         """Test _base_get_by_ids error handling."""
         # Setup mock error response

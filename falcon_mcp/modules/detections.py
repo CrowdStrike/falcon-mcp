@@ -135,7 +135,13 @@ class DetectionsModule(BaseModule):
             """).strip(),
             examples=["severity.desc", "timestamp.desc"],
         ),
-        include_hidden: bool = Field(default=True),
+        include_hidden: bool = Field(
+            default=True,
+            description=(
+                "Whether to include hidden detections (default: True). Set False to "
+                "match the detection totals shown in the Falcon console."
+            ),
+        ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Find detections (also called alerts) by criteria and return their complete details.
 
@@ -155,6 +161,7 @@ class DetectionsModule(BaseModule):
                 "offset": offset,
                 "q": q,
                 "sort": sort,
+                "include_hidden": include_hidden,
             },
             error_message="Failed to search detections",
         )
@@ -174,7 +181,7 @@ class DetectionsModule(BaseModule):
             operation="PostEntitiesAlertsV2",
             ids=detection_ids,
             id_key="composite_ids",
-            include_hidden=include_hidden,
+            parameters={"include_hidden": include_hidden},
         )
 
         if self._is_error(details):
@@ -202,7 +209,8 @@ class DetectionsModule(BaseModule):
 
         Use when you have specific composite detection ID(s). For discovering detections
         by criteria (severity, status, hostname, etc.), use falcon_search_detections
-        instead. Returns full detection records.
+        instead. Returns full detection records; IDs hidden from the Falcon UI are
+        omitted when include_hidden is False.
         """
         logger.debug("Getting detection details for ID(s): %s", ids)
 
@@ -210,7 +218,7 @@ class DetectionsModule(BaseModule):
             operation="PostEntitiesAlertsV2",
             ids=ids,
             id_key="composite_ids",
-            include_hidden=include_hidden,
+            parameters={"include_hidden": include_hidden},
         )
 
     def aggregate_detections(
