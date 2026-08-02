@@ -97,6 +97,10 @@ class DynamicToolCatalog:
     def get(self, tool_name: str) -> ToolEntry | None:
         return self._entries.get(tool_name)
 
+    def describe_policy(self) -> str:
+        """Name the filtering rules in effect, for error messages that cite the cause."""
+        return self._policy.describe()
+
     def search(
         self,
         query: str = "",
@@ -188,11 +192,7 @@ class DynamicToolCatalog:
 
 
 class DynamicMode:
-    """Registers the 2 discovery meta-tools (falcon_search_tools + falcon_execute_tool).
-
-    falcon_list_enabled_tools is registered separately by the server, giving dynamic
-    mode 3 tools total in the client-visible surface.
-    """
+    """Registers the 2 discovery meta-tools (falcon_search_tools + falcon_execute_tool)."""
 
     def __init__(
         self,
@@ -225,35 +225,54 @@ class DynamicMode:
         ),
         module: str | None = Field(
             default=None,
-            description="Filter results to a specific module (e.g., 'hosts', 'detections').",
+            description=(
+                "Restrict results to one module (e.g., 'hosts', 'detections'). Pass it "
+                "with no query to browse everything that module serves."
+            ),
         ),
         limit: int = Field(
             default=20,
             ge=1,
             le=500,
-            description="Maximum number of results to return (default: 20).",
+            description="Maximum number of results to return (default: 20, max: 500).",
         ),
     ) -> dict[str, Any]:
-        """Look up full parameter schemas for tools matching a keyword.
+        """Get a Falcon tool's parameters so you can call it with falcon_execute_tool.
 
-        Call falcon_list_enabled_tools first when you need the complete inventory of
-        what this server serves; use this to get a tool's parameters before calling
-        falcon_execute_tool. Returns matching tools with full schemas, plus total and
-        truncated so you can tell when results were capped.
+        This is the entry point in dynamic mode: search by keyword, or pass a module
+        name (or no query at all) to browse. Each result carries the tool's name,
+        module, description, a summary of every parameter (type, required, description,
+        examples, and filter-syntax hints where the tool takes a filter), and
+        read_only/destructive flags — check those before executing anything that
+        mutates. Read total and truncated to tell a capped list from a complete one.
         """
         results = self.catalog.search(query=query, module=module, limit=limit)
         total = self.catalog.count_matches(query=query, module=module)
         truncated = total > len(results)
 
         if not results:
+            # Under an active policy, "not served" is a config choice the user can
+            # change, not a missing capability — the two need different advice.
+            if self.catalog.resolution.withheld_by_rule:
+                hint = (
+                    f"No tool matching '{query}' is served by this server, which is "
+                    f"running with a tool filter ({self.catalog.describe_policy()}). "
+                    "Call falcon_list_enabled_tools for what it does serve. The "
+                    "capability may exist but be withheld by configuration — tell the "
+                    "user that rather than trying more searches."
+                )
+            else:
+                hint = (
+                    f"No tool matching '{query}' is served by this server. Call "
+                    "falcon_list_enabled_tools for the full inventory. If the capability "
+                    "you need is genuinely absent, it was not enabled on this server — "
+                    "tell the user rather than trying more searches."
+                )
             return {
                 "results": [],
                 "total": 0,
                 "truncated": False,
-                "hint": f"No tool matching '{query}' is served by this server. Call "
-                "falcon_list_enabled_tools for the full inventory. If the capability "
-                "you need is genuinely absent, it was not enabled on this server — "
-                "tell the user rather than trying more searches.",
+                "hint": hint,
             }
 
         envelope: dict[str, Any] = {
@@ -289,6 +308,17 @@ class DynamicMode:
         """
         entry = self.catalog.get(tool_name)
         if not entry:
+            # A tool the policy withheld is absent from the catalog exactly like one
+            # that never existed. Say which it is, or the model reports an operator
+            # config choice to the user as a missing product capability.
+            if tool_name in self.catalog.resolution.withheld_by_rule:
+                return {
+                    "error": f"'{tool_name}' exists on this server but its configuration "
+                    f"withholds it ({self.catalog.describe_policy()}). The capability is "
+                    "not missing — tell the user it is disabled by server configuration, "
+                    "and do not look for another tool to do it.",
+                    "tool": tool_name,
+                }
             return {
                 "error": f"Unknown tool: '{tool_name}'. Use falcon_search_tools to discover valid names."
             }

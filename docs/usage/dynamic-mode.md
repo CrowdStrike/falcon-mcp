@@ -11,8 +11,7 @@ Dynamic mode solves this by replacing the full tool surface with two meta-tools:
 `falcon_search_tools` to look up a tool's parameter schema and `falcon_execute_tool` to run it. The
 agent fetches the schema for exactly the tools it needs, paying a short discovery round-trip instead
 of a large up-front context cost. A third always-on tool, `falcon_list_enabled_tools`, returns the
-complete inventory of served tool names cheaply — every name costs a few kilobytes, against roughly
-ten times that for a 20-result schema search.
+complete inventory of served tool names.
 
 > [!NOTE]
 > Dynamic mode is in public preview. The feature flag and behavior are stable, but feedback is
@@ -50,7 +49,7 @@ core tool, instead of the full module surface:
 | Tool | Purpose |
 |------|---------|
 | `falcon_list_enabled_tools` | List every capability tool this server serves (meta-tools excluded) |
-| `falcon_search_tools` | Look up full parameter schemas for tools matching a keyword or module |
+| `falcon_search_tools` | Look up the parameters of tools matching a keyword or module |
 | `falcon_execute_tool` | Execute a discovered tool by name with the given parameters |
 
 The typical agent workflow is:
@@ -58,13 +57,9 @@ The typical agent workflow is:
 1. Call `falcon_list_enabled_tools` when you need to know what the server serves at all — a name
    absent from that list is not available, whether because its module is off or a tool filter
    withholds it.
-2. Call `falcon_search_tools` with a keyword or module name to get the parameter schemas for the
-   tools you intend to use.
+2. Call `falcon_search_tools` with a keyword or module name to get the parameters of the tools you
+   intend to use, along with their `read_only` and `destructive` flags.
 3. Call `falcon_execute_tool` with the tool name and parameters to run it.
-
-`falcon_list_enabled_modules` is not registered in dynamic mode: module information stays reachable
-through `falcon_search_tools`, which carries a `module` field on every result and accepts a `module`
-filter. It remains available in normal mode.
 
 Because `falcon_execute_tool` is a general dispatcher, it carries no read-only safety annotation by
 default — the agent must rely on the `read_only` and `destructive` fields returned by
@@ -126,8 +121,28 @@ Every response carries `total` (the number of tools matching the query, before a
 `truncated`, so a capped result set is never mistaken for the complete set. When results are
 truncated, raise `limit` (up to 500) or narrow the query.
 
-If no tools match, the response says so and points at `falcon_list_enabled_tools`. A capability with
-no matching tool is not served by that server — report that rather than searching again.
+If no tools match, the response says so and points at `falcon_list_enabled_tools`. A capability that
+is absent from that full inventory is not served by that server — report that rather than searching
+again.
+
+## Tool Filtering in Dynamic Mode
+
+`--read-only`, `--tools`, and `--exclude-tools` apply here as they do in normal mode: a withheld
+tool is absent from `falcon_search_tools` and cannot be run through `falcon_execute_tool`. Omitting
+it from the catalog is the enforcement, so the executor is not a bypass.
+
+Because a withheld tool is missing rather than flagged, its absence would otherwise be
+indistinguishable from a tool that never existed — leading an agent to tell the user the capability
+does not exist when the operator simply disabled it. Two things prevent that:
+
+- `falcon_execute_tool` on a withheld name reports that the tool exists but the server's
+  configuration withholds it, and names the rule. A name that was never served still returns the
+  plain unknown-tool error, so the two cases stay distinguishable.
+- `falcon_list_enabled_tools` carries a `filters_active` field describing the rules in effect. The
+  field is absent when no filter is configured.
+
+A tool from a module that was never enabled is not a filtered tool — it reports as unknown, since
+no rule withheld it.
 
 ## When to Use Dynamic Mode
 

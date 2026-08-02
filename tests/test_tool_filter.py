@@ -800,11 +800,12 @@ class TestDynamicModeToolFiltering(unittest.TestCase):
         self.assertNotIn(_MUTATING_TOOL, names)
 
     def test_read_only_rejects_mutating_tool_in_executor(self, mock_client):
+        """The executor must refuse it; TestWithheldToolsAreAttributable covers wording."""
         result = self._execute(
             self._dynamic_server(mock_client, read_only=True), _MUTATING_TOOL
         )
         self.assertIn("error", result)
-        self.assertIn("Unknown tool", result["error"])
+        self.assertIn("withholds it", result["error"])
 
     def test_deny_list_rejects_tool_in_executor(self, mock_client):
         server = self._dynamic_server(mock_client, excluded_tools={_READ_ONLY_TOOL})
@@ -864,6 +865,104 @@ class TestDynamicModeToolFiltering(unittest.TestCase):
         )
         result = self._execute(server, _READ_ONLY_TOOL)
         self.assertNotIn("error", result)
+
+
+@patch("falcon_mcp.server.FalconClient")
+class TestWithheldToolsAreAttributable(unittest.TestCase):
+    """A config-withheld tool must not read as a missing product capability.
+
+    Withholding removes the tool from the catalog, so its name lands in the same
+    unknown-tool branch as a name that was never served. Left alone, the model tells
+    the user the capability does not exist when the operator merely disabled it.
+    """
+
+    def setUp(self):
+        registry.discover_modules()
+
+    def _server(self, mock_client, **kwargs) -> FalconMCPServer:
+        mock_client.return_value.authenticate.return_value = True
+        return FalconMCPServer(enabled_modules={_MODULE}, **kwargs)
+
+    def _execute(self, server: FalconMCPServer, tool_name: str) -> Any:
+        tool = server.server._tool_manager._tools["falcon_execute_tool"]
+        return run_async(tool.run({"tool_name": tool_name, "parameters": {}}))
+
+    def _inventory(self, server: FalconMCPServer) -> dict[str, Any]:
+        tool = server.server._tool_manager._tools["falcon_list_enabled_tools"]
+        return run_async(tool.run({}))
+
+    def test_read_only_withheld_tool_cites_the_rule(self, mock_client):
+        server = self._server(mock_client, dynamic=True, read_only=True)
+        error = self._execute(server, _MUTATING_TOOL)["error"]
+
+        self.assertIn(_MUTATING_TOOL, error)
+        self.assertIn("read-only", error)
+        self.assertNotIn("Unknown tool", error)
+
+    def test_denied_tool_cites_the_rule(self, mock_client):
+        server = self._server(
+            mock_client, dynamic=True, excluded_tools={_MUTATING_TOOL}
+        )
+        error = self._execute(server, _MUTATING_TOOL)["error"]
+
+        self.assertIn("deny-list", error)
+        self.assertNotIn("Unknown tool", error)
+
+    def test_withheld_tool_is_still_not_executed(self, mock_client):
+        """Naming the cause must not resurrect the tool — omission is the enforcement."""
+        server = self._server(mock_client, dynamic=True, read_only=True)
+        module = server.modules[_MODULE]
+        module.client.command = MagicMock()
+
+        self._execute(server, _MUTATING_TOOL)
+
+        module.client.command.assert_not_called()
+
+    def test_never_served_name_keeps_the_unknown_tool_error(self, mock_client):
+        """The two cases must be distinguishable in both directions."""
+        server = self._server(mock_client, dynamic=True, read_only=True)
+        error = self._execute(server, "falcon_not_a_real_tool")["error"]
+
+        self.assertIn("Unknown tool", error)
+        self.assertNotIn("withholds it", error)
+
+    def test_module_gate_is_not_reported_as_a_policy_withholding(self, mock_client):
+        """--modules leaves the catalog smaller, not withheld.
+
+        A tool from an unloaded module never enters the catalog, so it must fall
+        through to the plain unknown-tool message rather than claiming a filter
+        withheld it.
+        """
+        server = self._server(mock_client, dynamic=True)
+        error = self._execute(server, _FOREIGN_TOOL)["error"]
+
+        self.assertIn("Unknown tool", error)
+        self.assertNotIn("withholds it", error)
+        self.assertNotIn("filters_active", self._inventory(server))
+
+    def test_zero_hit_hint_names_the_active_filter(self, mock_client):
+        server = self._server(mock_client, dynamic=True, read_only=True)
+        tool = server.server._tool_manager._tools["falcon_search_tools"]
+        hint = run_async(tool.run({"query": "nothing_matches_this", "limit": 20}))["hint"]
+
+        self.assertIn("tool filter", hint)
+        self.assertIn("read-only", hint)
+        self.assertIn("falcon_list_enabled_tools", hint)
+
+    def test_inventory_names_the_active_filter_in_both_modes(self, mock_client):
+        for dynamic in (True, False):
+            with self.subTest(dynamic=dynamic):
+                server = self._server(mock_client, dynamic=dynamic, read_only=True)
+                self.assertEqual(
+                    self._inventory(server)["filters_active"], "read-only"
+                )
+
+    def test_inventory_omits_the_key_when_no_filter_is_configured(self, mock_client):
+        """Presence of the key is the signal, so an unfiltered server must not carry it."""
+        for dynamic in (True, False):
+            with self.subTest(dynamic=dynamic):
+                inventory = self._inventory(self._server(mock_client, dynamic=dynamic))
+                self.assertNotIn("filters_active", inventory)
 
 
 if __name__ == "__main__":

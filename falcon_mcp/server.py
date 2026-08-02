@@ -368,8 +368,9 @@ class FalconMCPServer:
         Call this to see the complete inventory before hunting for a capability: a
         name absent from this list is not available on this server, whether because
         its module is not enabled or because a tool filter withholds it. Returns the
-        sorted tool names plus their total count. Excludes this server's own
-        meta-tools, which are always present and visible in tools/list.
+        sorted tool names plus their total count, and filters_active naming the filter
+        rules in effect when any are configured. Excludes this server's own meta-tools,
+        which are always present and visible in tools/list.
         """
         if self._dynamic_mode is not None:
             # Building the catalog clears module.tools, so it is the only record of
@@ -378,7 +379,12 @@ class FalconMCPServer:
         else:
             # _apply_policy() prunes module.tools to the served surface.
             names = {name for module in self.modules.values() for name in module.tools}
-        return {"tools": sorted(names), "total": len(names)}
+        result: dict[str, Any] = {"tools": sorted(names), "total": len(names)}
+        # Only present when a filter narrowed the list, so an unfiltered server's
+        # response is unchanged and the key's presence is itself the signal.
+        if self.tool_policy.active:
+            result["filters_active"] = self.tool_policy.describe()
+        return result
 
     def _run_http_transport(self, app: ASGIApp) -> None:
         """Apply middleware and start uvicorn for an HTTP transport.
