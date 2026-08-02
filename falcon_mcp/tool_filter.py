@@ -4,9 +4,15 @@ Tool-level filtering for the Falcon MCP server.
 Lets an operator shrink a server's blast radius without giving up a whole module.
 """
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 
 from mcp.types import ToolAnnotations
+
+# Sentinel reason for a tool no rule withheld — it was simply never requested, by
+# module gate or allow-list. Not a decision worth reporting, so it stays out of
+# Resolution.reasons.
+_NOT_REQUESTED = "not-requested"
 
 
 @dataclass(frozen=True)
@@ -31,11 +37,15 @@ class Resolution:
         removed: Prefixed names the policy withholds, for any reason.
         withheld_by_rule: The subset of ``removed`` dropped by the deny-list or
             read-only, rather than by never being requested.
+        reasons: For each name in ``withheld_by_rule``, the rule that dropped it —
+            ``"deny-list"`` or ``"read-only"``. Names the cause for one tool, which
+            ``ToolPolicy.describe()`` cannot do because it summarizes the whole server.
     """
 
     keep: frozenset[str]
     removed: frozenset[str]
     withheld_by_rule: frozenset[str]
+    reasons: Mapping[str, str] = field(default_factory=dict)
 
 
 class ToolPolicy:
@@ -99,35 +109,45 @@ class ToolPolicy:
 
         Returns:
             The keep/removed partition of ``catalog``, with the rule-driven removals
-            tracked separately for reporting.
+            tracked separately and each one's cause recorded.
         """
         keep: set[str] = set()
         removed: set[str] = set()
-        by_rule: set[str] = set()
+        reasons: dict[str, str] = {}
         for name, record in catalog.items():
-            if self._keeps(name, record):
+            reason = self._rejection_reason(name, record)
+            if reason is None:
                 keep.add(name)
                 continue
             removed.add(name)
-            if name in self.excluded or self._is_mutating(record):
-                by_rule.add(name)
+            if reason != _NOT_REQUESTED:
+                reasons[name] = reason
         return Resolution(
             keep=frozenset(keep),
             removed=frozenset(removed),
-            withheld_by_rule=frozenset(by_rule),
+            withheld_by_rule=frozenset(reasons),
+            reasons=reasons,
         )
 
-    def _keeps(self, name: str, record: ToolRecord) -> bool:
+    def _rejection_reason(self, name: str, record: ToolRecord) -> str | None:
+        """Name the rule that withholds this tool, or None if the policy keeps it.
+
+        Follows the documented precedence, so the reason is the rule that actually
+        decided this tool rather than every rule the server has enabled.
+        """
         if name in self.excluded:
-            return False
+            return "deny-list"
 
         if self.read_only and self._is_mutating(record):
-            return False
+            return "read-only"
 
         if name in self.allowed:
-            return True
+            return None
 
-        return self.enabled_modules is None or record.module in self.enabled_modules
+        if self.enabled_modules is None or record.module in self.enabled_modules:
+            return None
+
+        return _NOT_REQUESTED
 
     def _is_mutating(self, record: ToolRecord) -> bool:
         """True if read-only mode would reject this tool.

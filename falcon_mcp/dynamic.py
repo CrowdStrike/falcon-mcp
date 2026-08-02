@@ -97,8 +97,12 @@ class DynamicToolCatalog:
     def get(self, tool_name: str) -> ToolEntry | None:
         return self._entries.get(tool_name)
 
+    def withholding_rule(self, tool_name: str) -> str | None:
+        """Name the rule that withholds this tool, or None if no rule did."""
+        return self.resolution.reasons.get(tool_name)
+
     def describe_policy(self) -> str:
-        """Name the filtering rules in effect, for error messages that cite the cause."""
+        """Summarize every filtering rule the server has enabled."""
         return self._policy.describe()
 
     def search(
@@ -251,8 +255,6 @@ class DynamicMode:
         truncated = total > len(results)
 
         if not results:
-            # Under an active policy, "not served" is a config choice the user can
-            # change, not a missing capability — the two need different advice.
             if self.catalog.resolution.withheld_by_rule:
                 hint = (
                     f"No tool matching '{query}' is served by this server, which is "
@@ -311,12 +313,14 @@ class DynamicMode:
             # A tool the policy withheld is absent from the catalog exactly like one
             # that never existed. Say which it is, or the model reports an operator
             # config choice to the user as a missing product capability.
-            if tool_name in self.catalog.resolution.withheld_by_rule:
+            rule = self.catalog.withholding_rule(tool_name)
+            if rule is not None:
                 return {
                     "error": f"'{tool_name}' exists on this server but its configuration "
-                    f"withholds it ({self.catalog.describe_policy()}). The capability is "
-                    "not missing — tell the user it is disabled by server configuration, "
-                    "and do not look for another tool to do it.",
+                    f"withholds it ({rule}). The capability is not missing — tell the user "
+                    "it is disabled by this server's configuration. Do not try to achieve "
+                    "the same effect through a different tool, though other tools remain "
+                    "available for other work.",
                     "tool": tool_name,
                 }
             return {

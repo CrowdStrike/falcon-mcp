@@ -127,9 +127,10 @@ fixed order:
 
 Since the first two rules always win, they work as a deployment-wide floor that an additive
 `--tools` list cannot widen past. The restrictions also hold in dynamic mode: a withheld tool is
-absent from `falcon_search_tools` results and rejected by `falcon_execute_tool`. That rejection
-names the rule and says the tool exists but is withheld by configuration, so an agent does not
-report a disabled tool as a capability the product lacks; `falcon_list_enabled_tools` also carries a
+absent from `falcon_search_tools` results and rejected by `falcon_execute_tool`. Since dynamic mode
+dispatches by name, that rejection says the tool exists but is withheld by configuration and names
+the one rule responsible, so an agent does not report a disabled tool as a capability the product
+lacks. In either mode `falcon_list_enabled_tools` carries a
 `filters_active` field while any rule is in effect. The startup log
 reports which rules are active and how many tools `--read-only` and `--exclude-tools` withheld; add
 `--debug` to see those tools by name. A tool that was simply never requested is not counted as

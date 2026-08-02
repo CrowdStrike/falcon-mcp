@@ -243,12 +243,14 @@ falcon-mcp --read-only --exclude-tools falcon_execute_rtr_read_only_command
 ```
 
 Filtering applies to dynamic mode too — a withheld tool is absent from `falcon_search_tools`
-results and rejected by `falcon_execute_tool`. The rejection says the tool exists but the server's
-configuration withholds it, and names the rule, so an agent reports a disabled tool as disabled
-rather than telling the user the capability does not exist. `falcon_list_enabled_tools` carries a
-`filters_active` field whenever a rule is in effect. The startup log reports which rules are active
-and how many tools `--read-only` and `--exclude-tools` withheld, so you can confirm what you
-deployed. Run with `--debug` to see the withheld tools by name.
+results and rejected by `falcon_execute_tool`. Because dynamic mode dispatches by name rather than
+registering tools individually, that rejection spells out that the tool exists but the server's
+configuration withholds it, and names the one rule responsible, so an agent reports a disabled tool
+as disabled instead of telling the user the capability does not exist.
+`falcon_list_enabled_tools` carries a `filters_active` field in either mode whenever a rule is in
+effect. The startup log reports which rules are active and how many tools `--read-only` and
+`--exclude-tools` withheld, so you can confirm what you deployed. Run with `--debug` to see the
+withheld tools by name.
 
 These options filter tools, not resources. A withheld tool's FQL guide resource stays available —
 guides are static field documentation carrying no tenant data.

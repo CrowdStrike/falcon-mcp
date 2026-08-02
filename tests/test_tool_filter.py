@@ -172,6 +172,44 @@ class TestToolPolicy(unittest.TestCase):
         self.assertEqual(resolved.withheld_by_rule, {"falcon_denied", "falcon_mutator"})
         self.assertEqual(resolved.removed, resolved.withheld_by_rule | {"falcon_sibling"})
 
+    def test_reasons_name_the_rule_that_decided_each_tool(self):
+        """falcon_denied is read-only, so only the deny-list can have withheld it.
+
+        Attribution follows the documented precedence rather than reporting every
+        active rule, which would misdirect an operator debugging their config. A tool
+        the module gate dropped is not attributed at all.
+        """
+        p = ToolPolicy(
+            read_only=True, excluded={"falcon_denied"}, enabled_modules={"m"}
+        )
+        resolved = p.resolve(
+            _catalog(
+                ("falcon_denied", "m", _READ_ONLY_ANNOTATIONS),
+                ("falcon_mutator", "m", _MUTATING_ANNOTATIONS),
+                ("falcon_sibling", "off", _READ_ONLY_ANNOTATIONS),
+            )
+        )
+        self.assertEqual(
+            dict(resolved.reasons),
+            {"falcon_denied": "deny-list", "falcon_mutator": "read-only"},
+        )
+        self.assertNotIn("falcon_sibling", resolved.reasons)
+
+    def test_reasons_keys_match_withheld_by_rule(self):
+        """The two must not drift — an unattributed withholding cites no cause."""
+        p = ToolPolicy(
+            read_only=True, excluded={"falcon_denied"}, enabled_modules={"m"}
+        )
+        resolved = p.resolve(
+            _catalog(
+                ("falcon_denied", "m", _READ_ONLY_ANNOTATIONS),
+                ("falcon_mutator", "m", _MUTATING_ANNOTATIONS),
+                ("falcon_kept", "m", _READ_ONLY_ANNOTATIONS),
+                ("falcon_sibling", "off", _READ_ONLY_ANNOTATIONS),
+            )
+        )
+        self.assertEqual(set(resolved.reasons), resolved.withheld_by_rule)
+
     def test_mutating_tool_is_not_withheld_by_rule_when_read_only_is_off(self):
         """A mutator dropped by the module gate must not be blamed on read-only."""
         p = ToolPolicy(allowed={"falcon_a"}, enabled_modules={"enabled"})
@@ -907,6 +945,41 @@ class TestWithheldToolsAreAttributable(unittest.TestCase):
 
         self.assertIn("deny-list", error)
         self.assertNotIn("Unknown tool", error)
+
+    def test_error_cites_only_the_rule_that_withheld_this_tool(self, mock_client):
+        """With both rules on, each tool must name its own cause, not the server's.
+
+        _READ_ONLY_TOOL is read-only, so --read-only cannot have withheld it; only the
+        deny-list did. Citing every active rule would send an operator debugging their
+        config to the wrong flag.
+        """
+        server = self._server(
+            mock_client,
+            dynamic=True,
+            read_only=True,
+            excluded_tools={_READ_ONLY_TOOL},
+        )
+
+        denied = self._execute(server, _READ_ONLY_TOOL)["error"]
+        self.assertIn("deny-list", denied)
+        self.assertNotIn("read-only", denied)
+
+        mutating = self._execute(server, _MUTATING_TOOL)["error"]
+        self.assertIn("read-only", mutating)
+        self.assertNotIn("deny-list", mutating)
+
+    def test_error_does_not_suppress_unrelated_tool_use(self, mock_client):
+        """Blanket 'do not look for another tool' would stall legitimate work.
+
+        On a read-only server the agent often guesses a mutator when a served read
+        tool answers the real question, so the message must scope its warning to
+        reproducing the withheld effect rather than to using tools at all.
+        """
+        server = self._server(mock_client, dynamic=True, read_only=True)
+        error = self._execute(server, _MUTATING_TOOL)["error"]
+
+        self.assertNotIn("do not look for another tool", error)
+        self.assertIn("other tools remain available", error)
 
     def test_withheld_tool_is_still_not_executed(self, mock_client):
         """Naming the cause must not resurrect the tool — omission is the enforcement."""

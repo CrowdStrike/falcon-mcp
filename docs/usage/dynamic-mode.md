@@ -133,11 +133,16 @@ it from the catalog is the enforcement, so the executor is not a bypass.
 
 Because a withheld tool is missing rather than flagged, its absence would otherwise be
 indistinguishable from a tool that never existed — leading an agent to tell the user the capability
-does not exist when the operator simply disabled it. Two things prevent that:
+does not exist when the operator simply disabled it. This matters here in particular: dynamic mode
+dispatches by name, so an agent can name a withheld tool, whereas in normal mode the tool is not in
+`tools/list` at all. Two things prevent the misreport:
 
 - `falcon_execute_tool` on a withheld name reports that the tool exists but the server's
-  configuration withholds it, and names the rule. A name that was never served still returns the
-  plain unknown-tool error, so the two cases stay distinguishable.
+  configuration withholds it, naming the single rule responsible — `read-only` or `deny-list`, not
+  every rule the server has enabled — so an operator debugging their config is pointed at the right
+  flag. A name that was never served still returns the plain unknown-tool error, so the two cases
+  stay distinguishable. The message warns against reproducing the withheld effect through another
+  tool, not against using other tools at all.
 - `falcon_list_enabled_tools` carries a `filters_active` field describing the rules in effect. The
   field is absent when no filter is configured.
 
