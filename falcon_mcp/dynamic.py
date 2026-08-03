@@ -221,6 +221,14 @@ class DynamicMode:
             structured_output=False,
         )
 
+    def _entries_remain(self) -> bool:
+        """True if the catalog still serves at least one capability tool.
+
+        Filtering can withhold every tool (``--tools <mutator> --read-only``), which
+        changes what is honest to tell a model about looking elsewhere.
+        """
+        return bool(self.catalog.entries)
+
     async def _search_tools(
         self,
         query: str = Field(
@@ -255,9 +263,18 @@ class DynamicMode:
         truncated = total > len(results)
 
         if not results:
-            if self.catalog.resolution.withheld_by_rule:
+            # Quoting an empty query back reads as a failed lookup for "".
+            subject = f"No tool matching '{query}' is" if query else "No tool is"
+            if not self._entries_remain():
                 hint = (
-                    f"No tool matching '{query}' is served by this server, which is "
+                    "This server serves no capability tools: its configuration "
+                    f"({self.catalog.describe_policy()}) withholds all of them. Tell the "
+                    "user the server is configured with no tools available rather than "
+                    "searching again."
+                )
+            elif self.catalog.resolution.withheld_by_rule:
+                hint = (
+                    f"{subject} served by this server, which is "
                     f"running with a tool filter ({self.catalog.describe_policy()}). "
                     "Call falcon_list_enabled_tools for what it does serve. The "
                     "capability may exist but be withheld by configuration — tell the "
@@ -265,7 +282,7 @@ class DynamicMode:
                 )
             else:
                 hint = (
-                    f"No tool matching '{query}' is served by this server. Call "
+                    f"{subject} served by this server. Call "
                     "falcon_list_enabled_tools for the full inventory. If the capability "
                     "you need is genuinely absent, it was not enabled on this server — "
                     "tell the user rather than trying more searches."
@@ -315,12 +332,18 @@ class DynamicMode:
             # config choice to the user as a missing product capability.
             rule = self.catalog.withholding_rule(tool_name)
             if rule is not None:
+                # Promising other tools on an empty surface sends the model hunting.
+                remainder = (
+                    "Do not try to achieve the same effect through a different tool, "
+                    "though other tools remain available for other work."
+                    if self._entries_remain()
+                    else "This server currently serves no capability tools at all, so "
+                    "do not look for an alternative."
+                )
                 return {
                     "error": f"'{tool_name}' exists on this server but its configuration "
                     f"withholds it ({rule}). The capability is not missing — tell the user "
-                    "it is disabled by this server's configuration. Do not try to achieve "
-                    "the same effect through a different tool, though other tools remain "
-                    "available for other work.",
+                    f"it is disabled by this server's configuration. {remainder}",
                     "tool": tool_name,
                 }
             return {
