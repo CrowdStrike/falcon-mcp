@@ -63,8 +63,10 @@ class TestPoliciesIntegration(BaseIntegrationTest):
 
     def _scopes_available(self, policy_type: str) -> bool:
         """Return True if a search for the given type does not error on scope."""
-        result = self.call_method(
-            self.module.search_policies, policy_type=policy_type, limit=1
+        result = self._unwrap_results(
+            self.call_method(
+                self.module.search_policies, policy_type=policy_type, limit=1
+            )
         )
         if isinstance(result, dict) and "error" in result:
             return False
@@ -75,8 +77,10 @@ class TestPoliciesIntegration(BaseIntegrationTest):
 
     def _first_entity(self, policy_type: str):
         """Return one policy entity for the type, or None (empty/scopeless)."""
-        result = self.call_method(
-            self.module.search_policies, policy_type=policy_type, limit=1
+        result = self._unwrap_results(
+            self.call_method(
+                self.module.search_policies, policy_type=policy_type, limit=1
+            )
         )
         if not result or isinstance(result, dict):
             return None
@@ -107,8 +111,10 @@ class TestPoliciesIntegration(BaseIntegrationTest):
                     f"{policy_type} policy scope not available", "operation names"
                 )
                 continue
-            result = self.call_method(
-                self.module.search_policies, policy_type=policy_type, limit=1
+            result = self._unwrap_results(
+                self.call_method(
+                    self.module.search_policies, policy_type=policy_type, limit=1
+                )
             )
             if isinstance(result, list) and result and isinstance(result[0], dict):
                 assert "error" not in result[0], (
@@ -121,8 +127,10 @@ class TestPoliciesIntegration(BaseIntegrationTest):
         for policy_type in POLICY_TYPES:
             if not self._scopes_available(policy_type):
                 continue
-            result = self.call_method(
-                self.module.search_policies, policy_type=policy_type, limit=2
+            result = self._unwrap_results(
+                self.call_method(
+                    self.module.search_policies, policy_type=policy_type, limit=2
+                )
             )
             if not result or isinstance(result, dict):
                 continue
@@ -144,8 +152,10 @@ class TestPoliciesIntegration(BaseIntegrationTest):
                 "Device Control Policies scope not available", "dc v2 fields"
             )
             return
-        result = self.call_method(
-            self.module.search_policies, policy_type="device_control", limit=1
+        result = self._unwrap_results(
+            self.call_method(
+                self.module.search_policies, policy_type="device_control", limit=1
+            )
         )
         if not result or isinstance(result, dict):
             self.skip_with_warning(
@@ -197,11 +207,13 @@ class TestPoliciesIntegration(BaseIntegrationTest):
                     else:
                         filter_expr = f"{field}:'{value}'"
 
-                result = self.call_method(
-                    self.module.search_policies,
-                    policy_type=policy_type,
-                    filter=filter_expr,
-                    limit=1,
+                result = self._unwrap_results(
+                    self.call_method(
+                        self.module.search_policies,
+                        policy_type=policy_type,
+                        filter=filter_expr,
+                        limit=1,
+                    )
                 )
                 assert result and not isinstance(result, dict), (
                     f"Documented filter field '{field}' returned no results for "
@@ -235,11 +247,13 @@ class TestPoliciesIntegration(BaseIntegrationTest):
                 continue
             name = entity["name"]
             filter_expr = f"name:{operator}'{name}'"
-            result = self.call_method(
-                self.module.search_policies,
-                policy_type=policy_type,
-                filter=filter_expr,
-                limit=1,
+            result = self._unwrap_results(
+                self.call_method(
+                    self.module.search_policies,
+                    policy_type=policy_type,
+                    filter=filter_expr,
+                    limit=1,
+                )
             )
             assert result and not isinstance(result, dict), (
                 f"Documented name operator '{operator}' returned nothing for "
@@ -279,11 +293,13 @@ class TestPoliciesIntegration(BaseIntegrationTest):
             policy_id = entity.get("id")
             if not policy_id:
                 continue
-            members = self.call_method(
-                self.module.search_policy_members,
-                policy_type=policy_type,
-                id=policy_id,
-                limit=1,
+            members = self._unwrap_results(
+                self.call_method(
+                    self.module.search_policy_members,
+                    policy_type=policy_type,
+                    id=policy_id,
+                    limit=1,
+                )
             )
             if not members or isinstance(members, dict):
                 continue

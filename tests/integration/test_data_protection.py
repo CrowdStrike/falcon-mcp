@@ -35,7 +35,9 @@ class TestDataProtectionIntegration(BaseIntegrationTest):
 
     def test_search_classifications_returns_full_details(self):
         """Test that classifications include full entity details."""
-        result = self.call_method(self.module.search_data_protection_classifications, limit=2)
+        result = self._unwrap_results(
+            self.call_method(self.module.search_data_protection_classifications, limit=2)
+        )
 
         if not result or isinstance(result, dict):
             self.skip_with_warning("No classifications found", "classifications details")
@@ -96,10 +98,12 @@ class TestDataProtectionIntegration(BaseIntegrationTest):
 
     def test_search_policies_returns_full_details(self):
         """Test that policies include full entity details."""
-        result = self.call_method(
-            self.module.search_data_protection_policies,
-            platform_name="win",
-            limit=2,
+        result = self._unwrap_results(
+            self.call_method(
+                self.module.search_data_protection_policies,
+                platform_name="win",
+                limit=2,
+            )
         )
 
         if not result or isinstance(result, dict):
@@ -136,7 +140,9 @@ class TestDataProtectionIntegration(BaseIntegrationTest):
 
     def test_search_content_patterns_returns_full_details(self):
         """Test that content patterns include full entity details."""
-        result = self.call_method(self.module.search_data_protection_content_patterns, limit=2)
+        result = self._unwrap_results(
+            self.call_method(self.module.search_data_protection_content_patterns, limit=2)
+        )
 
         if not result or isinstance(result, dict):
             self.skip_with_warning("No content patterns found", "content patterns details")

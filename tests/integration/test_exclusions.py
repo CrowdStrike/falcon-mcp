@@ -32,8 +32,10 @@ class TestExclusionsIntegration(BaseIntegrationTest):
 
     def _scopes_available(self, exclusion_type: str) -> bool:
         """Return True if a search for the given type does not error on scope."""
-        result = self.call_method(
-            self.module.search_exclusions, exclusion_type=exclusion_type, limit=1
+        result = self._unwrap_results(
+            self.call_method(
+                self.module.search_exclusions, exclusion_type=exclusion_type, limit=1
+            )
         )
         # A scope/permission failure surfaces as an error dict or error list.
         if isinstance(result, dict) and "error" in result:
@@ -72,10 +74,12 @@ class TestExclusionsIntegration(BaseIntegrationTest):
         mocked unit tests would pass.
         """
         for exclusion_type in ("ioa", "ml", "sensor_visibility", "certificate"):
-            result = self.call_method(
-                self.module.search_exclusions,
-                exclusion_type=exclusion_type,
-                limit=1,
+            result = self._unwrap_results(
+                self.call_method(
+                    self.module.search_exclusions,
+                    exclusion_type=exclusion_type,
+                    limit=1,
+                )
             )
             # Empty results return the FQL guide dict (acceptable); only a true
             # error indicates a bad operation name or missing scope.
@@ -105,11 +109,13 @@ class TestExclusionsIntegration(BaseIntegrationTest):
             if not self._scopes_available(exclusion_type):
                 continue
             for field in fields:
-                result = self.call_method(
-                    self.module.search_exclusions,
-                    exclusion_type=exclusion_type,
-                    sort=f"{field}.desc",
-                    limit=1,
+                result = self._unwrap_results(
+                    self.call_method(
+                        self.module.search_exclusions,
+                        exclusion_type=exclusion_type,
+                        sort=f"{field}.desc",
+                        limit=1,
+                    )
                 )
                 if isinstance(result, list) and result and isinstance(result[0], dict):
                     assert "error" not in result[0], (
@@ -141,8 +147,10 @@ class TestExclusionsIntegration(BaseIntegrationTest):
         for exclusion_type, fields in documented_filters.items():
             if not self._scopes_available(exclusion_type):
                 continue
-            entity_result = self.call_method(
-                self.module.search_exclusions, exclusion_type=exclusion_type, limit=1
+            entity_result = self._unwrap_results(
+                self.call_method(
+                    self.module.search_exclusions, exclusion_type=exclusion_type, limit=1
+                )
             )
             # Empty environment returns the FQL guide dict; nothing to assert on.
             if not entity_result or isinstance(entity_result, dict):
@@ -172,11 +180,13 @@ class TestExclusionsIntegration(BaseIntegrationTest):
                     else:
                         filter_expr = f"{field}:'{value}'"
 
-                result = self.call_method(
-                    self.module.search_exclusions,
-                    exclusion_type=exclusion_type,
-                    filter=filter_expr,
-                    limit=1,
+                result = self._unwrap_results(
+                    self.call_method(
+                        self.module.search_exclusions,
+                        exclusion_type=exclusion_type,
+                        filter=filter_expr,
+                        limit=1,
+                    )
                 )
                 assert result and not isinstance(result, dict), (
                     f"Documented filter field '{field}' returned no results for "
@@ -209,8 +219,10 @@ class TestExclusionsIntegration(BaseIntegrationTest):
         for exclusion_type, field in targets.items():
             if not self._scopes_available(exclusion_type):
                 continue
-            entities = self.call_method(
-                self.module.search_exclusions, exclusion_type=exclusion_type, limit=20
+            entities = self._unwrap_results(
+                self.call_method(
+                    self.module.search_exclusions, exclusion_type=exclusion_type, limit=20
+                )
             )
             if not entities or isinstance(entities, dict):
                 self.skip_with_warning(
@@ -241,11 +253,13 @@ class TestExclusionsIntegration(BaseIntegrationTest):
                 )
                 continue
 
-            wildcard = self.call_method(
-                self.module.search_exclusions,
-                exclusion_type=exclusion_type,
-                filter=f"{field}:*'*{substr}*'",
-                limit=1,
+            wildcard = self._unwrap_results(
+                self.call_method(
+                    self.module.search_exclusions,
+                    exclusion_type=exclusion_type,
+                    filter=f"{field}:*'*{substr}*'",
+                    limit=1,
+                )
             )
             assert wildcard and not isinstance(wildcard, dict), (
                 f"`:*` wildcard substring match returned nothing for "
@@ -264,8 +278,10 @@ class TestExclusionsIntegration(BaseIntegrationTest):
         if not self._scopes_available("ioa"):
             self.skip_with_warning("IOA Exclusions scope not available", "search ioa")
             return
-        result = self.call_method(
-            self.module.search_exclusions, exclusion_type="ioa", limit=2
+        result = self._unwrap_results(
+            self.call_method(
+                self.module.search_exclusions, exclusion_type="ioa", limit=2
+            )
         )
         if not result or isinstance(result, dict):
             self.skip_with_warning("No IOA exclusions found", "search ioa details")
@@ -279,8 +295,10 @@ class TestExclusionsIntegration(BaseIntegrationTest):
         if not self._scopes_available("ml"):
             self.skip_with_warning("ML Exclusions scope not available", "search ml")
             return
-        result = self.call_method(
-            self.module.search_exclusions, exclusion_type="ml", limit=2
+        result = self._unwrap_results(
+            self.call_method(
+                self.module.search_exclusions, exclusion_type="ml", limit=2
+            )
         )
         if not result or isinstance(result, dict):
             self.skip_with_warning("No ML exclusions found", "search ml details")
@@ -296,10 +314,12 @@ class TestExclusionsIntegration(BaseIntegrationTest):
                 "Sensor Visibility Exclusions scope not available", "search sv"
             )
             return
-        result = self.call_method(
-            self.module.search_exclusions,
-            exclusion_type="sensor_visibility",
-            limit=2,
+        result = self._unwrap_results(
+            self.call_method(
+                self.module.search_exclusions,
+                exclusion_type="sensor_visibility",
+                limit=2,
+            )
         )
         if not result or isinstance(result, dict):
             self.skip_with_warning("No SV exclusions found", "search sv details")
@@ -315,8 +335,10 @@ class TestExclusionsIntegration(BaseIntegrationTest):
                 "Certificate exclusion scope not available", "search cert"
             )
             return
-        result = self.call_method(
-            self.module.search_exclusions, exclusion_type="certificate", limit=2
+        result = self._unwrap_results(
+            self.call_method(
+                self.module.search_exclusions, exclusion_type="certificate", limit=2
+            )
         )
         if not result or isinstance(result, dict):
             self.skip_with_warning("No certificate exclusions found", "search cert")
@@ -416,8 +438,10 @@ class TestExclusionsIntegration(BaseIntegrationTest):
             self.skip_with_warning("IOA Exclusions scope not available", "ioa roundtrip")
             return
 
-        existing = self.call_method(
-            self.module.search_exclusions, exclusion_type="ioa", limit=1
+        existing = self._unwrap_results(
+            self.call_method(
+                self.module.search_exclusions, exclusion_type="ioa", limit=1
+            )
         )
         if not existing or isinstance(existing, dict):
             self.skip_with_warning(
