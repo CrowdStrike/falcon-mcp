@@ -65,10 +65,8 @@ class TestDetectionsModule(TestModules):
         self.assertEqual(first_call[1]["parameters"]["limit"], 10)
         self.mock_client.command.assert_any_call(
             "PostEntitiesAlertsV2",
-            body={
-                "composite_ids": ["detection1", "detection2"],
-                "include_hidden": True,
-            },
+            body={"composite_ids": ["detection1", "detection2"]},
+            parameters={"include_hidden": True},
         )
 
         # Verify result is paginated envelope with empty results
@@ -113,10 +111,8 @@ class TestDetectionsModule(TestModules):
         self.assertEqual(first_call[1]["parameters"]["limit"], 10)
         self.mock_client.command.assert_any_call(
             "PostEntitiesAlertsV2",
-            body={
-                "composite_ids": ["detection1", "detection2"],
-                "include_hidden": True,
-            },
+            body={"composite_ids": ["detection1", "detection2"]},
+            parameters={"include_hidden": True},
         )
 
         # Verify result is paginated envelope
@@ -222,7 +218,8 @@ class TestDetectionsModule(TestModules):
         # Verify client command was called correctly
         self.mock_client.command.assert_called_once_with(
             "PostEntitiesAlertsV2",
-            body={"composite_ids": ["detection1"], "include_hidden": True},
+            body={"composite_ids": ["detection1"]},
+            parameters={"include_hidden": True},
         )
 
         # Verify result - handle_api_response returns a list of resources
@@ -269,10 +266,8 @@ class TestDetectionsModule(TestModules):
         # Check that the second call includes include_hidden=False
         self.mock_client.command.assert_any_call(
             "PostEntitiesAlertsV2",
-            body={
-                "composite_ids": ["detection1", "detection2"],
-                "include_hidden": False,
-            },
+            body={"composite_ids": ["detection1", "detection2"]},
+            parameters={"include_hidden": False},
         )
 
         # Verify result is paginated envelope
@@ -281,6 +276,64 @@ class TestDetectionsModule(TestModules):
         self.assertEqual(len(result["results"]), 1)
         self.assertEqual(result["results"][0]["composite_id"], "detection1")
         self.assertEqual(result["pagination"]["total"], 2)
+
+    def test_search_detections_include_hidden_reaches_query_step(self):
+        """include_hidden must reach the GetQueriesAlertsV2 query step.
+
+        The query step is what decides which IDs — and therefore
+        `pagination.total` — come back. Forwarding include_hidden only to the
+        hydration step leaves hidden alerts in the result set and the count.
+        """
+        for include_hidden in (True, False):
+            with self.subTest(include_hidden=include_hidden):
+                self.mock_client.command.reset_mock()
+                self.mock_client.command.side_effect = [
+                    {
+                        "status_code": 200,
+                        "body": {
+                            "resources": ["detection1"],
+                            "meta": {"pagination": {"offset": 0, "limit": 10, "total": 1}},
+                        },
+                    },
+                    {
+                        "status_code": 200,
+                        "body": {"resources": [{"composite_id": "detection1"}]},
+                    },
+                ]
+
+                self.module.search_detections(include_hidden=include_hidden)
+
+                query_call = self.mock_client.command.call_args_list[0]
+                self.assertEqual(query_call[0][0], "GetQueriesAlertsV2")
+                self.assertEqual(
+                    query_call[1]["parameters"].get("include_hidden"),
+                    include_hidden,
+                )
+
+    def test_search_detections_include_hidden_is_query_param_not_body(self):
+        """The hydration step must send include_hidden as a query param, not in the body.
+
+        PostEntitiesAlertsV2 declares include_hidden `in: query`; a copy in the
+        POST body is silently ignored, so asserting only that the value was
+        "passed somewhere" would not catch the bug.
+        """
+        self.mock_client.command.side_effect = [
+            {
+                "status_code": 200,
+                "body": {
+                    "resources": ["detection1"],
+                    "meta": {"pagination": {"offset": 0, "limit": 10, "total": 1}},
+                },
+            },
+            {"status_code": 200, "body": {"resources": [{"composite_id": "detection1"}]}},
+        ]
+
+        self.module.search_detections(include_hidden=False)
+
+        details_call = self.mock_client.command.call_args_list[1]
+        self.assertEqual(details_call[0][0], "PostEntitiesAlertsV2")
+        self.assertEqual(details_call[1]["parameters"], {"include_hidden": False})
+        self.assertNotIn("include_hidden", details_call[1]["body"])
 
     def test_get_detection_details_include_hidden_false(self):
         """Test getting detection details with include_hidden=False."""
@@ -297,12 +350,35 @@ class TestDetectionsModule(TestModules):
         # Verify client command was called correctly with include_hidden=False
         self.mock_client.command.assert_called_once_with(
             "PostEntitiesAlertsV2",
-            body={"composite_ids": ["detection1"], "include_hidden": False},
+            body={"composite_ids": ["detection1"]},
+            parameters={"include_hidden": False},
         )
 
         # Verify result
         expected_result = [{"id": "detection1", "name": "Test Detection 1"}]
         self.assertEqual(result, expected_result)
+
+    def test_get_detection_details_include_hidden_is_query_param_not_body(self):
+        """include_hidden must land in query parameters, never in the POST body.
+
+        PostEntitiesAlertsV2 declares it `in: query`; the API silently ignores a
+        body copy, so a test that accepts either placement reproduces the bug.
+        """
+        for include_hidden in (True, False):
+            with self.subTest(include_hidden=include_hidden):
+                self.mock_client.command.reset_mock()
+                self.mock_client.command.return_value = {
+                    "status_code": 200,
+                    "body": {"resources": [{"composite_id": "detection1"}]},
+                }
+
+                self.module.get_detection_details(
+                    ["detection1"], include_hidden=include_hidden
+                )
+
+                kwargs = self.mock_client.command.call_args[1]
+                self.assertEqual(kwargs["parameters"], {"include_hidden": include_hidden})
+                self.assertNotIn("include_hidden", kwargs["body"])
 
 
     def test_format_fql_error_response_error(self):
@@ -1393,6 +1469,38 @@ class TestDetectionsModule(TestModules):
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)
         self.assertNotIn("hint", result)
+
+    def test_update_detections_omits_include_hidden(self):
+        """update_detections must not send include_hidden at all.
+
+        PatchEntitiesAlertsV3 declares the parameter, but sending False makes
+        updates to hidden alerts fail outright (live-validated: 400 "no visible
+        alert present in the update query"), which would make it impossible to
+        un-hide an alert previously hidden via show_in_ui=False. Omitting it
+        keeps the endpoint's own default.
+        """
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+
+        self.module.update_detections(
+            ids=["id1"],
+            status="new",
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
+        )
+
+        kwargs = self.mock_client.command.call_args[1]
+        self.assertNotIn("parameters", kwargs)
+        self.assertNotIn("include_hidden", kwargs["body"])
 
     def test_update_detections_unassign_false_is_noop(self):
         """Test that unassign=False does not add the action parameter."""

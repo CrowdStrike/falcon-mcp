@@ -42,7 +42,8 @@ Retrieve details for detection IDs you already have.
 
 Use when you have specific composite detection ID(s). For discovering detections
 by criteria (severity, status, hostname, etc.), use falcon_search_detections
-instead. Returns full detection records.
+instead. Returns full detection records; IDs hidden from the Falcon UI are
+omitted when include_hidden is False.
 
 **Example prompts:**
 

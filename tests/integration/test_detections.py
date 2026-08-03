@@ -95,6 +95,116 @@ class TestDetectionsIntegration(BaseIntegrationTest):
             context="get_detection_details",
         )
 
+    def _find_hidden_detection_id(self, context: str):
+        """Return the composite_id of a detection hidden from the Falcon UI.
+
+        Hidden detections are the only ones that distinguish include_hidden=True
+        from include_hidden=False; a visible detection is returned either way.
+        Skips the calling test when the tenant has none.
+        """
+        result = self.call_method(
+            self.module.search_detections,
+            filter="show_in_ui:false",
+            limit=1,
+            include_hidden=True,
+        )
+        self.assert_no_error(result, context=f"{context}: finding a hidden detection")
+
+        hidden = self._unwrap_results(result)
+        if not hidden:
+            self.skip_with_warning(
+                "No hidden detections (show_in_ui:false) in this tenant; "
+                "include_hidden cannot be distinguished from the default",
+                context=context,
+            )
+
+        detection_id = self.get_first_id(hidden, id_field="composite_id")
+        if not detection_id:
+            self.skip_with_warning(
+                "Could not extract composite_id for a hidden detection",
+                context=context,
+            )
+        return detection_id
+
+    def test_search_detections_include_hidden_excludes_hidden_detections(self):
+        """include_hidden=False must drop hidden detections from results and the total.
+
+        The query step decides which IDs and what `pagination.total` come back, so
+        this catches include_hidden never reaching GetQueriesAlertsV2.
+        """
+        context = "test_search_detections_include_hidden_excludes_hidden_detections"
+        self._find_hidden_detection_id(context)
+
+        shown = self.call_method(
+            self.module.search_detections,
+            filter="show_in_ui:false",
+            limit=1,
+            include_hidden=False,
+        )
+        everything = self.call_method(
+            self.module.search_detections,
+            filter="show_in_ui:false",
+            limit=1,
+            include_hidden=True,
+        )
+
+        self.assert_no_error(shown, context=f"{context}: include_hidden=False")
+        self.assert_no_error(everything, context=f"{context}: include_hidden=True")
+
+        assert not self._unwrap_results(shown), (
+            "include_hidden=False still returned hidden detections: "
+            f"{self._unwrap_results(shown)}"
+        )
+        assert self._unwrap_results(everything), (
+            "include_hidden=True returned no hidden detections, "
+            "but one was found moments earlier"
+        )
+
+        # `pagination.total` comes from the query step and must respect the flag too.
+        assert shown["pagination"]["total"] == 0, (
+            "include_hidden=False counted hidden detections in pagination.total: "
+            f"{shown['pagination']['total']}"
+        )
+        assert (everything["pagination"]["total"] or 0) > 0, (
+            "include_hidden=True reported no hidden detections in pagination.total: "
+            f"{everything['pagination']['total']}"
+        )
+
+    def test_get_detection_details_include_hidden_excludes_hidden_detection(self):
+        """include_hidden=False must omit a hidden detection from a by-ID lookup.
+
+        PostEntitiesAlertsV2 declares include_hidden `in: query`; sent in the POST
+        body it is silently ignored and the hidden detection comes back anyway.
+        """
+        context = "test_get_detection_details_include_hidden_excludes_hidden_detection"
+        detection_id = self._find_hidden_detection_id(context)
+
+        visible_only = self.call_method(
+            self.module.get_detection_details,
+            ids=[detection_id],
+            include_hidden=False,
+        )
+        with_hidden = self.call_method(
+            self.module.get_detection_details,
+            ids=[detection_id],
+            include_hidden=True,
+        )
+
+        self.assert_no_error(visible_only, context=f"{context}: include_hidden=False")
+        self.assert_no_error(with_hidden, context=f"{context}: include_hidden=True")
+
+        assert visible_only == [], (
+            "include_hidden=False returned a hidden detection: "
+            f"{visible_only}"
+        )
+        assert with_hidden, (
+            f"include_hidden=True returned nothing for hidden detection {detection_id}"
+        )
+        assert with_hidden[0].get("show_in_ui") is False, (
+            "expected a detection hidden from the UI, got show_in_ui="
+            f"{with_hidden[0].get('show_in_ui')!r}"
+        )
+
     def test_operation_names_are_correct(self):
         """Validate that FalconPy operation names are correct.
 
@@ -261,7 +371,9 @@ class TestDetectionsIntegration(BaseIntegrationTest):
 
         Skips gracefully if Alerts:write scope is not available.
         """
-        search_result = self.call_method(self.module.search_detections, limit=1)
+        search_result = self._unwrap_results(
+            self.call_method(self.module.search_detections, limit=1)
+        )
         if not search_result or isinstance(search_result, dict):
             self.skip_with_warning(
                 "No detections available to test update_detections",
@@ -348,7 +460,9 @@ class TestDetectionsIntegration(BaseIntegrationTest):
 
         Skips gracefully if Alerts:write scope is not available.
         """
-        search_result = self.call_method(self.module.search_detections, limit=1)
+        search_result = self._unwrap_results(
+            self.call_method(self.module.search_detections, limit=1)
+        )
         if not search_result or isinstance(search_result, dict):
             self.skip_with_warning(
                 "No detections available to test update_detections tags",
@@ -500,7 +614,9 @@ class TestDetectionsIntegration(BaseIntegrationTest):
 
         Skips gracefully if Alerts:write scope is not available.
         """
-        search_result = self.call_method(self.module.search_detections, limit=1)
+        search_result = self._unwrap_results(
+            self.call_method(self.module.search_detections, limit=1)
+        )
         if not search_result or isinstance(search_result, dict):
             self.skip_with_warning(
                 "No detections available to test update_detections show_in_ui",
