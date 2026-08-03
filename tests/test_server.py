@@ -202,53 +202,6 @@ class TestFalconMCPServer(unittest.TestCase):
             self.assertIsInstance(module_name, str)
 
     @patch("falcon_mcp.server.FalconClient")
-    def test_list_modules(self, mock_client):
-        """Test listing all available modules."""
-        # Setup mock
-        mock_client_instance = MagicMock()
-        mock_client_instance.authenticate.return_value = True
-        mock_client.return_value = mock_client_instance
-
-        # Create server with limited modules
-        server = FalconMCPServer(enabled_modules={"detections", "cloud"})
-
-        # Call list_modules
-        result = server.list_modules()
-
-        # Should return ALL modules from registry regardless of what's enabled
-        expected_modules = registry.get_module_names()
-        self.assertEqual(set(result["modules"]), set(expected_modules))
-
-        # Verify return type is correct
-        self.assertIsInstance(result["modules"], list)
-
-        # Verify each module name is a string
-        for module_name in result["modules"]:
-            self.assertIsInstance(module_name, str)
-
-    @patch("falcon_mcp.server.FalconClient")
-    def test_list_modules_consistency(self, mock_client):
-        """Test that list_modules always returns the same result."""
-        # Setup mock
-        mock_client_instance = MagicMock()
-        mock_client_instance.authenticate.return_value = True
-        mock_client.return_value = mock_client_instance
-
-        # Create two servers with different enabled modules
-        server1 = FalconMCPServer(enabled_modules={"detections"})
-        server2 = FalconMCPServer(enabled_modules={"cloud", "intel"})
-
-        # Both should return the same available modules
-        result1 = server1.list_modules()
-        result2 = server2.list_modules()
-
-        self.assertEqual(set(result1["modules"]), set(result2["modules"]))
-
-        # And both should match the registry
-        expected_modules = registry.get_module_names()
-        self.assertEqual(set(result1["modules"]), set(expected_modules))
-
-    @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
     def test_server_with_stateless_http_enabled(self, mock_fastmcp, mock_client):
         """Test server initialization with stateless_http enabled."""
@@ -434,7 +387,7 @@ class TestFalconMCPServer(unittest.TestCase):
         core_tool_names = [
             "falcon_check_connectivity",
             "falcon_list_enabled_modules",
-            "falcon_list_modules",
+            "falcon_list_enabled_tools",
         ]
         for call in mock_server_instance.add_tool.call_args_list:
             name = call.kwargs.get("name")

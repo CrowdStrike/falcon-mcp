@@ -485,7 +485,7 @@ class TestMCPComplianceDynamic(unittest.IsolatedAsyncioTestCase):
         tool_names = {t.name for t in tools}
         self.assertEqual(
             tool_names,
-            {"falcon_list_enabled_modules", "falcon_search_tools", "falcon_execute_tool"},
+            {"falcon_list_enabled_tools", "falcon_search_tools", "falcon_execute_tool"},
         )
 
     async def test_dynamic_meta_tool_annotations(self):

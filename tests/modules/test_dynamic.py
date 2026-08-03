@@ -15,6 +15,7 @@ from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.modules.detections import DetectionsModule
 from falcon_mcp.modules.hosts import HostsModule
 from falcon_mcp.modules.ngsiem import NGSIEMModule
+from falcon_mcp.tool_filter import ToolPolicy
 
 _T = TypeVar("_T")
 
@@ -226,6 +227,65 @@ class TestDynamicToolCatalog(unittest.TestCase):
             )
 
 
+class TestEmptySurfaceCopy(unittest.TestCase):
+    """Agent-facing copy must not misstate an empty tool surface.
+
+    `--tools <mutator> --read-only` withholds everything, leaving a catalog with no
+    entries. Telling a model that other tools remain available sends it hunting
+    through a server that serves nothing.
+    """
+
+    def setUp(self):
+        self.mock_client = MagicMock()
+        modules: dict[str, BaseModule] = {
+            "detections": DetectionsModule(self.mock_client),
+        }
+        # Deny every tool the module has, so the catalog ends up empty.
+        probe: dict[str, BaseModule] = {
+            "detections": DetectionsModule(self.mock_client)
+        }
+        all_names = set(DynamicToolCatalog(probe).entries)
+        self.dynamic = DynamicMode(
+            modules, MagicMock(), ToolPolicy(excluded=all_names)
+        )
+        self.assertEqual(self.dynamic.catalog.entries, {}, "catalog must be empty")
+
+    def test_withheld_error_does_not_promise_other_tools(self):
+        result = run_async(
+            self.dynamic._execute_tool(
+                tool_name="falcon_search_detections", parameters={}
+            )
+        )
+        self.assertIn("withholds it", result["error"])
+        self.assertNotIn(
+            "other tools remain available",
+            result["error"],
+            "claimed other tools are available on a server that serves none",
+        )
+
+    def test_empty_query_hint_does_not_quote_an_empty_query(self):
+        """A module-only browse that matches nothing must not quote an empty query.
+
+        Exercised on a NON-empty surface: an empty catalog is described by its own
+        branch, so it would never reach the query wording being asserted here.
+        """
+        served: dict[str, BaseModule] = {
+            "detections": DetectionsModule(self.mock_client)
+        }
+        dynamic = DynamicMode(served, MagicMock())
+        self.assertTrue(dynamic.catalog.entries, "surface must be non-empty")
+
+        result = run_async(
+            dynamic._search_tools(query="", module="nosuchmodule", limit=20)
+        )
+        self.assertEqual(result["results"], [])
+        self.assertNotIn(
+            "matching ''",
+            result["hint"],
+            "quoted an empty query back at the model",
+        )
+
+
 class TestExecuteFalconTool(unittest.TestCase):
     """Test cases for DynamicMode execute dispatch."""
 
@@ -331,21 +391,21 @@ class TestExecuteFalconTool(unittest.TestCase):
                 query="hosts nonexistent", module=None, limit=20
             )
         )
-        self.assertIsInstance(result, dict)
-        assert isinstance(result, dict)  # narrow for Pyright
         self.assertEqual(result["results"], [])
-        self.assertIn("hint", result)
-        self.assertIn("detections", result["hint"])
-        self.assertIn("No tools found", result["hint"])
+        self.assertEqual(result["total"], 0)
+        self.assertFalse(result["truncated"])
+        self.assertIn("hosts nonexistent", result["hint"])
+        self.assertIn("falcon_list_enabled_tools", result["hint"])
 
-    def test_search_tools_with_results_returns_list(self):
+    def test_search_tools_with_results_returns_envelope(self):
         result = run_async(
             self.dynamic._search_tools(
                 query="search_detections", module=None, limit=20
             )
         )
-        self.assertIsInstance(result, list)
-        self.assertGreater(len(result), 0)
+        self.assertGreater(len(result["results"]), 0)
+        self.assertEqual(result["total"], len(result["results"]))
+        self.assertFalse(result["truncated"])
 
 
 class TestDynamicServerIntegration(unittest.TestCase):
@@ -375,12 +435,12 @@ class TestDynamicServerIntegration(unittest.TestCase):
             call.kwargs["name"] for call in mock_server_instance.add_tool.call_args_list
         ]
         self.assertEqual(len(tool_names), 3)
-        self.assertIn("falcon_list_enabled_modules", tool_names)
+        self.assertIn("falcon_list_enabled_tools", tool_names)
         self.assertIn("falcon_search_tools", tool_names)
         self.assertIn("falcon_execute_tool", tool_names)
         # These must NOT be registered in dynamic mode
         self.assertNotIn("falcon_check_connectivity", tool_names)
-        self.assertNotIn("falcon_list_modules", tool_names)
+        self.assertNotIn("falcon_list_enabled_modules", tool_names)
 
     @patch("falcon_mcp.server.FalconClient")
     @patch("falcon_mcp.server.FastMCP")
@@ -408,7 +468,7 @@ class TestDynamicServerIntegration(unittest.TestCase):
         # All three core tools must be present in normal mode
         self.assertIn("falcon_check_connectivity", tool_names)
         self.assertIn("falcon_list_enabled_modules", tool_names)
-        self.assertIn("falcon_list_modules", tool_names)
+        self.assertIn("falcon_list_enabled_tools", tool_names)
         # Module tools must be registered directly
         self.assertIn("falcon_search_detections", tool_names)
 

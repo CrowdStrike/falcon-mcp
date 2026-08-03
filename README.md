@@ -175,8 +175,8 @@ See the [Docker Deployment guide](https://developer.crowdstrike.com/falcon-mcp/d
 ## Dynamic Mode
 
 Running many modules at once inflates the context window every AI client must hold. Dynamic mode
-replaces the full tool surface with three tools — `falcon_list_enabled_modules` to see which
-modules are loaded, `falcon_search_tools` to discover the right tool on demand, and
+replaces the full tool surface with three tools — `falcon_list_enabled_tools` to see every tool the
+server serves, `falcon_search_tools` to look up a tool's parameters on demand, and
 `falcon_execute_tool` to run it — so agents only load the schemas they actually need.
 
 ```bash
@@ -186,6 +186,74 @@ falcon-mcp --dynamic
 
 See the [Dynamic Mode guide](https://developer.crowdstrike.com/falcon-mcp/usage/dynamic-mode/) for
 the full discover → execute workflow and trade-offs.
+
+## Restricting What a Server Can Do
+
+`--modules` is all-or-nothing per module: enabling one to get its search tools also exposes every
+mutating tool it carries. Three tool-level options narrow that surface.
+
+```bash
+# Investigation-only server: no tool that mutates tenant state is registered
+falcon-mcp --read-only
+
+# Expose exactly two tools, nothing else
+falcon-mcp --tools falcon_search_detections,falcon_search_hosts
+
+# Keep the module, drop one tool
+falcon-mcp --modules hostgroups --exclude-tools falcon_delete_host_groups
+
+# All of detections, plus one tool from a module you did not enable
+falcon-mcp --modules detections --tools falcon_search_applications
+```
+
+| Flag | Environment Variable | Effect |
+| --- | --- | --- |
+| `--read-only` | `FALCON_MCP_READ_ONLY` | Registers only read-only tools |
+| `--tools` | `FALCON_MCP_TOOLS` | Allow-list of tool names, added to the enabled modules |
+| `--exclude-tools` | `FALCON_MCP_EXCLUDE_TOOLS` | Deny-list of tool names |
+
+Tool names are the `falcon_`-prefixed names your client displays. An unrecognized name aborts
+startup rather than being ignored, so a typo in a deny-list cannot silently leave a tool exposed.
+
+### Composing the options
+
+`--tools` is **additive**, not a narrowing filter. It grants individual tools on top of whatever
+`--modules` already enabled, reaching across the module boundary:
+
+- `--tools X` on its own registers **only** X — no modules are loaded by default.
+- `--modules detections --tools X` registers every `detections` tool **plus** X, even when X
+  belongs to a module that is not enabled. That module contributes only X, not its whole surface,
+  and `falcon_list_enabled_modules` does not list it. `falcon_list_enabled_tools` does list X — it
+  reports served tools, so it is the reliable answer to "is this capability available here?"
+
+To *subtract*, use `--exclude-tools` or `--read-only`. All four knobs compose, and they resolve in
+a fixed order:
+
+1. `--exclude-tools` removes a tool unconditionally, even if `--tools` names it.
+2. `--read-only` removes every mutating tool unconditionally, even if `--tools` names it.
+3. `--tools` adds the tools it names, bypassing the module gate.
+4. `--modules` decides which tools are candidates by default.
+
+Because the first two rules always win, `--read-only` and `--exclude-tools` are safe to set as a
+deployment-wide floor: an additive `--tools` list cannot widen past them. Combining them is how you
+express "search everything, change nothing, and don't even offer that one tool":
+
+```bash
+falcon-mcp --read-only --exclude-tools falcon_execute_rtr_read_only_command
+```
+
+Filtering applies to dynamic mode too — a withheld tool is absent from `falcon_search_tools`
+results and rejected by `falcon_execute_tool`. Because dynamic mode dispatches by name rather than
+registering tools individually, that rejection spells out that the tool exists but the server's
+configuration withholds it, and names the one rule responsible, so an agent reports a disabled tool
+as disabled instead of telling the user the capability does not exist.
+`falcon_list_enabled_tools` carries a `filters_active` field in either mode whenever a rule is in
+effect. The startup log reports which rules are active and how many tools `--read-only` and
+`--exclude-tools` withheld, so you can confirm what you deployed. Run with `--debug` to see the
+withheld tools by name.
+
+These options filter tools, not resources. A withheld tool's FQL guide resource stays available —
+guides are static field documentation carrying no tenant data.
 
 ## Deployment Options
 

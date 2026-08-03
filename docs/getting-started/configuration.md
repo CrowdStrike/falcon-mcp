@@ -28,6 +28,9 @@ Configure your CrowdStrike API credentials and server settings using environment
 | `FALCON_MCP_STATELESS_HTTP` | `false` | Stateless mode for scalable deployments (required for AWS AgentCore) |
 | `FALCON_MCP_API_KEY` | — | API key for HTTP transport authentication |
 | `FALCON_MCP_DYNAMIC` | `false` | [Dynamic mode](/falcon-mcp/usage/dynamic-mode/): expose three tools instead of all module tools |
+| `FALCON_MCP_READ_ONLY` | `false` | Register only read-only tools ([tool restrictions](/falcon-mcp/usage/cli/#restricting-the-tool-surface)) |
+| `FALCON_MCP_TOOLS` | — | Comma-separated allow-list of tool names, added to the enabled modules |
+| `FALCON_MCP_EXCLUDE_TOOLS` | — | Comma-separated deny-list of tool names |
 | `FALCON_PROXY_URL` | — | HTTP/HTTPS proxy URL for outbound API connections |
 
 ## Using a .env File
@@ -64,6 +67,9 @@ FALCON_BASE_URL=https://api.crowdstrike.com
 #FALCON_MCP_STATELESS_HTTP=false
 #FALCON_MCP_API_KEY=your-api-key
 #FALCON_MCP_DYNAMIC=false
+#FALCON_MCP_READ_ONLY=false
+#FALCON_MCP_TOOLS=falcon_search_detections,falcon_search_hosts
+#FALCON_MCP_EXCLUDE_TOOLS=falcon_delete_host_groups
 #FALCON_PROXY_URL=http://proxy.corp.example.com:8080
 ```
 

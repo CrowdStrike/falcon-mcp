@@ -1,7 +1,7 @@
 """
 Dynamic mode for Falcon MCP Server.
 
-Wraps the full tool surface behind 3 tools (falcon_list_enabled_modules +
+Wraps the full tool surface behind 3 tools (falcon_list_enabled_tools +
 falcon_search_tools + falcon_execute_tool) to reduce context window consumption
 while keeping all functionality accessible on-demand.
 """
@@ -17,6 +17,7 @@ from falcon_mcp.common.fql import FQL_FILTER_HINT_SUFFIX
 from falcon_mcp.common.logging import get_logger
 from falcon_mcp.filter_hints import FILTER_HINTS, QUERY_STRING_HINTS
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS, BaseModule
+from falcon_mcp.tool_filter import Resolution, ToolPolicy, ToolRecord
 
 logger = get_logger(__name__)
 
@@ -39,8 +40,14 @@ class ToolEntry:
 class DynamicToolCatalog:
     """Builds a searchable catalog of tools from modules via a scratch FastMCP instance."""
 
-    def __init__(self, modules: dict[str, BaseModule]) -> None:
+    def __init__(
+        self, modules: dict[str, BaseModule], policy: ToolPolicy | None = None
+    ) -> None:
         self._entries: dict[str, ToolEntry] = {}
+        self._policy = policy or ToolPolicy()
+        self.resolution = Resolution(
+            keep=frozenset(), removed=frozenset(), withheld_by_rule=frozenset()
+        )
         self._build(modules)
 
     def _build(self, modules: dict[str, BaseModule]) -> None:
@@ -56,7 +63,25 @@ class DynamicToolCatalog:
             for tool_name in module.tools:
                 module_tool_names[tool_name] = module_name
 
+        self.resolution = self._policy.resolve(
+            {
+                tool_name: ToolRecord(
+                    module=module_tool_names.get(tool_name, "unknown"),
+                    annotations=tool_obj.annotations,
+                )
+                for tool_name, tool_obj in all_tools.items()
+            }
+        )
+
         for tool_name, tool_obj in all_tools.items():
+            # Omitting a withheld tool here is the whole enforcement: it is then
+            # absent from falcon_search_tools and 404s in falcon_execute_tool, so the
+            # executor is not a bypass.
+            if tool_name in self.resolution.removed:
+                # Named here because this path never calls server.remove_tool, so
+                # --debug would otherwise report a count with no names behind it.
+                logger.debug("Withheld tool: %s", tool_name)
+                continue
             module_name = module_tool_names.get(tool_name, "unknown")
             self._entries[tool_name] = ToolEntry(tool=tool_obj, module=module_name)
 
@@ -72,12 +97,31 @@ class DynamicToolCatalog:
     def get(self, tool_name: str) -> ToolEntry | None:
         return self._entries.get(tool_name)
 
+    def withholding_rule(self, tool_name: str) -> str | None:
+        """Name the rule that withholds this tool, or None if no rule did."""
+        return self.resolution.reasons.get(tool_name)
+
+    def describe_policy(self) -> str:
+        """Summarize every filtering rule the server has enabled."""
+        return self._policy.describe()
+
     def search(
         self,
         query: str = "",
         module: str | None = None,
         limit: int = 20,
     ) -> list[dict[str, Any]]:
+        return [self._format_entry(e) for e in self._matches(query, module)[:limit]]
+
+    def count_matches(self, query: str = "", module: str | None = None) -> int:
+        """Count every matching entry, ignoring the result limit.
+
+        Shares _matches with search() so the reported total cannot drift from the
+        results returned.
+        """
+        return len(self._matches(query, module))
+
+    def _matches(self, query: str, module: str | None) -> list[ToolEntry]:
         candidates: list[ToolEntry] = list(self._entries.values())
 
         if module:
@@ -89,7 +133,7 @@ class DynamicToolCatalog:
                 e for e in candidates if all(t in e.search_corpus for t in tokens)
             ]
 
-        return [self._format_entry(e) for e in candidates[:limit]]
+        return candidates
 
     def _format_entry(self, entry: ToolEntry) -> dict[str, Any]:
         params_summary = {}
@@ -152,15 +196,16 @@ class DynamicToolCatalog:
 
 
 class DynamicMode:
-    """Registers the 2 discovery meta-tools (falcon_search_tools + falcon_execute_tool).
+    """Registers the 2 discovery meta-tools (falcon_search_tools + falcon_execute_tool)."""
 
-    falcon_list_enabled_modules is registered separately by the server, giving
-    dynamic mode 3 tools total in the client-visible surface.
-    """
-
-    def __init__(self, modules: dict[str, BaseModule], server: FastMCP) -> None:
+    def __init__(
+        self,
+        modules: dict[str, BaseModule],
+        server: FastMCP,
+        policy: ToolPolicy | None = None,
+    ) -> None:
         self.server = server
-        self.catalog = DynamicToolCatalog(modules)
+        self.catalog = DynamicToolCatalog(modules, policy)
 
     def register(self) -> None:
         self.server.add_tool(
@@ -176,6 +221,14 @@ class DynamicMode:
             structured_output=False,
         )
 
+    def _entries_remain(self) -> bool:
+        """True if the catalog still serves at least one capability tool.
+
+        Filtering can withhold every tool (``--tools <mutator> --read-only``), which
+        changes what is honest to tell a model about looking elsewhere.
+        """
+        return bool(self.catalog.entries)
+
     async def _search_tools(
         self,
         query: str = Field(
@@ -184,30 +237,74 @@ class DynamicMode:
         ),
         module: str | None = Field(
             default=None,
-            description="Filter results to a specific module (e.g., 'hosts', 'detections').",
+            description=(
+                "Restrict results to one module (e.g., 'hosts', 'detections'). Pass it "
+                "with no query to browse everything that module serves."
+            ),
         ),
         limit: int = Field(
             default=20,
             ge=1,
-            le=100,
-            description="Maximum number of results to return (default: 20).",
+            le=500,
+            description="Maximum number of results to return (default: 20, max: 500).",
         ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Discover available Falcon tools by keyword search.
+    ) -> dict[str, Any]:
+        """Get a Falcon tool's parameters so you can call it with falcon_execute_tool.
 
-        Use this to find tools by name, description, module, or parameter keywords.
-        Returns tool schemas with parameter details so you can call falcon_execute_tool.
-        Consult this before executing any tool to understand its parameters.
+        This is the entry point in dynamic mode: search by keyword, or pass a module
+        name (or no query at all) to browse. Each result carries the tool's name,
+        module, description, a summary of every parameter (type, required, description,
+        examples, and filter-syntax hints where the tool takes a filter), and
+        read_only/destructive flags — check those before executing anything that
+        mutates. Read total and truncated to tell a capped list from a complete one.
         """
         results = self.catalog.search(query=query, module=module, limit=limit)
+        total = self.catalog.count_matches(query=query, module=module)
+        truncated = total > len(results)
+
         if not results:
-            available_modules = sorted({e.module for e in self.catalog.entries.values()})
+            # Quoting an empty query back reads as a failed lookup for "".
+            subject = f"No tool matching '{query}' is" if query else "No tool is"
+            if not self._entries_remain():
+                hint = (
+                    "This server serves no capability tools: its configuration "
+                    f"({self.catalog.describe_policy()}) withholds all of them. Tell the "
+                    "user the server is configured with no tools available rather than "
+                    "searching again."
+                )
+            elif self.catalog.resolution.withheld_by_rule:
+                hint = (
+                    f"{subject} served by this server, which is "
+                    f"running with a tool filter ({self.catalog.describe_policy()}). "
+                    "Call falcon_list_enabled_tools for what it does serve. The "
+                    "capability may exist but be withheld by configuration — tell the "
+                    "user that rather than trying more searches."
+                )
+            else:
+                hint = (
+                    f"{subject} served by this server. Call "
+                    "falcon_list_enabled_tools for the full inventory. If the capability "
+                    "you need is genuinely absent, it was not enabled on this server — "
+                    "tell the user rather than trying more searches."
+                )
             return {
                 "results": [],
-                "hint": f"No tools found matching your query. Available modules: {', '.join(available_modules)}. "
-                "Try a broader search or check falcon_list_enabled_modules.",
+                "total": 0,
+                "truncated": False,
+                "hint": hint,
             }
-        return results
+
+        envelope: dict[str, Any] = {
+            "results": results,
+            "total": total,
+            "truncated": truncated,
+        }
+        if truncated:
+            envelope["hint"] = (
+                f"Showing {len(results)} of {total}. Call falcon_list_enabled_tools "
+                "for all names, or narrow with query."
+            )
+        return envelope
 
     async def _execute_tool(
         self,
@@ -230,6 +327,25 @@ class DynamicMode:
         """
         entry = self.catalog.get(tool_name)
         if not entry:
+            # A tool the policy withheld is absent from the catalog exactly like one
+            # that never existed. Say which it is, or the model reports an operator
+            # config choice to the user as a missing product capability.
+            rule = self.catalog.withholding_rule(tool_name)
+            if rule is not None:
+                # Promising other tools on an empty surface sends the model hunting.
+                remainder = (
+                    "Do not try to achieve the same effect through a different tool, "
+                    "though other tools remain available for other work."
+                    if self._entries_remain()
+                    else "This server currently serves no capability tools at all, so "
+                    "do not look for an alternative."
+                )
+                return {
+                    "error": f"'{tool_name}' exists on this server but its configuration "
+                    f"withholds it ({rule}). The capability is not missing — tell the user "
+                    f"it is disabled by this server's configuration. {remainder}",
+                    "tool": tool_name,
+                }
             return {
                 "error": f"Unknown tool: '{tool_name}'. Use falcon_search_tools to discover valid names."
             }
