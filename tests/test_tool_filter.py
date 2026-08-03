@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 from mcp.types import ToolAnnotations
 
 from falcon_mcp import registry
-from falcon_mcp.server import FalconMCPServer, parse_args, parse_tools_list
+from falcon_mcp.server import FalconMCPServer, main, parse_args, parse_tools_list
 from falcon_mcp.tool_filter import ToolPolicy, ToolRecord
 
 _T = TypeVar("_T")
@@ -228,6 +228,37 @@ class TestToolPolicy(unittest.TestCase):
         )
         self.assertEqual(p.resolve(catalog), p.resolve(catalog))
 
+    def test_never_requested_sibling_is_not_attributed_to_read_only(self):
+        """A mutator the allow-list never named was not withheld by --read-only.
+
+        --tools X --read-only loads X's whole module to reach X, so its siblings get
+        registered as candidates. Attributing them to read-only inflates the startup
+        count and makes falcon_execute_tool call a never-requested tool "withheld
+        (read-only)" when the same tool without --read-only reports Unknown tool.
+        """
+        catalog = {
+            "falcon_wanted": ToolRecord(_MODULE, _MUTATING_ANNOTATIONS),
+            "falcon_sibling_mutator": ToolRecord(_MODULE, _MUTATING_ANNOTATIONS),
+            "falcon_sibling_reader": ToolRecord(_MODULE, _READ_ONLY_ANNOTATIONS),
+        }
+        # --tools falcon_wanted --read-only: no module is enabled in its own right.
+        resolution = ToolPolicy(
+            read_only=True, allowed={"falcon_wanted"}, enabled_modules=set()
+        ).resolve(catalog)
+
+        self.assertEqual(
+            dict(resolution.reasons),
+            {"falcon_wanted": "read-only"},
+            "only the requested tool was decided by read-only",
+        )
+        self.assertEqual(resolution.withheld_by_rule, frozenset({"falcon_wanted"}))
+        # Both siblings are still gone, just not blamed on a rule.
+        self.assertEqual(
+            resolution.removed,
+            frozenset(catalog),
+            "every unrequested tool is still removed",
+        )
+
     def test_describe_reports_active_rules(self):
         self.assertEqual(ToolPolicy().describe(), "none")
         self.assertIn("read-only", ToolPolicy(read_only=True).describe())
@@ -288,6 +319,30 @@ class TestCLIDefaultsReachTheServer(unittest.TestCase):
         with patch("falcon_mcp.server.FalconClient", mock):
             server = FalconMCPServer(enabled_modules=set(args.modules))
         self.assertEqual(server.enabled_modules, set(registry.get_module_names()))
+
+    def test_main_forwards_every_filter_flag_to_the_server(self):
+        """main() must hand each parsed filter flag to the constructor.
+
+        The tests above stop at parse_args() and re-thread the namespace by hand, so
+        none of them cover the args-to-kwargs mapping in main(). Dropping
+        read_only=args.read_only there serves every mutator on a server the operator
+        asked to be read-only, with the rest of the suite still green.
+        """
+        argv = [
+            "--read-only",
+            "--tools",
+            _FOREIGN_TOOL,
+            "--exclude-tools",
+            _MUTATING_TOOL,
+        ]
+        with patch.object(sys, "argv", ["falcon-mcp", *argv]):
+            with patch("falcon_mcp.server.FalconMCPServer") as mock_server:
+                main()
+
+        kwargs = mock_server.call_args.kwargs
+        self.assertTrue(kwargs["read_only"], "--read-only never reached the server")
+        self.assertEqual(kwargs["allowed_tools"], {_FOREIGN_TOOL})
+        self.assertEqual(kwargs["excluded_tools"], {_MUTATING_TOOL})
 
     def test_explicit_modules_are_honored(self):
         args = self._args(["--modules", "detections"])

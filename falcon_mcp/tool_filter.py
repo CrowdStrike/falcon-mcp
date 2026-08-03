@@ -62,7 +62,8 @@ class ToolPolicy:
 
     The allow-list is additive, not intersecting: ``--modules detections --tools X``
     registers every detections tool plus X, even when X's module is off. Rules 1 and
-    2 run first, so it can never widen past ``--read-only`` or ``--exclude-tools``.
+    2 still decide any tool the allow-list names, so it can never widen past
+    ``--read-only`` or ``--exclude-tools``.
 
     Tool names are the ``falcon_``-prefixed names clients see. Scope is tools only;
     FQL guide resources are static docs and stay registered — most tool descriptions
@@ -134,20 +135,25 @@ class ToolPolicy:
 
         Follows the documented precedence, so the reason is the rule that actually
         decided this tool rather than every rule the server has enabled.
+
+        A tool nothing requested is ``_NOT_REQUESTED`` even when a subtracting rule
+        would also have dropped it: ``--tools X`` loads X's whole module to reach X,
+        so blaming read-only for a sibling the operator never named would invent a
+        decision the allow-list already made by omission.
         """
+        requested = name in self.allowed or (
+            self.enabled_modules is None or record.module in self.enabled_modules
+        )
+        if not requested:
+            return _NOT_REQUESTED
+
         if name in self.excluded:
             return "deny-list"
 
         if self.read_only and self._is_mutating(record):
             return "read-only"
 
-        if name in self.allowed:
-            return None
-
-        if self.enabled_modules is None or record.module in self.enabled_modules:
-            return None
-
-        return _NOT_REQUESTED
+        return None
 
     def _is_mutating(self, record: ToolRecord) -> bool:
         """True if read-only mode would reject this tool.
