@@ -371,7 +371,9 @@ class TestDetectionsIntegration(BaseIntegrationTest):
 
         Skips gracefully if Alerts:write scope is not available.
         """
-        search_result = self.call_method(self.module.search_detections, limit=1)
+        search_result = self._unwrap_results(
+            self.call_method(self.module.search_detections, limit=1)
+        )
         if not search_result or isinstance(search_result, dict):
             self.skip_with_warning(
                 "No detections available to test update_detections",
@@ -458,7 +460,9 @@ class TestDetectionsIntegration(BaseIntegrationTest):
 
         Skips gracefully if Alerts:write scope is not available.
         """
-        search_result = self.call_method(self.module.search_detections, limit=1)
+        search_result = self._unwrap_results(
+            self.call_method(self.module.search_detections, limit=1)
+        )
         if not search_result or isinstance(search_result, dict):
             self.skip_with_warning(
                 "No detections available to test update_detections tags",
@@ -610,7 +614,9 @@ class TestDetectionsIntegration(BaseIntegrationTest):
 
         Skips gracefully if Alerts:write scope is not available.
         """
-        search_result = self.call_method(self.module.search_detections, limit=1)
+        search_result = self._unwrap_results(
+            self.call_method(self.module.search_detections, limit=1)
+        )
         if not search_result or isinstance(search_result, dict):
             self.skip_with_warning(
                 "No detections available to test update_detections show_in_ui",
