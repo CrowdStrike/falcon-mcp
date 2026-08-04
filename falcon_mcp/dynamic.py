@@ -6,6 +6,7 @@ falcon_search_tools + falcon_execute_tool) to reduce context window consumption
 while keeping all functionality accessible on-demand.
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -21,6 +22,32 @@ from falcon_mcp.tool_filter import Resolution, ToolPolicy, ToolRecord
 
 logger = get_logger(__name__)
 
+_TOOL_PREFIX = "falcon_"
+_NON_ALNUM = re.compile(r"[^a-z0-9]+")
+
+# Relative weights only: a name match must outrank any number of description
+# matches, so the gap between tiers exceeds the most tokens a query realistically
+# carries.
+_SCORE_EXACT_NAME = 1000
+_SCORE_NAME_WORD = 10
+_SCORE_NAME_SUBSTRING = 5
+_SCORE_MODULE_WORD = 3
+_SCORE_MODULE_SUBSTRING = 2
+_SCORE_DESCRIPTION = 1
+
+
+def _words(text: str) -> frozenset[str]:
+    """Split text into lowercase alphanumeric words."""
+    return frozenset(w for w in _NON_ALNUM.split(text.lower()) if w)
+
+
+def normalize_identifier(name: str) -> str:
+    """Reduce a name to lowercase alphanumerics, dropping separators.
+
+    Makes 'Host_Groups', 'host-groups', and 'hostgroups' the same key.
+    """
+    return _NON_ALNUM.sub("", name.lower())
+
 
 @dataclass
 class ToolEntry:
@@ -29,12 +56,51 @@ class ToolEntry:
     tool: Tool
     module: str
     search_corpus: str = field(init=False)
+    name_words: frozenset[str] = field(init=False)
+    unprefixed_name: str = field(init=False)
+    name_key: frozenset[str] = field(init=False)
+    module_words: frozenset[str] = field(init=False)
+    module_key: str = field(init=False)
 
     def __post_init__(self) -> None:
         param_names = " ".join(self.tool.parameters.get("properties", {}).keys())
         self.search_corpus = (
             f"{self.tool.name} {self.tool.description or ''} {self.module} {param_names}"
         ).lower()
+
+        name = self.tool.name.lower()
+        self.unprefixed_name = name.removeprefix(_TOOL_PREFIX)
+        self.name_words = _words(self.unprefixed_name)
+        # Both spellings are accepted as an exact hit so a query can name the tool
+        # with or without the server's prefix.
+        self.name_key = frozenset(
+            {normalize_identifier(name), normalize_identifier(self.unprefixed_name)}
+        )
+        self.module_words = _words(self.module)
+        self.module_key = normalize_identifier(self.module)
+
+    def score(self, tokens: list[str], query_key: str) -> int:
+        """Rank this entry against a tokenized query; higher sorts earlier.
+
+        Each token scores once, at the strongest field it hits, so a tool named
+        for the query outranks one that only mentions it in prose.
+        """
+        if query_key and query_key in self.name_key:
+            return _SCORE_EXACT_NAME
+
+        total = 0
+        for token in tokens:
+            if token in self.name_words:
+                total += _SCORE_NAME_WORD
+            elif token in self.unprefixed_name:
+                total += _SCORE_NAME_SUBSTRING
+            elif token in self.module_words:
+                total += _SCORE_MODULE_WORD
+            elif token in self.module_key:
+                total += _SCORE_MODULE_SUBSTRING
+            else:
+                total += _SCORE_DESCRIPTION
+        return total
 
 
 class DynamicToolCatalog:
@@ -125,15 +191,26 @@ class DynamicToolCatalog:
         candidates: list[ToolEntry] = list(self._entries.values())
 
         if module:
-            candidates = [e for e in candidates if e.module == module]
+            module_key = normalize_identifier(module)
+            candidates = [e for e in candidates if e.module_key == module_key]
 
-        if query:
-            tokens = query.lower().split()
-            candidates = [
-                e for e in candidates if all(t in e.search_corpus for t in tokens)
-            ]
+        if not query:
+            # Browsing has no relevance signal, so order by name to stay stable
+            # across processes.
+            return sorted(candidates, key=lambda e: e.tool.name)
 
-        return candidates
+        tokens = query.lower().split()
+        candidates = [e for e in candidates if all(t in e.search_corpus for t in tokens)]
+
+        query_key = normalize_identifier(query)
+        # Ties break toward the least-qualified name, then alphabetically: a tool
+        # carrying no extra words beyond the query is the more direct answer, and
+        # catalog insertion order follows a set of module names, so it is not
+        # stable across processes.
+        return sorted(
+            candidates,
+            key=lambda e: (-e.score(tokens, query_key), len(e.name_words), e.tool.name),
+        )
 
     def _format_entry(self, entry: ToolEntry) -> dict[str, Any]:
         params_summary = {}
@@ -238,8 +315,11 @@ class DynamicMode:
         module: str | None = Field(
             default=None,
             description=(
-                "Restrict results to one module (e.g., 'hosts', 'detections'). Pass it "
-                "with no query to browse everything that module serves."
+                "Restrict results to one module (e.g., 'hosts', 'detections'). Case "
+                "and separators are ignored, so 'Host_Groups' and 'hostgroups' both "
+                "work. Call falcon_list_enabled_tools for the exact module names this "
+                "server serves. Pass it with no query to browse everything that "
+                "module serves."
             ),
         ),
         limit: int = Field(

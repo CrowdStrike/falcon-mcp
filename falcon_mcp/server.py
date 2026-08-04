@@ -363,23 +363,39 @@ class FalconMCPServer:
         return {"modules": sorted(self.enabled_modules & set(self.modules))}
 
     def list_enabled_tools(self) -> dict[str, Any]:
-        """Lists every Falcon capability tool this server serves.
+        """Lists every Falcon capability tool this server serves, grouped by module.
 
         Call this to see the complete inventory before hunting for a capability: a
         name absent from this list is not available on this server, whether because
         its module is not enabled or because a tool filter withholds it. Returns the
-        sorted tool names plus their total count, and filters_active naming the filter
-        rules in effect when any are configured. Excludes this server's own meta-tools,
-        which are always present and visible in tools/list.
+        sorted tool names, their total count, a by_module mapping whose keys are the
+        exact module names falcon_search_tools accepts, and filters_active naming the
+        filter rules in effect when any are configured. Excludes this server's own
+        meta-tools, which are always present and visible in tools/list.
         """
         if self._dynamic_mode is not None:
             # Building the catalog clears module.tools, so it is the only record of
             # what falcon_execute_tool accepts.
-            names = set(self._dynamic_mode.catalog.entries)
+            entries = self._dynamic_mode.catalog.entries
+            names = set(entries)
+            by_module: dict[str, list[str]] = {}
+            for name, entry in entries.items():
+                by_module.setdefault(entry.module, []).append(name)
         else:
             # _apply_policy() prunes module.tools to the served surface.
-            names = {name for module in self.modules.values() for name in module.tools}
-        result: dict[str, Any] = {"tools": sorted(names), "total": len(names)}
+            by_module = {
+                module_name: sorted(module.tools)
+                for module_name, module in self.modules.items()
+                if module.tools
+            }
+            names = {name for tools in by_module.values() for name in tools}
+        result: dict[str, Any] = {
+            "tools": sorted(names),
+            "total": len(names),
+            # Derived from the same catalog the search serves, so the published
+            # vocabulary cannot drift from what module= accepts.
+            "by_module": {mod: sorted(by_module[mod]) for mod in sorted(by_module)},
+        }
         # Only present when a filter narrowed the list, so an unfiltered server's
         # response is unchanged and the key's presence is itself the signal.
         if self.tool_policy.active:

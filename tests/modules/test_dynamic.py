@@ -227,6 +227,138 @@ class TestDynamicToolCatalog(unittest.TestCase):
             )
 
 
+class TestSearchRanking(unittest.TestCase):
+    """Result POSITION, not just membership.
+
+    In dynamic mode falcon_search_tools is the only path to a capability, so where a
+    tool lands in the list is what decides tool selection. These run against the
+    whole catalog because rank is a property of the full field of competitors.
+    """
+
+    def setUp(self):
+        from falcon_mcp.client import FalconClient
+
+        mock_client = MagicMock(spec=FalconClient)
+        self.catalog = DynamicToolCatalog(
+            {
+                name: cls(mock_client)
+                for name, cls in registry.get_available_modules().items()
+            }
+        )
+
+    def _names(self, query: str, **kwargs: Any) -> list[str]:
+        return [r["name"] for r in self.catalog.search(query=query, **kwargs)]
+
+    def test_host_details_ranks_get_host_details_first(self):
+        self.assertEqual(self._names("host details")[0], "falcon_get_host_details")
+
+    def test_hosts_ranks_search_hosts_first(self):
+        self.assertEqual(self._names("hosts")[0], "falcon_search_hosts")
+
+    def test_vulnerabilities_ranks_search_vulnerabilities_first(self):
+        self.assertEqual(
+            self._names("vulnerabilities")[0], "falcon_search_vulnerabilities"
+        )
+
+    def test_bare_host_at_default_limit_still_contains_host_details(self):
+        """The default limit truncates 'host'; the intended tool must survive it."""
+        names = self._names("host")
+        self.assertEqual(len(names), 20, "expected the default limit to truncate")
+        self.assertIn("falcon_get_host_details", names)
+
+    def test_exact_tool_name_ranks_first_with_and_without_prefix(self):
+        for query in ("falcon_search_detections", "search_detections"):
+            with self.subTest(query=query):
+                self.assertEqual(self._names(query)[0], "falcon_search_detections")
+
+    def test_name_match_outranks_description_only_match(self):
+        names = self._names("quarantined files")
+        top = self.catalog.entries[names[0]]
+        self.assertIn("quarantined", top.name_words)
+
+    def test_ranking_is_independent_of_module_iteration_order(self):
+        """Catalog order comes from a set of module names, so it varies per process."""
+        from falcon_mcp.client import FalconClient
+
+        mock_client = MagicMock(spec=FalconClient)
+        available = registry.get_available_modules()
+        reversed_catalog = DynamicToolCatalog(
+            {name: available[name](mock_client) for name in reversed(list(available))}
+        )
+        for query in ("host details", "hosts", "vulnerabilities", "host", ""):
+            with self.subTest(query=query):
+                self.assertEqual(
+                    [r["name"] for r in self.catalog.search(query=query)],
+                    [r["name"] for r in reversed_catalog.search(query=query)],
+                )
+
+    def test_count_matches_equals_len_search_at_large_limit(self):
+        """search() and count_matches() must not drift: they share _matches."""
+        for query in ("host", "hosts", "detections", "vulnerabilities", "", "no_such_thing"):
+            with self.subTest(query=query):
+                self.assertEqual(
+                    self.catalog.count_matches(query=query),
+                    len(self.catalog.search(query=query, limit=10_000)),
+                )
+
+    def test_count_matches_equals_len_search_with_module_filter(self):
+        for module in ("hosts", "detections", "hostgroups"):
+            with self.subTest(module=module):
+                self.assertEqual(
+                    self.catalog.count_matches(module=module),
+                    len(self.catalog.search(module=module, limit=10_000)),
+                )
+
+    def test_ranking_does_not_change_the_matched_set(self):
+        """Scoring reorders; it must not add or drop a match."""
+        for query in ("host", "hosts", "host details", "detections"):
+            with self.subTest(query=query):
+                tokens = query.lower().split()
+                expected = {
+                    name
+                    for name, entry in self.catalog.entries.items()
+                    if all(t in entry.search_corpus for t in tokens)
+                }
+                self.assertEqual(set(self._names(query, limit=10_000)), expected)
+
+
+class TestModuleVocabulary(unittest.TestCase):
+    """The module parameter's accepted spellings, and where they are published."""
+
+    def setUp(self):
+        from falcon_mcp.client import FalconClient
+
+        mock_client = MagicMock(spec=FalconClient)
+        self.catalog = DynamicToolCatalog(
+            {
+                name: cls(mock_client)
+                for name, cls in registry.get_available_modules().items()
+            }
+        )
+
+    def test_module_match_ignores_case_and_separators(self):
+        expected = self.catalog.count_matches(module="hostgroups")
+        self.assertGreater(expected, 0)
+        for spelling in ("hostgroups", "host_groups", "host-groups", "Host_Groups", "HOSTGROUPS"):
+            with self.subTest(spelling=spelling):
+                self.assertEqual(self.catalog.count_matches(module=spelling), expected)
+
+    def test_unknown_module_still_returns_nothing(self):
+        self.assertEqual(self.catalog.count_matches(module="not_a_module"), 0)
+
+    def test_module_normalization_does_not_merge_distinct_modules(self):
+        """'hosts' and 'hostgroups' normalize distinctly, so neither absorbs the other."""
+        hosts = {r["name"] for r in self.catalog.search(module="hosts", limit=10_000)}
+        groups = {r["name"] for r in self.catalog.search(module="hostgroups", limit=10_000)}
+        self.assertTrue(hosts)
+        self.assertTrue(groups)
+        self.assertEqual(hosts & groups, set())
+
+    def test_empty_query_browse_order_is_stable(self):
+        names = [r["name"] for r in self.catalog.search(query="", limit=10_000)]
+        self.assertEqual(names, sorted(names))
+
+
 class TestEmptySurfaceCopy(unittest.TestCase):
     """Agent-facing copy must not misstate an empty tool surface.
 

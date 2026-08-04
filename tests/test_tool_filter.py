@@ -839,6 +839,39 @@ class TestDynamicModeToolFiltering(unittest.TestCase):
         # Not enabled here, so it must not be advertised.
         self.assertNotIn(_FOREIGN_TOOL, served)
 
+    def _by_module(self, server: FalconMCPServer) -> dict[str, list[str]]:
+        tool = server.server._tool_manager._tools["falcon_list_enabled_tools"]
+        return run_async(tool.run({}))["by_module"]
+
+    def test_by_module_publishes_names_the_module_filter_accepts(self, mock_client):
+        """Every published module name must return hits when passed as module=."""
+        server = self._dynamic_server(mock_client)
+        by_module = self._by_module(server)
+        self.assertTrue(by_module)
+        for module_name, tools in by_module.items():
+            with self.subTest(module=module_name):
+                self.assertEqual(set(self._search_module(server, module_name)), set(tools))
+
+    def _search_module(self, server: FalconMCPServer, module: str) -> list[str]:
+        tool = server.server._tool_manager._tools["falcon_search_tools"]
+        result = run_async(tool.run({"module": module, "limit": 500}))
+        return [entry["name"] for entry in result["results"]]
+
+    def test_by_module_partitions_the_served_surface(self, mock_client):
+        """Grouping must account for every served tool exactly once."""
+        server = self._dynamic_server(mock_client)
+        by_module = self._by_module(server)
+        grouped = [name for tools in by_module.values() for name in tools]
+        self.assertEqual(sorted(grouped), sorted(self._list_enabled_tools(server)))
+        self.assertEqual(len(grouped), len(set(grouped)))
+
+    def test_by_module_omits_withheld_tool(self, mock_client):
+        server = self._dynamic_server(mock_client, excluded_tools={_MUTATING_TOOL})
+        grouped = [
+            name for tools in self._by_module(server).values() for name in tools
+        ]
+        self.assertNotIn(_MUTATING_TOOL, grouped)
+
     def test_list_enabled_tools_omits_absent_sibling_of_allowed_tool(self, mock_client):
         """Both live in `discover`, so allow-listing one must not imply the other."""
         server = self._dynamic_server(mock_client, allowed_tools={_FOREIGN_TOOL})

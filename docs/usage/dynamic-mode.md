@@ -48,7 +48,7 @@ core tool, instead of the full module surface:
 
 | Tool | Purpose |
 |------|---------|
-| `falcon_list_enabled_tools` | List every capability tool this server serves (meta-tools excluded) |
+| `falcon_list_enabled_tools` | List every capability tool this server serves, grouped by module (meta-tools excluded) |
 | `falcon_search_tools` | Look up the parameters of tools matching a keyword or module |
 | `falcon_execute_tool` | Execute a discovered tool by name with the given parameters |
 
@@ -56,7 +56,7 @@ The typical agent workflow is:
 
 1. Call `falcon_list_enabled_tools` when you need to know what the server serves at all — a name
    absent from that list is not available, whether because its module is off or a tool filter
-   withholds it.
+   withholds it. Its `by_module` map also publishes the module names `falcon_search_tools` accepts.
 2. Call `falcon_search_tools` with a keyword or module name to get the parameters of the tools you
    intend to use, along with their `read_only` and `destructive` flags.
 3. Call `falcon_execute_tool` with the tool name and parameters to run it.
@@ -116,6 +116,20 @@ avoid large responses.
 ```json
 { "query": "quarantine release" }
 ```
+
+Results are ordered by relevance. A tool whose name matches the query outranks one that only
+mentions it in its description, and an exact tool name — with or without the `falcon_` prefix —
+ranks first. Ordering is deterministic: the same query returns the same order on every server
+process. A query with no keywords (module browsing) is ordered by tool name.
+
+Every token in `query` must appear somewhere in the tool's name, description, module, or parameter
+names, so extra words narrow the search rather than widening it. Prefer the nouns of the capability
+you want (`host details`, `quarantined files`) over a full sentence.
+
+`module` ignores case and separators, so `hostgroups`, `host_groups`, and `Host-Groups` all select
+the same module. `falcon_list_enabled_tools` returns a `by_module` map whose keys are the exact
+module names this server accepts; it is derived from the same catalog the search serves, so it
+cannot drift from what `module` will match.
 
 Every response carries `total` (the number of tools matching the query, before any limit) and
 `truncated`, so a capped result set is never mistaken for the complete set. When results are
