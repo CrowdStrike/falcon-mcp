@@ -8,7 +8,7 @@ while keeping all functionality accessible on-demand.
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Annotated, Any
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.tools import Tool
@@ -175,9 +175,23 @@ class DynamicToolCatalog:
         self,
         query: str = "",
         module: str | None = None,
-        limit: int = 20,
+        limit: int = 50,
+        tool_names: list[str] | None = None,
     ) -> list[dict[str, Any]]:
-        return [self._format_entry(e) for e in self._matches(query, module)[:limit]]
+        """Return catalog entries, with the input schema only when tools are named.
+
+        Naming tools is a request for their schemas, so those entries carry
+        parameters. A discovery search is not: the caller has yet to choose a tool,
+        and the schema is most of an entry's cost. Names the catalog does not serve
+        are dropped here; the caller reports them.
+        """
+        if tool_names:
+            return [
+                self._format_entry(entry)
+                for entry in (self.get(name) for name in tool_names)
+                if entry is not None
+            ]
+        return [self._format_lean_entry(e) for e in self._matches(query, module)[:limit]]
 
     def count_matches(self, query: str = "", module: str | None = None) -> int:
         """Count every matching entry, ignoring the result limit.
@@ -235,7 +249,26 @@ class DynamicToolCatalog:
             key=lambda e: (-e.score(tokens, query_key), len(e.name_words), e.tool.name),
         )
 
+    def _format_lean_entry(self, entry: ToolEntry) -> dict[str, Any]:
+        """Describe a tool without its input schema.
+
+        Deciding which tool is right needs the name, what it does, and whether it
+        mutates — not the parameters. The schema is roughly two thirds of a full
+        entry, so omitting it is what makes a wide result window affordable. The
+        absent ``parameters`` key is itself the signal that a second call, naming the
+        tool, is needed before executing it.
+        """
+        annotations = entry.tool.annotations
+        return {
+            "name": entry.tool.name,
+            "module": entry.module,
+            "description": entry.tool.description or "",
+            "read_only": annotations.readOnlyHint if annotations else True,
+            "destructive": annotations.destructiveHint if annotations else False,
+        }
+
     def _format_entry(self, entry: ToolEntry) -> dict[str, Any]:
+        """Describe a tool including its input schema and filter-syntax hints."""
         params_summary = {}
         properties = entry.tool.parameters.get("properties", {})
         required = entry.tool.parameters.get("required", [])
@@ -331,38 +364,70 @@ class DynamicMode:
 
     async def _search_tools(
         self,
-        query: str = Field(
-            default="",
-            description="Keywords to search across tool names, descriptions, module names, and parameter names.",
-        ),
-        module: str | None = Field(
-            default=None,
-            description=(
-                "Restrict results to one module (e.g., 'hosts', 'detections'). Case "
-                "and separators are ignored, so 'Host_Groups' and 'hostgroups' both "
-                "work. Call falcon_list_enabled_tools for the exact module names this "
-                "server serves. Pass it with no query to browse everything that "
-                "module serves."
+        query: Annotated[
+            str,
+            Field(
+                description="Keywords to search across tool names, descriptions, module names, and parameter names.",
             ),
-        ),
-        limit: int = Field(
-            default=20,
-            ge=1,
-            le=500,
-            description="Maximum number of results to return (default: 20, max: 500).",
-        ),
+        ] = "",
+        module: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Restrict results to one module (e.g., 'hosts', 'detections'). Case "
+                    "and separators are ignored, so 'Host_Groups' and 'hostgroups' both "
+                    "work. Call falcon_list_enabled_tools for the exact module names this "
+                    "server serves. Pass it with no query to browse everything that "
+                    "module serves."
+                ),
+            ),
+        ] = None,
+        limit: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=500,
+                description="Maximum number of results to return (default: 50, max: 500). Ignored when tool_names is given.",
+            ),
+        ] = 50,
+        # Annotated, not `= Field(...)`: the real default has to be None, because a
+        # FieldInfo sentinel is truthy and would select schema mode on every call that
+        # omits this.
+        tool_names: Annotated[
+            list[str] | None,
+            Field(
+                description=(
+                    "Exact tool names to return full parameter schemas for. Use this after "
+                    "a keyword search has told you which tool you want; pass two or more "
+                    "names to compare candidates in one call. Overrides query, module, and "
+                    "limit."
+                ),
+            ),
+        ] = None,
     ) -> dict[str, Any]:
-        """Get a Falcon tool's parameters so you can call it with falcon_execute_tool.
+        """Find a Falcon tool by keyword, then get its parameters before executing it.
 
-        This is the entry point in dynamic mode: search by keyword, or pass a module
-        name (or no query at all) to browse. Results are ordered by relevance, best
-        fit first, so prefer the top results. Each result carries the tool's name,
-        module, description, a summary of every parameter (type, required, description,
-        examples, and filter-syntax hints where the tool takes a filter), and
-        read_only/destructive flags — check those before executing anything that
-        mutates. Read total and truncated to tell a capped list from a complete one,
-        and hint for whether the match had to be loosened.
+        This is the entry point in dynamic mode, and it works in two steps.
+
+        Search first: pass keywords in query, or a module name (or nothing at all) to
+        browse. Results are ordered by relevance, best fit first, so prefer the top
+        ones. Each carries the tool's name, module, description, and read_only /
+        destructive flags — check those before executing anything that mutates. These
+        results deliberately carry no parameters.
+
+        Then get the schema: call this tool again with tool_names set to the names you
+        picked, and those entries come back with every parameter (type, required,
+        description, examples, and filter-syntax hints where the tool takes a filter),
+        ready to pass to falcon_execute_tool. Naming several at once compares them.
+
+        Read total and truncated to tell a capped list from a complete one, and hint
+        for whether the match had to be loosened.
         """
+        # Naming tools is a schema lookup, not a search, so the match-set fields
+        # describe what was asked for rather than a query nobody ran.
+        if tool_names:
+            return self._describe_named(tool_names)
+
         results = self.catalog.search(query=query, module=module, limit=limit)
         total = self.catalog.count_matches(query=query, module=module)
         truncated = total > len(results)
@@ -416,7 +481,54 @@ class DynamicMode:
                 f"Showing {len(results)} of {total}. Call falcon_list_enabled_tools "
                 "for all names, or narrow with query."
             )
-        if hints:
+        # Always last, so it is the instruction the model reads on the way out.
+        hints.append(
+            "These results carry no parameters. Pick the tool you want, then call "
+            "falcon_search_tools again with tool_names=[its name] to get the "
+            "parameters before calling falcon_execute_tool."
+        )
+        envelope["hint"] = " ".join(hints)
+        return envelope
+
+    def _describe_named(self, tool_names: list[str]) -> dict[str, Any]:
+        """Return full schemas for the named tools, reporting any this server lacks.
+
+        total counts what came back rather than the catalog, because no query ran:
+        there is no wider match set for it to describe.
+        """
+        results = self.catalog.search(tool_names=tool_names)
+        found = {entry["name"] for entry in results}
+        missing = [name for name in tool_names if name not in found]
+        envelope: dict[str, Any] = {
+            "results": results,
+            "total": len(results),
+            "truncated": False,
+        }
+        if missing:
+            # Returning fewer entries than were asked for, silently, reads as those
+            # tools having no parameters rather than not being served. A withheld tool
+            # and one that never existed need different words, and a single call can
+            # name both.
+            withheld = {
+                name: rule
+                for name in missing
+                if (rule := self.catalog.withholding_rule(name)) is not None
+            }
+            hints: list[str] = []
+            if withheld:
+                named = ", ".join(f"{n} ({r})" for n, r in withheld.items())
+                hints.append(
+                    f"Withheld by this server's configuration: {named}. The capability "
+                    "is not missing — tell the user it is disabled by configuration "
+                    "rather than searching again."
+                )
+            unknown = [name for name in missing if name not in withheld]
+            if unknown:
+                hints.append(
+                    f"Not served by this server: {', '.join(unknown)}. Search by "
+                    "keyword for the right name, or call falcon_list_enabled_tools "
+                    "for the full inventory."
+                )
             envelope["hint"] = " ".join(hints)
         return envelope
 
@@ -432,9 +544,10 @@ class DynamicMode:
     ) -> Any:
         """Execute a Falcon tool by name with the given parameters.
 
-        Use falcon_search_tools first to discover tool names, parameter schemas,
-        and mutation risk (read_only / destructive fields). Do not execute destructive
-        tools without confirming the user's intent.
+        Call falcon_search_tools first: search by keyword to find the tool, then call
+        it again with tool_names to get the parameter schema and the mutation risk
+        (read_only / destructive fields). Do not execute destructive tools without
+        confirming the user's intent.
         Results are returned in full — use each tool's own limit parameter to control
         response volume. Empty result sets return a dict with results, pagination, and
         hint keys rather than a bare empty list.
@@ -486,6 +599,6 @@ class DynamicMode:
             return {
                 "results": [],
                 "pagination": {"total": 0, "next": None},
-                "hint": "No records returned. Use falcon_search_tools to review the tool parameters if this is unexpected.",
+                "hint": "No records returned. Call falcon_search_tools with tool_names to review the tool parameters if this is unexpected.",
             }
         return result

@@ -8,10 +8,11 @@ set grows, this balloons the context window that AI clients must hold in every c
 for tools that will never be called in that session.
 
 Dynamic mode solves this by replacing the full tool surface with two meta-tools:
-`falcon_search_tools` to look up a tool's parameter schema and `falcon_execute_tool` to run it. The
-agent fetches the schema for exactly the tools it needs, paying a short discovery round-trip instead
-of a large up-front context cost. A third always-on tool, `falcon_list_enabled_tools`, returns the
-complete inventory of served tool names.
+`falcon_search_tools` to find a tool and look up its parameter schema, and
+`falcon_execute_tool` to run it. The agent fetches the schema for exactly the tools it needs,
+paying a short discovery round-trip instead of a large up-front context cost. A third
+always-on tool, `falcon_list_enabled_tools`, returns the complete inventory of served tool
+names.
 
 > [!NOTE]
 > Dynamic mode is in public preview. The feature flag and behavior are stable, but feedback is
@@ -49,7 +50,7 @@ core tool, instead of the full module surface:
 | Tool | Purpose |
 |------|---------|
 | `falcon_list_enabled_tools` | List every capability tool this server serves, grouped by module (meta-tools excluded) |
-| `falcon_search_tools` | Look up the parameters of tools matching a keyword or module |
+| `falcon_search_tools` | Find tools by keyword or module, then return the parameters of the ones you name |
 | `falcon_execute_tool` | Execute a discovered tool by name with the given parameters |
 
 The typical agent workflow is:
@@ -57,15 +58,44 @@ The typical agent workflow is:
 1. Call `falcon_list_enabled_tools` when you need to know what the server serves at all — a name
    absent from that list is not available, whether because its module is off or a tool filter
    withholds it. Its `by_module` map also publishes the module names `falcon_search_tools` accepts.
-2. Call `falcon_search_tools` with a keyword or module name to get the parameters of the tools you
-   intend to use, along with their `read_only` and `destructive` flags.
-3. Call `falcon_execute_tool` with the tool name and parameters to run it.
+2. Call `falcon_search_tools` with a keyword or module name to see candidate tools, ranked
+   best-fit-first, with their `read_only` and `destructive` flags.
+3. Call `falcon_search_tools` again with `tool_names` set to the tool you picked, to get its
+   parameters.
+4. Call `falcon_execute_tool` with the tool name and parameters to run it.
 
 Because `falcon_execute_tool` is a general dispatcher, it carries no read-only safety annotation by
 default — the agent must rely on the `read_only` and `destructive` fields returned by
-`falcon_search_tools` to understand a tool's mutation risk before executing it.
+`falcon_search_tools` to understand a tool's mutation risk before executing it. Those flags are
+present on discovery results, so mutation risk is visible before the schema is fetched.
 
-## Discover → Execute Example
+The server also states this loop in its MCP `instructions`, returned in the initialize handshake, so
+a client reads it once at connection instead of having to find it in a tool description mid-task.
+
+## Two Response Shapes
+
+`falcon_search_tools` answers two different questions, and returns a different shape for each.
+
+**Discovery** — `query` and/or `module`, the default. Answers "which tool do I want?" Each result
+carries `name`, `module`, `description`, `read_only`, and `destructive`, and deliberately **no**
+`parameters` key. The absent key is the signal that a second call is needed; the `hint` field says so
+explicitly.
+
+**Schema** — `tool_names`. Answers "how do I call it?" Each named tool comes back as a full entry
+including every parameter (type, required, description, examples) with FQL or CQL syntax hints
+inlined. `query`, `module`, and `limit` are ignored. Naming two or more tools compares candidates in
+a single call.
+
+Splitting the two is what makes discovery cheap: on the full 117-tool catalog the input schema is
+roughly two thirds of an entry's bytes, and at the moment of searching the agent has not chosen a
+tool to need it. A 50-result discovery response plus the schema for the one chosen tool costs
+slightly less than 20 results with schemas did.
+
+If `tool_names` names something this server does not serve, the response says which name and why —
+withheld by a tool filter, or never served at all — rather than silently returning fewer entries,
+which would read as a tool that takes no parameters.
+
+## Discover → Describe → Execute Example
 
 **Step 1 — Find the right tool:**
 
@@ -79,11 +109,24 @@ default — the agent must rely on the `read_only` and `destructive` fields retu
 }
 ```
 
-The response includes the tool name, a description, and its full parameter schema with FQL field
-hints already inlined for filter parameters, wrapped in a `results` list alongside `total` and
-`truncated`.
+The response is a `results` list alongside `total` and `truncated`. Each entry names the tool,
+describes it, and flags whether it mutates — but carries no parameters.
 
-**Step 2 — Execute it:**
+**Step 2 — Get its parameters:**
+
+```json
+{
+  "tool": "falcon_search_tools",
+  "arguments": {
+    "tool_names": ["falcon_search_detections"]
+  }
+}
+```
+
+Now the entry includes the full parameter schema, with FQL field hints already inlined for filter
+parameters.
+
+**Step 3 — Execute it:**
 
 ```json
 {
@@ -117,6 +160,10 @@ avoid large responses.
 { "query": "quarantine release" }
 ```
 
+```json
+{ "tool_names": ["falcon_search_hosts", "falcon_get_host_details"] }
+```
+
 Results are ordered by relevance. A tool whose name matches the query outranks one that only
 mentions it in its description, and an exact tool name — with or without the `falcon_` prefix —
 ranks first. Ordering is deterministic: the same query returns the same order on every server
@@ -136,7 +183,10 @@ cannot drift from what `module` will match.
 
 Every response carries `total` (the number of tools matching the query, before any limit) and
 `truncated`, so a capped result set is never mistaken for the complete set. When results are
-truncated, raise `limit` (up to 500) or narrow the query.
+truncated, raise `limit` (up to 500) or narrow the query. The default is 50: lean discovery entries
+are cheap enough that a wide window costs less than a narrow one did with schemas attached, so a
+query like `host` — which matches 35 tools — is not truncated at all. In schema mode `total` counts
+the entries returned, since no query ran for it to describe.
 
 If no tools match, no word in the query appears anywhere in the served surface. The response says so
 and points at `falcon_list_enabled_tools`. A capability absent from that full inventory is not served
@@ -174,6 +224,7 @@ Dynamic mode is a good fit when:
 - Your AI client has a limited context budget or charges per token of registered tool schemas.
 - The agent only needs a small subset of tools per session but you want the full module set available.
 
-The trade-off is the extra `falcon_search_tools` round-trip before every new tool call. For sessions
-that call a stable, known set of tools repeatedly, the overhead adds up. For exploratory or broad
-security-analysis workflows, dynamic mode often pays for itself quickly.
+The trade-off is the round-trips before a new tool call: one to find it, one to fetch its
+parameters. For sessions that call a stable, known set of tools repeatedly, that overhead adds up —
+though an agent that already knows the name can skip discovery and go straight to `tool_names`. For
+exploratory or broad security-analysis workflows, dynamic mode often pays for itself quickly.

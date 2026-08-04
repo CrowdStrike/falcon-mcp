@@ -22,6 +22,7 @@ from falcon_mcp.common.auth import (
     normalize_content_type_middleware,
     strip_trailing_slash_middleware,
 )
+from falcon_mcp.common.fql import FQL_FILTER_HINT_SUFFIX
 from falcon_mcp.common.logging import configure_logging, get_logger
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS, offload_to_thread
 from falcon_mcp.tool_filter import Resolution, ToolPolicy, ToolRecord
@@ -37,6 +38,27 @@ TransportType = Literal["stdio", "sse", "streamable-http"]
 # Hosts that keep the server reachable only from the local machine. Binding to
 # anything else exposes it on the network, where an unauthenticated endpoint is a risk.
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
+# Guidance both modes need, carried in the MCP instructions field rather than in tool
+# descriptions. These three facts belong to no single tool: a description is read only
+# when its tool is in play, and repeating any of them across the 47 filter-taking tools
+# would grow a tools/list payload that is already over budget. This field is read once
+# per connection and costs nothing against it.
+#
+# The operator sentence is FQL_FILTER_HINT_SUFFIX itself, not a paraphrase — dynamic
+# mode appends the same constant to every filter description, so an agent must not meet
+# two wordings of one rule.
+BASE_INSTRUCTIONS = (
+    "This server provides access to CrowdStrike Falcon capabilities.\n\n"
+    f"Composing filters: {FQL_FILTER_HINT_SUFFIX} Every filter-taking tool names a "
+    "falcon://<module>/<tool>/fql-guide resource listing the fields and operators that "
+    "endpoint actually accepts. Read it before composing a filter: an unsupported "
+    "field returns an empty result rather than an error, which is indistinguishable "
+    "from a genuine no-match.\n\n"
+    "Changing state: readOnlyHint=false marks a tool that changes tenant state, and "
+    "destructiveHint=true marks one whose effect cannot be undone. Confirm the user's "
+    "intent before calling either."
+)
 
 
 class FalconMCPServer:
@@ -151,7 +173,7 @@ class FalconMCPServer:
         # Initialize the MCP server
         self.server = FastMCP(
             name="Falcon MCP Server",
-            instructions="This server provides access to CrowdStrike Falcon capabilities.",
+            instructions=self._instructions(),
             debug=self.debug,
             log_level="DEBUG" if self.debug else "INFO",
             stateless_http=self.stateless_http,
@@ -207,6 +229,37 @@ class FalconMCPServer:
                 withheld,
                 "tool" if withheld == 1 else "tools",
             )
+
+    def _instructions(self) -> str:
+        """Describe the server, and in dynamic mode the loop for reaching a tool.
+
+        Both modes inherit BASE_INSTRUCTIONS, which carries the cross-cutting guidance
+        no single tool description owns.
+
+        Dynamic mode is not the shape a client expects: three meta-tools stand in for
+        the whole surface, and a keyword search deliberately returns no parameters.
+        Stating the loop here, at the protocol level, means it is read once at
+        connection rather than depending on the model reading it out of one tool's
+        docstring mid-task.
+        """
+        if not self.dynamic:
+            return BASE_INSTRUCTIONS
+        return (
+            f"{BASE_INSTRUCTIONS}\n\nThis server is running in dynamic mode: the "
+            "Falcon tools are not individually registered, and are reached through "
+            "three meta-tools instead.\n\n"
+            "1. falcon_search_tools with a keyword query, or a module name, lists "
+            "candidate tools ranked best-fit-first. These entries carry each tool's "
+            "name, description, and read_only / destructive flags, but no parameters.\n"
+            "2. falcon_search_tools again with tool_names=[chosen name] returns the "
+            "full parameter schema for those tools, including filter syntax hints. "
+            "Name more than one to compare candidates.\n"
+            "3. falcon_execute_tool runs the tool with those parameters.\n\n"
+            "falcon_list_enabled_tools gives the complete inventory of served tool "
+            "names. A capability absent from that list is not available on this "
+            "server, whether because its module is off or a filter withholds it — "
+            "report that rather than searching repeatedly."
+        )
 
     def _validate_filter_tool_names(
         self,

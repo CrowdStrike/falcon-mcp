@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 from falcon_mcp import registry
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
-from falcon_mcp.server import FalconMCPServer
+from falcon_mcp.server import BASE_INSTRUCTIONS, FalconMCPServer
 
 
 class TestFalconMCPServer(unittest.TestCase):
@@ -50,7 +50,7 @@ class TestFalconMCPServer(unittest.TestCase):
         # Verify server initialization
         mock_fastmcp.assert_called_once_with(
             name="Falcon MCP Server",
-            instructions="This server provides access to CrowdStrike Falcon capabilities.",
+            instructions=BASE_INSTRUCTIONS,
             debug=True,
             log_level="DEBUG",
             stateless_http=False,
@@ -222,7 +222,7 @@ class TestFalconMCPServer(unittest.TestCase):
         # Verify FastMCP was initialized with stateless_http
         mock_fastmcp.assert_called_once_with(
             name="Falcon MCP Server",
-            instructions="This server provides access to CrowdStrike Falcon capabilities.",
+            instructions=BASE_INSTRUCTIONS,
             debug=False,
             log_level="INFO",
             stateless_http=True,
@@ -251,7 +251,7 @@ class TestFalconMCPServer(unittest.TestCase):
         # Verify FastMCP was initialized with stateless_http=False
         mock_fastmcp.assert_called_once_with(
             name="Falcon MCP Server",
-            instructions="This server provides access to CrowdStrike Falcon capabilities.",
+            instructions=BASE_INSTRUCTIONS,
             debug=False,
             log_level="INFO",
             stateless_http=False,
@@ -333,7 +333,7 @@ class TestFalconMCPServer(unittest.TestCase):
         # Verify FastMCP receives the non-localhost host
         mock_fastmcp.assert_called_once_with(
             name="Falcon MCP Server",
-            instructions="This server provides access to CrowdStrike Falcon capabilities.",
+            instructions=BASE_INSTRUCTIONS,
             debug=False,
             log_level="INFO",
             stateless_http=False,

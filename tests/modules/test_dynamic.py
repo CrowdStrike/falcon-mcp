@@ -3,10 +3,14 @@ Tests for the Dynamic mode (two-tool pattern).
 """
 
 import asyncio
+import inspect
+import json
 import unittest
 from collections.abc import Coroutine
 from typing import Any, TypeVar
 from unittest.mock import MagicMock, patch
+
+from mcp.server.fastmcp import FastMCP
 
 from falcon_mcp import registry
 from falcon_mcp.dynamic import DynamicMode, DynamicToolCatalog
@@ -118,14 +122,14 @@ class TestDynamicToolCatalog(unittest.TestCase):
 
     def test_format_entry_includes_annotations(self):
         catalog = DynamicToolCatalog(self.modules)
-        results = catalog.search(query="search_detections")
+        results = catalog.search(tool_names=["falcon_search_detections"])
         detection_result = next(r for r in results if r["name"] == "falcon_search_detections")
         self.assertTrue(detection_result["read_only"])
         self.assertFalse(detection_result["destructive"])
 
     def test_format_entry_appends_filter_hints(self):
         catalog = DynamicToolCatalog(self.modules)
-        results = catalog.search(query="search_detections")
+        results = catalog.search(tool_names=["falcon_search_detections"])
         detection_result = next(r for r in results if r["name"] == "falcon_search_detections")
         filter_desc = detection_result["parameters"]["filter"]["description"]
         self.assertIn("severity_name", filter_desc)
@@ -134,7 +138,7 @@ class TestDynamicToolCatalog(unittest.TestCase):
 
     def test_format_entry_appends_host_filter_hints(self):
         catalog = DynamicToolCatalog(self.modules)
-        results = catalog.search(query="search_hosts")
+        results = catalog.search(tool_names=["falcon_search_hosts"])
         host_result = next(r for r in results if r["name"] == "falcon_search_hosts")
         filter_desc = host_result["parameters"]["filter"]["description"]
         self.assertIn("hostname", filter_desc)
@@ -143,14 +147,14 @@ class TestDynamicToolCatalog(unittest.TestCase):
 
     def test_format_entry_no_hint_for_tools_without_filter(self):
         catalog = DynamicToolCatalog(self.modules)
-        results = catalog.search(query="get_detection_details")
+        results = catalog.search(tool_names=["falcon_get_detection_details"])
         detail_result = next(r for r in results if r["name"] == "falcon_get_detection_details")
         for param in detail_result["parameters"].values():
             self.assertNotIn("Common fields:", param["description"])
 
     def test_format_entry_includes_examples_when_present(self):
         catalog = DynamicToolCatalog(self.modules)
-        results = catalog.search(query="search_detections")
+        results = catalog.search(tool_names=["falcon_search_detections"])
         detection_result = next(r for r in results if r["name"] == "falcon_search_detections")
         filter_param = detection_result["parameters"]["filter"]
         self.assertIn("examples", filter_param)
@@ -159,7 +163,7 @@ class TestDynamicToolCatalog(unittest.TestCase):
 
     def test_format_entry_omits_examples_when_absent(self):
         catalog = DynamicToolCatalog(self.modules)
-        results = catalog.search(query="get_detection_details")
+        results = catalog.search(tool_names=["falcon_get_detection_details"])
         detail_result = next(r for r in results if r["name"] == "falcon_get_detection_details")
         ids_param = detail_result["parameters"]["ids"]
         self.assertNotIn("examples", ids_param)
@@ -168,7 +172,7 @@ class TestDynamicToolCatalog(unittest.TestCase):
         """The NGSIEM CQL hint is injected onto the query_string param, not filter."""
         modules: dict[str, BaseModule] = {"ngsiem": NGSIEMModule(self.mock_client)}
         catalog = DynamicToolCatalog(modules)
-        results = catalog.search(query="search_ngsiem")
+        results = catalog.search(tool_names=["falcon_search_ngsiem"])
         ngsiem_result = next(r for r in results if r["name"] == "falcon_search_ngsiem")
         params = ngsiem_result["parameters"]
         # NGSIEM has no FQL filter param — the hint lands on query_string.
@@ -243,6 +247,211 @@ class TestDynamicToolCatalog(unittest.TestCase):
             )
 
 
+class TestLeanDiscoveryAndSchemaLookup(unittest.TestCase):
+    """The two response shapes falcon_search_tools serves.
+
+    Discovery answers "which tool", so it omits the input schema — most of an entry's
+    cost, and not needed to choose. Naming tools answers "how do I call it", so those
+    entries carry the schema. Confusing the two either overpays on every search or
+    leaves an agent unable to build a call.
+    """
+
+    def setUp(self):
+        self.mock_client = MagicMock()
+        self.modules: dict[str, BaseModule] = {
+            "detections": DetectionsModule(self.mock_client),
+            "hosts": HostsModule(self.mock_client),
+        }
+        self.catalog = DynamicToolCatalog(self.modules)
+
+    def test_discovery_results_omit_parameters(self):
+        for kwargs in ({"query": "detections"}, {"module": "hosts"}, {}):
+            with self.subTest(**kwargs):
+                results = self.catalog.search(**kwargs)
+                self.assertTrue(results)
+                for entry in results:
+                    self.assertNotIn("parameters", entry)
+
+    def test_discovery_results_carry_name_module_description_and_flags(self):
+        results = self.catalog.search(query="search_detections")
+        entry = next(r for r in results if r["name"] == "falcon_search_detections")
+        self.assertEqual(entry["module"], "detections")
+        self.assertTrue(entry["description"])
+        self.assertTrue(entry["read_only"])
+        self.assertFalse(entry["destructive"])
+        self.assertEqual(
+            set(entry),
+            {"name", "module", "description", "read_only", "destructive"},
+            "lean entry grew a field — every discovery result pays for it",
+        )
+
+    def test_tool_names_returns_full_schema_for_one_name(self):
+        results = self.catalog.search(tool_names=["falcon_search_detections"])
+        self.assertEqual([r["name"] for r in results], ["falcon_search_detections"])
+        self.assertIn("filter", results[0]["parameters"])
+
+    def test_tool_names_returns_full_schema_for_several_names(self):
+        """Comparing two candidates must not cost two round trips."""
+        asked = ["falcon_search_detections", "falcon_search_hosts"]
+        results = self.catalog.search(tool_names=asked)
+        self.assertEqual([r["name"] for r in results], asked)
+        for entry in results:
+            self.assertIn("filter", entry["parameters"])
+
+    def test_tool_names_keeps_the_fql_hint(self):
+        """The curated filter hint is the reason the schema path exists."""
+        results = self.catalog.search(tool_names=["falcon_search_detections"])
+        desc = results[0]["parameters"]["filter"]["description"]
+        self.assertIn("severity_name", desc)
+        self.assertIn("falcon://detections/search/fql-guide", desc)
+
+    def test_tool_names_keeps_the_cql_hint(self):
+        catalog = DynamicToolCatalog({"ngsiem": NGSIEMModule(self.mock_client)})
+        results = catalog.search(tool_names=["falcon_search_ngsiem"])
+        desc = results[0]["parameters"]["query_string"]["description"]
+        self.assertIn("pipe-based", desc)
+        self.assertIn("falcon://ngsiem/search/cql-guide", desc)
+
+    def test_tool_names_ignores_query_module_and_limit(self):
+        """Naming tools is a schema lookup, so the search parameters do not apply."""
+        results = self.catalog.search(
+            query="nothing_matches_this",
+            module="nosuchmodule",
+            limit=1,
+            tool_names=["falcon_search_detections", "falcon_search_hosts"],
+        )
+        self.assertEqual(
+            [r["name"] for r in results],
+            ["falcon_search_detections", "falcon_search_hosts"],
+        )
+
+    def test_count_matches_describes_discovery_not_the_requested_names(self):
+        """total must keep meaning "how many tools match", not "how many I asked for"."""
+        self.assertEqual(
+            self.catalog.count_matches(query="detections"),
+            len(self.catalog.search(query="detections", limit=10_000)),
+        )
+
+
+class TestSearchToolsTwoModeEnvelope(unittest.TestCase):
+    """The envelope falcon_search_tools returns in each mode."""
+
+    def setUp(self):
+        self.mock_client = MagicMock()
+        modules: dict[str, BaseModule] = {
+            "detections": DetectionsModule(self.mock_client),
+            "hosts": HostsModule(self.mock_client),
+        }
+        self.dynamic = DynamicMode(modules, MagicMock())
+
+    def _search(self, **kwargs: Any) -> dict[str, Any]:
+        return run_async(self.dynamic._search_tools(**kwargs))
+
+    def test_discovery_hint_directs_the_agent_to_fetch_the_schema(self):
+        """A lean result is unusable unless the agent knows the second call exists."""
+        result = self._search(query="detections", module=None, limit=50)
+        self.assertTrue(result["results"])
+        self.assertIn("tool_names", result["hint"])
+        self.assertIn("falcon_execute_tool", result["hint"])
+
+    def test_discovery_hint_survives_the_relaxed_and_truncated_hints(self):
+        """The schema instruction must not be crowded out by the other hints."""
+        result = self._search(query="detections", module=None, limit=1)
+        self.assertTrue(result["truncated"])
+        self.assertIn("Showing 1 of", result["hint"])
+        self.assertIn("tool_names", result["hint"])
+
+    def test_tool_names_envelope_totals_what_it_returned(self):
+        result = self._search(tool_names=["falcon_search_detections"])
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["total"], 1)
+        self.assertFalse(result["truncated"])
+        self.assertNotIn("hint", result)
+
+    def test_tool_names_reports_an_unknown_name(self):
+        """Silently returning fewer entries reads as a tool with no parameters."""
+        result = self._search(
+            tool_names=["falcon_search_detections", "falcon_not_a_tool"]
+        )
+        self.assertEqual([r["name"] for r in result["results"]], ["falcon_search_detections"])
+        self.assertIn("falcon_not_a_tool", result["hint"])
+        self.assertIn("Not served", result["hint"])
+
+    def test_tool_names_reports_every_unknown_name(self):
+        result = self._search(tool_names=["falcon_not_a_tool", "falcon_also_absent"])
+        self.assertEqual(result["results"], [])
+        self.assertIn("falcon_not_a_tool", result["hint"])
+        self.assertIn("falcon_also_absent", result["hint"])
+
+    def test_declared_limit_default_matches_the_catalog_default(self):
+        """The schema default is what clients actually get, and it is a second default.
+
+        DynamicToolCatalog.search and the registered tool each carry their own
+        default. A client omitting limit is served by the declared one, so if the two
+        disagree, every measurement taken against the catalog describes a window no
+        client ever sees.
+        """
+        server = FastMCP("probe")
+        self.dynamic.server = server
+        self.dynamic.register()
+        declared = server._tool_manager._tools["falcon_search_tools"].parameters[
+            "properties"
+        ]["limit"]["default"]
+        catalog_default = inspect.signature(
+            DynamicToolCatalog.search
+        ).parameters["limit"].default
+        self.assertEqual(declared, catalog_default)
+        self.assertEqual(declared, 50)
+
+
+class TestWithheldToolsAreAbsentFromBothModes(unittest.TestCase):
+    """The schema path must not become a filtering bypass.
+
+    Filtering is enforced by omitting the tool from the catalog, and tool_names looks
+    tools up by exact name — the one call shape that would reach a withheld tool if
+    the lookup skipped the catalog.
+    """
+
+    _WITHHELD = "falcon_search_detections"
+
+    def setUp(self):
+        self.mock_client = MagicMock()
+        modules: dict[str, BaseModule] = {
+            "detections": DetectionsModule(self.mock_client),
+        }
+        self.dynamic = DynamicMode(
+            modules, MagicMock(), ToolPolicy(excluded={self._WITHHELD})
+        )
+        self.assertTrue(self.dynamic.catalog.entries, "surface must be non-empty")
+
+    def test_withheld_tool_absent_from_discovery(self):
+        result = run_async(
+            self.dynamic._search_tools(query="detections", module=None, limit=500)
+        )
+        self.assertNotIn(self._WITHHELD, [r["name"] for r in result["results"]])
+
+    def test_withheld_tool_absent_from_schema_lookup(self):
+        result = run_async(self.dynamic._search_tools(tool_names=[self._WITHHELD]))
+        self.assertEqual(result["results"], [])
+
+    def test_schema_lookup_attributes_the_withholding_to_configuration(self):
+        """An operator's config choice must not read as a missing product capability."""
+        result = run_async(self.dynamic._search_tools(tool_names=[self._WITHHELD]))
+        self.assertIn("Withheld", result["hint"])
+        self.assertIn("deny-list", result["hint"])
+        self.assertNotIn("Not served", result["hint"])
+
+    def test_schema_lookup_separates_withheld_from_never_served(self):
+        """Both are missing; only one is the operator's doing."""
+        result = run_async(
+            self.dynamic._search_tools(
+                tool_names=[self._WITHHELD, "falcon_not_a_tool"]
+            )
+        )
+        self.assertIn(f"{self._WITHHELD} (deny-list)", result["hint"])
+        self.assertIn("Not served by this server: falcon_not_a_tool", result["hint"])
+
+
 class TestSearchRanking(unittest.TestCase):
     """Result POSITION, not just membership.
 
@@ -277,10 +486,35 @@ class TestSearchRanking(unittest.TestCase):
         )
 
     def test_bare_host_at_default_limit_still_contains_host_details(self):
-        """The default limit truncates 'host'; the intended tool must survive it."""
+        """'host' matches more tools than the default shows; the intended one must survive."""
         names = self._names("host")
-        self.assertEqual(len(names), 20, "expected the default limit to truncate")
         self.assertIn("falcon_get_host_details", names)
+
+    def test_bare_host_at_default_limit_is_not_truncated_at_all(self):
+        """What the wider default buys: 'host' matches 35 tools and all 35 fit.
+
+        Ranking alone already kept falcon_get_host_details in a 20-wide window, so
+        asserting only its membership does not pin the default. Asserting the whole
+        match set fits does — a narrower default truncates and fails here.
+        """
+        total = self.catalog.count_matches(query="host")
+        self.assertGreater(total, 20, "query must exceed the previous default")
+        self.assertEqual(len(self._names("host")), total)
+
+    def test_lean_discovery_at_the_new_default_costs_less_than_full_entries_at_20(self):
+        """The wider window is only affordable because entries dropped their schema.
+
+        Compares serialized payloads on the real catalog: a full 50 lean results
+        against the 20 full ones the previous default returned. If this inverts, the
+        default limit is no longer paid for.
+        """
+        lean_50 = self.catalog.search(query="")
+        self.assertEqual(len(lean_50), 50, "expected the default to fill the window")
+        full_20 = [
+            self.catalog._format_entry(e)
+            for e in self.catalog._matches("", None)[:20]
+        ]
+        self.assertLess(len(json.dumps(lean_50)), len(json.dumps(full_20)))
 
     def test_exact_tool_name_ranks_first_with_and_without_prefix(self):
         for query in ("falcon_search_detections", "search_detections"):
@@ -585,7 +819,7 @@ class TestExecuteFalconTool(unittest.TestCase):
     def test_search_tools_with_results_returns_envelope(self):
         result = run_async(
             self.dynamic._search_tools(
-                query="search_detections", module=None, limit=20
+                query="search_detections", module=None, limit=50
             )
         )
         self.assertGreater(len(result["results"]), 0)
@@ -675,6 +909,124 @@ class TestDynamicServerIntegration(unittest.TestCase):
         )
 
         mock_server_instance.add_resource.assert_called()
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_dynamic_instructions_describe_the_three_step_loop(
+        self, mock_fastmcp, mock_client
+    ):
+        """The two-step flow must not depend on the model reading one tool's docstring.
+
+        Discovery deliberately withholds parameters, which is not the shape a client
+        expects, so the loop is stated once at the protocol level.
+        """
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client.return_value.authenticate.return_value = True
+        mock_fastmcp.return_value = MagicMock()
+
+        FalconMCPServer(enabled_modules={"detections"}, dynamic=True)
+        instructions = mock_fastmcp.call_args.kwargs["instructions"]
+
+        self.assertIn("tool_names", instructions)
+        self.assertIn("falcon_search_tools", instructions)
+        self.assertIn("falcon_execute_tool", instructions)
+        self.assertIn("falcon_list_enabled_tools", instructions)
+        self.assertIn("no parameters", instructions)
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_normal_mode_instructions_omit_the_dynamic_loop(
+        self, mock_fastmcp, mock_client
+    ):
+        """Normal mode registers every tool, so describing a search loop would misdirect."""
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client.return_value.authenticate.return_value = True
+        mock_fastmcp.return_value = MagicMock()
+
+        FalconMCPServer(enabled_modules={"detections"}, dynamic=False)
+        instructions = mock_fastmcp.call_args.kwargs["instructions"]
+
+        self.assertIn("CrowdStrike Falcon", instructions)
+        self.assertNotIn("tool_names", instructions)
+        self.assertNotIn("falcon_search_tools", instructions)
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_normal_mode_instructions_carry_the_cross_cutting_facts(
+        self, mock_fastmcp, mock_client
+    ):
+        """Three facts no normal-mode tool description states on its own.
+
+        Operator syntax reaches dynamic mode through _format_entry and reaches normal
+        mode nowhere; the fql-guide URI scheme and the mutation annotations are each
+        re-taught per tool or not at all. Stating them once here costs nothing against
+        the tools/list payload budget.
+        """
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client.return_value.authenticate.return_value = True
+        mock_fastmcp.return_value = MagicMock()
+
+        FalconMCPServer(enabled_modules={"detections"}, dynamic=False)
+        instructions = mock_fastmcp.call_args.kwargs["instructions"]
+
+        self.assertIn("+ for AND", instructions)
+        self.assertIn(", for OR", instructions)
+        self.assertIn("single-quoted", instructions)
+        self.assertIn("falcon://<module>/<tool>/fql-guide", instructions)
+        self.assertIn("empty result", instructions)
+        self.assertIn("readOnlyHint", instructions)
+        self.assertIn("destructiveHint", instructions)
+        self.assertIn("Confirm", instructions)
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_dynamic_mode_instructions_keep_the_shared_base(
+        self, mock_fastmcp, mock_client
+    ):
+        """Appending the dynamic block must not replace the cross-cutting facts.
+
+        A dynamic-mode agent composes filters through falcon_execute_tool, so it needs
+        the FQL and mutation guidance every bit as much as a normal-mode one.
+        """
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client.return_value.authenticate.return_value = True
+        mock_fastmcp.return_value = MagicMock()
+
+        FalconMCPServer(enabled_modules={"detections"}, dynamic=True)
+        instructions = mock_fastmcp.call_args.kwargs["instructions"]
+
+        self.assertIn("+ for AND", instructions)
+        self.assertIn("falcon://<module>/<tool>/fql-guide", instructions)
+        self.assertIn("destructiveHint", instructions)
+        # ... alongside the loop, not instead of it.
+        self.assertIn("tool_names", instructions)
+        self.assertIn("falcon_execute_tool", instructions)
+
+    @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_instructions_reuse_the_dynamic_mode_filter_hint_suffix(
+        self, mock_fastmcp, mock_client
+    ):
+        """The operator sentence has two call sites and must not be paraphrased.
+
+        _format_entry appends FQL_FILTER_HINT_SUFFIX to every filter description in
+        dynamic mode. If the instructions restated the same rule in their own words,
+        the two could drift and an agent would see two versions of the syntax.
+        """
+        from falcon_mcp.common.fql import FQL_FILTER_HINT_SUFFIX
+        from falcon_mcp.server import FalconMCPServer
+
+        mock_client.return_value.authenticate.return_value = True
+        mock_fastmcp.return_value = MagicMock()
+
+        FalconMCPServer(enabled_modules={"detections"}, dynamic=False)
+        instructions = mock_fastmcp.call_args.kwargs["instructions"]
+
+        self.assertIn(FQL_FILTER_HINT_SUFFIX, instructions)
 
     @patch("sys.argv", ["falcon-mcp", "--dynamic"])
     def test_parse_args_dynamic_flag(self):
