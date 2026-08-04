@@ -118,10 +118,6 @@ instead of being ignored, so a typo in a deny-list cannot silently leave a tool 
   reports the tools available on the server, so it is the reliable answer to "is this capability
   available here?"
 
-  Its `by_module` map still groups X under the module X belongs to. That key means "X comes from
-  this module", not "this module is enabled" — the tools listed under it are the only ones
-  available, and `module=` in `falcon_search_tools` returns exactly those.
-
 To *subtract*, use `--exclude-tools` or `--read-only`. All four options compose and resolve in a
 fixed order:
 

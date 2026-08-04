@@ -69,9 +69,6 @@ default — the agent must rely on the `read_only` and `destructive` fields retu
 `falcon_search_tools` to understand a tool's mutation risk before executing it. Those flags are
 present on discovery results, so mutation risk is visible before the schema is fetched.
 
-The server also states this loop in its MCP `instructions`, returned in the initialize handshake, so
-a client reads it once at connection instead of having to find it in a tool description mid-task.
-
 ## Two Response Shapes
 
 `falcon_search_tools` answers two different questions, and returns a different shape for each.
