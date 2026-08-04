@@ -122,9 +122,12 @@ mentions it in its description, and an exact tool name — with or without the `
 ranks first. Ordering is deterministic: the same query returns the same order on every server
 process. A query with no keywords (module browsing) is ordered by tool name.
 
-Every token in `query` must appear somewhere in the tool's name, description, module, or parameter
-names, so extra words narrow the search rather than widening it. Prefer the nouns of the capability
-you want (`host details`, `quarantined files`) over a full sentence.
+Every token in `query` is matched against the tool's name, description, module, and parameter
+names. Tools matching every token are preferred; when no tool matches all of them, the search falls
+back to tools matching at least one, so a phrase like `real-time response command` returns ranked
+candidates instead of nothing. The `hint` field says when that fallback was used — treat those
+results as looser and check the top few. Ranking is what makes the wider set usable, so prefer the
+first results rather than scanning the whole list.
 
 `module` ignores case and separators, so `hostgroups`, `host_groups`, and `Host-Groups` all select
 the same module. `falcon_list_enabled_tools` returns a `by_module` map whose keys are the exact
@@ -135,9 +138,9 @@ Every response carries `total` (the number of tools matching the query, before a
 `truncated`, so a capped result set is never mistaken for the complete set. When results are
 truncated, raise `limit` (up to 500) or narrow the query.
 
-If no tools match, the response says so and points at `falcon_list_enabled_tools`. A capability that
-is absent from that full inventory is not served by that server — report that rather than searching
-again.
+If no tools match, no word in the query appears anywhere in the served surface. The response says so
+and points at `falcon_list_enabled_tools`. A capability absent from that full inventory is not served
+by that server — report that rather than searching again.
 
 ## Tool Filtering in Dynamic Mode
 

@@ -61,14 +61,30 @@ class TestDynamicToolCatalog(unittest.TestCase):
         results = catalog.search(query="severity")
         self.assertGreater(len(results), 0)
 
-    def test_search_all_tokens_must_match(self):
+    def test_search_prefers_entries_matching_every_token(self):
         catalog = DynamicToolCatalog(self.modules)
         results = catalog.search(query="search detections")
         names = [r["name"] for r in results]
         self.assertIn("falcon_search_detections", names)
+        # Every result matches both tokens, so the fallback stayed out of it.
+        self.assertFalse(catalog.relaxed(query="search detections"))
+        for entry in (catalog.entries[n] for n in names):
+            self.assertIn("search", entry.search_corpus)
+            self.assertIn("detections", entry.search_corpus)
 
-        results_no_match = catalog.search(query="search nonexistent_xyz_module")
-        self.assertEqual(len(results_no_match), 0)
+    def test_search_falls_back_to_any_token_when_no_entry_matches_all(self):
+        """A phrase carrying one unknown word must not wipe out the whole result set."""
+        catalog = DynamicToolCatalog(self.modules)
+        strict = catalog.search(query="detections")
+        relaxed = catalog.search(query="detections nonexistent_xyz_token", limit=10_000)
+        self.assertTrue(catalog.relaxed(query="detections nonexistent_xyz_token"))
+        self.assertTrue(relaxed)
+        self.assertIn(strict[0]["name"], [r["name"] for r in relaxed])
+
+    def test_search_returns_nothing_when_no_token_matches_at_all(self):
+        catalog = DynamicToolCatalog(self.modules)
+        self.assertEqual(catalog.search(query="nonexistent_xyz_module"), [])
+        self.assertEqual(catalog.count_matches(query="nonexistent_xyz_module"), 0)
 
     def test_search_module_filter(self):
         catalog = DynamicToolCatalog(self.modules)
@@ -319,7 +335,44 @@ class TestSearchRanking(unittest.TestCase):
                     for name, entry in self.catalog.entries.items()
                     if all(t in entry.search_corpus for t in tokens)
                 }
+                self.assertTrue(expected, "query must match under the strict filter")
+                self.assertFalse(self.catalog.relaxed(query=query))
                 self.assertEqual(set(self._names(query, limit=10_000)), expected)
+
+    def test_fallback_only_engages_when_strict_matching_is_empty(self):
+        """Precision is preserved: a query the strict filter can serve is served by it."""
+        for query in ("host details", "search detections", "quarantined files"):
+            with self.subTest(query=query):
+                self.assertFalse(self.catalog.relaxed(query=query))
+
+    def test_fallback_rescues_a_natural_language_phrase(self):
+        """The reported zero-hit cases must return a usable, ranked result set."""
+        for query, intended in (
+            ("hosts detections", "falcon_search_detections"),
+            ("top hosts detections", "falcon_aggregate_detections"),
+            ("real-time response command", "falcon_execute_rtr_read_only_command"),
+        ):
+            with self.subTest(query=query):
+                self.assertTrue(self.catalog.relaxed(query=query))
+                names = self._names(query)
+                self.assertIn(
+                    intended, names, f"{intended} missing from the default result window"
+                )
+
+    def test_fallback_results_stay_ranked_and_deterministic(self):
+        from falcon_mcp.client import FalconClient
+
+        mock_client = MagicMock(spec=FalconClient)
+        available = registry.get_available_modules()
+        reversed_catalog = DynamicToolCatalog(
+            {name: available[name](mock_client) for name in reversed(list(available))}
+        )
+        for query in ("hosts detections", "real-time response command"):
+            with self.subTest(query=query):
+                self.assertEqual(
+                    self._names(query, limit=10_000),
+                    [r["name"] for r in reversed_catalog.search(query=query, limit=10_000)],
+                )
 
 
 class TestModuleVocabulary(unittest.TestCase):

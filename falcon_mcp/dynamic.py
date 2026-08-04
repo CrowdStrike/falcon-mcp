@@ -187,7 +187,20 @@ class DynamicToolCatalog:
         """
         return len(self._matches(query, module))
 
-    def _matches(self, query: str, module: str | None) -> list[ToolEntry]:
+    def relaxed(self, query: str = "", module: str | None = None) -> bool:
+        """True when the results came from the any-token fallback."""
+        return self._match_set(query, module)[1]
+
+    def _match_set(
+        self, query: str, module: str | None
+    ) -> tuple[list[ToolEntry], bool]:
+        """Select matching entries; the flag reports whether the fallback ran.
+
+        Requiring every token narrows well when the query is already tool-shaped,
+        but a phrase carrying one word the catalog does not use matches nothing at
+        all. Falling back to any-token keeps such a query answerable; ranking is
+        what makes the wider set usable.
+        """
         candidates: list[ToolEntry] = list(self._entries.values())
 
         if module:
@@ -195,13 +208,23 @@ class DynamicToolCatalog:
             candidates = [e for e in candidates if e.module_key == module_key]
 
         if not query:
+            return candidates, False
+
+        tokens = query.lower().split()
+        strict = [e for e in candidates if all(t in e.search_corpus for t in tokens)]
+        if strict:
+            return strict, False
+        return [e for e in candidates if any(t in e.search_corpus for t in tokens)], True
+
+    def _matches(self, query: str, module: str | None) -> list[ToolEntry]:
+        candidates, _ = self._match_set(query, module)
+
+        if not query:
             # Browsing has no relevance signal, so order by name to stay stable
             # across processes.
             return sorted(candidates, key=lambda e: e.tool.name)
 
         tokens = query.lower().split()
-        candidates = [e for e in candidates if all(t in e.search_corpus for t in tokens)]
-
         query_key = normalize_identifier(query)
         # Ties break toward the least-qualified name, then alphabetically: a tool
         # carrying no extra words beyond the query is the more direct answer, and
@@ -332,11 +355,13 @@ class DynamicMode:
         """Get a Falcon tool's parameters so you can call it with falcon_execute_tool.
 
         This is the entry point in dynamic mode: search by keyword, or pass a module
-        name (or no query at all) to browse. Each result carries the tool's name,
+        name (or no query at all) to browse. Results are ordered by relevance, best
+        fit first, so prefer the top results. Each result carries the tool's name,
         module, description, a summary of every parameter (type, required, description,
         examples, and filter-syntax hints where the tool takes a filter), and
         read_only/destructive flags — check those before executing anything that
-        mutates. Read total and truncated to tell a capped list from a complete one.
+        mutates. Read total and truncated to tell a capped list from a complete one,
+        and hint for whether the match had to be loosened.
         """
         results = self.catalog.search(query=query, module=module, limit=limit)
         total = self.catalog.count_matches(query=query, module=module)
@@ -379,11 +404,20 @@ class DynamicMode:
             "total": total,
             "truncated": truncated,
         }
+        hints: list[str] = []
+        if self.catalog.relaxed(query=query, module=module):
+            hints.append(
+                "No tool matched every word, so these match at least one of them and "
+                "are ordered by relevance — the best fit is first. Check the top few "
+                "rather than assuming the capability is missing."
+            )
         if truncated:
-            envelope["hint"] = (
+            hints.append(
                 f"Showing {len(results)} of {total}. Call falcon_list_enabled_tools "
                 "for all names, or narrow with query."
             )
+        if hints:
+            envelope["hint"] = " ".join(hints)
         return envelope
 
     async def _execute_tool(
