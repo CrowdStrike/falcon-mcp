@@ -11,8 +11,8 @@ Dynamic mode solves this by replacing the full tool surface with two meta-tools:
 `falcon_search_tools` to find a tool and look up its parameter schema, and
 `falcon_execute_tool` to run it. The agent fetches the schema for exactly the tools it needs,
 paying a short discovery round-trip instead of a large up-front context cost. A third
-always-on tool, `falcon_list_enabled_tools`, returns the complete inventory of served tool
-names.
+always-on tool, `falcon_list_enabled_tools`, returns the full inventory of Falcon tools
+available on the server.
 
 > [!NOTE]
 > Dynamic mode is in public preview. The feature flag and behavior are stable, but feedback is
@@ -49,13 +49,13 @@ core tool, instead of the full module surface:
 
 | Tool | Purpose |
 |------|---------|
-| `falcon_list_enabled_tools` | List every capability tool this server serves, grouped by module (meta-tools excluded) |
+| `falcon_list_enabled_tools` | List the Falcon tools available on this server, grouped by the module each belongs to (meta-tools excluded) |
 | `falcon_search_tools` | Find tools by keyword or module, then return the parameters of the ones you name |
 | `falcon_execute_tool` | Execute a discovered tool by name with the given parameters |
 
 The typical agent workflow is:
 
-1. Call `falcon_list_enabled_tools` when you need to know what the server serves at all — a name
+1. Call `falcon_list_enabled_tools` when you need to know what the server has at all — a name
    absent from that list is not available, whether because its module is off or a tool filter
    withholds it. Its `by_module` map also publishes the module names `falcon_search_tools` accepts.
 2. Call `falcon_search_tools` with a keyword or module name to see candidate tools, ranked
@@ -91,8 +91,8 @@ roughly two thirds of an entry's bytes, and at the moment of searching the agent
 tool to need it. A 50-result discovery response plus the schema for the one chosen tool costs
 slightly less than 20 results with schemas did.
 
-If `tool_names` names something this server does not serve, the response says which name and why —
-withheld by a tool filter, or never served at all — rather than silently returning fewer entries,
+If `tool_names` names something this server does not have, the response says which name and why —
+withheld by a tool filter, or never available at all — rather than silently returning fewer entries,
 which would read as a tool that takes no parameters.
 
 ## Discover → Describe → Execute Example
@@ -178,8 +178,10 @@ first results rather than scanning the whole list.
 
 `module` ignores case and separators, so `hostgroups`, `host_groups`, and `Host-Groups` all select
 the same module. `falcon_list_enabled_tools` returns a `by_module` map whose keys are the exact
-module names this server accepts; it is derived from the same catalog the search serves, so it
-cannot drift from what `module` will match.
+module names this server accepts; it comes from the same catalog the search dispatches from, so it
+cannot drift from what `module` will match. A key groups the tools that belong to that module and
+are available here — with `--tools`, that can be a subset of the module's full surface, so `module=`
+returns only what the map lists.
 
 Every response carries `total` (the number of tools matching the query, before any limit) and
 `truncated`, so a capped result set is never mistaken for the complete set. When results are
@@ -188,9 +190,9 @@ are cheap enough that a wide window costs less than a narrow one did with schema
 query like `host` — which matches 35 tools — is not truncated at all. In schema mode `total` counts
 the entries returned, since no query ran for it to describe.
 
-If no tools match, no word in the query appears anywhere in the served surface. The response says so
-and points at `falcon_list_enabled_tools`. A capability absent from that full inventory is not served
-by that server — report that rather than searching again.
+If no tools match, no word in the query appears anywhere in the available surface. The response says
+so and points at `falcon_list_enabled_tools`. A capability absent from that full inventory is not
+available on that server — report that rather than searching again.
 
 ## Tool Filtering in Dynamic Mode
 
@@ -207,7 +209,7 @@ dispatches by name, so an agent can name a withheld tool, whereas in normal mode
 - `falcon_execute_tool` on a withheld name reports that the tool exists but the server's
   configuration withholds it, naming the single rule responsible — `read-only` or `deny-list`, not
   every rule the server has enabled — so an operator debugging their config is pointed at the right
-  flag. A name that was never served still returns the plain unknown-tool error, so the two cases
+  flag. A name that was never available still returns the plain unknown-tool error, so the two cases
   stay distinguishable. The message warns against reproducing the withheld effect through another
   tool, not against using other tools at all.
 - `falcon_list_enabled_tools` carries a `filters_active` field describing the rules in effect. The

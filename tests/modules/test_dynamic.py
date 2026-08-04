@@ -375,7 +375,7 @@ class TestSearchToolsTwoModeEnvelope(unittest.TestCase):
         )
         self.assertEqual([r["name"] for r in result["results"]], ["falcon_search_detections"])
         self.assertIn("falcon_not_a_tool", result["hint"])
-        self.assertIn("Not served", result["hint"])
+        self.assertIn("Not available on this server", result["hint"])
 
     def test_tool_names_reports_every_unknown_name(self):
         result = self._search(tool_names=["falcon_not_a_tool", "falcon_also_absent"])
@@ -439,7 +439,7 @@ class TestWithheldToolsAreAbsentFromBothModes(unittest.TestCase):
         result = run_async(self.dynamic._search_tools(tool_names=[self._WITHHELD]))
         self.assertIn("Withheld", result["hint"])
         self.assertIn("deny-list", result["hint"])
-        self.assertNotIn("Not served", result["hint"])
+        self.assertNotIn("Not available on this server", result["hint"])
 
     def test_schema_lookup_separates_withheld_from_never_served(self):
         """Both are missing; only one is the operator's doing."""
@@ -449,7 +449,9 @@ class TestWithheldToolsAreAbsentFromBothModes(unittest.TestCase):
             )
         )
         self.assertIn(f"{self._WITHHELD} (deny-list)", result["hint"])
-        self.assertIn("Not served by this server: falcon_not_a_tool", result["hint"])
+        self.assertIn(
+            "Not available on this server: falcon_not_a_tool", result["hint"]
+        )
 
 
 class TestSearchRanking(unittest.TestCase):
@@ -703,6 +705,45 @@ class TestEmptySurfaceCopy(unittest.TestCase):
             result["hint"],
             "quoted an empty query back at the model",
         )
+
+    def test_module_scoped_miss_blames_the_module_not_the_server(self):
+        """A module that matches nothing must not read as an empty server.
+
+        The subject line was built from `query` alone, so `module='incidents'` on a
+        server that does serve tools produced "No tool is available on this server" —
+        which sends the agent to tell the user the whole server is empty when only
+        that one module is absent.
+        """
+        served: dict[str, BaseModule] = {
+            "detections": DetectionsModule(self.mock_client)
+        }
+        dynamic = DynamicMode(served, MagicMock())
+        self.assertTrue(dynamic.catalog.entries, "surface must be non-empty")
+
+        result = run_async(dynamic._search_tools(module="incidents", limit=20))
+
+        self.assertEqual(result["results"], [])
+        self.assertIn("incidents", result["hint"])
+        self.assertNotIn(
+            "No tool is available on this server",
+            result["hint"],
+            "reported an empty server when only the named module was absent",
+        )
+
+    def test_module_scoped_miss_with_a_query_names_both(self):
+        """Both narrowing terms are why the result is empty, so both must be named."""
+        served: dict[str, BaseModule] = {
+            "detections": DetectionsModule(self.mock_client)
+        }
+        dynamic = DynamicMode(served, MagicMock())
+
+        result = run_async(
+            dynamic._search_tools(query="quarantine", module="incidents", limit=20)
+        )
+
+        self.assertEqual(result["results"], [])
+        self.assertIn("quarantine", result["hint"])
+        self.assertIn("incidents", result["hint"])
 
 
 class TestExecuteFalconTool(unittest.TestCase):

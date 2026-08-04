@@ -176,7 +176,7 @@ See the [Docker Deployment guide](https://developer.crowdstrike.com/falcon-mcp/d
 
 Running many modules at once inflates the context window every AI client must hold. Dynamic mode
 replaces the full tool surface with three tools — `falcon_list_enabled_tools` to see every tool the
-server serves, `falcon_search_tools` to find candidate tools by keyword and then fetch the parameter
+server has available, `falcon_search_tools` to find candidate tools by keyword and then fetch the parameter
 schema for the one you pick, and `falcon_execute_tool` to run it — so agents only load the schemas
 they actually need.
 
@@ -225,7 +225,12 @@ startup rather than being ignored, so a typo in a deny-list cannot silently leav
 - `--modules detections --tools X` registers every `detections` tool **plus** X, even when X
   belongs to a module that is not enabled. That module contributes only X, not its whole surface,
   and `falcon_list_enabled_modules` does not list it. `falcon_list_enabled_tools` does list X — it
-  reports served tools, so it is the reliable answer to "is this capability available here?"
+  reports the tools available on the server, so it is the reliable answer to "is this capability
+  available here?"
+
+  Its `by_module` map still groups X under the module X belongs to. That key means "X comes from
+  this module", not "this module is enabled" — the tools listed under it are the only ones
+  available, and `module=` in `falcon_search_tools` returns exactly those.
 
 To *subtract*, use `--exclude-tools` or `--read-only`. All four knobs compose, and they resolve in
 a fixed order:

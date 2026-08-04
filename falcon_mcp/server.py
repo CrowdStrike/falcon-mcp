@@ -39,15 +39,6 @@ TransportType = Literal["stdio", "sse", "streamable-http"]
 # anything else exposes it on the network, where an unauthenticated endpoint is a risk.
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
-# Guidance both modes need, carried in the MCP instructions field rather than in tool
-# descriptions. These three facts belong to no single tool: a description is read only
-# when its tool is in play, and repeating any of them across the 47 filter-taking tools
-# would grow a tools/list payload that is already over budget. This field is read once
-# per connection and costs nothing against it.
-#
-# The operator sentence is FQL_FILTER_HINT_SUFFIX itself, not a paraphrase — dynamic
-# mode appends the same constant to every filter description, so an agent must not meet
-# two wordings of one rule.
 BASE_INSTRUCTIONS = (
     "This server provides access to CrowdStrike Falcon capabilities.\n\n"
     f"Composing filters: {FQL_FILTER_HINT_SUFFIX} Every filter-taking tool names a "
@@ -235,12 +226,6 @@ class FalconMCPServer:
 
         Both modes inherit BASE_INSTRUCTIONS, which carries the cross-cutting guidance
         no single tool description owns.
-
-        Dynamic mode is not the shape a client expects: three meta-tools stand in for
-        the whole surface, and a keyword search deliberately returns no parameters.
-        Stating the loop here, at the protocol level, means it is read once at
-        connection rather than depending on the model reading it out of one tool's
-        docstring mid-task.
         """
         if not self.dynamic:
             return BASE_INSTRUCTIONS
@@ -255,10 +240,11 @@ class FalconMCPServer:
             "full parameter schema for those tools, including filter syntax hints. "
             "Name more than one to compare candidates.\n"
             "3. falcon_execute_tool runs the tool with those parameters.\n\n"
-            "falcon_list_enabled_tools gives the complete inventory of served tool "
-            "names. A capability absent from that list is not available on this "
-            "server, whether because its module is off or a filter withholds it — "
-            "report that rather than searching repeatedly."
+            "falcon_list_enabled_tools gives the full inventory of Falcon tools "
+            "available here, grouped by the module each belongs to. A capability "
+            "absent from that list is not available on this server, whether because "
+            "its module is off or a filter withholds it — report that rather than "
+            "searching repeatedly."
         )
 
     def _validate_filter_tool_names(
@@ -303,7 +289,7 @@ class FalconMCPServer:
             int: Number of tools left registered
         """
         # falcon_list_enabled_tools is always registered: it is the cheap way to see
-        # the whole served surface, and dynamic mode's zero-hit hint points here.
+        # every tool available, and dynamic mode's zero-hit hint points here.
         # Meta-tools are exempt from the policy — withholding them leaves the server
         # undiscoverable.
         self.server.add_tool(
@@ -371,7 +357,7 @@ class FalconMCPServer:
                 self.server.remove_tool(name)
                 logger.debug("Withheld tool: %s", name)
 
-        # Keep module.tools mirroring what the server serves.
+        # Keep module.tools mirroring what is registered.
         for module in self.modules.values():
             module.tools = [name for name in module.tools if name not in resolution.removed]
 
@@ -416,15 +402,16 @@ class FalconMCPServer:
         return {"modules": sorted(self.enabled_modules & set(self.modules))}
 
     def list_enabled_tools(self) -> dict[str, Any]:
-        """Lists every Falcon capability tool this server serves, grouped by module.
+        """Lists the Falcon tools available on this server.
 
-        Call this to see the complete inventory before hunting for a capability: a
-        name absent from this list is not available on this server, whether because
-        its module is not enabled or because a tool filter withholds it. Returns the
-        sorted tool names, their total count, a by_module mapping whose keys are the
-        exact module names falcon_search_tools accepts, and filters_active naming the
-        filter rules in effect when any are configured. Excludes this server's own
-        meta-tools, which are always present and visible in tools/list.
+        Call this to see the full inventory before hunting for a capability: a name
+        absent from this list is not available here, whether because its module is not
+        enabled or because a tool filter withholds it. Returns the sorted tool names,
+        their count, and a by_module mapping grouping each tool under the module it
+        belongs to — the names listed under a module are the only ones available from
+        it, and are the exact spellings falcon_search_tools accepts as module=.
+        filters_active names the filter rules whenever any are configured. Excludes
+        this server's own meta-tools, which are always present in tools/list.
         """
         if self._dynamic_mode is not None:
             # Building the catalog clears module.tools, so it is the only record of
@@ -435,7 +422,7 @@ class FalconMCPServer:
             for name, entry in entries.items():
                 by_module.setdefault(entry.module, []).append(name)
         else:
-            # _apply_policy() prunes module.tools to the served surface.
+            # _apply_policy() prunes module.tools to what stayed registered.
             by_module = {
                 module_name: sorted(module.tools)
                 for module_name, module in self.modules.items()
@@ -445,8 +432,8 @@ class FalconMCPServer:
         result: dict[str, Any] = {
             "tools": sorted(names),
             "total": len(names),
-            # Derived from the same catalog the search serves, so the published
-            # vocabulary cannot drift from what module= accepts.
+            # Same catalog the search dispatches from, so the published vocabulary
+            # cannot drift from what module= accepts.
             "by_module": {mod: sorted(by_module[mod]) for mod in sorted(by_module)},
         }
         # Only present when a filter narrowed the list, so an unfiltered server's

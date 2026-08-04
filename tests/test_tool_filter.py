@@ -872,6 +872,26 @@ class TestDynamicModeToolFiltering(unittest.TestCase):
         ]
         self.assertNotIn(_MUTATING_TOOL, grouped)
 
+    def test_by_module_key_means_ownership_not_an_enabled_module(self, mock_client):
+        """An allow-listed tool publishes its owning module, which is not enabled.
+
+        `--tools falcon_search_applications` loads `discover` for that one tool, so
+        `by_module` gains a `discover` key while `falcon_list_enabled_modules` still
+        reports no such module. The key describes which module a tool belongs to, not
+        that the module's surface is available — and `module=` must return only the
+        granted tool, never the module's other tools.
+        """
+        server = self._dynamic_server(mock_client, allowed_tools={_FOREIGN_TOOL})
+        by_module = self._by_module(server)
+
+        owning_module = registry.get_tool_module_map()[_FOREIGN_TOOL]
+        self.assertIn(owning_module, by_module)
+        self.assertEqual(by_module[owning_module], [_FOREIGN_TOOL])
+        # The module is a grouping label here, not an enabled module.
+        self.assertNotIn(owning_module, server.enabled_modules)
+        # And searching it must not reach the tools that were never granted.
+        self.assertEqual(self._search_module(server, owning_module), [_FOREIGN_TOOL])
+
     def test_list_enabled_tools_omits_absent_sibling_of_allowed_tool(self, mock_client):
         """Both live in `discover`, so allow-listing one must not imply the other."""
         server = self._dynamic_server(mock_client, allowed_tools={_FOREIGN_TOOL})

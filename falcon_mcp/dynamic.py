@@ -182,7 +182,7 @@ class DynamicToolCatalog:
 
         Naming tools is a request for their schemas, so those entries carry
         parameters. A discovery search is not: the caller has yet to choose a tool,
-        and the schema is most of an entry's cost. Names the catalog does not serve
+        and the schema is most of an entry's cost. Names the catalog does not hold
         are dropped here; the caller reports them.
         """
         if tool_names:
@@ -355,7 +355,7 @@ class DynamicMode:
         )
 
     def _entries_remain(self) -> bool:
-        """True if the catalog still serves at least one capability tool.
+        """True if the catalog still holds at least one Falcon tool.
 
         Filtering can withhold every tool (``--tools <mutator> --read-only``), which
         changes what is honest to tell a model about looking elsewhere.
@@ -376,9 +376,10 @@ class DynamicMode:
                 description=(
                     "Restrict results to one module (e.g., 'hosts', 'detections'). Case "
                     "and separators are ignored, so 'Host_Groups' and 'hostgroups' both "
-                    "work. Call falcon_list_enabled_tools for the exact module names this "
-                    "server serves. Pass it with no query to browse everything that "
-                    "module serves."
+                    "work. Call falcon_list_enabled_tools for the module names this "
+                    "server accepts. Pass it with no query to browse every tool that "
+                    "module contributes here, which may be a subset of the module's "
+                    "full surface."
                 ),
             ),
         ] = None,
@@ -390,9 +391,6 @@ class DynamicMode:
                 description="Maximum number of results to return (default: 50, max: 500). Ignored when tool_names is given.",
             ),
         ] = 50,
-        # Annotated, not `= Field(...)`: the real default has to be None, because a
-        # FieldInfo sentinel is truthy and would select schema mode on every call that
-        # omits this.
         tool_names: Annotated[
             list[str] | None,
             Field(
@@ -433,26 +431,31 @@ class DynamicMode:
         truncated = total > len(results)
 
         if not results:
-            # Quoting an empty query back reads as a failed lookup for "".
-            subject = f"No tool matching '{query}' is" if query else "No tool is"
+            # Name every narrowing term: a module-scoped miss is not an empty server.
+            criteria = []
+            if query:
+                criteria.append(f"matching '{query}'")
+            if module:
+                criteria.append(f"in module '{module}'")
+            subject = f"No tool {' '.join(criteria)} is" if criteria else "No tool is"
             if not self._entries_remain():
                 hint = (
-                    "This server serves no capability tools: its configuration "
+                    "This server has no Falcon tools available: its configuration "
                     f"({self.catalog.describe_policy()}) withholds all of them. Tell the "
                     "user the server is configured with no tools available rather than "
                     "searching again."
                 )
             elif self.catalog.resolution.withheld_by_rule:
                 hint = (
-                    f"{subject} served by this server, which is "
+                    f"{subject} available on this server, which is "
                     f"running with a tool filter ({self.catalog.describe_policy()}). "
-                    "Call falcon_list_enabled_tools for what it does serve. The "
+                    "Call falcon_list_enabled_tools for what is available. The "
                     "capability may exist but be withheld by configuration — tell the "
                     "user that rather than trying more searches."
                 )
             else:
                 hint = (
-                    f"{subject} served by this server. Call "
+                    f"{subject} available on this server. Call "
                     "falcon_list_enabled_tools for the full inventory. If the capability "
                     "you need is genuinely absent, it was not enabled on this server — "
                     "tell the user rather than trying more searches."
@@ -506,7 +509,7 @@ class DynamicMode:
         }
         if missing:
             # Returning fewer entries than were asked for, silently, reads as those
-            # tools having no parameters rather than not being served. A withheld tool
+            # tools having no parameters rather than being unavailable. A withheld tool
             # and one that never existed need different words, and a single call can
             # name both.
             withheld = {
@@ -525,7 +528,7 @@ class DynamicMode:
             unknown = [name for name in missing if name not in withheld]
             if unknown:
                 hints.append(
-                    f"Not served by this server: {', '.join(unknown)}. Search by "
+                    f"Not available on this server: {', '.join(unknown)}. Search by "
                     "keyword for the right name, or call falcon_list_enabled_tools "
                     "for the full inventory."
                 )
@@ -564,8 +567,8 @@ class DynamicMode:
                     "Do not try to achieve the same effect through a different tool, "
                     "though other tools remain available for other work."
                     if self._entries_remain()
-                    else "This server currently serves no capability tools at all, so "
-                    "do not look for an alternative."
+                    else "This server currently has no Falcon tools available at all, "
+                    "so do not look for an alternative."
                 )
                 return {
                     "error": f"'{tool_name}' exists on this server but its configuration "
