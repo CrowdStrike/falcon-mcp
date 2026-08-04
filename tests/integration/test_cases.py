@@ -57,9 +57,10 @@ class TestCasesIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_cases")
         self.assert_valid_list_response(result, min_length=0, context="search_cases")
 
-        if len(result) > 0:
+        cases = self._unwrap_results(result)
+        if len(cases) > 0:
             self.assert_search_returns_details(
-                result,
+                cases,
                 expected_fields=["id", "name", "status", "severity"],
                 context="search_cases full details",
             )
@@ -109,7 +110,9 @@ class TestCasesIntegration(BaseIntegrationTest):
 
     def test_get_cases_with_valid_id(self):
         """Test get_cases with a valid case ID from search."""
-        search_result = self.call_method(self.module.search_cases, limit=1)
+        search_result = self._unwrap_results(
+            self.call_method(self.module.search_cases, limit=1)
+        )
 
         if not search_result or len(search_result) == 0:
             self.skip_with_warning(
