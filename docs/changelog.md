@@ -3,6 +3,28 @@
 
 # Changelog
 
+## [0.16.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.15.0...v0.16.0) (2026-08-05)
+
+
+### Features
+
+* **dynamic:** rank and broaden tool search, and teach the server once via MCP instructions ([#493](https://github.com/CrowdStrike/falcon-mcp/issues/493)) ([80d8111](https://github.com/CrowdStrike/falcon-mcp/commit/80d8111dafe801e2481b750f8066132b5dfbdd21))
+* **modules/base:** add shared aggregate-query foundation ([#480](https://github.com/CrowdStrike/falcon-mcp/issues/480)) ([903254f](https://github.com/CrowdStrike/falcon-mcp/commit/903254f3479abf9f98ad6eb3aa03c8cb10e8fd9c))
+* **modules/cases:** add aggregate tools for case configuration and files ([#495](https://github.com/CrowdStrike/falcon-mcp/issues/495)) ([a533f58](https://github.com/CrowdStrike/falcon-mcp/commit/a533f58d6796e328c5b2cd28ae4fbb6cf4f17c6e))
+* **modules/detections:** add alert aggregation tool ([#483](https://github.com/CrowdStrike/falcon-mcp/issues/483)) ([ab97afd](https://github.com/CrowdStrike/falcon-mcp/commit/ab97afde87261552b70599561852df1d62d92aff))
+* **modules/hosts:** add Falcon Grouping Tag management tool ([#487](https://github.com/CrowdStrike/falcon-mcp/issues/487)) ([cc2cd6a](https://github.com/CrowdStrike/falcon-mcp/commit/cc2cd6af0a6e4b03bb5bbcde222bb1433779b756))
+* **modules/ngsiem:** add CQL authoring guidance to search tool ([#475](https://github.com/CrowdStrike/falcon-mcp/issues/475)) ([bb600ca](https://github.com/CrowdStrike/falcon-mcp/commit/bb600ca766fb6df2472c395a6f17dfa43325e083))
+* **server:** add concurrent request handling ([#478](https://github.com/CrowdStrike/falcon-mcp/issues/478)) ([356d2b5](https://github.com/CrowdStrike/falcon-mcp/commit/356d2b55bc765cc69aef6330cbfee0b00a72a776))
+* **server:** add tool-level filtering with --read-only, --tools, and --exclude-tools ([#490](https://github.com/CrowdStrike/falcon-mcp/issues/490)) ([3b76a6b](https://github.com/CrowdStrike/falcon-mcp/commit/3b76a6b631f3020f570a0ac7612ab51ff392a3fb))
+
+
+### Bug Fixes
+
+* **modules/detections:** rename falcon_aggregate_alerts to falcon_aggregate_detections ([#488](https://github.com/CrowdStrike/falcon-mcp/issues/488)) ([6a6f19e](https://github.com/CrowdStrike/falcon-mcp/commit/6a6f19ebf8db8380245b523c26fc1a43f955a7e5)), closes [#485](https://github.com/CrowdStrike/falcon-mcp/issues/485)
+* **modules/detections:** send include_hidden as a query parameter ([#491](https://github.com/CrowdStrike/falcon-mcp/issues/491)) ([0ad7fff](https://github.com/CrowdStrike/falcon-mcp/commit/0ad7fff089c805543a0d43b3b4d4865eb6663944))
+* **modules:** drop redundant offset input from dual-pagination search tools ([#474](https://github.com/CrowdStrike/falcon-mcp/issues/474)) ([778d360](https://github.com/CrowdStrike/falcon-mcp/commit/778d360fb0831c05e64c8d4f8f457131789e87d6))
+* **tests:** unwrap the search envelope in three modules' integration guards ([#492](https://github.com/CrowdStrike/falcon-mcp/issues/492)) ([e9e2175](https://github.com/CrowdStrike/falcon-mcp/commit/e9e2175626a6bbed13d72b0923ae51b769ee8e63))
+
 ## [0.15.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.14.0...v0.15.0) (2026-07-20)
 
 
