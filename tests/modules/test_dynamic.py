@@ -332,6 +332,13 @@ class TestLeanDiscoveryAndSchemaLookup(unittest.TestCase):
             len(self.catalog.search(query="detections", limit=10_000)),
         )
 
+    def test_tool_names_dedupes_repeated_names(self):
+        """A name repeated in tool_names must yield one entry, not inflate the count."""
+        results = self.catalog.search(
+            tool_names=["falcon_search_hosts", "falcon_search_hosts"]
+        )
+        self.assertEqual([r["name"] for r in results], ["falcon_search_hosts"])
+
 
 class TestSearchToolsTwoModeEnvelope(unittest.TestCase):
     """The envelope falcon_search_tools returns in each mode."""
@@ -355,11 +362,29 @@ class TestSearchToolsTwoModeEnvelope(unittest.TestCase):
         self.assertIn("falcon_execute_tool", result["hint"])
 
     def test_discovery_hint_survives_the_relaxed_and_truncated_hints(self):
-        """The schema instruction must not be crowded out by the other hints."""
-        result = self._search(query="detections", module=None, limit=1)
+        """The schema instruction must not be crowded out by the other hints.
+
+        The query is a genuine fallback case (no tool matches every word), so all three
+        hint fragments — relaxed, truncated, and the schema instruction — are present at
+        once, and the schema instruction must survive alongside them.
+        """
+        query = "find all the iocs added this week"
+        self.assertTrue(self.dynamic.catalog.relaxed(query=query))
+        result = self._search(query=query, module=None, limit=1)
         self.assertTrue(result["truncated"])
+        self.assertIn("match at least one", result["hint"])
         self.assertIn("Showing 1 of", result["hint"])
         self.assertIn("tool_names", result["hint"])
+
+    def test_tool_names_dedupes_and_does_not_inflate_total(self):
+        """A repeated name returns one schema and total counts what came back."""
+        result = self._search(
+            tool_names=["falcon_search_detections", "falcon_search_detections"]
+        )
+        self.assertEqual(
+            [r["name"] for r in result["results"]], ["falcon_search_detections"]
+        )
+        self.assertEqual(result["total"], 1)
 
     def test_tool_names_envelope_totals_what_it_returned(self):
         result = self._search(tool_names=["falcon_search_detections"])
@@ -609,6 +634,78 @@ class TestSearchRanking(unittest.TestCase):
                     self._names(query, limit=10_000),
                     [r["name"] for r in reversed_catalog.search(query=query, limit=10_000)],
                 )
+
+    def test_read_only_tool_outranks_destructive_sibling_on_nl_query(self):
+        """A natural-language read query must not surface the destructive sibling first.
+
+        In the fallback tier the query carries many words the catalog does not use;
+        crediting every miss made the read-only and destructive tools tie, and the
+        alphabetical tiebreak then put the destructive one first. Coverage — how many
+        query words the tool actually matches — is the signal that separates them.
+        """
+        for query, read_only, destructive in (
+            ("find all the iocs that were added this week",
+             "falcon_search_iocs", "falcon_remove_iocs"),
+            ("find all the exclusions that were created this week",
+             "falcon_search_exclusions", "falcon_delete_exclusions"),
+            ("find all the policies that were created this week",
+             "falcon_search_policies", "falcon_delete_policies"),
+        ):
+            with self.subTest(query=query):
+                self.assertTrue(self.catalog.relaxed(query=query))
+                names = self._names(query, limit=10_000)
+                self.assertLess(
+                    names.index(read_only),
+                    names.index(destructive),
+                    f"{destructive} ranked above the read-only {read_only}",
+                )
+
+    def test_higher_coverage_outranks_lower_coverage_despite_alphabetical(self):
+        """Coverage is the primary key: a tool matching more query words wins.
+
+        falcon_remove_iocs sorts before falcon_search_iocs alphabetically, so if the
+        tiebreak still decided this the destructive one would win. It must not: the
+        read-only tool matches more of the query's words.
+        """
+        query = "all the iocs added recently"
+        names = self._names(query, limit=10_000)
+        tokens = query.lower().split()
+
+        def matched(name: str) -> int:
+            corpus = self.catalog.entries[name].search_corpus
+            return sum(1 for t in tokens if t in corpus)
+
+        self.assertGreater(
+            matched("falcon_search_iocs"), matched("falcon_remove_iocs")
+        )
+        self.assertLess(
+            names.index("falcon_search_iocs"), names.index("falcon_remove_iocs")
+        )
+
+    def test_free_text_query_is_normalized_like_the_corpus(self):
+        """Punctuation and separators in query must tokenize the same as the corpus."""
+        baseline_single = self._names("hosts")[0]
+        for query in ("hosts?", "hosts!", "searchhosts"):
+            with self.subTest(query=query):
+                self.assertEqual(self._names(query)[0], baseline_single)
+
+        baseline_two = self._names("search hosts")[0]
+        self.assertEqual(self._names("search-hosts")[0], baseline_two)
+
+    def test_short_query_is_not_absorbed_into_a_collapsed_name(self):
+        """The glued-name rescue is exact-membership, not substring containment.
+
+        'mass' is a substring of the collapsed 'searchcspmassets' but shares no real
+        relevance and does not appear in that tool's description. Substring containment
+        would rescue it into the strict tier — a confident, wrong, non-relaxed match.
+        Only a query equal to the whole collapsed name (e.g. 'searchhosts') is rescued.
+        """
+        # A short query with no genuine corpus hit must not surface a tool solely
+        # because it is embedded in that tool's collapsed name.
+        cspm = self.catalog.entries.get("falcon_search_cspm_assets")
+        if cspm is not None and "mass" not in cspm.search_corpus:
+            names = self._names("mass", limit=10_000)
+            self.assertNotIn("falcon_search_cspm_assets", names)
 
 
 class TestModuleVocabulary(unittest.TestCase):
@@ -1016,7 +1113,12 @@ class TestDynamicServerIntegration(unittest.TestCase):
         self.assertIn("+ for AND", instructions)
         self.assertIn(", for OR", instructions)
         self.assertIn("single-quoted", instructions)
-        self.assertIn("falcon://<module>/<tool>/fql-guide", instructions)
+        self.assertIn("falcon://", instructions)
+        # The old synthetic template resolved for no registered resource, so an agent
+        # building it 404s on every filter. Point at the tool's own filter param
+        # instead, which names the real URI.
+        self.assertNotIn("falcon://<module>/<tool>/fql-guide", instructions)
+        self.assertNotIn("Every filter-taking tool", instructions)
         self.assertIn("empty result", instructions)
         self.assertIn("readOnlyHint", instructions)
         self.assertIn("destructiveHint", instructions)
@@ -1041,7 +1143,8 @@ class TestDynamicServerIntegration(unittest.TestCase):
         instructions = mock_fastmcp.call_args.kwargs["instructions"]
 
         self.assertIn("+ for AND", instructions)
-        self.assertIn("falcon://<module>/<tool>/fql-guide", instructions)
+        self.assertIn("falcon://", instructions)
+        self.assertNotIn("falcon://<module>/<tool>/fql-guide", instructions)
         self.assertIn("destructiveHint", instructions)
         # ... alongside the loop, not instead of it.
         self.assertIn("tool_names", instructions)

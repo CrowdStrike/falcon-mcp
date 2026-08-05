@@ -1124,7 +1124,7 @@ class TestWithheldToolsAreAttributable(unittest.TestCase):
     def test_zero_hit_hint_names_the_active_filter(self, mock_client):
         server = self._server(mock_client, dynamic=True, read_only=True)
         tool = server.server._tool_manager._tools["falcon_search_tools"]
-        hint = run_async(tool.run({"query": "nothing_matches_this", "limit": 20}))["hint"]
+        hint = run_async(tool.run({"query": "zzqqxx", "limit": 20}))["hint"]
 
         self.assertIn("tool filter", hint)
         self.assertIn("read-only", hint)

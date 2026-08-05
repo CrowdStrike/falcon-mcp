@@ -41,11 +41,11 @@ _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 BASE_INSTRUCTIONS = (
     "This server provides access to CrowdStrike Falcon capabilities.\n\n"
-    f"Composing filters: {FQL_FILTER_HINT_SUFFIX} Every filter-taking tool names a "
-    "falcon://<module>/<tool>/fql-guide resource listing the fields and operators that "
-    "endpoint actually accepts. Read it before composing a filter: an unsupported "
-    "field returns an empty result rather than an error, which is indistinguishable "
-    "from a genuine no-match.\n\n"
+    f"Composing filters: {FQL_FILTER_HINT_SUFFIX} When a tool's filter parameter names "
+    "a falcon:// guide resource, read it before composing a filter: it lists the fields "
+    "and operators that endpoint actually accepts, and an unsupported field returns an "
+    "empty result rather than an error, which is indistinguishable from a genuine "
+    "no-match.\n\n"
     "Changing state: readOnlyHint=false marks a tool that changes tenant state, and "
     "destructiveHint=true marks one whose effect cannot be undone. Confirm the user's "
     "intent before calling either."
@@ -232,7 +232,8 @@ class FalconMCPServer:
         return (
             f"{BASE_INSTRUCTIONS}\n\nThis server is running in dynamic mode: the "
             "Falcon tools are not individually registered, and are reached through "
-            "three meta-tools instead.\n\n"
+            "three tools instead — falcon_search_tools and falcon_execute_tool for "
+            "discovery, plus the always-on falcon_list_enabled_tools inventory.\n\n"
             "1. falcon_search_tools with a keyword query, or a module name, lists "
             "candidate tools ranked best-fit-first. These entries carry each tool's "
             "name, description, and read_only / destructive flags, but no parameters.\n"

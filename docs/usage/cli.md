@@ -81,7 +81,7 @@ falcon-mcp --help
 | `--stateless-http` | `FALCON_MCP_STATELESS_HTTP` | `false` | Stateless mode for scalable deployments |
 | `--member-cid` | `FALCON_MEMBER_CID` | — | Flight Control child CID |
 | `--proxy` | `FALCON_PROXY_URL` | — | HTTP/HTTPS proxy for outbound API connections |
-| `--dynamic` | `FALCON_MCP_DYNAMIC` | `false` | [Dynamic mode](/falcon-mcp/usage/dynamic-mode/): expose three meta-tools (list-enabled-tools, search, execute) instead of all module tools to reduce context usage |
+| `--dynamic` | `FALCON_MCP_DYNAMIC` | `false` | [Dynamic mode](/falcon-mcp/usage/dynamic-mode/): expose three tools (list-enabled-tools, search, execute) instead of all module tools to reduce context usage |
 | `--read-only` | `FALCON_MCP_READ_ONLY` | `false` | Register only read-only tools, disabling every tool that mutates tenant state |
 | `--tools` | `FALCON_MCP_TOOLS` | — | Comma-separated allow-list of tool names, added to the enabled modules |
 | `--exclude-tools` | `FALCON_MCP_EXCLUDE_TOOLS` | — | Comma-separated deny-list of tool names to withhold |

@@ -1,9 +1,10 @@
 """
 Dynamic mode for Falcon MCP Server.
 
-Wraps the full tool surface behind 3 tools (falcon_list_enabled_tools +
-falcon_search_tools + falcon_execute_tool) to reduce context window consumption
-while keeping all functionality accessible on-demand.
+Registers three tools total: falcon_search_tools and falcon_execute_tool are the
+discovery pair, and falcon_list_enabled_tools is the always-on inventory tool. Together
+they reach the full tool surface on demand, keeping the context window small while
+every capability stays reachable.
 """
 
 import re
@@ -27,7 +28,8 @@ _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
 # Relative weights only: a name match must outrank any number of description
 # matches, so the gap between tiers exceeds the most tokens a query realistically
-# carries.
+# carries. A token matching nothing anywhere scores nothing — it is neither
+# coverage nor strength.
 _SCORE_EXACT_NAME = 1000
 _SCORE_NAME_WORD = 10
 _SCORE_NAME_SUBSTRING = 5
@@ -79,28 +81,39 @@ class ToolEntry:
         self.module_words = _words(self.module)
         self.module_key = normalize_identifier(self.module)
 
-    def score(self, tokens: list[str], query_key: str) -> int:
+    def score(self, tokens: list[str], query_key: str) -> tuple[int, int]:
         """Rank this entry against a tokenized query; higher sorts earlier.
 
-        Each token scores once, at the strongest field it hits, so a tool named
-        for the query outranks one that only mentions it in prose.
+        Returns ``(matched, strength)``. ``matched`` is how many query tokens hit any
+        field of this entry — the primary key, so a tool covering more of the query
+        outranks one covering less regardless of where the hits land. ``strength`` is
+        the weighted sum within that coverage, scoring each token once at the strongest
+        field it hits, so a tool named for the query outranks one that only mentions it
+        in prose. A token matching nothing adds to neither.
         """
         if query_key and query_key in self.name_key:
-            return _SCORE_EXACT_NAME
+            # Sorts above any real query: full coverage plus a strength no per-token
+            # sum can reach.
+            return (len(tokens) + 1, _SCORE_EXACT_NAME)
 
-        total = 0
+        matched = 0
+        strength = 0
         for token in tokens:
             if token in self.name_words:
-                total += _SCORE_NAME_WORD
+                strength += _SCORE_NAME_WORD
             elif token in self.unprefixed_name:
-                total += _SCORE_NAME_SUBSTRING
+                strength += _SCORE_NAME_SUBSTRING
             elif token in self.module_words:
-                total += _SCORE_MODULE_WORD
+                strength += _SCORE_MODULE_WORD
             elif token in self.module_key:
-                total += _SCORE_MODULE_SUBSTRING
+                strength += _SCORE_MODULE_SUBSTRING
+            elif token in self.search_corpus:
+                strength += _SCORE_DESCRIPTION
             else:
-                total += _SCORE_DESCRIPTION
-        return total
+                # Matches nothing anywhere: not coverage, not strength.
+                continue
+            matched += 1
+        return (matched, strength)
 
 
 class DynamicToolCatalog:
@@ -186,9 +199,11 @@ class DynamicToolCatalog:
         are dropped here; the caller reports them.
         """
         if tool_names:
+            # Dedupe while preserving order: a repeated name is one schema, and a
+            # duplicate would otherwise inflate the reported total.
             return [
                 self._format_entry(entry)
-                for entry in (self.get(name) for name in tool_names)
+                for entry in (self.get(name) for name in dict.fromkeys(tool_names))
                 if entry is not None
             ]
         return [self._format_lean_entry(e) for e in self._matches(query, module)[:limit]]
@@ -224,11 +239,32 @@ class DynamicToolCatalog:
         if not query:
             return candidates, False
 
-        tokens = query.lower().split()
-        strict = [e for e in candidates if all(t in e.search_corpus for t in tokens)]
+        tokens = list(_words(query))
+        query_key = normalize_identifier(query)
+        # Match every-token first for precision. Tokenizing on _NON_ALNUM (not a bare
+        # split) means 'hosts?' and 'search-hosts' reach the corpus the same way the
+        # corpus was built; the glued 'searchhosts' form has no usable token, so admit
+        # an entry whose whole name key equals the normalized query to rescue it. This
+        # mirrors score()'s exact-name short-circuit — membership, not substring, so a
+        # short query is not silently absorbed into an unrelated collapsed name.
+        def hits(entry: ToolEntry) -> bool:
+            return query_key in entry.name_key
+
+        strict = [
+            e
+            for e in candidates
+            if (tokens and all(t in e.search_corpus for t in tokens)) or hits(e)
+        ]
         if strict:
             return strict, False
-        return [e for e in candidates if any(t in e.search_corpus for t in tokens)], True
+        return (
+            [
+                e
+                for e in candidates
+                if any(t in e.search_corpus for t in tokens) or hits(e)
+            ],
+            True,
+        )
 
     def _matches(self, query: str, module: str | None) -> list[ToolEntry]:
         candidates, _ = self._match_set(query, module)
@@ -238,16 +274,44 @@ class DynamicToolCatalog:
             # across processes.
             return sorted(candidates, key=lambda e: e.tool.name)
 
-        tokens = query.lower().split()
+        tokens = list(_words(query))
         query_key = normalize_identifier(query)
-        # Ties break toward the least-qualified name, then alphabetically: a tool
-        # carrying no extra words beyond the query is the more direct answer, and
-        # catalog insertion order follows a set of module names, so it is not
-        # stable across processes.
-        return sorted(
-            candidates,
-            key=lambda e: (-e.score(tokens, query_key), len(e.name_words), e.tool.name),
-        )
+        # Coverage first: a tool matching more of the query's words is the more
+        # relevant answer, and — crucially — a read-only tool that matches the query
+        # sorts above a destructive sibling that matches less of it. Within equal
+        # coverage, strength orders by where the hits landed. Ties then break toward
+        # the least-qualified name, then alphabetically, since catalog insertion order
+        # follows a set of module names and is not stable across processes.
+        def sort_key(e: ToolEntry) -> tuple[int, int, int, str]:
+            matched, strength = e.score(tokens, query_key)
+            return (-matched, -strength, len(e.name_words), e.tool.name)
+
+        return sorted(candidates, key=sort_key)
+
+    @staticmethod
+    def _append_hint(params: dict[str, Any], key: str, text: str) -> None:
+        """Append a hint to one parameter's description, spacing it correctly.
+
+        A description already ending in '.' just needs a space before the hint;
+        otherwise the separator supplies the period too.
+        """
+        if key not in params:
+            return
+        desc = params[key]["description"]
+        separator = " " if desc.endswith(".") else ". "
+        params[key]["description"] = desc + separator + text
+
+    @staticmethod
+    def _base_entry(entry: ToolEntry) -> dict[str, Any]:
+        """The fields every entry carries, with or without the input schema."""
+        annotations = entry.tool.annotations
+        return {
+            "name": entry.tool.name,
+            "module": entry.module,
+            "description": entry.tool.description or "",
+            "read_only": annotations.readOnlyHint if annotations else True,
+            "destructive": annotations.destructiveHint if annotations else False,
+        }
 
     def _format_lean_entry(self, entry: ToolEntry) -> dict[str, Any]:
         """Describe a tool without its input schema.
@@ -258,14 +322,7 @@ class DynamicToolCatalog:
         absent ``parameters`` key is itself the signal that a second call, naming the
         tool, is needed before executing it.
         """
-        annotations = entry.tool.annotations
-        return {
-            "name": entry.tool.name,
-            "module": entry.module,
-            "description": entry.tool.description or "",
-            "read_only": annotations.readOnlyHint if annotations else True,
-            "destructive": annotations.destructiveHint if annotations else False,
-        }
+        return self._base_entry(entry)
 
     def _format_entry(self, entry: ToolEntry) -> dict[str, Any]:
         """Describe a tool including its input schema and filter-syntax hints."""
@@ -285,33 +342,17 @@ class DynamicToolCatalog:
             params_summary[name] = param_info
 
         hint = FILTER_HINTS.get(entry.tool.name)
-        if hint and "filter" in params_summary:
-            desc = params_summary["filter"]["description"]
-            separator = " " if desc.endswith(".") else ". "
-            params_summary["filter"]["description"] = desc + separator + hint
-
-        if "filter" in params_summary:
-            desc = params_summary["filter"]["description"]
-            separator = " " if desc.endswith(".") else ". "
-            params_summary["filter"]["description"] = desc + separator + FQL_FILTER_HINT_SUFFIX
+        if hint:
+            self._append_hint(params_summary, "filter", hint)
+        self._append_hint(params_summary, "filter", FQL_FILTER_HINT_SUFFIX)
 
         # CQL tools use a `query_string` param instead of an FQL `filter`; inject the
         # curated CQL hint there so dynamic mode reaches the model the same way.
         cql_hint = QUERY_STRING_HINTS.get(entry.tool.name)
-        if cql_hint and "query_string" in params_summary:
-            desc = params_summary["query_string"]["description"]
-            separator = " " if desc.endswith(".") else ". "
-            params_summary["query_string"]["description"] = desc + separator + cql_hint
+        if cql_hint:
+            self._append_hint(params_summary, "query_string", cql_hint)
 
-        annotations = entry.tool.annotations
-        return {
-            "name": entry.tool.name,
-            "module": entry.module,
-            "description": entry.tool.description or "",
-            "parameters": params_summary,
-            "read_only": annotations.readOnlyHint if annotations else True,
-            "destructive": annotations.destructiveHint if annotations else False,
-        }
+        return {**self._base_entry(entry), "parameters": params_summary}
 
     @staticmethod
     def summarize_parameters(parameters: dict[str, Any]) -> dict[str, Any]:
@@ -329,7 +370,11 @@ class DynamicToolCatalog:
 
 
 class DynamicMode:
-    """Registers the 2 discovery meta-tools (falcon_search_tools + falcon_execute_tool)."""
+    """Registers the discovery pair: falcon_search_tools + falcon_execute_tool.
+
+    falcon_list_enabled_tools, the third dynamic-mode tool, is registered by the
+    server itself since it is always on, in both modes.
+    """
 
     def __init__(
         self,
