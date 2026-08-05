@@ -94,6 +94,25 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_list_case_templates": [
         "What case templates are available?",
     ],
+    "falcon_aggregate_case_slas": [
+        "How many case SLA policies do we have?",
+        "Break down our case SLAs by who created them",
+    ],
+    "falcon_aggregate_case_templates": [
+        "How many case templates has each person created?",
+        "Count the case templates added in the last 30 days",
+    ],
+    "falcon_aggregate_case_access_tags": [
+        "What access tags are used to restrict case visibility, and how many of each?",
+    ],
+    "falcon_aggregate_case_notification_groups": [
+        "How many case notification groups are configured?",
+        "Show notification group counts by creator",
+    ],
+    "falcon_aggregate_case_file_details": [
+        "What file names show up most often across case attachments?",
+        "How many files are attached to these two cases?",
+    ],
     # Correlation Rules
     "falcon_search_correlation_rules": [
         "Show me all active high-severity correlation rules",
