@@ -635,6 +635,37 @@ class TestSearchRanking(unittest.TestCase):
                     [r["name"] for r in reversed_catalog.search(query=query, limit=10_000)],
                 )
 
+    def test_read_only_tool_outranks_destructive_sibling_on_single_token_query(self):
+        """A bare noun must not surface the destructive sibling first.
+
+        A single-token query is the most common thing an agent types, and coverage
+        alone cannot separate the siblings: both match the one token as a name word,
+        both carry two name words, so the tuple collapses to the alphabetical tiebreak
+        — which puts the mutator first (remove < search, delete < search). In dynamic
+        mode this ordering is tool selection, so read-only must break the tie.
+        """
+        for query, read_only, destructive in (
+            ("iocs", "falcon_search_iocs", "falcon_remove_iocs"),
+            ("exclusions", "falcon_search_exclusions", "falcon_delete_exclusions"),
+            ("policies", "falcon_search_policies", "falcon_delete_policies"),
+        ):
+            with self.subTest(query=query):
+                names = self._names(query, limit=10_000)
+                self.assertLess(
+                    names.index(read_only),
+                    names.index(destructive),
+                    f"{destructive} ranked above the read-only {read_only}",
+                )
+
+    def test_read_only_tiebreak_does_not_override_coverage_or_strength(self):
+        """read-only breaks ties only; it must not reorder a stronger or wider match.
+
+        falcon_search_hosts wins 'hosts' on strength (name word) over read-only
+        siblings that match it only in prose, so the read-only term must sit below
+        coverage and strength in the key, not above them.
+        """
+        self.assertEqual(self._names("hosts")[0], "falcon_search_hosts")
+
     def test_read_only_tool_outranks_destructive_sibling_on_nl_query(self):
         """A natural-language read query must not surface the destructive sibling first.
 

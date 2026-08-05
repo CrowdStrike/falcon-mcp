@@ -59,8 +59,9 @@ The typical agent workflow is:
 1. Call `falcon_list_enabled_tools` when you need to know what the server has at all — a name
    absent from that list is not available, whether because its module is off or a tool filter
    withholds it. Its `by_module` map also publishes the module names `falcon_search_tools` accepts.
-2. Call `falcon_search_tools` with a keyword or module name to see candidate tools, ranked
-   best-fit-first, with their `read_only` and `destructive` flags.
+2. Call `falcon_search_tools` with a keyword or module name to see candidate tools, ordered by
+   likely relevance, with their `read_only` and `destructive` flags. The order is a keyword match,
+   not a judgement of intent — read the descriptions and flags and pick the tool that fits.
 3. Call `falcon_search_tools` again with `tool_names` set to the tool you picked, to get its
    parameters.
 4. Call `falcon_execute_tool` with the tool name and parameters to run it.
@@ -164,15 +165,17 @@ avoid large responses.
 
 Results are ordered by relevance. A tool whose name matches the query outranks one that only
 mentions it in its description, and an exact tool name — with or without the `falcon_` prefix —
-ranks first. Ordering is deterministic: the same query returns the same order on every server
+ranks first. When two tools are otherwise tied — a bare noun like `iocs` matches `falcon_search_iocs`
+and `falcon_remove_iocs` equally — the read-only one ranks first, so the order never steers toward a
+mutator by default. Ordering is deterministic: the same query returns the same order on every server
 process. A query with no keywords (module browsing) is ordered by tool name.
 
 Every token in `query` is matched against the tool's name, description, module, and parameter
 names. Tools matching every token are preferred; when no tool matches all of them, the search falls
 back to tools matching at least one, so a phrase like `real-time response command` returns ranked
-candidates instead of nothing. The `hint` field says when that fallback was used — treat those
-results as looser and check the top few. Ranking is what makes the wider set usable, so prefer the
-first results rather than scanning the whole list.
+candidates instead of nothing. The `hint` field says when that fallback was used. The order is a
+keyword match with no view of intent, so read each candidate's description and its `read_only` /
+`destructive` flags and pick the one that fits, rather than taking the first row on trust.
 
 `module` ignores case and separators, so `hostgroups`, `host_groups`, and `Host-Groups` all select
 the same module. `falcon_list_enabled_tools` returns a `by_module` map whose keys are the exact

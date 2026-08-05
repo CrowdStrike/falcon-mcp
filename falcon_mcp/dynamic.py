@@ -277,14 +277,18 @@ class DynamicToolCatalog:
         tokens = list(_words(query))
         query_key = normalize_identifier(query)
         # Coverage first: a tool matching more of the query's words is the more
-        # relevant answer, and — crucially — a read-only tool that matches the query
-        # sorts above a destructive sibling that matches less of it. Within equal
-        # coverage, strength orders by where the hits landed. Ties then break toward
-        # the least-qualified name, then alphabetically, since catalog insertion order
-        # follows a set of module names and is not stable across processes.
-        def sort_key(e: ToolEntry) -> tuple[int, int, int, str]:
+        # relevant answer. Within equal coverage, strength orders by where the hits
+        # landed. When both still tie — a bare noun matches a read-only tool and its
+        # destructive sibling identically (search_iocs vs remove_iocs) — read-only
+        # wins, so ordering never steers an agent to the mutator first. Only then do
+        # ties break toward the least-qualified name and finally alphabetically, since
+        # catalog insertion order follows a set of module names and is not stable
+        # across processes.
+        def sort_key(e: ToolEntry) -> tuple[int, int, int, bool, str]:
             matched, strength = e.score(tokens, query_key)
-            return (-matched, -strength, len(e.name_words), e.tool.name)
+            annotations = e.tool.annotations
+            read_only = annotations.readOnlyHint if annotations else True
+            return (-matched, -strength, len(e.name_words), not read_only, e.tool.name)
 
         return sorted(candidates, key=sort_key)
 
@@ -453,10 +457,10 @@ class DynamicMode:
         This is the entry point in dynamic mode, and it works in two steps.
 
         Search first: pass keywords in query, or a module name (or nothing at all) to
-        browse. Results are ordered by relevance, best fit first, so prefer the top
-        ones. Each carries the tool's name, module, description, and read_only /
-        destructive flags — check those before executing anything that mutates. These
-        results deliberately carry no parameters.
+        browse. Results are ordered by likely relevance, but the order is a keyword
+        match with no view of your intent: read each tool's description and its
+        read_only / destructive flags and pick the one that fits, rather than taking
+        the first row. These results deliberately carry no parameters.
 
         Then get the schema: call this tool again with tool_names set to the names you
         picked, and those entries come back with every parameter (type, required,
@@ -520,9 +524,9 @@ class DynamicMode:
         hints: list[str] = []
         if self.catalog.relaxed(query=query, module=module):
             hints.append(
-                "No tool matched every word, so these match at least one of them and "
-                "are ordered by relevance — the best fit is first. Check the top few "
-                "rather than assuming the capability is missing."
+                "No tool matched every word, so these match at least one of them, "
+                "ordered by likely relevance. Read the descriptions and pick the one "
+                "that fits rather than assuming the capability is missing."
             )
         if truncated:
             hints.append(
