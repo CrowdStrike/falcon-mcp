@@ -48,6 +48,96 @@ Returns the updated case record.
 
 - "Add these NGSIEM event IDs to the case as evidence"
 
+### `falcon_aggregate_case_access_tags`
+
+**Required scopes:** `Case Templates:read`
+
+Count case access tags grouped by a field.
+
+Use this to see which access tags control case visibility in your tenant
+and how many of each exist. Access tags accept a narrower field set than
+the other case aggregates — only key, id, and cid. Consult
+falcon://cases/aggregates/fql-guide before constructing filter
+expressions. Returns buckets of `label` and `count`. Requires the
+Case Templates:read scope.
+
+**Example prompts:**
+
+- "What access tags are used to restrict case visibility, and how many of each?"
+
+### `falcon_aggregate_case_file_details`
+
+**Required scopes:** `Cases:read`
+
+Report the files attached to cases, grouped and counted by a field.
+
+Use this whenever a question mentions files, attachments or screenshots
+on a case, including "what files are attached to case X" and "how many
+files does case X have" — pass the case IDs as case_ids. Case records
+from falcon_get_cases do not list attachments; their
+`analysis_results.files` field holds forensic artifacts from detections
+and is empty for cases that do have attachments. Consult
+falcon://cases/file-aggregates/fql-guide before constructing filter
+expressions. Returns buckets of `label` and `count`. Requires the
+Cases:read scope.
+
+**Example prompts:**
+
+- "What file names show up most often across case attachments?"
+- "How many files are attached to these two cases?"
+
+### `falcon_aggregate_case_notification_groups`
+
+**Required scopes:** `Case Templates:read`
+
+Count case notification groups grouped by a field.
+
+Use this to summarize the notification groups that receive case updates,
+such as how many are configured or who created them. Consult
+falcon://cases/aggregates/fql-guide before constructing filter
+expressions. Returns buckets of `label` and `count`. Requires the
+Case Templates:read scope.
+
+**Example prompts:**
+
+- "How many case notification groups are configured?"
+- "Show notification group counts by creator"
+
+### `falcon_aggregate_case_slas`
+
+**Required scopes:** `Case Templates:read`
+
+Count case SLA definitions grouped by a field.
+
+Use this to summarize the SLA policies configured in your tenant — for
+example how many exist, or who created them — rather than to list them
+individually. Consult falcon://cases/aggregates/fql-guide before
+constructing filter expressions. Returns buckets of `label` and `count`.
+Requires the Case Templates:read scope.
+
+**Example prompts:**
+
+- "How many case SLA policies do we have?"
+- "Break down our case SLAs by who created them"
+
+### `falcon_aggregate_case_templates`
+
+**Required scopes:** `Case Templates:read`
+
+Count case templates grouped by a field.
+
+Use this to summarize the case templates configured in your tenant, such
+as how many exist or which users author them; falcon_list_case_templates
+returns the individual template records instead. Consult
+falcon://cases/aggregates/fql-guide before constructing filter
+expressions. Returns buckets of `label` and `count`. Requires the
+Case Templates:read scope.
+
+**Example prompts:**
+
+- "How many case templates has each person created?"
+- "Count the case templates added in the last 30 days"
+
 ### `falcon_create_case`
 
 > [!NOTE]
@@ -73,8 +163,11 @@ created case record.
 Retrieve details for case IDs you already have.
 
 Use when you have specific case IDs from search results or external
-references. For discovering cases by criteria, use falcon_search_cases
-instead. Returns full case records.
+references. For discovering cases by criteria, use falcon_search_cases;
+for files attached to a case, use falcon_aggregate_case_file_details.
+Returns full case records. Their `analysis_results.files` field lists
+forensic artifacts from detections, not attachments, and is empty for
+cases that do have attachments.
 
 **Example prompts:**
 
@@ -149,3 +242,5 @@ updated case record with incremented version.
 ## Resources
 
 - **`falcon://cases/search/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_cases` tool.
+- **`falcon://cases/aggregates/fql-guide`**: Contains the guide for the `filter` param of the `falcon_aggregate_case_slas`, `falcon_aggregate_case_templates`, `falcon_aggregate_case_access_tags`, and `falcon_aggregate_case_notification_groups` tools.
+- **`falcon://cases/file-aggregates/fql-guide`**: Contains the guide for the `filter` param of the `falcon_aggregate_case_file_details` tool.

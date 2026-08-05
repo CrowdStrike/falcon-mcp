@@ -7,7 +7,7 @@ import unittest
 from mcp.types import ToolAnnotations
 
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
-from falcon_mcp.modules.cases import CasesModule
+from falcon_mcp.modules.cases import CasesModule, _is_filter_error
 from tests.modules.utils.test_modules import TestModules
 
 
@@ -23,7 +23,7 @@ class TestCasesModule(TestModules):
     # -------------------------------------------------------------------------
 
     def test_register_tools(self):
-        """Test that all 8 case management tools are registered with correct prefixed names."""
+        """Test that all 13 case management tools are registered with correct prefixed names."""
         expected_tools = [
             "falcon_search_cases",
             "falcon_get_cases",
@@ -33,13 +33,20 @@ class TestCasesModule(TestModules):
             "falcon_add_case_event_evidence",
             "falcon_manage_case_tags",
             "falcon_list_case_templates",
+            "falcon_aggregate_case_slas",
+            "falcon_aggregate_case_templates",
+            "falcon_aggregate_case_access_tags",
+            "falcon_aggregate_case_notification_groups",
+            "falcon_aggregate_case_file_details",
         ]
         self.assert_tools_registered(expected_tools)
 
     def test_register_resources(self):
-        """Test that the FQL guide resource is registered."""
+        """Test that the FQL guide resources are registered."""
         expected_resources = [
             "falcon_search_cases_fql_guide",
+            "falcon_aggregate_case_config_fql_guide",
+            "falcon_aggregate_case_file_details_fql_guide",
         ]
         self.assert_resources_registered(expected_resources)
 
@@ -705,6 +712,534 @@ class TestCasesModule(TestModules):
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 1)
         self.assertIn("error", result[0])
+
+    # -------------------------------------------------------------------------
+    # Aggregate Tool Tests
+    # -------------------------------------------------------------------------
+
+    def _agg_ok(self, buckets=None):
+        """Stub a successful aggregate response."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"name": "t", "buckets": buckets or [{"label": "a", "count": 2}]}
+                ],
+                "errors": [],
+            },
+        }
+
+    def _sent_body(self):
+        """Return the single aggregate spec sent to the API."""
+        body = self.mock_client.command.call_args[1]["body"]
+        self.assertIsInstance(body, list, "aggregate body must be list-wrapped")
+        self.assertEqual(len(body), 1)
+        return body[0]
+
+    def test_aggregate_tools_are_read_only(self):
+        """Test that all five aggregate tools register as read-only."""
+        self.module.register_tools(self.mock_server)
+
+        for tool in (
+            "falcon_aggregate_case_slas",
+            "falcon_aggregate_case_templates",
+            "falcon_aggregate_case_access_tags",
+            "falcon_aggregate_case_notification_groups",
+            "falcon_aggregate_case_file_details",
+        ):
+            self.assert_tool_annotations(tool, READ_ONLY_ANNOTATIONS)
+
+    def test_aggregate_tools_use_correct_operations(self):
+        """Test that each aggregate tool calls its own verified FalconPy operation."""
+        cases = [
+            (self.module.aggregate_case_slas, "aggregates_slas_post_v1", "name"),
+            (self.module.aggregate_case_templates, "aggregates_templates_post_v1", "name"),
+            (
+                self.module.aggregate_case_access_tags,
+                "aggregates_access_tags_post_v1",
+                "key",
+            ),
+            (
+                self.module.aggregate_case_notification_groups,
+                "aggregates_notification_groups_post_v2",
+                "name",
+            ),
+        ]
+        for method, operation, field in cases:
+            with self.subTest(operation=operation):
+                self.mock_client.command.reset_mock()
+                self._agg_ok()
+
+                result = method(
+                    field=field,
+                    agg_type="terms",
+                    filter=None,
+                    size=None,
+                    from_=None,
+                    date_ranges=None,
+                    name=None,
+                )
+
+                self.assertEqual(
+                    self.mock_client.command.call_args[0][0], operation
+                )
+                self.assertEqual(self._sent_body(), {"type": "terms", "field": field})
+                self.assertEqual(result[0]["buckets"], [{"label": "a", "count": 2}])
+
+    def test_aggregate_notification_groups_avoids_deprecated_v1(self):
+        """Test that the deprecated v1 notification-groups operation is never called."""
+        self._agg_ok()
+
+        self.module.aggregate_case_notification_groups(
+            field="name",
+            agg_type="terms",
+            filter=None,
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        operation = self.mock_client.command.call_args[0][0]
+        self.assertEqual(operation, "aggregates_notification_groups_post_v2")
+        self.assertNotEqual(operation, "aggregates_notification_groups_post_v1")
+
+    def test_aggregate_forwards_reduced_dialect_fields(self):
+        """Test that the reduced-dialect fields reach the API under their wire names."""
+        self._agg_ok()
+
+        self.module.aggregate_case_templates(
+            field="created_timestamp",
+            agg_type="date_range",
+            filter="created_by_name:'a@example.com'",
+            size=5,
+            from_=2,
+            date_ranges=[{"from": "2026-01-01T00:00:00Z", "to": "2026-02-01T00:00:00Z"}],
+            name="by_quarter",
+        )
+
+        self.assertEqual(
+            self._sent_body(),
+            {
+                "type": "date_range",
+                "field": "created_timestamp",
+                "filter": "created_by_name:'a@example.com'",
+                "from": 2,
+                "name": "by_quarter",
+                "size": 5,
+                "date_ranges": [
+                    {"from": "2026-01-01T00:00:00Z", "to": "2026-02-01T00:00:00Z"}
+                ],
+            },
+        )
+
+    def test_aggregate_omits_unset_fields(self):
+        """Test that unset optional fields are omitted rather than sent as null."""
+        self._agg_ok()
+
+        self.module.aggregate_case_slas(
+            field="name",
+            agg_type="terms",
+            filter=None,
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertEqual(sorted(self._sent_body()), ["field", "type"])
+
+    def test_aggregate_does_not_send_sort(self):
+        """Test that no aggregate tool sends sort, which the API ignores."""
+        self._agg_ok()
+
+        self.module.aggregate_case_templates(
+            field="name",
+            agg_type="terms",
+            filter=None,
+            size=3,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertNotIn("sort", self._sent_body())
+
+    def test_aggregate_filter_error_returns_fql_guide(self):
+        """Test that a filter error is surfaced with the FQL guide attached."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [],
+                "errors": [{"code": 400, "message": "unexpected filter field"}],
+            },
+        }
+
+        result = self.module.aggregate_case_templates(
+            field="name",
+            agg_type="terms",
+            filter="status:'new'",
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("fql_guide", result)
+        self.assertIn("name", result["fql_guide"])
+        self.assertIn("error", result["results"][0])
+
+    def test_aggregate_non_filter_error_omits_fql_guide(self):
+        """Test that a bad aggregation field is not blamed on the filter.
+
+        The FQL guide covers the `filter` param, so attaching it to a `field`
+        or `agg_type` failure would point the caller at the wrong argument.
+        """
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [],
+                "errors": [
+                    {"code": 400, "message": "unsupported field for aggregation: status"}
+                ],
+            },
+        }
+
+        result = self.module.aggregate_case_templates(
+            field="status",
+            agg_type="terms",
+            filter=None,
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertNotIn("fql_guide", result[0])
+
+    def test_aggregate_invalid_agg_type_error_omits_fql_guide(self):
+        """Test that an invalid aggregate type is not reported as a filter error."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [],
+                "errors": [{"code": 400, "message": 'invalid aggregate type: "avg"'}],
+            },
+        }
+
+        result = self.module.aggregate_case_slas(
+            field="name",
+            agg_type="avg",
+            filter=None,
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertNotIn("fql_guide", result[0])
+
+    def test_aggregate_date_range_without_date_ranges_skips_the_api(self):
+        """Test that a date_range aggregation missing its buckets never reaches the API.
+
+        The API answers such a spec with an opaque 500, so `_base_aggregate`
+        rejects it up front. The reply is not a filter problem, so it must not
+        carry the FQL guide.
+        """
+        for tool in (
+            self.module.aggregate_case_slas,
+            self.module.aggregate_case_templates,
+            self.module.aggregate_case_access_tags,
+            self.module.aggregate_case_notification_groups,
+        ):
+            with self.subTest(tool=tool.__name__):
+                self.mock_client.command.reset_mock()
+
+                result = tool(
+                    field="name",
+                    agg_type="date_range",
+                    filter=None,
+                    size=None,
+                    from_=None,
+                    date_ranges=None,
+                    name=None,
+                )
+
+                self.mock_client.command.assert_not_called()
+                self.assertIsInstance(result, list)
+                self.assertIn("error", result[0])
+                self.assertIn("date_ranges", result[0]["error"])
+                self.assertNotIn("fql_guide", result[0])
+
+    def test_aggregate_file_details_date_range_without_date_ranges_skips_the_api(self):
+        """Test that the file-details tool also rejects the spec before any call."""
+        result = self.module.aggregate_case_file_details(
+            field="name",
+            agg_type="date_range",
+            case_ids=None,
+            filter=None,
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.mock_client.command.assert_not_called()
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertIn("date_ranges", result[0]["error"])
+        self.assertNotIn("fql_guide", result[0])
+
+    def test_aggregate_http_400_field_error_omits_fql_guide(self):
+        """Test that a real 400 field error is not mistaken for a filter error.
+
+        `handle_api_response` prepends generic filter-syntax advice to every
+        400, so classification must read the API's own messages instead.
+        """
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {
+                "errors": [
+                    {
+                        "code": 400,
+                        "message": "unsupported field for aggregation: not_a_real_field",
+                    }
+                ]
+            },
+        }
+
+        result = self.module.aggregate_case_templates(
+            field="not_a_real_field",
+            agg_type="terms",
+            filter="name:'x'",
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertNotIn("fql_guide", result[0])
+
+    def test_aggregate_http_400_filter_error_returns_fql_guide(self):
+        """Test that a real 400 filter error still surfaces the FQL guide."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"code": 400, "message": "unexpected filter field"}]},
+        }
+
+        result = self.module.aggregate_case_templates(
+            field="name",
+            agg_type="terms",
+            filter="not_a_real_field:'x'",
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("fql_guide", result)
+
+    def test_is_filter_error_tolerates_malformed_error_shapes(self):
+        """Test that error classification never raises on an unexpected shape.
+
+        A crash here would replace a useful API error with a TypeError, so every
+        shape `_base_aggregate` can return must classify rather than blow up.
+        """
+        shapes = [
+            {"error": "boom"},
+            {"error": "boom", "details": None},
+            {"error": "boom", "details": "not a dict"},
+            {"error": "boom", "details": {"status_code": 403}},
+            {"error": "boom", "details": {"body": None}},
+            {"error": "boom", "details": {"body": {"resources": []}}},
+            {"error": "boom", "details": {"body": {"errors": None}}},
+            {"error": "boom", "details": {"body": {"errors": []}}},
+            {"error": "boom", "details": {"body": {"errors": [{"code": 403}]}}},
+            {"error": "boom", "details": {"body": {"errors": [{"message": None}]}}},
+            {"error": "boom", "details": {"body": {"errors": ["filter"]}}},
+            {"error": "boom", "details": {"body": {"errors": {"message": "filter"}}}},
+        ]
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                self.assertFalse(_is_filter_error(shape))
+
+    def test_is_filter_error_detects_api_filter_messages(self):
+        """Test that a filter message is recognized, including past a sibling error."""
+        self.assertTrue(
+            _is_filter_error(
+                {
+                    "error": "boom",
+                    "details": {
+                        "body": {"errors": [{"message": "unexpected filter field"}]}
+                    },
+                }
+            )
+        )
+        self.assertTrue(
+            _is_filter_error(
+                {
+                    "error": "boom",
+                    "details": {
+                        "body": {
+                            "errors": [
+                                {"message": "something else"},
+                                {"message": "failed to parse filter"},
+                            ]
+                        }
+                    },
+                }
+            )
+        )
+        self.assertFalse(
+            _is_filter_error(
+                {
+                    "error": "boom",
+                    "details": {
+                        "body": {
+                            "errors": [
+                                {"message": "unsupported field for aggregation: x"}
+                            ]
+                        }
+                    },
+                }
+            )
+        )
+
+    def test_aggregate_access_tags_error_names_supported_fields(self):
+        """Test that an access-tags filter failure returns its narrow field set."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [],
+                "errors": [{"code": 400, "message": "unexpected filter field"}],
+            },
+        }
+
+        result = self.module.aggregate_case_access_tags(
+            field="key",
+            agg_type="terms",
+            filter="name:'x'",
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertIn("key", result["fql_guide"])
+
+    def test_aggregate_file_details_uses_correct_operation(self):
+        """Test that file details calls its own operation and sends no ids when unscoped."""
+        self._agg_ok()
+
+        self.module.aggregate_case_file_details(
+            field="name",
+            agg_type="terms",
+            case_ids=None,
+            filter=None,
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertEqual(
+            self.mock_client.command.call_args[0][0],
+            "aggregates_file_details_post_v1",
+        )
+        self.assertNotIn("parameters", self.mock_client.command.call_args[1])
+        self.assertEqual(self._sent_body(), {"type": "terms", "field": "name"})
+
+    def test_aggregate_file_details_scopes_case_ids_via_filter(self):
+        """Test that case_ids becomes a case_id filter, since the ids param does not narrow."""
+        self._agg_ok()
+
+        self.module.aggregate_case_file_details(
+            field="name",
+            agg_type="terms",
+            case_ids=["case-a", "case-b"],
+            filter=None,
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertEqual(
+            self._sent_body()["filter"], "case_id:['case-a','case-b']"
+        )
+        # Still sent as a query param, because the API declares ids required.
+        self.assertEqual(
+            self.mock_client.command.call_args[1]["parameters"],
+            {"ids": ["case-a", "case-b"]},
+        )
+
+    def test_aggregate_file_details_parenthesizes_user_filter(self):
+        """Test that an OR in the caller's filter cannot widen the case scope."""
+        self._agg_ok()
+
+        self.module.aggregate_case_file_details(
+            field="name",
+            agg_type="terms",
+            case_ids=["case-a"],
+            filter="name:'x',name:*'*.png'",
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertEqual(
+            self._sent_body()["filter"],
+            "case_id:['case-a']+(name:'x',name:*'*.png')",
+        )
+
+    def test_aggregate_file_details_filter_only(self):
+        """Test that a filter with no case_ids is passed through unwrapped."""
+        self._agg_ok()
+
+        self.module.aggregate_case_file_details(
+            field="name",
+            agg_type="terms",
+            case_ids=None,
+            filter="name:*'*.png'",
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertEqual(self._sent_body()["filter"], "name:*'*.png'")
+
+    def test_aggregate_file_details_error_returns_file_guide(self):
+        """Test that a file-details failure returns the file guide, not the config guide."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "failed to parse filter"}]},
+        }
+
+        result = self.module.aggregate_case_file_details(
+            field="name",
+            agg_type="terms",
+            case_ids=["case-a"],
+            filter="name:::",
+            size=None,
+            from_=None,
+            date_ranges=None,
+            name=None,
+        )
+
+        self.assertIn("case_id", result["fql_guide"])
+        self.assertIn("Case File Aggregates", result["fql_guide"])
+        # The composed filter, not the caller's fragment, is what the API saw.
+        self.assertEqual(result["filter_used"], "case_id:['case-a']+(name:::)")
 
 
 if __name__ == "__main__":
