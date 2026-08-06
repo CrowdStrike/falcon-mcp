@@ -124,8 +124,10 @@ class DetectionsModule(BaseModule):
                 confidence: Confidence level of the detection (1-100)
                 agent_id: Agent ID associated with the detection
 
-                Sort either asc (ascending) or desc (descending).
-                Both formats are supported: 'severity.desc' or 'severity|desc'
+                Sort either asc (ascending) or desc (descending). Use the dot
+                separator ('severity.desc'), which is supported on every Falcon
+                sort endpoint. The pipe form ('severity|desc') is accepted here
+                but rejected by some endpoints, so prefer the dot form.
 
                 When searching for high severity detections, use 'severity.desc' to get the
                 highest severity detections first.

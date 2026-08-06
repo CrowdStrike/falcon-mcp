@@ -156,8 +156,10 @@ class DiscoverModule(BaseModule):
                 country: Country location
                 criticality: Criticality level
 
-                Sort either asc (ascending) or desc (descending).
-                Both formats are supported: 'hostname.desc' or 'hostname|desc'
+                Sort either asc (ascending) or desc (descending). Use the dot
+                separator ('hostname.desc'), which is supported on every Falcon
+                sort endpoint. The pipe form ('hostname|desc') is accepted here
+                but rejected by some endpoints, so prefer the dot form.
 
                 Examples: 'hostname.asc', 'last_seen_timestamp.desc', 'criticality.desc'
             """).strip(),

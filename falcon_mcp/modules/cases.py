@@ -208,7 +208,7 @@ class CasesModule(BaseModule):
         ),
         sort: str | None = Field(
             default=None,
-            description="Sort order. Fields: created_timestamp, updated_timestamp, severity, status, name, reference_id. Formats: 'field.desc', 'field|asc'. Example: 'created_timestamp.desc'",
+            description="Sort order. Fields: created_timestamp, updated_timestamp, severity, status, name, reference_id. Prefer the dot separator ('field.desc'), which is supported on every Falcon sort endpoint; the pipe form ('field|asc') also works here. Example: 'created_timestamp.desc'",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Find cases by criteria and return their complete details.

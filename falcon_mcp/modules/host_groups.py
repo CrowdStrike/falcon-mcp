@@ -144,7 +144,9 @@ class HostGroupsModule(BaseModule):
                 modified_timestamp: When the group was last modified
 
                 Sort either asc (ascending) or desc (descending).
-                Both formats are supported: 'name.desc' or 'name|desc'
+                Use the dot separator ('name.desc'), which is supported on every
+                Falcon sort endpoint. The pipe form ('name|desc') is accepted
+                here but rejected by some endpoints, so prefer the dot form.
 
                 Examples: 'name.asc', 'created_timestamp.desc'
             """).strip(),
