@@ -20,6 +20,10 @@ from falcon_mcp.resources.detections import (
 
 logger = get_logger(__name__)
 
+# PatchEntitiesAlertsV3 rejects requests carrying more than this many composite
+# IDs with HTTP 413 ("request too large").
+MAX_UPDATE_COMPOSITE_IDS = 1000
+
 
 class DetectionsModule(BaseModule):
     """Module for accessing and analyzing CrowdStrike Falcon detections."""
@@ -456,9 +460,12 @@ class DetectionsModule(BaseModule):
         email address, or full name, unassign, append a comment, hide/show detections in the UI,
         or add/remove tags. Resolution is tag-based: applying the conventional tags true_positive,
         false_positive, or ignored is what populates the console's Resolution view. At least one
-        update parameter must be provided. Returns `[]` (empty list) on success, or
+        update parameter must be provided. Requests covering more than 1000 detection IDs are
+        chunked automatically so none are silently dropped. Returns `[]` (empty list) on success, or
         `{"result": [], "hint": "..."}` when closing without adding a resolution tag in this call;
-        returns an error dict on failure.
+        returns an error dict on failure. If a later chunk fails after earlier chunks already
+        applied, the error dict carries a `partial_success` block listing the already-updated ids so
+        the caller can retry only the remainder rather than re-applying non-idempotent actions.
         """
         # Validate mutually exclusive assignment parameters
         assignment_params = [assign_to_uuid, assign_to_user_id, assign_to_name]
@@ -524,17 +531,36 @@ class DetectionsModule(BaseModule):
         if not action_parameters:
             return {"error": "At least one update parameter must be provided."}
 
-        body = {
-            "composite_ids": ids,
-            "action_parameters": action_parameters,
-        }
+        body_base = {"action_parameters": action_parameters}
 
-        result = self._base_query_api_call(
-            operation="PatchEntitiesAlertsV3",
-            body_params=body,
-            error_message="Failed to update detections",
-            default_result=[],
-        )
+        # PatchEntitiesAlertsV3 rejects more than MAX_UPDATE_COMPOSITE_IDS ids per
+        # request with HTTP 413, so chunk larger requests and fail loudly if any
+        # batch errors rather than reporting success on a truncated update.
+        result: list[dict[str, Any]] | dict[str, Any] = []
+        for i in range(0, len(ids), MAX_UPDATE_COMPOSITE_IDS):
+            batch = ids[i : i + MAX_UPDATE_COMPOSITE_IDS]
+            batch_result = self._base_query_api_call(
+                operation="PatchEntitiesAlertsV3",
+                body_params={**body_base, "composite_ids": batch},
+                error_message="Failed to update detections",
+                default_result=[],
+            )
+
+            if self._is_error(batch_result):
+                # The API applies each batch independently and cannot roll back, so
+                # ids before this batch are already updated. Report how many so the
+                # caller can retry only the remainder instead of re-applying
+                # non-idempotent actions (e.g. append_comment) to earlier ids.
+                if i > 0:
+                    batch_result["partial_success"] = {
+                        "updated_ids": ids[:i],
+                        "updated_count": i,
+                        "failed_and_remaining_ids": ids[i:],
+                    }
+                return batch_result
+
+            if isinstance(batch_result, list):
+                result.extend(batch_result)
 
         # Soft hint: closing without adding a resolution tag in this call may leave the
         # detection out of the console's Resolution view. Non-fatal — only wraps the success
