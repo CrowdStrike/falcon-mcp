@@ -133,10 +133,10 @@ class ReconModule(BaseModule):
                 created_date: When the notification was created
                 updated_date: When the notification was last updated
 
-                Append |asc or |desc for direction (default desc).
-                Examples: 'created_date|desc', 'updated_date|asc'
+                Append .asc or .desc for direction (default desc).
+                Examples: 'created_date.desc', 'updated_date.asc'
             """).strip(),
-            examples=["created_date|desc", "updated_date|asc"],
+            examples=["created_date.desc", "updated_date.asc"],
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search Falcon Intelligence Recon notifications (also called recon alerts)
@@ -229,10 +229,10 @@ class ReconModule(BaseModule):
                 priority: Rule priority level
                 topic: Rule topic category
 
-                Append |asc or |desc for direction (default desc).
-                Examples: 'created_timestamp|desc', 'priority|asc'
+                Append .asc or .desc for direction (default desc).
+                Examples: 'created_timestamp.desc', 'priority.asc'
             """).strip(),
-            examples=["created_timestamp|desc", "last_updated_timestamp|desc"],
+            examples=["created_timestamp.desc", "last_updated_timestamp.desc"],
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search Falcon Intelligence Recon monitoring rules and return their full details.
@@ -321,10 +321,10 @@ class ReconModule(BaseModule):
                 created_date: When the record was created
                 exposure_date: When the data was exposed/breached
 
-                Append |asc or |desc for direction (default desc).
-                Examples: 'created_date|desc', 'exposure_date|desc'
+                Append .asc or .desc for direction (default desc).
+                Examples: 'created_date.desc', 'exposure_date.desc'
             """).strip(),
-            examples=["created_date|desc", "exposure_date|desc"],
+            examples=["created_date.desc", "exposure_date.desc"],
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search Falcon Intelligence Recon exposed-data records and return their full details.
