@@ -219,8 +219,10 @@ class CloudModule(BaseModule):
                 first_seen: Timestamp when the container was first seen
                 running_status: Container running status which is either true or false
 
-                Sort either asc (ascending) or desc (descending).
-                Both formats are supported: 'container_name.desc' or 'container_name|desc'
+                Sort either asc (ascending) or desc (descending). Use the dot
+                separator ('container_name.desc'), which is supported on every
+                Falcon sort endpoint. The pipe form ('container_name|desc') is
+                accepted here but rejected by some endpoints, so prefer the dot form.
 
                 When searching containers running vulnerable images, use 'image_vulnerability_count.desc' to get container with most images vulnerabilities.
 
@@ -319,8 +321,10 @@ class CloudModule(BaseModule):
                 cvss_score: CVSS score of the image vulnerability
                 images_impacted: Number of images impacted by the vulnerability
 
-                Sort either asc (ascending) or desc (descending).
-                Both formats are supported: 'container_name.desc' or 'container_name|desc'
+                Sort either asc (ascending) or desc (descending). Use the dot
+                separator ('cvss_score.desc'), which is supported on every Falcon
+                sort endpoint. The pipe form ('cvss_score|desc') is accepted here
+                but rejected by some endpoints, so prefer the dot form.
 
                 Examples: 'cvss_score.desc', 'cps_current_rating.asc'
             """
@@ -384,8 +388,10 @@ class CloudModule(BaseModule):
                 creation_time: When the asset was created
                 updated_at: When the asset was last updated
 
-                Sort either asc (ascending) or desc (descending).
-                Both formats are supported: 'updated_at.desc' or 'updated_at|desc'
+                Sort either asc (ascending) or desc (descending). Use the dot
+                separator ('updated_at.desc'), which is supported on every Falcon
+                sort endpoint. The pipe form ('updated_at|desc') is accepted here
+                but rejected by some endpoints, so prefer the dot form.
 
                 Examples: 'updated_at.desc', 'resource_type.asc'
             """
@@ -586,7 +592,8 @@ class CloudModule(BaseModule):
             default=None,
             description=dedent(
                 """
-                Sort IOM findings. Use |asc or |desc suffix to specify direction.
+                Sort IOM findings. Use a .asc or .desc suffix to specify direction.
+                Prefer the dot separator, supported on every Falcon sort endpoint.
 
                 Common sort fields:
                 severity: Finding severity level
@@ -596,10 +603,10 @@ class CloudModule(BaseModule):
                 service: Cloud service name
                 status: Finding status
 
-                Examples: 'severity|desc', 'last_detected|desc', 'first_detected|asc'
+                Examples: 'severity.desc', 'last_detected.desc', 'first_detected.asc'
             """
             ).strip(),
-            examples=["severity|desc", "last_detected|desc"],
+            examples=["severity.desc", "last_detected.desc"],
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for CSPM Indicators of Misconfiguration (IOM) findings.
@@ -667,13 +674,14 @@ class CloudModule(BaseModule):
         sort: str | None = Field(
             default=None,
             description=(
-                "Sort risks using field|asc or field|desc syntax.\n\n"
+                "Sort risks using field.asc or field.desc syntax. Prefer the dot "
+                "separator, supported on every Falcon sort endpoint.\n\n"
                 "Supported fields: account_id, account_name, asset_id, asset_name, "
                 "asset_region, asset_type, cloud_provider, first_seen, last_seen, "
                 "resolved_at, rule_name, service_category, severity, status\n\n"
-                "Examples: 'severity|desc', 'first_seen|desc', 'account_name|asc'"
+                "Examples: 'severity.desc', 'first_seen.desc', 'account_name.asc'"
             ),
-            examples=["severity|desc", "first_seen|desc", "account_name|asc"],
+            examples=["severity.desc", "first_seen.desc", "account_name.asc"],
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for cloud risks in your CrowdStrike environment.
@@ -726,8 +734,8 @@ class CloudModule(BaseModule):
         ),
         sort: str | None = Field(
             default=None,
-            description="Sort groups. Default: name|asc. Examples: 'name|asc', 'created_at|desc'",
-            examples=["name|asc", "created_at|desc"],
+            description="Sort groups. Default: name.asc. Prefer the dot separator, supported on every Falcon sort endpoint. Examples: 'name.asc', 'created_at.desc'",
+            examples=["name.asc", "created_at.desc"],
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """List cloud groups in your CrowdStrike environment.

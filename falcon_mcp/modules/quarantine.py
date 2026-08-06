@@ -101,7 +101,7 @@ class QuarantineModule(BaseModule):
         ),
         sort: str | None = Field(
             default=None,
-            description="Sort quarantined files using FQL syntax such as `date_updated|desc` or `hostname|asc`.",
+            description="Sort quarantined files using FQL syntax such as `date_updated.desc` or `hostname.asc`. Prefer the dot separator, supported on every Falcon sort endpoint.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search quarantined files and return full quarantine metadata.

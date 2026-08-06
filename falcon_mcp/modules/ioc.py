@@ -100,10 +100,12 @@ class IOCModule(BaseModule):
                 action, applied_globally, created_on, expiration, modified_on,
                 severity_number, source, type, value
 
-                Supported formats: 'field.asc', 'field.desc', 'field|asc', 'field|desc'
-                Examples: 'modified_on.desc', 'severity_number|desc'
+                Prefer the dot separator ('field.desc'), which is supported on
+                every Falcon sort endpoint. The pipe form ('field|desc') also
+                works here.
+                Examples: 'modified_on.desc', 'severity_number.desc'
             """).strip(),
-            examples={"modified_on.desc", "severity_number|desc"},
+            examples={"modified_on.desc", "severity_number.desc"},
         ),
         after: str | None = Field(
             default=None,
