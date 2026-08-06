@@ -134,6 +134,8 @@ class SpotlightModule(BaseModule):
         )
 
         if self._is_error(vulnerabilities):
-            return [vulnerabilities]
+            return self._format_fql_error_response(
+                [vulnerabilities], filter, SEARCH_VULNERABILITIES_FQL_DOCUMENTATION
+            )
 
         return self._build_pagination_envelope(vulnerabilities or [], pagination, filter)

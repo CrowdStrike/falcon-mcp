@@ -160,7 +160,9 @@ class HostsModule(BaseModule):
         )
 
         if self._is_error(device_ids):
-            return [device_ids]
+            return self._format_fql_error_response(
+                [device_ids], filter, SEARCH_HOSTS_FQL_DOCUMENTATION
+            )
 
         if not device_ids:
             return self._build_pagination_envelope([], pagination, filter)
