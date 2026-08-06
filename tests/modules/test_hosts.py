@@ -7,6 +7,7 @@ import unittest
 from mcp.types import ToolAnnotations
 
 from falcon_mcp.modules.hosts import HostsModule
+from falcon_mcp.resources.hosts import SEARCH_HOSTS_FQL_DOCUMENTATION
 from tests.modules.utils.test_modules import TestModules
 
 
@@ -140,7 +141,7 @@ class TestHostsModule(TestModules):
         self.assertEqual(result["pagination"]["total"], 2)
 
     def test_search_hosts_error(self):
-        """Test searching for hosts with API error."""
+        """Test searching for hosts with a filter error returns the FQL guide."""
         # Setup mock response with error
         mock_response = {
             "status_code": 400,
@@ -151,10 +152,14 @@ class TestHostsModule(TestModules):
         # Call search_hosts
         result = self.module.search_hosts(filter="invalid_filter")
 
-        # Verify result contains error
-        self.assertEqual(len(result), 1)
-        self.assertIn("error", result[0])
-        self.assertIn("details", result[0])
+        # Verify result contains the error wrapped alongside the FQL guide and hint
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("error", result["results"][0])
+        self.assertIn("fql_guide", result)
+        self.assertEqual(result["fql_guide"], SEARCH_HOSTS_FQL_DOCUMENTATION)
+        self.assertIn("hint", result)
+        self.assertEqual(result["filter_used"], "invalid_filter")
 
     def test_search_hosts_no_results(self):
         """Test searching for hosts with no results."""

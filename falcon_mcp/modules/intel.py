@@ -161,7 +161,9 @@ class IntelModule(BaseModule):
         )
 
         if self._is_error(api_response):
-            return [api_response]
+            return self._format_fql_error_response(
+                [api_response], filter, QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION
+            )
 
         return self._build_pagination_envelope(api_response or [], pagination, filter)
 
@@ -234,7 +236,9 @@ class IntelModule(BaseModule):
         )
 
         if self._is_error(api_response):
-            return [api_response]
+            return self._format_fql_error_response(
+                [api_response], filter, QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION
+            )
 
         return self._build_pagination_envelope(api_response or [], pagination, filter)
 
@@ -291,7 +295,9 @@ class IntelModule(BaseModule):
         )
 
         if self._is_error(api_response):
-            return [api_response]
+            return self._format_fql_error_response(
+                [api_response], filter, QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION
+            )
 
         return self._build_pagination_envelope(api_response or [], pagination, filter)
 
