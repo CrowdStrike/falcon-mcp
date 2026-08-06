@@ -30,6 +30,53 @@ logger = get_logger(__name__)
 # Valid exclusion types (the discriminator values exposed to the agent).
 EXCLUSION_TYPES = ("ioa", "ml", "sensor_visibility", "certificate")
 
+# Zero-width regex assertions the IOA exclusion API rejects. 
+def _find_zero_width_assertion(regex: str) -> str | None:
+    """Return the first zero-width assertion token in ``regex``, else None.
+
+    Ignores escaped anchors (``\\^``, ``\\$``) and anything inside a character
+    class ``[...]``, which the regex engine treats as literals rather than
+    position assertions. A ``]`` in the first position of a class (or right
+    after a leading ``^`` negation) is itself a literal member, not the class
+    terminator.
+    """
+    index = 0
+    in_class = False
+    # Members seen since the current class opened, excluding a leading `^`.
+    class_members = 0
+    length = len(regex)
+    while index < length:
+        char = regex[index]
+        if char == "\\" and index + 1 < length:
+            nxt = regex[index + 1]
+            if not in_class and nxt in ("b", "A", "Z"):
+                return f"\\{nxt}"
+            if in_class:
+                class_members += 1
+            index += 2
+            continue
+        if not in_class:
+            if char == "[":
+                in_class = True
+                class_members = 0
+            elif char in ("^", "$"):
+                return char
+            index += 1
+            continue
+        # Inside a character class.
+        if char == "^" and class_members == 0:
+            # Leading negation is not itself a member.
+            index += 1
+            continue
+        if char == "]" and class_members > 0:
+            in_class = False
+            index += 1
+            continue
+        # Any other char, including a `]` in the first member position.
+        class_members += 1
+        index += 1
+    return None
+
 
 class ExclusionsModule(BaseModule):
     """Module for managing CrowdStrike exclusions across all four types."""
@@ -340,6 +387,29 @@ class ExclusionsModule(BaseModule):
                 "'.*' (this would exclude everything). Provide more specific regexes.",
                 operation=self._OPERATIONS["ioa"]["create"],
             )
+
+        # IOA regexes must not contain zero-width assertions (^ $ \b \A \Z); the
+        # API rejects them, so fail fast with the offending field and token.
+        regex_fields = {
+            "ifn_regex": ifn_regex,
+            "cl_regex": cl_regex,
+            "parent_ifn_regex": parent_ifn_regex,
+            "parent_cl_regex": parent_cl_regex,
+            "grandparent_ifn_regex": grandparent_ifn_regex,
+            "grandparent_cl_regex": grandparent_cl_regex,
+        }
+        for field_name, field_value in regex_fields.items():
+            if not field_value:
+                continue
+            token = _find_zero_width_assertion(field_value)
+            if token is not None:
+                return _format_error_response(
+                    f"IOA exclusion rejected: '{field_name}' contains the "
+                    f"zero-width assertion '{token}', which the IOA regex engine "
+                    "does not support. Remove ^, $, \\b, \\A, and \\Z (escape them "
+                    "as \\\\^ / \\\\$ or use a character class if you need a literal).",
+                    operation=self._OPERATIONS["ioa"]["create"],
+                )
 
         exclusion: dict[str, Any] = {
             "name": name,
