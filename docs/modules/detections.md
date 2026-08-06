@@ -81,9 +81,12 @@ Use to change status (new, in_progress, reopened, closed), assign to a user by U
 email address, or full name, unassign, append a comment, hide/show detections in the UI,
 or add/remove tags. Resolution is tag-based: applying the conventional tags true_positive,
 false_positive, or ignored is what populates the console's Resolution view. At least one
-update parameter must be provided. Returns `[]` (empty list) on success, or
+update parameter must be provided. Requests covering more than 1000 detection IDs are
+chunked automatically so none are silently dropped. Returns `[]` (empty list) on success, or
 `{"result": [], "hint": "..."}` when closing without adding a resolution tag in this call;
-returns an error dict on failure.
+returns an error dict on failure. If a later chunk fails after earlier chunks already
+applied, the error dict carries a `partial_success` block listing the already-updated ids so
+the caller can retry only the remainder rather than re-applying non-idempotent actions.
 
 **Example prompts:**
 
