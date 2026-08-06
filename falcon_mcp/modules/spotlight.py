@@ -63,7 +63,7 @@ class SpotlightModule(BaseModule):
             default=10,
             ge=1,
             le=5000,
-            description="Maximum number of results to return. (Max: 5000, Default: 10)",
+            description="Maximum number of results to return. (Max: 5000, Default: 10) For large pulls, a single big page can time out on busy tenants; prefer smaller pages combined with `after`-based pagination (pass `pagination.next` from the previous response as the `after` parameter) instead of raising this to the maximum.",
         ),
         sort: str | None = Field(
             default=None,
