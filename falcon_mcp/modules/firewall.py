@@ -101,9 +101,11 @@ class FirewallModule(BaseModule):
             description=dedent("""
                 Sort firewall rules using FQL syntax.
 
-                Supported examples: name.asc, modified_on.desc, platform|asc
+                Supported examples: name.asc, modified_on.desc. Prefer the dot
+                separator ('modified_on.desc'), which is supported on every Falcon
+                sort endpoint; the pipe form ('platform|asc') also works here.
             """).strip(),
-            examples=["modified_on.desc", "name|asc"],
+            examples=["modified_on.desc", "name.asc"],
         ),
         q: str | None = Field(
             default=None,

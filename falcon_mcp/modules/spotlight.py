@@ -76,14 +76,15 @@ class SpotlightModule(BaseModule):
                 • updated_timestamp: When the vulnerability was last updated
 
                 Sort either asc (ascending) or desc (descending).
-                Format: 'field|direction'
+                Format: 'field.direction' — prefer the dot separator, supported
+                on every Falcon sort endpoint.
 
-                Examples: 'created_timestamp|desc', 'updated_timestamp|desc', 'closed_timestamp|asc'
+                Examples: 'created_timestamp.desc', 'updated_timestamp.desc', 'closed_timestamp.asc'
             """).strip(),
             examples=[
-                "created_timestamp|desc",
-                "updated_timestamp|desc",
-                "closed_timestamp|asc",
+                "created_timestamp.desc",
+                "updated_timestamp.desc",
+                "closed_timestamp.asc",
             ],
         ),
         after: str | None = Field(
