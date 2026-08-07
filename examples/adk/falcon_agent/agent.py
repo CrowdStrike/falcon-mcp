@@ -1,20 +1,33 @@
-import logging
 import os
-from typing import Any
 
 from google.adk.agents import LlmAgent  # type: ignore[import-untyped]
+from google.adk.agents.context_cache_config import (  # type: ignore[import-untyped]
+    ContextCacheConfig,
+)
+from google.adk.apps.app import App, EventsCompactionConfig  # type: ignore[import-untyped]
 from google.adk.tools.mcp_tool.mcp_session_manager import (  # type: ignore[import-untyped]
     StdioConnectionParams,
 )
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset  # type: ignore[import-untyped]
+from google.adk.tools.mcp_tool.mcp_toolset import McpToolset  # type: ignore[import-untyped]
 from mcp import StdioServerParameters
 
-from google.adk.apps.app import App, EventsCompactionConfig
-from google.adk.agents.context_cache_config import ContextCacheConfig
-
+# Validate required environment variables
+_required_vars = [
+    "FALCON_CLIENT_ID",
+    "FALCON_CLIENT_SECRET",
+    "FALCON_BASE_URL",
+    "GOOGLE_CLOUD_PROJECT",
+    "GOOGLE_CLOUD_LOCATION",
+]
+_missing = [v for v in _required_vars if not os.environ.get(v) or os.environ.get(v) == "NOT_SET"]
+if _missing:
+    raise ValueError(
+        f"Missing or unset required environment variables: {', '.join(_missing)}. "
+        "Please configure them in your .env file."
+    )
 
 # Get required environment variables
-_google_model = os.environ.get("GOOGLE_MODEL", "")
+_google_model = os.environ.get("GOOGLE_MODEL", "gemini-2.5-flash")
 _falcon_agent_prompt = os.environ.get("FALCON_AGENT_PROMPT", "")
 _falcon_client_id = os.environ.get("FALCON_CLIENT_ID", "")
 _falcon_client_secret = os.environ.get("FALCON_CLIENT_SECRET", "")
@@ -27,7 +40,7 @@ root_agent = LlmAgent(
     name="falcon_agent",
     instruction=_falcon_agent_prompt,
     tools=[
-        MCPToolset(
+        McpToolset(
             connection_params=StdioConnectionParams(
                 server_params=StdioServerParameters(
                     command="falcon-mcp",
@@ -36,7 +49,8 @@ root_agent = LlmAgent(
                         "FALCON_CLIENT_SECRET": _falcon_client_secret,
                         "FALCON_BASE_URL": _falcon_base_url,
                     },
-                )
+                ),
+                timeout=30.0,
             ),
             use_mcp_resources=True,
         ),
@@ -47,7 +61,7 @@ root_agent = LlmAgent(
 events_compaction_config = (
     EventsCompactionConfig(
         compaction_interval=5,  # Trigger compaction every 5 new invocations.
-        overlap_size=1  # Include last invocation from the previous window.
+        overlap_size=1,  # Include last invocation from the previous window.
     )
     if _event_compaction == "Y"
     else None
@@ -58,7 +72,7 @@ context_cache_config = (
     ContextCacheConfig(
         min_tokens=4096,  # Minimum tokens to trigger caching
         ttl_seconds=600,  # Store for up to 10 minutes
-        cache_intervals=5  # Refresh after 5 uses
+        cache_intervals=5,  # Refresh after 5 uses
     )
     if _context_caching == "Y"
     else None
@@ -70,6 +84,6 @@ app = App(
     root_agent=root_agent,
     # Context Caching
     context_cache_config=context_cache_config,
-    # context compaction
+    # Context Compaction
     events_compaction_config=events_compaction_config,
 )
