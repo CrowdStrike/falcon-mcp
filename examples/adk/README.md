@@ -178,7 +178,7 @@ Here are the steps:
 5. On the Configuration screen add Agent name, Description and Agent Engine path (format - `projects/{project}/locations/{location}/reasoningEngines/{reasoningEngine}`), Click create
 6. Provide Access -> Select Created Agent -> User permissions tab -> Add User -> Provide "Agent User" role to a user / All Users as needed
 7. Access the Gemini Enterprise app and select the agent or invoke it with `@agent_name`
-8. If you need to delete the Agent from Gemini Enterprise App - you can select `delete` fro mthe Actions menu for the particular agent.
+8. If you need to delete the Agent from Gemini Enterprise App - you can select `delete` from the Actions menu for the particular agent.
 
 
 ### Securing access, Evaluating, Optimizing performance and costs
