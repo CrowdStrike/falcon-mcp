@@ -215,3 +215,6 @@ memory-bank/
 
 # Playwright MCP screenshots
 .playwright-mcp/
+
+# ADK
+.adk/
