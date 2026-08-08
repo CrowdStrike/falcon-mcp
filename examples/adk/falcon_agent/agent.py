@@ -1,4 +1,5 @@
 import os
+import sys
 
 from google.adk.agents import LlmAgent  # type: ignore[import-untyped]
 from google.adk.agents.context_cache_config import (  # type: ignore[import-untyped]
@@ -21,10 +22,12 @@ _required_vars = [
 ]
 _missing = [v for v in _required_vars if not os.environ.get(v) or os.environ.get(v) == "NOT_SET"]
 if _missing:
-    raise ValueError(
-        f"Missing or unset required environment variables: {', '.join(_missing)}. "
-        "Please configure them in your .env file."
+    _error_msg = (
+        f"\n❌ [falcon_agent] Missing or unset required environment variables: {', '.join(_missing)}\n"
+        "👉 Please configure them in your .env file.\n"
     )
+    print(_error_msg, file=sys.stderr)
+    raise RuntimeError(_error_msg)
 
 # Get required environment variables
 _google_model = os.environ.get("GOOGLE_MODEL", "gemini-2.5-flash")

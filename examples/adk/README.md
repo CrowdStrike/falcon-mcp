@@ -43,7 +43,7 @@ cd examples/adk
 cp falcon_agent/env.properties falcon_agent/.env
 ```
 
-Now update the following Environment variables in the `falcon_agent/.env` file. Make sure the `GOOGLE_GENAI_USE_VERTEXAI` is left to `True`. You can update the `GOOGLE_MODEL` and `FALCON_AGENT_PROMPT` variables as needed or leave them as is.
+Now update the following environment variables in the `falcon_agent/.env` file. Make sure the `GOOGLE_GENAI_USE_VERTEXAI` is left to `True`. You can update the `GOOGLE_MODEL` and `FALCON_AGENT_PROMPT` variables as needed or leave them as is.
 
 ```
 # Must update following values
@@ -114,7 +114,7 @@ You can stop the agent with `ctrl+C`
 
 ### Deployment - Why Deploy?
 
-You may want to deploy the agent (with the `falcon-mcp` server) for following reasons:
+You may want to deploy the agent (with the falcon-mcp server) for the following reasons:
 
 1. Centralize execution on Agent Runtime without distributing credentials to individual local machines (for production workloads, managing secrets via Google Cloud Secret Manager is recommended)
 2. You want to share the ready-to-use agent with your team
@@ -137,9 +137,10 @@ Here are the deployment instructions:
 ```bash
 # While in examples/adk directory
 # If using uv; use uv run adk
-# please change the region accordingly
+# Please change the region accordingly
 
 adk deploy agent_engine --region us-central1 --display_name falcon_adk_agent falcon_agent/
+
 ```
 
 <details>
