@@ -139,8 +139,10 @@ Update an existing host-based policy of the given type.
 
 Provide the policy `id` plus any fields to change (name, description,
 settings). platform_name is not updatable after creation. Uses HTTP PATCH
-semantics — unspecified fields are left unchanged. Returns the updated
-policy record.
+semantics — unspecified fields are left unchanged. Firewall policies accept
+only name and description here; they have no settings field, and rule-group
+attachment is a whole-container operation this tool does not expose. Returns
+the updated policy record.
 
 **Example prompts:**
 
