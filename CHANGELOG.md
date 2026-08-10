@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.1](https://github.com/CrowdStrike/falcon-mcp/compare/v0.16.0...v0.16.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* **modules/detections:** chunk update_detections requests over 1000 ids ([#513](https://github.com/CrowdStrike/falcon-mcp/issues/513)) ([a9757b3](https://github.com/CrowdStrike/falcon-mcp/commit/a9757b39fe419bba5d318e0843d488bd1f55f533))
+* **modules/exclusions:** reject IOA regex zero-width assertions pre-flight ([#512](https://github.com/CrowdStrike/falcon-mcp/issues/512)) ([7f774e2](https://github.com/CrowdStrike/falcon-mcp/commit/7f774e21a130c09938c9e1584d6110838343cd82))
+* **modules:** return FQL guide on filter errors for hosts, spotlight, and intel searches ([#507](https://github.com/CrowdStrike/falcon-mcp/issues/507)) ([d59d4b1](https://github.com/CrowdStrike/falcon-mcp/commit/d59d4b141f9db76d2569208a8d1c9b03f2aa7b65)), closes [#501](https://github.com/CrowdStrike/falcon-mcp/issues/501)
+
+
+### Refactoring
+
+* **common:** remove dead dict-to-FQL branch in prepare_api_parameters ([#508](https://github.com/CrowdStrike/falcon-mcp/issues/508)) ([3741c76](https://github.com/CrowdStrike/falcon-mcp/commit/3741c76b4375ce24c24d1f8f68f30e4da1531ed7)), closes [#502](https://github.com/CrowdStrike/falcon-mcp/issues/502)
+
 ## [0.16.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.15.0...v0.16.0) (2026-08-05)
 
 
