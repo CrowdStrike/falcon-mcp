@@ -28,7 +28,6 @@ class TestFirewallIntegration(BaseIntegrationTest):
             filter=None,
             limit=1,
             sort=None,
-            q=None,
             after=None,
         )
         self.assert_no_error(result, context="operation name validation")
@@ -40,7 +39,6 @@ class TestFirewallIntegration(BaseIntegrationTest):
             filter=None,
             limit=5,
             sort=None,
-            q=None,
             after=None,
         )
 
@@ -61,7 +59,6 @@ class TestFirewallIntegration(BaseIntegrationTest):
             filter="enabled:true",
             limit=3,
             sort="modified_on.desc",
-            q=None,
             after=None,
         )
 
@@ -78,7 +75,6 @@ class TestFirewallIntegration(BaseIntegrationTest):
             filter=None,
             limit=5,
             sort=None,
-            q=None,
             after=None,
         )
 
@@ -101,7 +97,6 @@ class TestFirewallIntegration(BaseIntegrationTest):
             filter="enabled:true",
             limit=3,
             sort="modified_on.desc",
-            q=None,
             after=None,
         )
 

@@ -143,15 +143,21 @@ FILTER_HINTS: dict[str, str] = {
     # === Firewall Rules ===
     "falcon_search_firewall_rules": (
         "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime)."
+        "enabled (true|false), created_on (UTC datetime). "
+        "name: use the contains operator name:~'value' (whole-word substring); a "
+        "name:'value*' glob is treated literally and returns nothing."
     ),
     "falcon_search_firewall_rule_groups": (
         "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime)."
+        "enabled (true|false), created_on (UTC datetime). "
+        "name: use the contains operator name:~'value' (whole-word substring); a "
+        "name:'value*' glob is treated literally and returns nothing."
     ),
     "falcon_search_firewall_policy_rules": (
         "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime)."
+        "enabled (true|false), created_on (UTC datetime). "
+        "name: use the contains operator name:~'value' (whole-word substring); a "
+        "name:'value*' glob is treated literally and returns nothing."
     ),
     # === Intel: Actors ===
     "falcon_search_actors": (
