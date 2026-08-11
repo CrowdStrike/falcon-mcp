@@ -229,6 +229,22 @@ class PoliciesModule(BaseModule):
         },
     }
 
+    # Whether a create/update body may carry a `settings` object. The firewall
+    # create and update endpoints have no `settings` field (their schema is
+    # id/name/description[/clone_id/platform_name] only), so the API silently
+    # discards a `settings` value and returns 200 — a no-op that looks like a
+    # success. Reject it up front instead. Firewall rule-group attachment is a
+    # whole-container PUT (/policy/entities/policy-container) that this module
+    # does not wrap; it cannot be done through create/update settings.
+    _SUPPORTS_SETTINGS: dict[str, bool] = {
+        "prevention": True,
+        "sensor_update": True,
+        "firewall": False,
+        "device_control": True,
+        "response": True,
+        "content_update": True,
+    }
+
     # Sort field bases that the API accepts (each with a .asc/.desc direction).
     # platform_name is deliberately excluded — it returns HTTP 500 on every type.
     _SAFE_SORT_FIELDS = {
@@ -598,6 +614,19 @@ class PoliciesModule(BaseModule):
                     operation=self._OPERATIONS[policy_type]["create"],
                 )
 
+        # The firewall endpoints have no `settings` field — passing one returns
+        # 200 while changing nothing. Reject it loudly instead of silently no-op.
+        if settings is not None and not self._SUPPORTS_SETTINGS[policy_type]:
+            op_key = "update" if is_update else "create"
+            return _format_error_response(
+                f"'{policy_type}' policies do not accept a 'settings' object — the "
+                "endpoint has no such field and would silently ignore it. Firewall "
+                "policy configuration (including rule-group attachment) is a "
+                "whole-container operation not exposed by this tool; use the Falcon "
+                "console for it. This tool can still update 'name' and 'description'.",
+                operation=self._OPERATIONS[policy_type][op_key],
+            )
+
         resource: dict[str, Any] = {}
         # id is only placed in the body on update (create never carries an id).
         if is_update and policy_id is not None:
@@ -646,7 +675,7 @@ class PoliciesModule(BaseModule):
         ),
         settings: Any | None = Field(
             default=None,
-            description="Opaque per-type settings object (dict or list), passed through unchanged. Building detailed settings is out of scope for v1 — prefer cloning an existing policy via clone_id then tweaking with falcon_update_policy.",
+            description="Opaque per-type settings object (dict or list), passed through unchanged. Not accepted for firewall policies (the endpoint has no settings field and would ignore it — rejected with an error). Building detailed settings is out of scope for v1 — prefer cloning an existing policy via clone_id then tweaking with falcon_update_policy.",
         ),
         clone_id: str | None = Field(
             default=None,
@@ -713,15 +742,17 @@ class PoliciesModule(BaseModule):
         ),
         settings: Any | None = Field(
             default=None,
-            description="Opaque per-type settings object (dict or list), passed through unchanged. Unspecified fields are left unchanged.",
+            description="Opaque per-type settings object (dict or list), passed through unchanged. Unspecified fields are left unchanged. Not accepted for firewall policies (the endpoint has no settings field and would ignore it — rejected with an error).",
         ),
     ) -> list[dict[str, Any]]:
         """Update an existing host-based policy of the given type.
 
         Provide the policy `id` plus any fields to change (name, description,
         settings). platform_name is not updatable after creation. Uses HTTP PATCH
-        semantics — unspecified fields are left unchanged. Returns the updated
-        policy record.
+        semantics — unspecified fields are left unchanged. Firewall policies accept
+        only name and description here; they have no settings field, and rule-group
+        attachment is a whole-container operation this tool does not expose. Returns
+        the updated policy record.
         """
         type_error = self._validate_policy_type(policy_type)
         if type_error is not None:

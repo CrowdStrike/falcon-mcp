@@ -496,6 +496,77 @@ class TestPoliciesModule(TestModules):
         self.assertIn("error", result[0])
         self.assertEqual(self.mock_client.command.call_count, 0)
 
+    def test_update_firewall_rejects_settings(self):
+        """Firewall update with settings is rejected — the endpoint has no
+        settings field and would silently 200 without changing anything (#526)."""
+        result = self.module.update_policy(
+            policy_type="firewall",
+            id="fw-1",
+            name=None,
+            description=None,
+            settings={"rule_group_ids": ["rg-1"]},
+        )
+        self.assertIn("error", result[0])
+        self.assertIn("settings", result[0]["error"])
+        self.assertEqual(self.mock_client.command.call_count, 0)
+
+    def test_create_firewall_rejects_settings(self):
+        """Firewall create with settings is rejected for the same reason (#526)."""
+        result = self.module.create_policy(
+            policy_type="firewall",
+            **self._create_kwargs(
+                name="fw",
+                platform_name="Windows",
+                settings={"foo": "bar"},
+            ),
+        )
+        self.assertIn("error", result[0])
+        self.assertIn("settings", result[0]["error"])
+        self.assertEqual(self.mock_client.command.call_count, 0)
+
+    def test_update_firewall_name_and_description_still_work(self):
+        """Firewall update without settings still works — only settings is barred."""
+        self.mock_client.command.return_value = self._create_response(
+            {"id": "fw-1", "name": "renamed"}
+        )
+        self.module.update_policy(
+            policy_type="firewall",
+            id="fw-1",
+            name="renamed",
+            description="desc",
+            settings=None,
+        )
+        call = self.mock_client.command.call_args_list[0]
+        self.assertEqual(call[0][0], "updateFirewallPolicies")
+        resource = call[1]["body"]["resources"][0]
+        self.assertEqual(resource["id"], "fw-1")
+        self.assertEqual(resource["name"], "renamed")
+        self.assertEqual(resource["description"], "desc")
+        self.assertNotIn("settings", resource)
+
+    def test_update_non_firewall_types_accept_settings(self):
+        """Every non-firewall type still forwards settings into the body."""
+        for policy_type in EXPECTED_OPS:
+            if policy_type == "firewall":
+                continue
+            with self.subTest(policy_type=policy_type):
+                self.mock_client.command.reset_mock()
+                self.mock_client.command.side_effect = None
+                self.mock_client.command.return_value = self._create_response(
+                    {"id": "p-1"}
+                )
+                self.module.update_policy(
+                    policy_type=policy_type,
+                    id="p-1",
+                    name=None,
+                    description=None,
+                    settings=[{"id": "x", "value": True}],
+                )
+                call = self.mock_client.command.call_args_list[0]
+                wrapper = self.module._BODY_WRAPPER[policy_type]
+                resource = call[1]["body"][wrapper][0]
+                self.assertEqual(resource["settings"], [{"id": "x", "value": True}])
+
     def test_update_places_id_inside_resource(self):
         """Update body places id inside the resource object."""
         self.mock_client.command.return_value = self._create_response(
