@@ -286,6 +286,10 @@ class CasesModule(BaseModule):
             default=None,
             description="Case description (max 2048 characters).",
         ),
+        description_format: str | None = Field(
+            default=None,
+            description="Rendering format for the description. Values: plaintext, markdown. Defaults to CrowdStrike's server-side default (plaintext) when omitted.",
+        ),
         status: str | None = Field(
             default=None,
             description="Initial status. Values: new, in_progress. Defaults to 'new' if omitted.",
@@ -324,6 +328,8 @@ class CasesModule(BaseModule):
 
         if description is not None:
             body["description"] = description
+        if description_format is not None:
+            body["description_format"] = description_format
         if status is not None:
             body["status"] = status
         if assigned_to_user_uuid is not None:
@@ -366,6 +372,10 @@ class CasesModule(BaseModule):
             default=None,
             description="New case description.",
         ),
+        description_format: str | None = Field(
+            default=None,
+            description="Rendering format for the description. Values: plaintext, markdown. Left unchanged when omitted.",
+        ),
         status: str | None = Field(
             default=None,
             description="New status. Values: new, in_progress, closed, reopened.",
@@ -404,6 +414,8 @@ class CasesModule(BaseModule):
             fields["name"] = name
         if description is not None:
             fields["description"] = description
+        if description_format is not None:
+            fields["description_format"] = description_format
         if status is not None:
             fields["status"] = status
         if severity is not None:
