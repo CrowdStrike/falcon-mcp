@@ -84,7 +84,6 @@ class TestFirewallModule(TestModules):
             filter="enabled:true",
             limit=20,
             sort="modified_on.desc",
-            q=None,
             after=None,
         )
 
@@ -96,6 +95,9 @@ class TestFirewallModule(TestModules):
         self.assertEqual(first_call[1]["parameters"]["filter"], "enabled:true")
         self.assertEqual(first_call[1]["parameters"]["limit"], 20)
         self.assertNotIn("offset", first_call[1]["parameters"])
+        # `q` is not a supported parameter — the API ignores it, so it must not
+        # be forwarded (see issue #525).
+        self.assertNotIn("q", first_call[1]["parameters"])
         self.assertEqual(first_call[1]["parameters"]["sort"], "modified_on.desc")
 
         self.assertEqual(second_call[0][0], "get_rules")
@@ -127,7 +129,6 @@ class TestFirewallModule(TestModules):
             filter=None,
             limit=20,
             sort="modified_on.desc",
-            q=None,
             after=None,
         )
 
@@ -146,7 +147,6 @@ class TestFirewallModule(TestModules):
             filter="name:'DoesNotExist*'",
             limit=10,
             sort=None,
-            q=None,
             after=None,
         )
 
@@ -179,7 +179,6 @@ class TestFirewallModule(TestModules):
             filter="enabled:true",
             limit=10,
             sort="modified_on.desc",
-            q=None,
             after=None,
         )
 
@@ -213,7 +212,6 @@ class TestFirewallModule(TestModules):
             filter=None,
             limit=10,
             sort="modified_on.desc",
-            q=None,
             after=None,
         )
 
@@ -246,7 +244,6 @@ class TestFirewallModule(TestModules):
             limit=10,
             offset=0,
             sort="modified_on.desc",
-            q=None,
         )
 
         self.assertEqual(self.mock_client.command.call_count, 2)
@@ -281,7 +278,6 @@ class TestFirewallModule(TestModules):
             limit=10,
             offset=0,
             sort="modified_on.desc",
-            q=None,
         )
 
         self.assertEqual(len(result["results"]), 2)
@@ -398,7 +394,6 @@ class TestFirewallModule(TestModules):
             filter="bad_field:'value'",
             limit=10,
             sort=None,
-            q=None,
             after=None,
         )
 
@@ -418,7 +413,6 @@ class TestFirewallModule(TestModules):
             filter=None,
             limit=10,
             sort=None,
-            q=None,
             after=None,
         )
 
@@ -442,7 +436,6 @@ class TestFirewallModule(TestModules):
             filter="enabled:true",
             limit=10,
             sort=None,
-            q=None,
             after=None,
         )
 
@@ -461,7 +454,6 @@ class TestFirewallModule(TestModules):
             filter="bad_field:'value'",
             limit=10,
             sort=None,
-            q=None,
             after=None,
         )
 
@@ -469,6 +461,20 @@ class TestFirewallModule(TestModules):
         self.assertIn("results", result)
         self.assertIn("fql_guide", result)
         self.assertIn("hint", result)
+
+
+    def test_search_tools_do_not_expose_q_param(self):
+        """The `q` free-text param was removed — the API silently ignores it, so
+        offering it returned unfiltered results that looked filtered (issue #525)."""
+        import inspect
+
+        for method in (
+            self.module.search_firewall_rules,
+            self.module.search_firewall_rule_groups,
+            self.module.search_firewall_policy_rules,
+        ):
+            params = inspect.signature(method).parameters
+            self.assertNotIn("q", params, f"{method.__name__} must not expose `q`")
 
 
 if __name__ == "__main__":

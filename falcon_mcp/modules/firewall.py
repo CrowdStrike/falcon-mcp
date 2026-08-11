@@ -88,7 +88,7 @@ class FirewallModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description="FQL filter expression. See `falcon://firewall/rules/fql-guide` for syntax.",
-            examples=["enabled:true", "platform:'windows'+name:'Block*'"],
+            examples=["enabled:true", "platform:'windows'+name:~'Block'"],
         ),
         limit: int = Field(
             default=10,
@@ -106,10 +106,6 @@ class FirewallModule(BaseModule):
                 sort endpoint; the pipe form ('platform|asc') also works here.
             """).strip(),
             examples=["modified_on.desc", "name.asc"],
-        ),
-        q: str | None = Field(
-            default=None,
-            description="Free-text query string across rule fields.",
         ),
         after: str | None = Field(
             default=None,
@@ -129,7 +125,6 @@ class FirewallModule(BaseModule):
                 "filter": filter,
                 "limit": limit,
                 "sort": sort,
-                "q": q,
                 "after": after,
             },
             error_message="Failed to search firewall rules",
@@ -163,7 +158,7 @@ class FirewallModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description="FQL filter expression. See `falcon://firewall/rules/fql-guide` for syntax.",
-            examples=["enabled:true", "platform:'windows'+name:'Default*'"],
+            examples=["enabled:true", "platform:'windows'+name:~'Default'"],
         ),
         limit: int = Field(
             default=10,
@@ -174,10 +169,6 @@ class FirewallModule(BaseModule):
         sort: str | None = Field(
             default=None,
             description="Sort expression in FQL syntax (e.g., modified_on.desc).",
-        ),
-        q: str | None = Field(
-            default=None,
-            description="Free-text query string across rule group fields.",
         ),
         after: str | None = Field(
             default=None,
@@ -197,7 +188,6 @@ class FirewallModule(BaseModule):
                 "filter": filter,
                 "limit": limit,
                 "sort": sort,
-                "q": q,
                 "after": after,
             },
             error_message="Failed to search firewall rule groups",
@@ -249,10 +239,6 @@ class FirewallModule(BaseModule):
             default=None,
             description="Sort expression in FQL syntax (e.g., modified_on.desc).",
         ),
-        q: str | None = Field(
-            default=None,
-            description="Free-text query string across policy rule fields.",
-        ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search firewall rules within a specific policy container.
 
@@ -269,7 +255,6 @@ class FirewallModule(BaseModule):
                 "limit": limit,
                 "offset": offset,
                 "sort": sort,
-                "q": q,
             },
             error_message="Failed to search firewall policy rules",
         )
