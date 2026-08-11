@@ -252,6 +252,11 @@ API_SCOPE_REQUIREMENTS = {
     "GetRulesV1": ["Monitoring rules (Falcon Intelligence Recon):read"],
     "QueryNotificationsExposedDataRecordsV1": ["Monitoring rules (Falcon Intelligence Recon):read"],
     "GetNotificationsExposedDataRecordsV1": ["Monitoring rules (Falcon Intelligence Recon):read"],
+    "AggregateNotificationsV1": ["Monitoring rules (Falcon Intelligence Recon):read"],
+    "AggregateNotificationsExposedDataRecordsV1": [
+        "Monitoring rules (Falcon Intelligence Recon):read"
+    ],
+    "PreviewRuleV1": ["Monitoring rules (Falcon Intelligence Recon):read"],
     # Policies operations - Content Update
     "queryCombinedContentUpdatePolicies": ["Content Update Policies:read"],
     "queryContentUpdatePolicies": ["Content Update Policies:read"],

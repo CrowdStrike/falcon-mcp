@@ -12,6 +12,66 @@ Searching Falcon Intelligence Recon notifications, monitoring rules, and exposed
 
 ## Tools
 
+### `falcon_aggregate_recon_exposed_data_records`
+
+**Required scopes:** `Monitoring rules (Falcon Intelligence Recon):read`
+
+Count and group Falcon Intelligence Recon exposed-data records into summary buckets.
+
+Use this to answer how many, top, most common, per day, or over time questions about
+leaked credentials and PII — which sites leak the most, the newly-versus-previously
+reported mix, or exposure volume over time — without retrieving individual rows.
+Consult `falcon://recon/exposed-data-records/aggregate-guide` for the restricted field
+list and `falcon://recon/exposed-data-records/search/fql-guide` before writing a filter.
+Returns one entry per aggregation, each with a `name` and `buckets` keyed on `label`
+and `count`.
+
+**Example prompts:**
+
+- "Which sites leak the most of our credentials?"
+- "How many exposed credentials are newly reported vs previously reported?"
+- "Show exposed data record volume per day"
+
+### `falcon_aggregate_recon_notifications`
+
+**Required scopes:** `Monitoring rules (Falcon Intelligence Recon):read`
+
+Count and group Falcon Intelligence Recon notifications into summary buckets.
+
+Use this to answer how many, top, most common, per day, or over time questions about
+recon notifications — the mix of statuses, the noisiest monitoring rules, or the
+typosquatting trend — without retrieving individual records. Consult
+`falcon://recon/notifications/aggregate-guide` for aggregatable fields and
+`falcon://recon/notifications/search/fql-guide` before writing a filter. Returns one
+entry per aggregation, each with a `name` and `buckets` keyed on `label` and `count`.
+
+**Example prompts:**
+
+- "How many recon notifications are there by status?"
+- "What are the top 10 noisiest recon monitoring rules this month?"
+- "Show recon notification volume per day for the past 30 days"
+- "Break down typosquatting notifications by priority"
+
+### `falcon_preview_recon_rule`
+
+**Required scopes:** `Monitoring rules (Falcon Intelligence Recon):read`
+
+Estimate how many notifications a prospective Recon monitoring rule would generate.
+
+Use this before creating a monitoring rule to judge how noisy it would be, or to
+compare candidate filters — a high total means the rule needs tightening. Consult
+`falcon://recon/rules/preview-guide` for the rule-filter dialect, since `filter` is a
+rule definition rather than a notification search filter; to summarize notifications
+that already exist, use `falcon_aggregate_recon_notifications` instead. Returns a
+fixed breakdown of `channel`, `count`, and `site` aggregations with `label`/`count`
+buckets.
+
+**Example prompts:**
+
+- "How noisy would a rule monitoring example.com be?"
+- "Preview how many notifications a brand rule for Acme would generate in the past 30 days"
+- "Estimate the notification volume before I create this monitoring rule"
+
 ### `falcon_search_recon_exposed_data_records`
 
 **Required scopes:** `Monitoring rules (Falcon Intelligence Recon):read`
@@ -82,3 +142,6 @@ Responses include `pagination.total` (the total number of records matching the f
 - **`falcon://recon/notifications/search/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_recon_notifications` tool.
 - **`falcon://recon/rules/search/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_recon_rules` tool.
 - **`falcon://recon/exposed-data-records/search/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_recon_exposed_data_records` tool.
+- **`falcon://recon/notifications/aggregate-guide`**: Contains the aggregatable fields and usage guide for the `falcon_aggregate_recon_notifications` tool.
+- **`falcon://recon/exposed-data-records/aggregate-guide`**: Contains the aggregatable fields and usage guide for the `falcon_aggregate_recon_exposed_data_records` tool.
+- **`falcon://recon/rules/preview-guide`**: Contains the rule-filter dialect, valid topics, and lookback values for the `falcon_preview_recon_rule` tool.

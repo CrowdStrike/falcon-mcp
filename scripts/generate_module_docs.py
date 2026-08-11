@@ -408,6 +408,22 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Show leaked credentials from the past 7 days",
         "Find exposed data records for a specific notification",
     ],
+    "falcon_aggregate_recon_notifications": [
+        "How many recon notifications are there by status?",
+        "What are the top 10 noisiest recon monitoring rules this month?",
+        "Show recon notification volume per day for the past 30 days",
+        "Break down typosquatting notifications by priority",
+    ],
+    "falcon_aggregate_recon_exposed_data_records": [
+        "Which sites leak the most of our credentials?",
+        "How many exposed credentials are newly reported vs previously reported?",
+        "Show exposed data record volume per day",
+    ],
+    "falcon_preview_recon_rule": [
+        "How noisy would a rule monitoring example.com be?",
+        "Preview how many notifications a brand rule for Acme would generate in the past 30 days",
+        "Estimate the notification volume before I create this monitoring rule",
+    ],
     # Scheduled Reports
     "falcon_search_scheduled_reports": [
         "Show me all active scheduled reports",
