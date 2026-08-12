@@ -143,15 +143,21 @@ FILTER_HINTS: dict[str, str] = {
     # === Firewall Rules ===
     "falcon_search_firewall_rules": (
         "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime)."
+        "enabled (true|false), created_on (UTC datetime). "
+        "name: use the contains operator name:~'value' (whole-word substring); a "
+        "name:'value*' glob is treated literally and returns nothing."
     ),
     "falcon_search_firewall_rule_groups": (
         "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime)."
+        "enabled (true|false), created_on (UTC datetime). "
+        "name: use the contains operator name:~'value' (whole-word substring); a "
+        "name:'value*' glob is treated literally and returns nothing."
     ),
     "falcon_search_firewall_policy_rules": (
         "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime)."
+        "enabled (true|false), created_on (UTC datetime). "
+        "name: use the contains operator name:~'value' (whole-word substring); a "
+        "name:'value*' glob is treated literally and returns nothing."
     ),
     # === Intel: Actors ===
     "falcon_search_actors": (
@@ -281,6 +287,24 @@ FILTER_HINTS: dict[str, str] = {
         "rule.topic (SA_DOMAIN|...), "
         "created_date:>'now-7d' (relative date). "
         "Ex: domain:'example.com'+credential_status:'newly_reported'"
+    ),
+    "falcon_aggregate_recon_notifications": (
+        "Filters which notifications are counted. Common fields: "
+        "status (new|in-progress|pending-review|closed-true-positive|closed-false-positive), "
+        "rule_priority (low|medium|high|critical), "
+        "rule_topic (SA_TYPOSQUATTING|SA_THIRD_PARTY|SA_CUSTOM|SA_DOMAIN|SA_IP|SA_BRAND_PRODUCT), "
+        "rule_id, item_type, item_site, source_category, "
+        "created_date:>'now-30d' (relative date). "
+        "Ex: rule_topic:'SA_TYPOSQUATTING'+created_date:>'now-30d'"
+    ),
+    "falcon_aggregate_recon_exposed_data_records": (
+        "Filters which records are counted. Common fields: domain, email, "
+        "credential_status (newly_reported|confirmed_active|previously_reported), "
+        "site (telegram.org|stealer_logs|malware_logs), source_category, notification_id, "
+        "rule.topic (SA_DOMAIN|SA_EMAIL), "
+        "created_date:>'now-7d' (relative date). "
+        "NOTE: the aggregatable `field` list is narrower than what this filter accepts. "
+        "Ex: credential_status:'newly_reported'+created_date:>'now-30d'"
     ),
     # === Scheduled Reports ===
     "falcon_search_scheduled_reports": (
