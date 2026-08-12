@@ -4,41 +4,79 @@ This repository includes a prebuilt [Google ADK](https://google.github.io/adk-do
 
 The goal is to provide customers an opinionated and validated set of instructions for running falcon-mcp and deploying it for their teams.
 
+> [!NOTE]
+> The `falcon-mcp` package is published to PyPI and installed as a dependency. Cloning this repository provides the agent code and deployment configuration.
+
 ## Table of Contents
 
 1. [Setting up and running locally (5 minutes)](#setting-up-and-running-locally-5-minutes)
 2. [Deployment - Why Deploy?](#deployment---why-deploy)
-3. [Deploying the agent to Cloud Run](#deploying-the-agent-to-cloud-run)
-4. [Deploying to Vertex AI Agent Engine and registering on Agentspace](#deploying-to-vertex-ai-agent-engine-and-registering-on-agentspace)
-5. [Securing access, Evaluating, Optimizing performance and costs](#securing-access-evaluating-optimizing-performance-and-costs)
+3. [Deploying to Agent Runtime and using as Gemini Enterprise App Agent](#deploying-to-agent-runtime-and-using-as-gemini-enterprise-app-agent)
+4. [Securing access, Evaluating, Optimizing performance and costs](#securing-access-evaluating-optimizing-performance-and-costs)
+5. [FQL Guide Resources](#fql-guide-resources)
+6. [Troubleshooting](#troubleshooting)
 
 ### Setting up and running locally (5 minutes)
 
-You can run the following commands locally on Linux / Mac or in Google Cloud Shell.
+You can run the following commands locally on Linux / macOS or in Google Cloud Shell.
 If you plan to deploy the agent, it is recommended to run in Google Cloud Shell.
 
-```bash
+#### Prerequisites
 
+If running locally (outside Google Cloud Shell), ensure you have the `gcloud` CLI installed and authenticate with Application Default Credentials (ADC), set your project, and enable the `aiplatform` API:
+
+```bash
+gcloud auth application-default login
+gcloud config set project <YOUR_PROJECT_ID>
+gcloud services enable aiplatform.googleapis.com
+```
+
+#### Clone and Configure
+
+```bash
 git clone https://github.com/CrowdStrike/falcon-mcp.git
 
 cd falcon-mcp
 
 cd examples/adk
 
-# create and activate python environment
+cp falcon_agent/env.properties falcon_agent/.env
+```
+
+Now update the following environment variables in the `falcon_agent/.env` file. Make sure the `GOOGLE_GENAI_USE_VERTEXAI` is left to `True`. You can update the `GOOGLE_MODEL` and `FALCON_AGENT_PROMPT` variables as needed or leave them as is.
+
+```
+# Must update following values
+
+FALCON_CLIENT_ID
+FALCON_CLIENT_SECRET
+FALCON_BASE_URL
+
+GOOGLE_CLOUD_PROJECT
+GOOGLE_CLOUD_LOCATION
+```
+
+#### Install dependencies
+
+```bash
+# Create and activate python environment
+# You can also use uv
+
 python3 -m venv .venv
 . .venv/bin/activate
 
-# install depenencies
+# Install dependencies
 pip install -r falcon_agent/requirements.txt
-
-chmod +x adk_agent_operations.sh
-
-./adk_agent_operations.sh
-
 ```
 
-The script will create `.env` file in `falcon_agent/` directory and prompt you to update it. At a minimum update the `General Agent Configuration` section.
+#### Run the agent locally
+
+```bash
+adk web
+
+# If running in Cloud Shell - use the following command:
+# adk web --allow_origins "*"
+```
 
 > [!WARNING]
 > **Do not use curly braces** (`{variable}`) in the `FALCON_AGENT_PROMPT` value. Google ADK interprets `{name}` patterns as context variables that must exist in session state, which causes `Context variable not found` errors at runtime. Use square brackets or plain text instead.
@@ -48,61 +86,20 @@ The script will create `.env` file in `falcon_agent/` directory and prompt you t
 <summary><b>Sample Output - Very First Run</b></summary>
 
 ```bash
-./adk_agent_operations.sh
-INFO: No operation mode provided and './falcon_agent/.env' is not found.
-INFO: Attempting to copy template './falcon_agent/env.properties' to './falcon_agent/.env'.
-SUCCESS: './falcon_agent/env.properties' copied to './falcon_agent/.env'.
-ACTION REQUIRED: Please update the variables in './falcon_agent/.env' before running this script with an operation mode.
+2026-07-22 17:38:47,091 - INFO - service_factory.py:266 - Using in-memory memory service
+2026-07-22 17:38:47,092 - INFO - local_storage.py:89 - Using per-agent session storage
 
-```
-
-</details>
-
-<br>
-
-> [!NOTE]
-> Make sure you get and update the GOOGLE_API_KEY using these [instructions](https://ai.google.dev/gemini-api/docs/api-key).
-
-Now run the script with `local_run` parameter.
-
-```bash
-# local run
-./adk_agent_operations.sh local_run
-```
-
-Here is the sample output
-
-<details>
-
-<summary><b>Sample Output - Local Run</b></summary>
-
-```bash
-./adk_agent_operations.sh local_run
-INFO: Operation mode selected: 'local_run'.
---- Loading environment variables from './falcon_agent/.env' ---
---- Environment variables loaded. ---
---- Validating required environment variables for 'local_run' mode ---
-INFO: Variable 'GOOGLE_GENAI_USE_VERTEXAI' is set and valid.
-INFO: Variable 'GOOGLE_API_KEY' is set and valid.
-INFO: Variable 'GOOGLE_MODEL' is set and valid.
-INFO: Variable 'FALCON_CLIENT_ID' is set and valid.
-INFO: Variable 'FALCON_CLIENT_SECRET' is set and valid.
-INFO: Variable 'FALCON_BASE_URL' is set and valid.
-INFO: Variable 'FALCON_AGENT_PROMPT' is set and valid.
---- All required environment variables are VALID. ---
-INFO: Running ADK Agent for local development...
-INFO:     Started server process [20071]
+INFO:     Started server process [717057]
 INFO:     Waiting for application startup.
 
 +-----------------------------------------------------------------------------+
 | ADK Web Server started                                                      |
 |                                                                             |
-| For local testing, access at http://localhost:8000.                         |
+| For local testing, access at http://127.0.0.1:8000.                         |
 +-----------------------------------------------------------------------------+
 
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-
 ```
 
 </details>
@@ -117,340 +114,96 @@ You can stop the agent with `ctrl+C`
 
 ### Deployment - Why Deploy?
 
-You may want to deploy the agent (with the `falcon-mcp` server) for following reasons
+You may want to deploy the agent (with the falcon-mcp server) for the following reasons:
 
-1. You do not want to hand out credentials to everyone to run MCP server locally
-2. You want to share the ready to use agent with your team
-3. Use it for demos without any setup
+1. Centralize execution on Agent Runtime without distributing credentials to individual local machines (for production workloads, managing secrets via Google Cloud Secret Manager is recommended)
+2. You want to share the ready-to-use agent with your team
+3. Use it for demos without any client-side setup
 
-You have two distinct paths to deployment:
+You have two distinct paths after deployment:
 
-1. Deploy on Cloud Run
-2. Deploy on Vertex AI Agent Engine (and access through Agentspace after registration)
+1. Deploy and use in Agent Platform / Agent Registry playground
+2. Deploy in Agent Runtime and use via Gemini Enterprise
 
-<br>
+### Deploying to Agent Runtime and using as Gemini Enterprise App Agent
 
-> [!NOTE]
-> For all the following sections - If you are not running in Google Cloud Shell, make sure you have `gcloud` CLI [installed](https://cloud.google.com/sdk/docs/install) and you have authenticated with your username (preferably as owner of the project) on your local computer.
-
-### Deploying the agent to Cloud Run
-
-This section covers deployment to cloud run. Make sure you have all the required [APIs enabled](https://cloud.google.com/run/docs/quickstarts/build-and-deploy/deploy-python-service#before-you-begin) on the GCP project.
-
-```bash
-cd examples/adk/
-./adk_agent_operations.sh cloudrun_deploy
-```
-
-In the sample output below, note the lines marked with ➡️
-
-1. You will have to provide input for `Allow unauthenticated invocations?` (say N)
-2. Once deployment is completed you get a URL to access your agent.
-
-<details>
-
-<summary><b>Sample Output - Cloud Run Deloyment</b></summary>
-
-```bash
-INFO: Operation mode selected: 'cloudrun_deploy'.
---- Loading environment variables from './falcon_agent/.env' ---
---- Environment variables loaded. ---
---- Validating required environment variables for 'cloudrun_deploy' mode ---
-INFO: Variable 'GOOGLE_GENAI_USE_VERTEXAI' is set and valid.
-INFO: Variable 'GOOGLE_MODEL' is set and valid.
-INFO: Variable 'FALCON_CLIENT_ID' is set and valid.
-INFO: Variable 'FALCON_CLIENT_SECRET' is set and valid.
-INFO: Variable 'FALCON_BASE_URL' is set and valid.
-INFO: Variable 'FALCON_AGENT_PROMPT' is set and valid.
-INFO: Variable 'PROJECT_ID' is set and valid.
-INFO: Variable 'REGION' is set and valid.
---- All required environment variables are VALID. ---
-INFO: Preparing for Cloud Run deployment...
-INFO: Backing up './falcon_agent/.env' to './falcon_agent/.env.bak'.
-INFO: Modifying './falcon_agent/.env': Deleting GOOGLE_API_KEY and setting GOOGLE_GENAI_USE_VERTEXAI=True.
-INFO: Re-loading modified environment variables.
-INFO: Deploying ADK Agent to Cloud Run...
-Start generating Cloud Run source files in /tmp/cloud_run_deploy_src/20250801_071151
-Copying agent source code...
-Copying agent source code complete.
-Creating Dockerfile...
-Creating Dockerfile complete: /tmp/cloud_run_deploy_src/20250801_071151/Dockerfile
-Deploying to Cloud Run...
-➡️ Allow unauthenticated invocations to [falcon-agent-service] (y/N)?  N
-
-Building using Dockerfile and deploying container to Cloud Run service [falcon-agent-service] in project [crowdstrikexxxxxxx] region [us-central1]
-⠛ Building and deploying new service... Uploading sources.
-  ⠛ Uploading sources...
-✓ Building and deploying new service... Done.
-  ✓ Uploading sources...
-  ✓ Building Container... Logs are available at [https://console.cloud.google.com/cloud-build/builds;region=us-central1/b1dbfe60-46fe-4cc1-ba6a-xxxx?project=xxxxx].
-  ✓ Creating Revision...
-  ✓ Routing traffic...
-  ✓ Setting IAM Policy...
-Done.
-Service [falcon-agent-service] revision [falcon-agent-service-00001-abc] has been deployed and is serving 100 percent of traffic.
-➡️ Service URL: https://falcon-agent-service-xxxxx.us-central1.run.app
-INFO: Display format: "none"
-Cleaning up the temp folder: /tmp/cloud_run_deploy_src/20250801_071151
-SUCCESS: Cloud Run deployment completed successfully.
---- Operation 'cloudrun_deploy' complete. ---
-INFO: Restoring .env file from backup: './falcon_agent/.env.bak'.
-```
-
-</details>
-
-<br>
+This section covers deployment to GCP Agent Platform Agent Runtime. To access the agent and to consolidate all your agents under one umbrella you can also add the deployed agent to a Gemini Enterprise App.
 
 > [!NOTE]
-> By default the service has IAM authentication enabled for it. Please follow steps below to enable access to yourself and your team.
+> When using `GOOGLE_CLOUD_LOCATION=global` in `.env` (which directs model inference to the global endpoint for models like `gemini-3.5-flash`), pass the `--region` flag (e.g. `--region us-central1`) during deployment to specify the supported regional location where the Agent Engine container is hosted.
 
-1. Cloud Run - Services - select `falcon-agent-service`, by clicking the checkbox next to it.
-2. At the top click `permissions`, a pane `Permissions for falcon-agent-service` should open on the right hand side.
-3. Click `Add principal`
-4. Add the users you want to provide access to and provide them `Cloud Run Invoker` role.
-5. Wait for some time.
-
-#### Accessing the service
-
-1. Ask your users to run the following command (replace project id and region with the project id & region in which you have deployed the service)
+Here are the deployment instructions:
 
 ```bash
-gcloud run services proxy falcon-agent-service --project PROJECT-ID --region YOUR-REGION
+# While in examples/adk directory
+# If using uv; use uv run adk
+# Please change the region accordingly
+
+adk deploy agent_engine --region us-central1 --display_name falcon_adk_agent falcon_agent/
+
 ```
 
 <details>
+<summary>
+Updating an already deployed agent
+</summary>
 
-<summary><b>Sample Output Accessing Cloud Run service through local proxy</b></summary>
+If you updated the agent code for some reason (like for optimizing for cost / performance as shown [below](#optimizing-performance-and-costs)) then you can update your agent like this:
 
 ```bash
-# You might be asked to install a component, for the proxy to work locally
-This command requires the `cloud-run-proxy` component to be installed. Would
- you like to install the `cloud-run-proxy` component to continue command
-execution? (Y/n)?  Y
+# While in examples/adk directory
+# If using uv; use uv run adk
+# Provide the numeric Agent Engine ID of the agent being updated (e.g. 12345678910)
 
-Proxying to Cloud Run service [falcon-agent-service] in project [crowdstrike-xxx-yyy] region [us-central1]
-http://127.0.0.1:8080 proxies to https://falcon-agent-service-abc1234-uc.a.run.app
-
+adk deploy agent_engine --region us-central1 --display_name falcon_adk_agent --agent_engine_id <AGENT_ENGINE_ID> falcon_agent/
 ```
+
+> In ADK 2.5.0 with Vertex AI (Non API Key mode) configuration, `--agent_engine_id` takes the bare numeric ID when project and location are set.
 
 </details>
 
-1. Now they can access the Cloud Run Service locally on `http://localhost:8080`
+#### Accessing the Agent
 
-### Deploying to Vertex AI Agent Engine and registering on Agentspace
+Go to:
 
-This section covers deployment to Vetex AI Agent Engine. To acces the agent and to consolidate all your agents under one umbrella you can also register the deployed agent to Agentspace.
+Agent Platform -> Agent Registry -> Your Agent -> Click -> Playground -> interact with the agent
 
-1. Make sure that you create a bucket for staging the Agent Engine artifacts in the same project as the deployment (env variable - `AGENT_ENGINE_STAGING_BUCKET`).
+#### Accessing the Agent as a Gemini Enterprise Agent Application
 
-```bash
-cd examples/adk/
-./adk_agent_operations.sh agent_engine_deploy
-```
+Here are the steps:
 
-And here is the sample output.
+1. Go to Gemini Enterprise menu in GCP Console
+2. Create an App (Global)
+3. Click the application -> go to Agents -> Add Agent -> Choose Custom agent via Agent Runtime
+4. Skip Authorizations screen
+5. On the Configuration screen add Agent name, Description and Agent Engine path (format - `projects/{project}/locations/{location}/reasoningEngines/{reasoningEngine}`), Click create
+6. Provide Access -> Select Created Agent -> User permissions tab -> Add User -> Provide "Agent User" role to a user / All Users as needed
+7. Access the Gemini Enterprise app and select the agent or invoke it with `@agent_name`
+8. If you need to delete the Agent from Gemini Enterprise App - you can select `delete` from the Actions menu for the particular agent.
 
-Make sure you copy the Agent Engine Number from the output (marked by ➡️ for illustration)
-
-<details>
-
-<summary><b>Sample Output - Agent Engine Deployment</b></summary>
-
-```bash
-INFO: Operation mode selected: 'agent_engine_deploy'.
---- Loading environment variables from './falcon_agent/.env' ---
---- Environment variables loaded. ---
---- Validating required environment variables for 'agent_engine_deploy' mode ---
-INFO: Variable 'GOOGLE_GENAI_USE_VERTEXAI' is set and valid.
-INFO: Variable 'GOOGLE_MODEL' is set and valid.
-INFO: Variable 'FALCON_CLIENT_ID' is set and valid.
-INFO: Variable 'FALCON_CLIENT_SECRET' is set and valid.
-INFO: Variable 'FALCON_BASE_URL' is set and valid.
-INFO: Variable 'FALCON_AGENT_PROMPT' is set and valid.
-INFO: Variable 'PROJECT_ID' is set and valid.
-INFO: Variable 'REGION' is set and valid.
-INFO: Variable 'AGENT_ENGINE_STAGING_BUCKET' is set and valid.
---- All required environment variables are VALID. ---
-INFO: Preparing for Agent Engine deployment...
-INFO: Backing up './falcon_agent/.env' to './falcon_agent/.env.bak'.
-INFO: Modifying './falcon_agent/.env': Deleting GOOGLE_API_KEY and setting GOOGLE_GENAI_USE_VERTEXAI=True.
-INFO: Re-loading modified environment variables.
-INFO: Deploying ADK Agent to Agent Engine...
-Copying agent source code...
-Copying agent source code complete.
-Initializing Vertex AI...
-Resolving files and dependencies...
-Reading environment variables from /tmp/agent_engine_deploy_src/20250801_103024/.env
-Vertex AI initialized.
-Created /tmp/agent_engine_deploy_src/20250801_103024/agent_engine_app.py
-Files and dependencies resolved
-Deploying to agent engine...
-Reading requirements from requirements='/tmp/agent_engine_deploy_src/20250801_103024/requirements.txt'
-Read the following lines: ['google-adk[eval]', 'falcon-mcp', 'google-cloud-aiplatform[agent_engines]', 'cloudpickle']
-Identified the following requirements: {'google-cloud-aiplatform': '1.105.0', 'cloudpickle': '3.1.1', 'pydantic': '2.11.7'}
-The following requirements are missing: {'pydantic'}
-The following requirements are appended: {'pydantic==2.11.7'}
-The final list of requirements: ['google-adk[eval]', 'falcon-mcp', 'google-cloud-aiplatform[agent_engines]', 'cloudpickle', 'pydantic==2.11.7']
-Using bucket agent-engine-xxyyzz
-Wrote to gs://agent-engine-xxyyzz/agent_engine/agent_engine.pkl
-Writing to gs://agent-engine-xxyyzz/agent_engine/requirements.txt
-Creating in-memory tarfile of extra_packages
-Writing to gs://agent-engine-xxyyzz/agent_engine/dependencies.tar.gz
-Creating AgentEngine
-INFO:vertexai.agent_engines:Creating AgentEngine
-Create AgentEngine backing LRO: projects/123456789101/locations/us-central1/reasoningEngines/3670952665795123456/operations/5379102769057612345
-INFO:vertexai.agent_engines:Create AgentEngine backing LRO: projects/123456789101/locations/us-central1/reasoningEngines/3670952665795123456/operations/5379102769057612345
-View progress and logs at https://console.cloud.google.com/logs/query?project=crowdstrike-xxxx-yyyy
-INFO:vertexai.agent_engines:View progress and logs at https://console.cloud.google.com/logs/query?project=crowdstrike-xxxx-yyyy
-➡️ AgentEngine created. Resource name: projects/123456789101/locations/us-central1/reasoningEngines/3670952665795123456
-INFO:vertexai.agent_engines:AgentEngine created. Resource name: projects/123456789101/locations/us-central1/reasoningEngines/3670952665795123456
-To use this AgentEngine in another session:
-INFO:vertexai.agent_engines:To use this AgentEngine in another session:
-agent_engine = vertexai.agent_engines.get('projects/123456789101/locations/us-central1/reasoningEngines/3670952665795123456')
-INFO:vertexai.agent_engines:agent_engine = vertexai.agent_engines.get('projects/123456789101/locations/us-central1/reasoningEngines/3670952665795123456')
-Cleaning up the temp folder: /tmp/agent_engine_deploy_src/20250801_103024
-SUCCESS: Agent Engine deployment completed successfully.
---- Operation 'agent_engine_deploy' complete. ---
-INFO: Restoring .env file from backup: './falcon_agent/.env.bak'.
-
-```
-
-</details>
-
-<br>
-
-Once the agent is deployed on Agent Engine, you can register it on Agentspace to work with an Agent Engine Application.
-
-Make sure you have the Agent Engine Number from the previous step
-
-1. Go to the Agentspace [page](https://console.cloud.google.com/gen-app-builder/engines) in Google Cloud Console.
-2. Create an App (Type - Agentspace)
-3. Note down the app details including the app name (e.g. google-security-agent-app_1750057151234)
-4. Make sure that you have the Agent Space Admin role while performing the following actions
-5. Enable Discovery Engine API for your project
-6. Provide the following roles to the Discovery Engine Service Account
-   - Vertex AI viewer
-   - Vertex AI user
-7. Please note that these roles need to be provided into the project housing your Agent Engine Agent. Also you need to enable the show Google provided role grants to access the Discovery Engine Service Account.
-
-Update the environment variables `PROJECT_NUMBER`, `AGENT_LOCATION`, `REASONING_ENGINE_NUMBER` and `AGENT_SPACE_APP_NAME` in the `# Agentspace Specific` section.
-
-Now to register the agent and make it available to your application use the following command.
-
-```bash
-cd examples/adk/
-./adk_agent_operations.sh agentspace_register
-```
-
-<details>
-
-<summary><b>Sample Output - Agentspace Registration</b></summary>
-
-```bash
-INFO: Operation mode selected: 'agentspace_register'.
---- Loading environment variables from './falcon_agent/.env' ---
---- Environment variables loaded. ---
---- Validating required environment variables for 'agentspace_register' mode ---
-INFO: Variable 'GOOGLE_GENAI_USE_VERTEXAI' is set and valid.
-INFO: Variable 'GOOGLE_MODEL' is set and valid.
-INFO: Variable 'FALCON_CLIENT_ID' is set and valid.
-INFO: Variable 'FALCON_CLIENT_SECRET' is set and valid.
-INFO: Variable 'FALCON_BASE_URL' is set and valid.
-INFO: Variable 'FALCON_AGENT_PROMPT' is set and valid.
-INFO: Variable 'PROJECT_ID' is set and valid.
-INFO: Variable 'REGION' is set and valid.
-INFO: Variable 'PROJECT_NUMBER' is set and valid.
-INFO: Variable 'AGENT_LOCATION' is set and valid.
-INFO: Variable 'REASONING_ENGINE_NUMBER' is set and valid.
-INFO: Variable 'AGENT_SPACE_APP_NAME' is set and valid.
---- All required environment variables are VALID. ---
-INFO: Registering ADK Agent with AgentSpace...
-INFO: Sending POST request to: https://discoveryengine.googleapis.com/v1alpha/projects/security-xyzabc-123456/locations/global/collections/default_collection/engines/google-security-agent-app_1750057112345/assistants/default_assistant/agents
-DEBUG: Request Body :
-{
-    "displayName": "Crowdstrike Falcon Agent",
-    "description": "Allows users interact with Crowdstrike Falcon backend",
-    "adk_agent_definition":
-    {
-        "tool_settings": {
-            "tool_description": "Crowdstrike Falcon tools"
-        },
-        "provisioned_reasoning_engine": {
-            "reasoning_engine":"projects/707099123456/locations/us-central1/reasoningEngines/5047646776881234567"
-        }
-    }
-}
-...
-{
-  "name": "projects/707099123456/locations/global/collections/default_collection/engines/google-security-agent-app_1750057112345/assistants/default_assistant/agents/2662627860861234567",
-  "displayName": "Crowdstrike Falcon Agent",
-  "description": "Allows users interact with Crowdstrike Falcon backend",
-  "createTime": "2025-08-03T15:39:03.129318186Z",
-  "adkAgentDefinition": {
-    "toolSettings": {
-      "toolDescription": "Crowdstrike Falcon tools"
-    },
-    "provisionedReasoningEngine": {
-      "reasoningEngine": "projects/707099123456/locations/us-central1/reasoningEngines/5047646776881234567"
-    }
-  },
-  "state": "ENABLED"
-}
-
-SUCCESS: cURL command completed successfully for AgentSpace registration.
---- Operation 'agentspace_register' complete. ---
-
-```
-
-</details>
-
-<br>
-
-> You can find more about [Agentspace registration](https://cloud.google.com/agentspace/agentspace-enterprise/docs/assistant#create-assistant-existing-app).
-
-Now you can access the agent in the Agentspace application you created earlier.
-
-In case you want to delete the agent from the Agentspace application, use the following set of commands (replace the variables as needed).
-
-<details>
-
-<summary><b>List and deregister the Agent</b></summary>
-
-```bash
-# List the agents for your application
-
-curl -X GET -H "Authorization: Bearer $(gcloud auth print-access-token)" \
--H "Content-Type: application/json" \
--H "X-Goog-User-Project: $PROJECT_ID" \
-"https://discoveryengine.googleapis.com/v1alpha/projects/$PROJECT_ID/locations/global/collections/default_collection/engines/$AGENT_ENGINE_APP_NAME/assistants/default_assistant/agents"
-
-# note down the agent number (export as REASONING_ENGINE_NUMBER) and use that in the next command.
-
-curl -X DELETE -H "Authorization: Bearer $(gcloud auth print-access-token)" \
--H "Content-Type: application/json" \
--H "X-Goog-User-Project: $PROJECT_ID" \
-https://discoveryengine.googleapis.com/v1alpha/projects/$PROJECT_ID/locations/global/collections/default_collection/engines/$AGENT_ENGINE_APP_NAME/assistants/default_assistant/agents/$REASONING_ENGINE_NUMBER
-
-
-```
-
-</details>
 
 ### Securing access, Evaluating, Optimizing performance and costs
 
 #### Securing access
 
-  1. For local runs make sure that you are not using a shared machine
-  2. For Cloud Run deployment you can use - [Control access on an individual service or job](https://cloud.google.com/run/docs/securing/managing-access#control-service-or-job-access) - that is the default behavior for this deployment.
-  3. For agent running in Agentspace - you can provide access (Predefined role - `Discovery Engine User`) selectively by navigating to Agentspace-Apps-Your App -Integration-Grant Permissions.
+1. For local runs, make sure that you are not using a shared machine.
+2. For agent accessed from Gemini Enterprise - the access is granted using step 6 from [Accessing the Agent as a Gemini Enterprise Agent Application](#accessing-the-agent-as-a-gemini-enterprise-agent-application).
 
 #### Evaluating
 
 It is advised to evaluate the agent for the trajectory it takes and the output it produces - you can use [ADK documentation](https://google.github.io/adk-docs/evaluate/) to evaluate this agent. You can also test with different models.
 
+> [!NOTE]
+> Running evaluations with `adk eval` requires the ADK evaluation dependencies: `pip install "google-adk[eval]==2.5.0"`.
+
 #### Optimizing performance and costs
 
-Various native performance improvements are already part of the codebase. You can further optimize the performance and reduce the LLM costs by controlling the value of the environment variable `MAX_PREV_USER_INTERACTIONS`. You can test how many previous conversations (instead of ALL conversations by default) work for your use case (recommended 5). You can also use the appropriate [Gemini Model](https://ai.google.dev/gemini-api/docs/models#model-variations) for both cost and performance optimizations.
+Various native performance improvements are included in the codebase:
+
+- **Event Compaction & Context Caching**: The values `EVENT_COMPACTION=Y` and `CONTEXT_CACHING=Y` in `.env` enable ADK [event compaction](https://adk.dev/context/compaction/) and [context caching](https://adk.dev/context/caching/). They are on by default; you can change them in `.env` file and also change finer configuration details in `agent.py` file.
+  - *Note on Warnings*: In ADK 2.5.0, these features are marked `@experimental` and emit a `UserWarning` during startup; this is expected behavior.
+  - *Context Caching Trigger*: Context caching automatically kicks in for conversations exceeding 4096 tokens (`min_tokens=4096`) and will not apply to turn 1 of short interactions.
+- **Gemini Model Selection**: By default, `gemini-3.5-flash` is configured in `env.properties`. Newer models like `gemini-3.5-flash` or preview models are hosted on the global endpoint, requiring `GOOGLE_CLOUD_LOCATION=global` in your `.env`. When deploying to Agent Engine, explicitly pass `--region <REGION>` (such as `us-central1`) on the command line so the agent container is deployed in a regional runtime while querying the global model endpoint. Refer to [Gemini Developer API pricing](https://ai.google.dev/gemini-api/docs/pricing) for model capabilities and cost considerations.
 
 ### FQL Guide Resources
 
@@ -463,3 +216,7 @@ The agent is configured with `use_mcp_resources=True`, which enables ADK's MCP r
 Google ADK interprets `{variable_name}` patterns in agent instruction strings as template variables that must be resolved from session state. If your `FALCON_AGENT_PROMPT` contains curly braces, you will see this error when sending messages.
 
 **Fix:** Remove all curly braces from your prompt. The default prompt in `env.properties` is safe to use as-is.
+
+#### `Consistent 429 errors / consistent model errors`
+
+**Fix:** Check your Gemini Quota, Try changing the model and switching off `EVENT_COMPACTION` and `CONTEXT_CACHING`
