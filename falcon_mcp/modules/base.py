@@ -4,7 +4,7 @@ Base module for Falcon MCP Server
 This module provides the base class for all Falcon MCP server modules.
 """
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from functools import partial, wraps
 from inspect import iscoroutinefunction
 from typing import Any, Callable
@@ -89,7 +89,6 @@ class BaseModule(ABC):
         self.tools: list[str] = []  # List to track registered tools
         self.resources: list[str] = []  # List to track registered resources
 
-    @abstractmethod
     def register_tools(self, server: FastMCP) -> None:
         """Register tools with the MCP server.
 
@@ -219,7 +218,7 @@ class BaseModule(ABC):
         Returns:
             The entities reordered to match ordered_ids.
         """
-        by_id = {str(entity.get(id_field, "")): entity for entity in entities}
+        by_id = {str(entity.get(id_field, "")): entity for entity in entities if isinstance(entity, dict)}
 
         result: list[dict[str, Any]] = []
         placed: set[str] = set()
@@ -232,7 +231,7 @@ class BaseModule(ABC):
         # Preserve entities not referenced by ordered_ids rather than dropping them
         result.extend(
             entity for entity in entities
-            if str(entity.get(id_field, "")) not in placed
+            if isinstance(entity, dict) and str(entity.get(id_field, "")) not in placed
         )
 
         return result
@@ -396,7 +395,7 @@ class BaseModule(ABC):
         operation: str,
         search_params: dict[str, Any],
         error_message: str = "Search operation failed",
-    ) -> tuple[list[dict[str, Any]] | dict[str, Any], dict[str, Any] | None]:
+    ) -> tuple[list[Any] | dict[str, Any], dict[str, Any] | None]:
         """Like _base_search_api_call but also returns the response's pagination metadata.
 
         Hydration (fetching full entity details by ID) discards `body.meta.pagination`

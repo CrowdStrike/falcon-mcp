@@ -13,6 +13,23 @@ Accessing and managing CrowdStrike Falcon hosts/devices
 
 ## Tools
 
+### `falcon_search_hosts`
+
+**Required scopes:** `Hosts:read`
+
+Search for hosts in your CrowdStrike environment.
+
+Use this to find devices by hostname, platform, IP, sensor version, or other
+attributes. Consult falcon://hosts/search/fql-guide before constructing filter
+expressions. Returns full host details including device info, OS, and network
+context.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+
+**Example prompts:**
+
+- "Find all Windows hosts in my environment"
+- "Show me hosts last seen in the past 24 hours"
+
 ### `falcon_get_host_details`
 
 **Required scopes:** `Hosts:read`
@@ -43,23 +60,6 @@ Adding a tag a host already has, or removing one it lacks, is a no-op. Returns
 one record per device, each with `device_id`, `updated`, and `code`. Tag names
 are case-sensitive, so removing a tag requires the exact casing it was created
 with.
-
-### `falcon_search_hosts`
-
-**Required scopes:** `Hosts:read`
-
-Search for hosts in your CrowdStrike environment.
-
-Use this to find devices by hostname, platform, IP, sensor version, or other
-attributes. Consult falcon://hosts/search/fql-guide before constructing filter
-expressions. Returns full host details including device info, OS, and network
-context.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
-
-**Example prompts:**
-
-- "Find all Windows hosts in my environment"
-- "Show me hosts last seen in the past 24 hours"
 
 ## Resources
 

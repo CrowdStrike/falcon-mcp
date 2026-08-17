@@ -13,71 +13,20 @@ Searching, creating, updating, and deleting Custom IOA (Indicators of Attack) be
 
 ## Tools
 
-### `falcon_create_ioa_rule`
+### `falcon_search_ioa_rule_groups`
 
-> [!NOTE]
-> This tool modifies data.
+**Required scopes:** `Custom IOA Rules:read`
 
-**Required scopes:** `Custom IOA Rules:write`
+Search Custom IOA rule groups and return full details including their rules.
 
-Create a new Custom IOA behavioral detection rule within a rule group.
-
-Use falcon_get_ioa_rule_types first to discover rule type IDs, required fields,
-and valid disposition IDs. The field_values parameter defines the behavioral
-criteria the rule matches against (process names, file paths, command line regex).
+Use this to find rule groups by platform, name, or enabled state. Consult
+falcon://custom-ioa/rule-groups/fql-guide before constructing filter expressions.
+Returns rule group objects with their contained behavioral detection rules.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
-- "Add a process creation rule to IOA group abc123 that detects cmd.exe spawned from Word"
-
-### `falcon_create_ioa_rule_group`
-
-> [!NOTE]
-> This tool modifies data.
-
-**Required scopes:** `Custom IOA Rules:write`
-
-Create a new Custom IOA rule group.
-
-Rule groups are containers for behavioral detection rules scoped to a platform.
-Use falcon_get_ioa_platforms to see valid platform values. After creating a
-group, use falcon_create_ioa_rule to add detection rules to it.
-
-**Example prompts:**
-
-- "Create a Windows IOA rule group named 'Suspicious PowerShell Activity'"
-
-### `falcon_delete_ioa_rule_groups`
-
-> [!CAUTION]
-> This tool performs destructive operations.
-
-**Required scopes:** `Custom IOA Rules:write`
-
-Delete Custom IOA rule groups by ID.
-
-Permanently removes the rule groups and all rules within them. Use
-falcon_search_ioa_rule_groups to find rule group IDs.
-
-**Example prompts:**
-
-- "Delete Custom IOA rule groups abc123 and def456"
-
-### `falcon_delete_ioa_rules`
-
-> [!CAUTION]
-> This tool performs destructive operations.
-
-**Required scopes:** `Custom IOA Rules:write`
-
-Delete Custom IOA behavioral detection rules from a rule group.
-
-Use falcon_search_ioa_rule_groups to find the rule group ID and individual
-rule instance IDs to delete.
-
-**Example prompts:**
-
-- "Delete rules from IOA group abc123"
+- "Find enabled Windows Custom IOA rule groups"
 
 ### `falcon_get_ioa_platforms`
 
@@ -106,20 +55,71 @@ platform, fields, and supported actions.
 
 - "What Custom IOA rule types are available?"
 
-### `falcon_search_ioa_rule_groups`
+### `falcon_create_ioa_rule_group`
 
-**Required scopes:** `Custom IOA Rules:read`
+> [!NOTE]
+> This tool modifies data.
 
-Search Custom IOA rule groups and return full details including their rules.
+**Required scopes:** `Custom IOA Rules:write`
 
-Use this to find rule groups by platform, name, or enabled state. Consult
-falcon://custom-ioa/rule-groups/fql-guide before constructing filter expressions.
-Returns rule group objects with their contained behavioral detection rules.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+Create a new Custom IOA rule group.
+
+Rule groups are containers for behavioral detection rules scoped to a platform.
+Use falcon_get_ioa_platforms to see valid platform values. After creating a
+group, use falcon_create_ioa_rule to add detection rules to it.
 
 **Example prompts:**
 
-- "Find enabled Windows Custom IOA rule groups"
+- "Create a Windows IOA rule group named 'Suspicious PowerShell Activity'"
+
+### `falcon_update_ioa_rule_group`
+
+> [!NOTE]
+> This tool modifies data.
+
+**Required scopes:** `Custom IOA Rules:write`
+
+Update an existing Custom IOA rule group.
+
+Modify name, description, or enabled state. Requires rulegroup_version for
+optimistic locking — get it from falcon_search_ioa_rule_groups.
+
+**Example prompts:**
+
+- "Disable IOA rule group abc123"
+
+### `falcon_delete_ioa_rule_groups`
+
+> [!CAUTION]
+> This tool performs destructive operations.
+
+**Required scopes:** `Custom IOA Rules:write`
+
+Delete Custom IOA rule groups by ID.
+
+Permanently removes the rule groups and all rules within them. Use
+falcon_search_ioa_rule_groups to find rule group IDs.
+
+**Example prompts:**
+
+- "Delete Custom IOA rule groups abc123 and def456"
+
+### `falcon_create_ioa_rule`
+
+> [!NOTE]
+> This tool modifies data.
+
+**Required scopes:** `Custom IOA Rules:write`
+
+Create a new Custom IOA behavioral detection rule within a rule group.
+
+Use falcon_get_ioa_rule_types first to discover rule type IDs, required fields,
+and valid disposition IDs. The field_values parameter defines the behavioral
+criteria the rule matches against (process names, file paths, command line regex).
+
+**Example prompts:**
+
+- "Add a process creation rule to IOA group abc123 that detects cmd.exe spawned from Word"
 
 ### `falcon_update_ioa_rule`
 
@@ -137,21 +137,21 @@ and instance_id from falcon_search_ioa_rule_groups.
 
 - "Enable IOA rule instance abc in group xyz"
 
-### `falcon_update_ioa_rule_group`
+### `falcon_delete_ioa_rules`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Custom IOA Rules:write`
 
-Update an existing Custom IOA rule group.
+Delete Custom IOA behavioral detection rules from a rule group.
 
-Modify name, description, or enabled state. Requires rulegroup_version for
-optimistic locking — get it from falcon_search_ioa_rule_groups.
+Use falcon_search_ioa_rule_groups to find the rule group ID and individual
+rule instance IDs to delete.
 
 **Example prompts:**
 
-- "Disable IOA rule group abc123"
+- "Delete rules from IOA group abc123"
 
 ## Resources
 

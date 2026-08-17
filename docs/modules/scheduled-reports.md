@@ -12,19 +12,20 @@ Accessing and managing CrowdStrike Falcon scheduled reports and scheduled search
 
 ## Tools
 
-### `falcon_download_report_execution`
+### `falcon_search_scheduled_reports`
 
 **Required scopes:** `Scheduled Reports:read`
 
-Download the results of a completed report execution.
+Search for scheduled reports and searches in your CrowdStrike environment.
 
-Only works for executions with status='DONE'. Check status first using
-falcon_search_report_executions. Returns CSV string or JSON records depending
-on the report's configured format. PDF format is not supported.
+Use this to find reports by status, type, creator, or creation date. Consult
+falcon://scheduled-reports/search/fql-guide before constructing filter expressions.
+Returns full report/search entity details including schedule configuration.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
-- "Download the results for report execution abc123"
+- "Show me all active scheduled reports"
 
 ### `falcon_launch_scheduled_report`
 
@@ -59,20 +60,19 @@ Responses include `pagination.total` (the total number of records matching the f
 
 - "Show me completed executions for report abc123"
 
-### `falcon_search_scheduled_reports`
+### `falcon_download_report_execution`
 
 **Required scopes:** `Scheduled Reports:read`
 
-Search for scheduled reports and searches in your CrowdStrike environment.
+Download the results of a completed report execution.
 
-Use this to find reports by status, type, creator, or creation date. Consult
-falcon://scheduled-reports/search/fql-guide before constructing filter expressions.
-Returns full report/search entity details including schedule configuration.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+Only works for executions with status='DONE'. Check status first using
+falcon_search_report_executions. Returns CSV string or JSON records depending
+on the report's configured format. PDF format is not supported.
 
 **Example prompts:**
 
-- "Show me all active scheduled reports"
+- "Download the results for report execution abc123"
 
 ## Resources
 

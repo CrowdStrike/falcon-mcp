@@ -14,6 +14,40 @@ Initiating and inspecting RTR sessions and for executing read-only RTR commands 
 
 ## Tools
 
+### `falcon_search_rtr_sessions`
+
+**Required scopes:** `Real time response:read`
+
+Search RTR sessions and return full session details.
+
+Use this to find sessions by hostname, agent ID, user, or creation time. Consult
+falcon://rtr/sessions/search/fql-guide before constructing filter expressions.
+Returns session metadata including host info, commands executed, and status.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+
+**Example prompts:**
+
+- "Find all active RTR sessions"
+- "Show me RTR sessions for host abc123"
+
+### `falcon_search_rtr_audit_sessions`
+
+**Required scopes:** `real-time-response-audit:read`
+
+Search RTR audit sessions for accountability and timeline evidence.
+
+Use this when you need to understand who used RTR, when they used it,
+which host was targeted, or which command activity Falcon recorded.
+This is read-only audit visibility; it does not open sessions or run
+commands. Consult falcon://rtr/audit/sessions/search/fql-guide before
+constructing filter expressions.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+
+**Example prompts:**
+
+- "Show me RTR audit activity from the last 7 days"
+- "Who used RTR against host BRR-WB-LIB-22?"
+
 ### `falcon_aggregate_rtr_sessions`
 
 **Required scopes:** `Real time response:read`
@@ -29,52 +63,6 @@ commands, or return every session record.
 
 - "Summarize RTR sessions by command for the last 30 days"
 - "Which hosts have the most RTR activity this week?"
-
-### `falcon_check_rtr_command_status`
-
-**Required scopes:** `Real time response:read`
-
-Get the status and output for an RTR command execution.
-
-Poll this after falcon_execute_rtr_read_only_command to retrieve command
-output. Use sequence_id to paginate through large output chunks.
-
-**Example prompts:**
-
-- "Check the status of RTR command request abc123"
-
-### `falcon_delete_rtr_session`
-
-> [!CAUTION]
-> This tool performs destructive operations.
-
-**Required scopes:** `Real time response:read`
-
-Close an RTR session and release the host connection.
-
-Use this when investigation is complete to free up session resources.
-
-**Example prompts:**
-
-- "End the RTR session abc123"
-
-### `falcon_execute_rtr_read_only_command`
-
-> [!NOTE]
-> This tool modifies data.
-
-**Required scopes:** `Real time response:read`
-
-Execute a read-only RTR command on a single host.
-
-Limited to read-only commands (ls, ps, cat, filehash, reg) for hunt and triage
-workflows. Does not expose admin or remediation commands. Returns command records
-containing a cloud_request_id for polling output via falcon_check_rtr_command_status.
-
-**Example prompts:**
-
-- "Run 'ps' on this host via RTR"
-- "List running processes on host xyz"
 
 ### `falcon_get_rtr_session_details`
 
@@ -107,19 +95,6 @@ containing the session_id needed for subsequent commands.
 
 - "Start an RTR session on host xyz"
 
-### `falcon_list_rtr_session_files`
-
-**Required scopes:** `Real time response:write`
-
-List files extracted during an RTR session.
-
-Returns file metadata for artifacts captured during the session, such as
-files pulled with the `get` command.
-
-**Example prompts:**
-
-- "List files extracted during RTR session abc123"
-
 ### `falcon_pulse_rtr_session`
 
 > [!NOTE]
@@ -135,6 +110,24 @@ to prevent session expiration during long investigations.
 **Example prompts:**
 
 - "Refresh the RTR session to keep it alive"
+
+### `falcon_execute_rtr_read_only_command`
+
+> [!NOTE]
+> This tool modifies data.
+
+**Required scopes:** `Real time response:read`
+
+Execute a read-only RTR command on a single host.
+
+Limited to read-only commands (ls, ps, cat, filehash, reg) for hunt and triage
+workflows. Does not expose admin or remediation commands. Returns command records
+containing a cloud_request_id for polling output via falcon_check_rtr_command_status.
+
+**Example prompts:**
+
+- "Run 'ps' on this host via RTR"
+- "List running processes on host xyz"
 
 ### `falcon_run_rtr_read_only_command_and_wait`
 
@@ -157,39 +150,46 @@ RTR Admin or remediation APIs.
 - "Run 'ps' via RTR and return the output when it completes"
 - "Check C:\Windows\win.ini on this RTR session and wait for the result"
 
-### `falcon_search_rtr_audit_sessions`
-
-**Required scopes:** `real-time-response-audit:read`
-
-Search RTR audit sessions for accountability and timeline evidence.
-
-Use this when you need to understand who used RTR, when they used it,
-which host was targeted, or which command activity Falcon recorded.
-This is read-only audit visibility; it does not open sessions or run
-commands. Consult falcon://rtr/audit/sessions/search/fql-guide before
-constructing filter expressions.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
-
-**Example prompts:**
-
-- "Show me RTR audit activity from the last 7 days"
-- "Who used RTR against host BRR-WB-LIB-22?"
-
-### `falcon_search_rtr_sessions`
+### `falcon_check_rtr_command_status`
 
 **Required scopes:** `Real time response:read`
 
-Search RTR sessions and return full session details.
+Get the status and output for an RTR command execution.
 
-Use this to find sessions by hostname, agent ID, user, or creation time. Consult
-falcon://rtr/sessions/search/fql-guide before constructing filter expressions.
-Returns session metadata including host info, commands executed, and status.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+Poll this after falcon_execute_rtr_read_only_command to retrieve command
+output. Use sequence_id to paginate through large output chunks.
 
 **Example prompts:**
 
-- "Find all active RTR sessions"
-- "Show me RTR sessions for host abc123"
+- "Check the status of RTR command request abc123"
+
+### `falcon_list_rtr_session_files`
+
+**Required scopes:** `Real time response:write`
+
+List files extracted during an RTR session.
+
+Returns file metadata for artifacts captured during the session, such as
+files pulled with the `get` command.
+
+**Example prompts:**
+
+- "List files extracted during RTR session abc123"
+
+### `falcon_delete_rtr_session`
+
+> [!CAUTION]
+> This tool performs destructive operations.
+
+**Required scopes:** `Real time response:read`
+
+Close an RTR session and release the host connection.
+
+Use this when investigation is complete to free up session resources.
+
+**Example prompts:**
+
+- "End the RTR session abc123"
 
 ## Resources
 

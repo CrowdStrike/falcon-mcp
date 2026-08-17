@@ -1,10 +1,10 @@
 <!-- meta:title Cloud Security -->
-<!-- meta:description Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets -->
+<!-- meta:description Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets, IOM Findings, CSPM Suppression Rules, Cloud Risks, Cloud Groups, and Cloud Insights -->
 <!-- meta:section modules -->
 <!-- meta:link-base /falcon-mcp/ -->
 <!-- frontmatter:sidebar order:10 -->
 
-Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets
+Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets, IOM Findings, CSPM Suppression Rules, Cloud Risks, Cloud Groups, and Cloud Insights
 
 ## API Scopes
 
@@ -18,19 +18,104 @@ Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Con
 
 ## Tools
 
-### `falcon_count_kubernetes_containers`
+### `falcon_search_cloud_risks`
 
-**Required scopes:** `Falcon Container Image:read`
+**Required scopes:** `Cloud Security API Risks:read`
 
-Count Kubernetes containers matching filter criteria.
+Search for cloud risks in your CrowdStrike environment.
 
-Use this for aggregate counts without returning full container details. Consult
-falcon://cloud/kubernetes-containers/fql-guide before constructing filter
-expressions. Returns the matching container count as an integer.
+Use this to find risks by severity, status, cloud provider, account, asset, rule,
+or threat actor. Cloud risks aggregate IOM and IOA findings into per-asset risk
+records and include threat intelligence attribution. For individual compliance rule
+violations on specific resources, use falcon_search_iom_findings instead.
+
+For the underlying per-asset security facts that risks are computed from, use
+falcon_search_cloud_insights instead — that covers all insight categories:
+Identity (MFA status, admin privileges, credential rotation, unused accounts),
+Network (internet exposure, public IPs, access ranges),
+Vulnerabilities (reachable CVEs, RCE, sensor presence),
+Data (secrets, sensitive data, encryption, logging),
+AI (LLM model usage, MCP server exposure),
+Application (third-party vendor compliance, excessive permissions).
+
+Consult falcon://cloud/cloud-risks/fql-guide before constructing filter expressions.
+Returns full risk details including severity, lifecycle status, asset context, and
+threat intelligence attribution.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 
 **Example prompts:**
 
-- "How many containers are running in Azure?"
+- "Show me all open critical cloud risks in AWS"
+- "Which account has the most unresolved critical risks?"
+- "What new cloud risks appeared in the last 7 days?"
+- "Show me risks for the production cloud group"
+- "What cloud risks have been suppressed and why?"
+
+### `falcon_search_cloud_groups`
+
+**Required scopes:** `Cloud Groups V2:read`
+
+List cloud groups in your CrowdStrike environment.
+
+Use this to discover available cloud groups before filtering risks by
+`cloud_group` or `groups.*` FQL fields in `falcon_search_cloud_risks`.
+Returns full group details including name, selectors, and tags.
+
+**Example prompts:**
+
+- "What cloud groups are configured in my environment?"
+- "List all cloud groups tagged as production"
+
+### `falcon_get_cloud_groups`
+
+**Required scopes:** `Cloud Groups V2:read`
+
+Get detailed information for cloud groups by ID.
+
+Use when you already have specific cloud group IDs — for example, the `cloud_groups`
+field returned by `falcon_search_cloud_risks`. Returns full group details including
+name, selectors, business impact, and environment tags.
+
+**Example prompts:**
+
+- "Get the details for cloud group abc-123"
+
+### `falcon_search_iom_findings`
+
+**Required scopes:** `Cloud Security API Detections:read`
+
+Search for CSPM Indicators of Misconfiguration (IOM) findings.
+
+Use this to find specific compliance rule failures on individual cloud resources —
+each IOM is a single rule-against-resource violation (e.g. "S3 bucket ACL allows
+public write" on a named bucket). For aggregated risk posture combining multiple
+IOMs and IOAs across assets, use falcon_search_cloud_risks instead. For runtime
+behavioral threats, use falcon_search_detections. Consult
+falcon://cloud/cspm-iom-findings/fql-guide before constructing filter expressions.
+Returns IOM entities with cloud context, evaluation details, and resource information.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+
+**Example prompts:**
+
+- "Show me critical open CSPM misconfiguration findings in AWS"
+- "Find IOM findings for S3 buckets with public access"
+- "What CSPM IOM findings are suppressed as accepted risk?"
+
+### `falcon_search_cspm_suppression_rules`
+
+**Required scopes:** `Cloud Security Policies:read`
+
+Search for CSPM IOM suppression rules.
+
+Use this to review existing suppressions before creating new ones. Returns
+suppression rule objects including scope, reason, and expiration details.
+Returns an empty list if no rules exist.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+
+**Example prompts:**
+
+- "List all CSPM IOM suppression rules and their reasons"
+- "Show me which CSPM findings are being suppressed and why"
 
 ### `falcon_create_cspm_suppression_rule`
 
@@ -69,89 +154,34 @@ first. Returns a confirmation response.
 - "Delete CSPM suppression rule abc-123"
 - "Remove the CSPM IOM suppression rule for the S3 public access finding"
 
-### `falcon_get_cloud_groups`
+### `falcon_search_kubernetes_containers`
 
-**Required scopes:** `Cloud Groups V2:read`
+**Required scopes:** `Falcon Container Image:read`
 
-Get detailed information for cloud groups by ID.
+Search for Kubernetes containers in your CrowdStrike container inventory.
 
-Use when you already have specific cloud group IDs — for example, the `cloud_groups`
-field returned by `falcon_search_cloud_risks`. Returns full group details including
-name, selectors, business impact, and environment tags.
-
-**Example prompts:**
-
-- "Get the details for cloud group abc-123"
-
-### `falcon_search_cloud_groups`
-
-**Required scopes:** `Cloud Groups V2:read`
-
-List cloud groups in your CrowdStrike environment.
-
-Use this to discover available cloud groups before filtering risks by
-`cloud_group` or `groups.*` FQL fields in `falcon_search_cloud_risks`.
-Returns full group details including name, selectors, and tags.
+Use this to find containers by cluster, namespace, image, or cloud provider.
+Consult falcon://cloud/kubernetes-containers/fql-guide before constructing filter
+expressions. Returns full container details including image, status, and vulnerabilities.
 
 **Example prompts:**
 
-- "What cloud groups are configured in my environment?"
-- "List all cloud groups tagged as production"
+- "Find all containers running in AWS clusters"
+- "Show me containers in the prod cluster"
 
-### `falcon_search_cloud_risks`
+### `falcon_count_kubernetes_containers`
 
-**Required scopes:** `Cloud Security API Risks:read`
+**Required scopes:** `Falcon Container Image:read`
 
-Search for cloud risks in your CrowdStrike environment.
+Count Kubernetes containers matching filter criteria.
 
-Use this to find risks by severity, status, cloud provider, account, asset, rule,
-or threat actor. Cloud risks aggregate IOM and IOA findings into per-asset risk
-records and include threat intelligence attribution. For individual compliance rule
-violations on specific resources, use falcon_search_iom_findings instead. Consult
-falcon://cloud/cloud-risks/fql-guide before constructing filter expressions.
-Returns full risk details including severity, lifecycle status, asset context, and
-threat intelligence attribution.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+Use this for aggregate counts without returning full container details. Consult
+falcon://cloud/kubernetes-containers/fql-guide before constructing filter
+expressions. Returns the matching container count as an integer.
 
 **Example prompts:**
 
-- "Show me all open critical cloud risks in AWS"
-- "Which account has the most unresolved critical risks?"
-- "What new cloud risks appeared in the last 7 days?"
-- "Show me risks for the production cloud group"
-- "What cloud risks have been suppressed and why?"
-
-### `falcon_search_cspm_assets`
-
-**Required scopes:** `Cloud Security API Assets:read`
-
-Search for cloud assets in your CrowdStrike CSPM inventory.
-
-Use this to find cloud resources (EC2, VPCs, S3, etc.) by provider, region,
-resource type, or tags. Consult falcon://cloud/cspm-assets/fql-guide before
-constructing filter expressions. Returns slimmed asset details with security
-posture context (IOM/IOA counts, exposure, severity).
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
-
-**Example prompts:**
-
-- "Find all AWS EC2 instances in my cloud inventory"
-
-### `falcon_search_cspm_suppression_rules`
-
-**Required scopes:** `Cloud Security Policies:read`
-
-Search for CSPM IOM suppression rules.
-
-Use this to review existing suppressions before creating new ones. Returns
-suppression rule objects including scope, reason, and expiration details.
-Returns an empty list if no rules exist.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
-
-**Example prompts:**
-
-- "List all CSPM IOM suppression rules and their reasons"
-- "Show me which CSPM findings are being suppressed and why"
+- "How many containers are running in Azure?"
 
 ### `falcon_search_images_vulnerabilities`
 
@@ -169,46 +199,110 @@ Responses include `pagination.total` (the total number of records matching the f
 
 - "Find image vulnerabilities with CVSS score above 7"
 
-### `falcon_search_iom_findings`
+### `falcon_search_cspm_assets`
 
-**Required scopes:** `Cloud Security API Detections:read`
+**Required scopes:** `Cloud Security API Assets:read`
 
-Search for CSPM Indicators of Misconfiguration (IOM) findings.
+Search for cloud assets in your CrowdStrike CSPM inventory.
 
-Use this to find specific compliance rule failures on individual cloud resources —
-each IOM is a single rule-against-resource violation (e.g. "S3 bucket ACL allows
-public write" on a named bucket). For aggregated risk posture combining multiple
-IOMs and IOAs across assets, use falcon_search_cloud_risks instead. For runtime
-behavioral threats, use falcon_search_detections. Consult
-falcon://cloud/cspm-iom-findings/fql-guide before constructing filter expressions.
-Returns IOM entities with cloud context, evaluation details, and resource information.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+Use this to find cloud resources (EC2, VPCs, S3, etc.) by provider, region,
+resource type, or tags. Consult falcon://cloud/cspm-assets/fql-guide before
+constructing filter expressions. Returns slimmed asset details with security
+posture context (IOM/IOA counts, exposure, severity).
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
 
 **Example prompts:**
 
-- "Show me critical open CSPM misconfiguration findings in AWS"
-- "Find IOM findings for S3 buckets with public access"
-- "What CSPM IOM findings are suppressed as accepted risk?"
+- "Find all AWS EC2 instances in my cloud inventory"
 
-### `falcon_search_kubernetes_containers`
+### `falcon_search_cloud_insights`
 
-**Required scopes:** `Falcon Container Image:read`
+**Required scopes:** `Cloud Security API Assets:read`, `Cloud Security Policies:read`
 
-Search for Kubernetes containers in your CrowdStrike container inventory.
+Search for cloud security insights using FQL.
 
-Use this to find containers by cluster, namespace, image, or cloud provider.
-Consult falcon://cloud/kubernetes-containers/fql-guide before constructing filter
-expressions. Returns full container details including image, status, and vulnerabilities.
+Returns asset records — one per asset — each with asset context and a nested
+`insights` array of the insight facts found on that asset.
+
+To filter by category or specific insight types, first call
+`list_cloud_insight_definitions` to get the insight_ids for the category you
+care about, then pass `insights.id:['id1','id2']` (or a single value
+`insights.id:'id1'`) in the `filter` param. Omit `filter` entirely to
+return all assets that have any insight across all categories — the server
+automatically scopes the query to insight-bearing assets only, so omitting
+filter does NOT return plain asset inventory.
+
+The `insights` array in each result contains ALL insight entries on that asset.
+Use `falcon_get_cloud_asset_insights` to drill into a specific asset's full
+insight detail including the richer `details{}` map.
+For the top-down correlated risk view use `falcon_search_cloud_risks`.
+
+Responses include `pagination.total` (total assets matching the filter, or null
+when the API does not report a count). Use `pagination.next` as the `after`
+cursor on the next call to page through results.
+
+The `rule_id` field in each insight entry is the PFM rule instance ID that
+triggered the insight. The `value` field is polymorphic: boolean, string,
+integer, list of strings, or date/timestamp depending on the insight_id.
+The `category` field is null — use `list_cloud_insight_definitions` if you need
+the category label for a given insight_id.
+Consult falcon://cloud/cloud-insights/fql-guide for filter field details.
+
+When the user asks for "all" results and `pagination.total` exceeds the count
+returned, continue paginating with the `after` cursor until all pages are
+retrieved before summarising — do not summarise a partial result set.
 
 **Example prompts:**
 
-- "Find all containers running in AWS clusters"
-- "Show me containers in the prod cluster"
+- "What is internet-exposed in my cloud accounts?"
+- "Which IAM identities have admin and are actually unused?"
+- "Which exposed storage might hold sensitive data?"
+- "Which access keys are stale or unrotated?"
+
+### `falcon_get_cloud_asset_insights`
+
+**Required scopes:** `Cloud Security API Assets:read`
+
+Retrieve the full insight detail for one or more cloud ASSET IDs.
+
+Takes cloud asset IDs (not insight-definition IDs) and returns each asset's
+complete `cloud_context.insights` — both the `external[]` insight instances and
+the richer `details{}` map (per-insight value, context, and calculatedAt) — plus
+asset context. Use this to drill into why an asset is flagged after finding it with
+falcon_search_cloud_insights or falcon_search_cspm_assets. Returns one record per
+requested asset that has insight data.
+
+**Example prompts:**
+
+- "Show me all the insight facts and context for cloud asset abc-123"
+- "Why is this asset flagged — give me its full insight detail"
+
+### `falcon_list_cloud_insight_definitions`
+
+**Required scopes:** `Cloud Security Policies:read`
+
+Return all available cloud insight definitions, deduplicated by insight_id.
+
+Each entry represents one unique insight type with aggregated providers,
+resource_types, and (when non-empty) compliance framework controls.
+
+Call this first whenever you are not certain which insight_id covers the user's
+question. Do not guess insight IDs or reach for other tools before checking
+whether a relevant insight type exists — the definitions catalog is the
+authoritative source for what CSPM tracks as insight facts. If a relevant
+definition is found here, use its insight_id in falcon_search_cloud_insights.
+
+**Example prompts:**
+
+- "What cloud security insights are available for Identity?"
+- "List all insight definitions across all categories"
+- "Which compliance controls map to cloud network insights?"
 
 ## Resources
 
+- **`falcon://cloud/cloud-risks/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_cloud_risks` tool.
+- **`falcon://cloud/cspm-iom-findings/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_iom_findings` tool.
 - **`falcon://cloud/kubernetes-containers/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_kubernetes_containers` and `falcon_count_kubernetes_containers` tools.
 - **`falcon://cloud/images-vulnerabilities/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_images_vulnerabilities` tool.
 - **`falcon://cloud/cspm-assets/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_cspm_assets` tool.
-- **`falcon://cloud/cspm-iom-findings/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_iom_findings` tool.
-- **`falcon://cloud/cloud-risks/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_cloud_risks` tool.
+- **`falcon://cloud/cloud-insights/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_cloud_insights` tool.

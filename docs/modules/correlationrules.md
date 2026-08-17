@@ -13,40 +13,6 @@ Correlation Rules module for CrowdStrike Falcon.
 
 ## Tools
 
-### `falcon_create_correlation_rule`
-
-> [!NOTE]
-> This tool modifies data.
-
-**Required scopes:** `Correlation Rules:write`
-
-Create a new NG-SIEM Correlation Rule.
-
-Wraps a user-provided CQL query as a scheduled detection rule. The caller must
-supply the CQL query — use falcon_search_ngsiem to test queries before creating rules.
-Returns the created rule record on success.
-
-**Example prompts:**
-
-- "Create a correlation rule using this CQL query: #event_simpleName=ProcessRollup2 | CommandLine=*-EncodedCommand*"
-
-### `falcon_delete_correlation_rules`
-
-> [!CAUTION]
-> This tool performs destructive operations.
-
-**Required scopes:** `Correlation Rules:write`
-
-Permanently delete NG-SIEM Correlation Rules by rule ID.
-
-Removes the specified rules and all their versions. This action cannot be undone —
-use falcon_search_correlation_rules to confirm IDs before deleting. Returns an
-empty list on success.
-
-**Example prompts:**
-
-- "Delete the test correlation rule we created"
-
 ### `falcon_search_correlation_rules`
 
 **Required scopes:** `Correlation Rules:read`
@@ -63,6 +29,23 @@ Responses include `pagination.total` (the total number of records matching the f
 
 - "Show me all active high-severity correlation rules"
 - "Find correlation rules covering lateral movement tactics"
+
+### `falcon_create_correlation_rule`
+
+> [!NOTE]
+> This tool modifies data.
+
+**Required scopes:** `Correlation Rules:write`
+
+Create a new NG-SIEM Correlation Rule.
+
+Wraps a user-provided CQL query as a scheduled detection rule. The caller must
+supply the CQL query — use falcon_search_ngsiem to test queries before creating rules.
+Returns the created rule record on success.
+
+**Example prompts:**
+
+- "Create a correlation rule using this CQL query: #event_simpleName=ProcessRollup2 | CommandLine=*-EncodedCommand*"
 
 ### `falcon_update_correlation_rule`
 
@@ -81,6 +64,23 @@ Only provided fields are changed; omitted fields retain current values.
 
 - "Disable the correlation rule — set its status to inactive"
 - "Update the rule severity to critical (90)"
+
+### `falcon_delete_correlation_rules`
+
+> [!CAUTION]
+> This tool performs destructive operations.
+
+**Required scopes:** `Correlation Rules:write`
+
+Permanently delete NG-SIEM Correlation Rules by rule ID.
+
+Removes the specified rules and all their versions. This action cannot be undone —
+use falcon_search_correlation_rules to confirm IDs before deleting. Returns an
+empty list on success.
+
+**Example prompts:**
+
+- "Delete the test correlation rule we created"
 
 ## Resources
 

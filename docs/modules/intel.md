@@ -14,20 +14,6 @@ Accessing and analyzing CrowdStrike Falcon intelligence data
 
 ## Tools
 
-### `falcon_get_mitre_report`
-
-**Required scopes:** `Actors (Falcon Intelligence):read`
-
-Generate a MITRE ATT&CK report for a given threat actor.
-
-Accepts an actor name (e.g., 'WARP PANDA') or numeric ID. Returns MITRE ATT&CK
-tactics, techniques, and procedures (TTPs) for the actor. JSON format returns a
-parsed list of dicts; CSV format returns raw CSV text.
-
-**Example prompts:**
-
-- "Generate MITRE ATT&CK report for FANCY BEAR"
-
 ### `falcon_search_actors`
 
 **Required scopes:** `Actors (Falcon Intelligence):read`
@@ -74,6 +60,20 @@ Responses include `pagination.total` (the total number of records matching the f
 **Example prompts:**
 
 - "Find intelligence reports published in the last 30 days"
+
+### `falcon_get_mitre_report`
+
+**Required scopes:** `Actors (Falcon Intelligence):read`
+
+Generate a MITRE ATT&CK report for a given threat actor.
+
+Accepts an actor name (e.g., 'WARP PANDA') or numeric ID. Returns MITRE ATT&CK
+tactics, techniques, and procedures (TTPs) for the actor. JSON format returns a
+parsed list of dicts; CSV format returns raw CSV text.
+
+**Example prompts:**
+
+- "Generate MITRE ATT&CK report for FANCY BEAR"
 
 ## Resources
 

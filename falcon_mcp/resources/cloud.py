@@ -9,11 +9,7 @@ FQL_DOCUMENTATION = FQL_BASE_OPERATORS
 
 # List of tuples containing filter options data: (name, type, description)
 KUBERNETES_CONTAINERS_FQL_FILTERS = [
-    (
-        "Name",
-        "Type",
-        "Description"
-    ),
+    ("Name", "Type", "Description"),
     (
         "agent_id",
         "String",
@@ -21,7 +17,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The sensor agent ID running in the container.
 
         Ex: agent_id:'3c1ca4a114504ca89af51fd126991efd'
-        """
+        """,
     ),
     (
         "agent_type",
@@ -30,7 +26,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The sensor agent type running in the container.
 
         Ex: agent_type:'Falcon sensor for linux'
-        """
+        """,
     ),
     (
         "ai_related",
@@ -39,7 +35,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Determines if the container hosts AI related packages.
 
         Ex: ai_related:true
-        """
+        """,
     ),
     (
         "cloud_account_id",
@@ -48,7 +44,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The cloud provider account ID.
 
         Ex: cloud_account_id:'171998889118'
-        """
+        """,
     ),
     (
         "cloud_name",
@@ -57,7 +53,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The cloud provider name.
 
         Ex: cloud_name:'AWS'
-        """
+        """,
     ),
     (
         "cloud_region",
@@ -66,7 +62,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The cloud region.
 
         Ex: cloud_region:'us-1'
-        """
+        """,
     ),
     (
         "cluster_id",
@@ -75,7 +71,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The kubernetes cluster ID of the container.
 
         Ex: cluster_id:'6055bde7-acfe-48ae-9ee0-0ac1a60d8eac'
-        """
+        """,
     ),
     (
         "cluster_name",
@@ -84,7 +80,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The kubernetes cluster that manages the container.
 
         Ex: cluster_name:'prod-cluster'
-        """
+        """,
     ),
     (
         "container_id",
@@ -93,7 +89,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The kubernetes container ID.
 
         Ex: container_id:'c30c45f9-4702-4663-bce8-cca9f2237d1d'
-        """
+        """,
     ),
     (
         "container_name",
@@ -102,7 +98,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The kubernetes container name.
 
         Ex: container_name:'prod-cluster'
-        """
+        """,
     ),
     (
         "cve_id",
@@ -111,7 +107,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The CVE ID found in the container image.
 
         Ex: cve_id:'CVE-2025-1234'
-        """
+        """,
     ),
     (
         "detection_name",
@@ -120,7 +116,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The name of the detection found in the container image.
 
         Ex: detection_name:'RunningAsRootContainer'
-        """
+        """,
     ),
     (
         "first_seen",
@@ -129,7 +125,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Timestamp when the kubernetes container was first seen in UTC date format ("YYYY-MM-DDTHH:MM:SSZ").
 
         Ex: first_seen:'2025-01-19T11:14:15Z'
-        """
+        """,
     ),
     (
         "image_detection_count",
@@ -138,7 +134,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Number of images detections found in the container image.
 
         Ex: image_detection_count:5
-        """
+        """,
     ),
     (
         "image_digest",
@@ -147,7 +143,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The digest of the container image.
 
         Ex: image_digest:'sha256:a08d3ee8ee68ebd8a78525a710c6479270692259e'
-        """
+        """,
     ),
     (
         "image_has_been_assessed",
@@ -156,7 +152,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Tells whether the container image has been assessed.
 
         Ex: image_has_been_assessed:true
-        """
+        """,
     ),
     (
         "image_id",
@@ -165,14 +161,14 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The ID of the container image.
 
         Ex: image_id:'a90f484d134848af858cd409801e213e'
-        """
+        """,
     ),
     (
         "image_registry",
         "String",
         """
         The registry of the container image.
-        """
+        """,
     ),
     (
         "image_repository",
@@ -181,7 +177,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The repository of the container image.
 
         Ex: image_repository:'my-app'
-        """
+        """,
     ),
     (
         "image_tag",
@@ -190,7 +186,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The tag of the container image.
 
         Ex: image_tag:'v1.0.0'
-        """
+        """,
     ),
     (
         "image_vulnerability_count",
@@ -199,7 +195,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Number of image vulnerabilities found in the container image.
 
         Ex: image_vulnerability_count:1
-        """
+        """,
     ),
     (
         "insecure_mount_source",
@@ -208,7 +204,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         File path of the insecure mount in the container.
 
         Ex: insecure_mount_source:'/var/data'
-        """
+        """,
     ),
     (
         "insecure_mount_type",
@@ -217,7 +213,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Type of the insecure mount in the container.
 
         Ex: insecure_mount_type:'hostPath'
-        """
+        """,
     ),
     (
         "insecure_propagation_mode",
@@ -226,7 +222,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Tells whether the container has an insecure mount propagation mode.
 
         Ex: insecure_propagation_mode:false
-        """
+        """,
     ),
     (
         "interactive_mode",
@@ -235,7 +231,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Tells whether the container is running in interactive mode.
 
         Ex: interactive_mode:true
-        """
+        """,
     ),
     (
         "ipv4",
@@ -244,7 +240,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The IPv4 of the container.
 
         Ex: ipv4:'10.10.1.5'
-        """
+        """,
     ),
     (
         "ipv6",
@@ -253,7 +249,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The IPv6 of the container.
 
         Ex: ipv6:'2001:db8::ff00:42:8329'
-        """
+        """,
     ),
     (
         "last_seen",
@@ -262,7 +258,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Timestamp when the kubernetes container was last seen in UTC date format ("YYYY-MM-DDTHH:MM:SSZ").
 
         Ex: last_seen:'2025-01-19T11:14:15Z'
-        """
+        """,
     ),
     (
         "namespace",
@@ -271,7 +267,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The kubernetes namespace name.
 
         Ex: namespace:'default'
-        """
+        """,
     ),
     (
         "node_name",
@@ -280,7 +276,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The name of the kubernetes node.
 
         Ex: node_name:'k8s-pool'
-        """
+        """,
     ),
     (
         "node_uid",
@@ -289,7 +285,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The kubernetes node UID of the container.
 
         Ex: node_uid:'79f1741e7db542bdaaecac11a7f7b7ae'
-        """
+        """,
     ),
     (
         "pod_id",
@@ -298,21 +294,21 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         The kubernetes pod ID of the container.
 
         Ex: pod_id:'6ab0fffa-2662-440b-8e95-2be93e11da3c'
-        """
+        """,
     ),
     (
         "pod_name",
         "String",
         """
         The kubernetes pod name of the container.
-        """
+        """,
     ),
     (
         "port",
         "String",
         """
         The port that the container exposes.
-        """
+        """,
     ),
     (
         "privileged",
@@ -321,7 +317,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Tells whether the container is running with elevated privileges.
 
         Ex: privileged:false
-        """
+        """,
     ),
     (
         "root_write_access",
@@ -330,21 +326,21 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Tells whether the container has root write access.
 
         Ex: root_write_access:false
-        """
+        """,
     ),
     (
         "run_as_root_group",
         "Boolean",
         """
         Tells whether the container is running as root group.
-        """
+        """,
     ),
     (
         "run_as_root_user",
         "Boolean",
         """
         Tells whether the container is running as root user.
-        """
+        """,
     ),
     (
         "running_status",
@@ -353,7 +349,7 @@ KUBERNETES_CONTAINERS_FQL_FILTERS = [
         Tells whether the container is running.
 
         Ex: running_status:true
-        """
+        """,
     ),
 ]
 
@@ -362,7 +358,9 @@ KUBERNETES_CONTAINERS_FQL_DOCUMENTATION = (
     + """
 === falcon_search_kubernetes_containers FQL filter available fields ===
 
-""" + generate_md_table(KUBERNETES_CONTAINERS_FQL_FILTERS) + """
+"""
+    + generate_md_table(KUBERNETES_CONTAINERS_FQL_FILTERS)
+    + """
 
 === falcon_search_kubernetes_containers FQL filter examples ===
 
@@ -393,11 +391,7 @@ agent_type:'Kubernetes'
 
 # List of tuples containing filter options data: (name, type, description)
 IMAGES_VULNERABILITIES_FQL_FILTERS = [
-    (
-        "Name",
-        "Type",
-        "Description"
-    ),
+    ("Name", "Type", "Description"),
     (
         "ai_related",
         "Boolean",
@@ -405,7 +399,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         Tells whether the image has AI related packages.
 
         Ex: ai_related:true
-        """
+        """,
     ),
     (
         "base_os",
@@ -414,7 +408,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         The base operating system of the image.
 
         Ex: base_os:'ubuntu'
-        """
+        """,
     ),
     (
         "container_id",
@@ -423,7 +417,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         The kubernetes container id in which the image vulnerability was detected.
 
         Ex: container_id:'515f976c43eaa3edf51590e7217ac8191a7e50c59'
-        """
+        """,
     ),
     (
         "container_running_status",
@@ -432,7 +426,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         The running status of the kubernetes container in which the image vulnerability was detected.
 
         Ex: container_running_status:true
-        """
+        """,
     ),
     (
         "cps_rating",
@@ -442,7 +436,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         Possible values: Low, Medium, High, Critical
 
         Ex: cps_rating:'Critical'
-        """
+        """,
     ),
     (
         "cve_id",
@@ -451,7 +445,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         The CVE ID of the image vulnerability.
 
         Ex: cve_id:'CVE-2025-1234'
-        """
+        """,
     ),
     (
         "cvss_score",
@@ -460,7 +454,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         The CVSS Score of the image vulnerability. The value must be between 0 and 10.
 
         Ex: cvss_score:8
-        """
+        """,
     ),
     (
         "image_digest",
@@ -469,7 +463,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         The digest of the image.
 
         Ex: image_digest:'sha256:a08d3ee8ee68ebd8a78525a710c6479270692259e'
-        """
+        """,
     ),
     (
         "image_id",
@@ -478,7 +472,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         The ID of the image.
 
         Ex: image_id:'a90f484d134848af858cd409801e213e'
-        """
+        """,
     ),
     (
         "registry",
@@ -487,7 +481,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         The image registry of the image in which the vulnerability was detected.
 
         Ex: registry:'docker.io'
-        """
+        """,
     ),
     (
         "repository",
@@ -496,7 +490,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         The image repository of the image in which the vulnerability was detected.
 
         Ex: repository:'my-app'
-        """
+        """,
     ),
     (
         "severity",
@@ -506,7 +500,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         Available values: Low, Medium, High, Critical.
 
         Ex: severity:'High'
-        """
+        """,
     ),
     (
         "tag",
@@ -515,7 +509,7 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         The image tag of the image in which the vulnerability was detected.
 
         Ex: tag:'v1.0.0'
-        """
+        """,
     ),
 ]
 
@@ -524,7 +518,9 @@ IMAGES_VULNERABILITIES_FQL_DOCUMENTATION = (
     + """
 === falcon_search_images_vulnerabilities FQL filter options ===
 
-""" + generate_md_table(IMAGES_VULNERABILITIES_FQL_FILTERS) + """
+"""
+    + generate_md_table(IMAGES_VULNERABILITIES_FQL_FILTERS)
+    + """
 
 === falcon_search_images_vulnerabilities FQL filter examples ===
 
@@ -544,11 +540,7 @@ registry:*'*docker*'
 
 # List of tuples containing filter options data: (name, type, description)
 SEARCH_CSPM_ASSETS_FQL_FILTERS = [
-    (
-        "Name",
-        "Type",
-        "Description"
-    ),
+    ("Name", "Type", "Description"),
     (
         "account_id",
         "String",
@@ -556,7 +548,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         The cloud provider account ID.
 
         Ex: account_id:'123456789012'
-        """
+        """,
     ),
     (
         "account_name",
@@ -565,7 +557,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         The cloud provider account name.
 
         Ex: account_name:'production-account'
-        """
+        """,
     ),
     (
         "cloud_provider",
@@ -576,7 +568,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: cloud_provider:'AWS'
         Ex: cloud_provider:['AWS', 'Azure']
-        """
+        """,
     ),
     (
         "resource_type",
@@ -588,7 +580,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         Ex: resource_type:'AWS::EC2::Instance'
         Ex: resource_type:'ec2-instance'
         Ex: resource_type:*'*S3*'
-        """
+        """,
     ),
     (
         "resource_id",
@@ -597,7 +589,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         The unique identifier of the cloud resource.
 
         Ex: resource_id:'//ec2.amazonaws.com/i-1234567890abcdef0'
-        """
+        """,
     ),
     (
         "region",
@@ -607,7 +599,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: region:'us-east-1'
         Ex: region:['us-east-1', 'us-west-2']
-        """
+        """,
     ),
     (
         "tag_key",
@@ -617,7 +609,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: tag_key:'Environment'
         Ex: tag_key:'CostCenter'
-        """
+        """,
     ),
     (
         "tag_value",
@@ -627,7 +619,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: tag_value:'Production'
         Ex: tag_value:'*web*'
-        """
+        """,
     ),
     (
         "tags",
@@ -637,7 +629,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: tags:'Environment:Production'
         Ex: tags:'CostCenter:12345'
-        """
+        """,
     ),
     (
         "tags_string",
@@ -647,7 +639,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: tags_string:'*Production*'
         Ex: tags_string:'*Environment*'
-        """
+        """,
     ),
     (
         "creation_time",
@@ -657,7 +649,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: creation_time:>'2025-01-01T00:00:00Z'
         Ex: creation_time:<='2024-12-31T23:59:59Z'
-        """
+        """,
     ),
     (
         "updated_at",
@@ -666,7 +658,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         Timestamp when the asset was last updated in CrowdStrike in UTC format.
 
         Ex: updated_at:>'2025-03-01T00:00:00Z'
-        """
+        """,
     ),
     (
         "active",
@@ -675,7 +667,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         Indicates if the asset is currently active.
 
         Ex: active:true
-        """
+        """,
     ),
     (
         "service",
@@ -686,7 +678,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: service:'EC2'
         Ex: service:*'*Gateway*'
-        """
+        """,
     ),
     (
         "service_category",
@@ -696,7 +688,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         Examples: Compute, Storage, Networking, Database.
 
         Ex: service_category:'Compute'
-        """
+        """,
     ),
     (
         "location",
@@ -706,7 +698,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: location:'us-central1'
         Ex: location:'global'
-        """
+        """,
     ),
     (
         "highest_severity",
@@ -717,7 +709,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: highest_severity:'critical'
         Ex: highest_severity:['critical', 'high']
-        """
+        """,
     ),
     (
         "publicly_exposed",
@@ -726,7 +718,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         Whether the resource is publicly exposed.
 
         Ex: publicly_exposed:true
-        """
+        """,
     ),
     (
         "status",
@@ -736,7 +728,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         Values: ResourceDiscovered, ResourceUpdated, ResourceDeleted.
 
         Ex: status:'ResourceDiscovered'
-        """
+        """,
     ),
     (
         "instance_state",
@@ -746,7 +738,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: instance_state:'running'
         Ex: instance_state:'stopped'
-        """
+        """,
     ),
     (
         "managed_by",
@@ -757,7 +749,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: managed_by:'Sensor'
         Ex: managed_by:'Unmanaged'
-        """
+        """,
     ),
     (
         "instance_id",
@@ -766,7 +758,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
         Cloud instance identifier.
 
         Ex: instance_id:'i-0abc123def456'
-        """
+        """,
     ),
     (
         "platform_name",
@@ -776,7 +768,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: platform_name:'Linux'
         Ex: platform_name:'Windows'
-        """
+        """,
     ),
     (
         "ioa_count",
@@ -786,7 +778,7 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: ioa_count:>0
         Ex: ioa_count:>=5
-        """
+        """,
     ),
     (
         "iom_count",
@@ -796,16 +788,12 @@ SEARCH_CSPM_ASSETS_FQL_FILTERS = [
 
         Ex: iom_count:>0
         Ex: iom_count:>=10
-        """
+        """,
     ),
 ]
 
 CSPM_IOM_FINDINGS_FQL_FILTERS = [
-    (
-        "Name",
-        "Type",
-        "Description"
-    ),
+    ("Name", "Type", "Description"),
     (
         "account_id",
         "String",
@@ -813,7 +801,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         The cloud provider account ID.
 
         Ex: account_id:'123456789012'
-        """
+        """,
     ),
     (
         "account_name",
@@ -822,7 +810,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         The cloud provider account name.
 
         Ex: account_name:'production-account'
-        """
+        """,
     ),
     (
         "cloud_provider",
@@ -832,7 +820,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
 
         Ex: cloud_provider:'aws'
         Ex: cloud_provider:['aws', 'azure']
-        """
+        """,
     ),
     (
         "severity",
@@ -843,7 +831,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
 
         Ex: severity:'critical'
         Ex: severity:['critical', 'high']
-        """
+        """,
     ),
     (
         "status",
@@ -853,7 +841,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         Values: open, suppressed, pass.
 
         Ex: status:'open'
-        """
+        """,
     ),
     (
         "service",
@@ -863,7 +851,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
 
         Ex: service:'S3'
         Ex: service:'IAM'
-        """
+        """,
     ),
     (
         "service_category",
@@ -873,7 +861,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         Examples: Compute, Storage, Networking, Identity.
 
         Ex: service_category:'Identity'
-        """
+        """,
     ),
     (
         "region",
@@ -883,7 +871,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
 
         Ex: region:'us-east-1'
         Ex: region:['us-east-1', 'eu-west-1']
-        """
+        """,
     ),
     (
         "resource_id",
@@ -892,7 +880,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         The unique identifier of the affected resource.
 
         Ex: resource_id:'arn:aws:s3:::my-bucket'
-        """
+        """,
     ),
     (
         "resource_type",
@@ -902,7 +890,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
 
         Ex: resource_type:'AWS::S3::Bucket'
         Ex: resource_type:*'*EC2*'
-        """
+        """,
     ),
     (
         "resource_type_name",
@@ -911,7 +899,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         Human-readable resource type name.
 
         Ex: resource_type_name:'S3 Bucket'
-        """
+        """,
     ),
     (
         "rule_name",
@@ -921,7 +909,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
 
         Ex: rule_name:*'*encryption*'
         Ex: rule_name:*'*public*'
-        """
+        """,
     ),
     (
         "rule_id",
@@ -930,7 +918,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         The unique rule identifier.
 
         Ex: rule_id:'CS-001'
-        """
+        """,
     ),
     (
         "policy_name",
@@ -939,7 +927,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         The policy name containing the rule.
 
         Ex: policy_name:*'*CIS*'
-        """
+        """,
     ),
     (
         "policy_id",
@@ -948,7 +936,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         The policy identifier.
 
         Ex: policy_id:'123'
-        """
+        """,
     ),
     (
         "benchmark_name",
@@ -957,7 +945,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         Compliance benchmark name (e.g., CIS, NIST, SOC2).
 
         Ex: benchmark_name:*'*CIS*'
-        """
+        """,
     ),
     (
         "framework",
@@ -966,7 +954,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         Compliance framework the finding maps to.
 
         Ex: framework:'CIS'
-        """
+        """,
     ),
     (
         "attack_type",
@@ -975,7 +963,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         MITRE ATT&CK attack type classification.
 
         Ex: attack_type:*'*credential*'
-        """
+        """,
     ),
     (
         "tactic_name",
@@ -984,7 +972,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         MITRE ATT&CK tactic name.
 
         Ex: tactic_name:'Credential Access'
-        """
+        """,
     ),
     (
         "technique_name",
@@ -993,7 +981,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         MITRE ATT&CK technique name.
 
         Ex: technique_name:*'*Brute Force*'
-        """
+        """,
     ),
     (
         "first_detected",
@@ -1002,7 +990,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         When the finding was first detected in UTC format.
 
         Ex: first_detected:>'2025-01-01T00:00:00Z'
-        """
+        """,
     ),
     (
         "last_detected",
@@ -1011,7 +999,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         When the finding was last detected in UTC format.
 
         Ex: last_detected:>'2025-04-01T00:00:00Z'
-        """
+        """,
     ),
     (
         "suppressed_by",
@@ -1020,7 +1008,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         The user or rule that suppressed this finding.
 
         Ex: suppressed_by:*'*admin*'
-        """
+        """,
     ),
     (
         "suppression_reason",
@@ -1030,7 +1018,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         Values: accept-risk, compensating-control, false-positive.
 
         Ex: suppression_reason:'accept-risk'
-        """
+        """,
     ),
     (
         "tag_key",
@@ -1039,7 +1027,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         Cloud resource tag key.
 
         Ex: tag_key:'Environment'
-        """
+        """,
     ),
     (
         "tag_value",
@@ -1048,7 +1036,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         Cloud resource tag value.
 
         Ex: tag_value:'Production'
-        """
+        """,
     ),
     (
         "cloud_group",
@@ -1057,7 +1045,7 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         Cloud group identifier for organizational grouping.
 
         Ex: cloud_group:'prod-group'
-        """
+        """,
     ),
 ]
 
@@ -1066,7 +1054,9 @@ CSPM_IOM_FINDINGS_FQL_DOCUMENTATION = (
     + """
 === falcon_search_iom_findings FQL filter available fields ===
 
-""" + generate_md_table(CSPM_IOM_FINDINGS_FQL_FILTERS) + """
+"""
+    + generate_md_table(CSPM_IOM_FINDINGS_FQL_FILTERS)
+    + """
 
 === falcon_search_iom_findings FQL filter examples ===
 
@@ -1110,7 +1100,9 @@ SEARCH_CSPM_ASSETS_FQL_DOCUMENTATION = (
     + """
 === falcon_search_cspm_assets FQL filter available fields ===
 
-""" + generate_md_table(SEARCH_CSPM_ASSETS_FQL_FILTERS) + """
+"""
+    + generate_md_table(SEARCH_CSPM_ASSETS_FQL_FILTERS)
+    + """
 
 === falcon_search_cspm_assets FQL filter examples ===
 
@@ -1340,7 +1332,9 @@ CLOUD_RISKS_FQL_DOCUMENTATION = (
     + """
 === falcon_search_cloud_risks FQL filter available fields ===
 
-""" + generate_md_table(CLOUD_RISKS_FQL_FILTERS) + """
+"""
+    + generate_md_table(CLOUD_RISKS_FQL_FILTERS)
+    + """
 
 === falcon_search_cloud_risks FQL filter sort fields ===
 
@@ -1371,3 +1365,4 @@ status:'Suppressed'
 service_category:'Storage'+severity:'Critical'
 """
 )
+

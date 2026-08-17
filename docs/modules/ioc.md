@@ -13,6 +13,22 @@ Searching, creating, and deleting custom IOCs using Falcon IOC Service Collectio
 
 ## Tools
 
+### `falcon_search_iocs`
+
+**Required scopes:** `IOC Management:read`
+
+Search custom IOCs and return full IOC details.
+
+Use this to find IOCs by type, value, action, severity, or expiration status.
+Consult falcon://ioc/search/fql-guide before constructing filter expressions.
+Returns full indicator records including metadata, platforms, and host groups.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
+
+**Example prompts:**
+
+- "Find all active domain IOCs"
+- "Show me SHA256 hash IOCs with prevent action"
+
 ### `falcon_add_ioc`
 
 > [!NOTE]
@@ -46,22 +62,6 @@ given, filter takes precedence. Returns a success summary with deleted IOC IDs.
 
 - "Delete IOC with ID abc123"
 - "Remove all expired IOCs"
-
-### `falcon_search_iocs`
-
-**Required scopes:** `IOC Management:read`
-
-Search custom IOCs and return full IOC details.
-
-Use this to find IOCs by type, value, action, severity, or expiration status.
-Consult falcon://ioc/search/fql-guide before constructing filter expressions.
-Returns full indicator records including metadata, platforms, and host groups.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
-
-**Example prompts:**
-
-- "Find all active domain IOCs"
-- "Show me SHA256 hash IOCs with prevent action"
 
 ## Resources
 

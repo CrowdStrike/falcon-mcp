@@ -17,6 +17,23 @@ This module provides a unified set of tools for managing CrowdStrike exclusions 
 
 ## Tools
 
+### `falcon_search_exclusions`
+
+Search exclusions of a given type and return full exclusion records.
+
+Use this to find IOA, machine learning, sensor visibility, or
+certificate-based exclusions by name, value, scope, or timestamp. The
+`exclusion_type` parameter selects which exclusion API is queried.
+Consult falcon://exclusions/search/fql-guide before constructing filter
+expressions — the available fields differ per type. Returns full
+exclusion records including id, scope, and timestamps.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+
+**Example prompts:**
+
+- "Show me my most recent IOA and machine learning exclusions"
+- "List sensor visibility exclusions created in the last 7 days"
+
 ### `falcon_create_exclusion`
 
 > [!NOTE]
@@ -34,6 +51,22 @@ error before any API call. Returns the created exclusion record(s).
 
 - "Create an ML exclusion for /tmp/foo.sh applied to all hosts"
 - "Add a sensor visibility exclusion for C:\Temp\* on the Workstations group"
+
+### `falcon_update_exclusion`
+
+> [!NOTE]
+> This tool modifies data.
+
+Update an existing exclusion of the given type.
+
+Provide the `id` of the exclusion plus the same fields used when creating
+that type. All four types update via HTTP PATCH. Invalid or missing
+fields return a guiding error before any API call. Returns the updated
+exclusion record(s).
+
+**Example prompts:**
+
+- "Update IOA exclusion abc123 to also match a new command line regex"
 
 ### `falcon_delete_exclusions`
 
@@ -64,39 +97,6 @@ metadata for the given hash.
 **Example prompts:**
 
 - "Look up the signing certificate for SHA256 3dd9a..."
-
-### `falcon_search_exclusions`
-
-Search exclusions of a given type and return full exclusion records.
-
-Use this to find IOA, machine learning, sensor visibility, or
-certificate-based exclusions by name, value, scope, or timestamp. The
-`exclusion_type` parameter selects which exclusion API is queried.
-Consult falcon://exclusions/search/fql-guide before constructing filter
-expressions — the available fields differ per type. Returns full
-exclusion records including id, scope, and timestamps.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
-
-**Example prompts:**
-
-- "Show me my most recent IOA and machine learning exclusions"
-- "List sensor visibility exclusions created in the last 7 days"
-
-### `falcon_update_exclusion`
-
-> [!NOTE]
-> This tool modifies data.
-
-Update an existing exclusion of the given type.
-
-Provide the `id` of the exclusion plus the same fields used when creating
-that type. All four types update via HTTP PATCH. Invalid or missing
-fields return a guiding error before any API call. Returns the updated
-exclusion record(s).
-
-**Example prompts:**
-
-- "Update IOA exclusion abc123 to also match a new command line regex"
 
 ## Resources
 
