@@ -731,7 +731,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
         ctrl = {
             "name": "CIS 1.1",
             "security_framework": [{"name": "CIS"}],
-            "section": "IAM",
+            "section_name": "IAM",
             "requirement": "1.1",
             "extra_field": "dropped",
         }
@@ -818,12 +818,33 @@ class TestCloudInsightDefinitionsTools(TestModules):
     def test_definitions_skips_non_dict_controls(self):
         """Non-dict control entries are silently skipped."""
         ctrl_bad = "not-a-dict"
-        ctrl_good = {"name": "C1", "security_framework": [{"name": "F1"}], "section": "s", "requirement": "1.0"}
+        ctrl_good = {"name": "C1", "security_framework": [{"name": "F1"}], "section_name": "s", "requirement": "1.0"}
         rule = self._make_rule("iid1", "Network", "N", controls=[ctrl_bad, ctrl_good])
         self.mock_client.command.side_effect = self._insights_definition_api_responses([rule])
         result = self.module.list_cloud_insight_definitions()
         self.assertEqual(len(result[0]["controls"]), 1)
         self.assertEqual(result[0]["controls"][0]["name"], "C1")
+
+    def test_control_section_maps_from_api_section_name(self):
+        """PFM returns section_name; output exposes it as section."""
+        ctrl = {
+            "name": "C1",
+            "security_framework": [{"name": "CIS"}],
+            "section_name": "IAM",
+            "requirement": "1.2",
+        }
+        rules = [self._make_rule("iid1", "Identity", "I", controls=[ctrl])]
+        self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
+        result = self.module.list_cloud_insight_definitions()
+        self.assertEqual(result[0]["controls"][0]["section"], "IAM")
+
+    def test_control_section_empty_when_api_field_absent(self):
+        """A control with no section_name yields an empty section, not a KeyError."""
+        ctrl = {"name": "C1", "security_framework": [{"name": "CIS"}], "requirement": "1.2"}
+        rules = [self._make_rule("iid1", "Identity", "I", controls=[ctrl])]
+        self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
+        result = self.module.list_cloud_insight_definitions()
+        self.assertEqual(result[0]["controls"][0]["section"], "")
 
     def test_fetch_pfm_rules_paginates_query_rule(self):
         """Catalog build paginates QueryRule when more than 500 results are returned."""

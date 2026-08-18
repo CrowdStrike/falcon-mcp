@@ -98,6 +98,26 @@ class TestCloudInsightsIntegration(BaseIntegrationTest):
         for expected in ["Identity", "Network", "Data", "Vulnerabilities", "AI"]:
             assert expected in categories, f"Expected category '{expected}' not found. Got: {sorted(categories)}"
 
+    def test_list_cloud_insight_definitions_controls_have_section(self):
+        """Controls, when present, carry a non-empty section from the live API.
+
+        Guards the section_name -> section mapping: a wrong source field name
+        yields controls whose section is uniformly "".
+        """
+        result = self.call_method(self.module.list_cloud_insight_definitions)
+        self.assert_no_error(result, context="list_cloud_insight_definitions controls")
+
+        with_controls = [e for e in result if e.get("controls")]
+        if not with_controls:
+            pytest.skip("no insight definitions carry compliance controls in this CID")
+
+        all_controls = [c for e in with_controls for c in e["controls"]]
+        for c in all_controls:
+            assert set(c.keys()) == {"name", "framework", "section", "requirement"}
+        assert any(c["section"] for c in all_controls), (
+            "all controls have empty section — check the source field name is section_name"
+        )
+
     # --- search_cloud_insights ---
 
     def test_search_cloud_insights_returns_flattened_records(self):

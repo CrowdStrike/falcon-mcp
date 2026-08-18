@@ -295,7 +295,7 @@ class _CloudInsightsMixin(_CloudBase):
         return {
             "name": ctrl.get("name") or "",
             "framework": framework,
-            "section": ctrl.get("section") or "",
+            "section": ctrl.get("section_name") or "",
             "requirement": ctrl.get("requirement") or "",
         }
 
