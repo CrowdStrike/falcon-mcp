@@ -7,6 +7,28 @@ without needing to read the full FQL resource.
 """
 
 FILTER_HINTS: dict[str, str] = {
+    # === AgentWorks ===
+    "falcon_search_agentworks_agents": (
+        "Common fields: template_id, active_version.model "
+        "(e.g. 'bedrock.claude-4-6-sonnet'), published_version_ids. "
+        "The agent has no top-level name/model — filter model via active_version.model. "
+        "No wildcards. Sort by created_date. "
+        "Ex: active_version.model:'bedrock.claude-4-6-sonnet'"
+    ),
+    "falcon_search_agentworks_agent_versions": (
+        "Common fields: agent_id, name (exact, no wildcards), model, "
+        "is_published (true|false), is_enabled (true|false), created_at (UTC datetime). "
+        "Sort by created_at. "
+        "Ex: agent_id:'<uuid>'+is_published:true"
+    ),
+    "falcon_search_agentworks_spans": (
+        "ALWAYS filter, usually by trace_id (pass an invocation's ai_trace_id). "
+        "Common fields: trace_id, span_type (llm|aw_agent|aiplatform_agent|...), "
+        "status (unset|ok|error), name, duration_ms, "
+        "start_time (last 90 days only, e.g. start_time:>'now-7d'). "
+        "Sort by start_time. "
+        "Ex: trace_id:'<ai_trace_id>'"
+    ),
     # === Detections ===
     "falcon_search_detections": (
         "Common fields: severity_name (Critical|High|Medium|Low|Informational), "
