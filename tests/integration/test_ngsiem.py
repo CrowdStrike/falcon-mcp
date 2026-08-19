@@ -41,8 +41,8 @@ class TestNGSIEMIntegration(BaseIntegrationTest):
 
         self.assert_no_error(result, context="search_ngsiem")
 
-        # Result should be a list (events)
-        assert isinstance(result, list), f"Expected list of events, got {type(result)}"
+        events = self._unwrap_results(result)
+        assert isinstance(events, list), f"Expected list of events, got {type(events)}"
 
     def test_operation_names_are_correct(self):
         """Validate that FalconPy operation names work against real API.
@@ -93,7 +93,7 @@ class TestNGSIEMIntegration(BaseIntegrationTest):
         )
 
         self.assert_no_error(result, context="search with no matches")
-        assert isinstance(result, list), f"Expected list, got {type(result)}"
+        assert self._unwrap_results(result) == [], "Expected no events for an absent aid"
 
     def test_search_ngsiem_with_repository_parameter(self):
         """Test search with explicit repository parameter."""
@@ -110,7 +110,7 @@ class TestNGSIEMIntegration(BaseIntegrationTest):
 
         # May return events or empty list depending on environment
         self.assert_no_error(result, context="search with investigate_view repository")
-        assert isinstance(result, list), f"Expected list, got {type(result)}"
+        assert isinstance(self._unwrap_results(result), list)
 
     def test_search_ngsiem_invalid_repository_returns_error(self):
         """Test that an invalid repository value returns an error."""
@@ -141,11 +141,12 @@ class TestNGSIEMIntegration(BaseIntegrationTest):
         )
 
         self.assert_no_error(result, context="search_ngsiem event structure")
-        assert isinstance(result, list), f"Expected list, got {type(result)}"
+        events = self._unwrap_results(result)
+        assert isinstance(events, list), f"Expected list, got {type(events)}"
 
         # Only validate structure if events exist
-        if len(result) > 0:
-            first_event = result[0]
+        if len(events) > 0:
+            first_event = events[0]
             assert isinstance(first_event, dict), f"Expected event dict, got {type(first_event)}"
             # Events should have at least a timestamp field
             assert "@timestamp" in first_event or "timestamp" in first_event, (
@@ -166,7 +167,7 @@ class TestNGSIEMIntegration(BaseIntegrationTest):
         )
 
         self.assert_no_error(result, context="search with special characters")
-        assert isinstance(result, list), f"Expected list, got {type(result)}"
+        assert isinstance(self._unwrap_results(result), list)
 
     def test_search_ngsiem_timeout_returns_error(self):
         """Test that a search exceeding the timeout returns a timeout error.
@@ -194,4 +195,79 @@ class TestNGSIEMIntegration(BaseIntegrationTest):
         assert "error" in result, "Expected 'error' key for timeout"
         assert "timed out" in result["error"].lower(), (
             f"Expected timeout message, got: {result['error']}"
+        )
+
+    def test_job_metadata_is_returned_live(self):
+        """Job metadata reaches the caller from a real search.
+
+        Guards against an upstream rename, which would silently return None for all
+        of them and strip the zero-row reasoning of its evidence.
+        """
+        end_time = datetime.now(timezone.utc)
+        start_time = end_time - timedelta(hours=1)
+
+        result = self.call_method(
+            self.module.search_ngsiem,
+            query_string="#event_simpleName=ProcessRollup2 | head(3)",
+            start=start_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            end=end_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        )
+
+        self.assert_no_error(result, context="search_ngsiem job metadata")
+        job = result["job"]
+        assert job["processed_events"] is not None, f"processed_events missing: {job}"
+        assert job["processed_bytes"] is not None, f"processed_bytes missing: {job}"
+        assert job["event_count"] is not None, f"event_count missing: {job}"
+        assert job["search_start"] is not None, f"search_start missing: {job}"
+        assert job["search_end"] is not None, f"search_end missing: {job}"
+        assert job["parsed_query"] == "#event_simpleName=ProcessRollup2", (
+            f"unexpected parse echo: {job['parsed_query']!r}"
+        )
+
+    def test_zero_row_result_is_provably_a_zero_row_result_live(self):
+        """A valid filter matching nothing comes back as a confirmed negative.
+
+        The reported scenario: a well-formed query over a value that does not exist.
+        """
+        end_time = datetime.now(timezone.utc)
+        start_time = end_time - timedelta(hours=1)
+
+        result = self.call_method(
+            self.module.search_ngsiem,
+            query_string=(
+                '#event_simpleName=NetworkConnectIP4 aid="00000000000000000000000000000000" '
+                "| head(5)"
+            ),
+            start=start_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            end=end_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        )
+
+        self.assert_no_error(result, context="zero-row search")
+        assert result["results"] == [], f"Expected no rows, got {len(result['results'])}"
+        assert result["job"]["processed_events"] > 0, (
+            f"a valid filter must scan events even when it matches none; got "
+            f"{result['job']['processed_events']}"
+        )
+        assert "a real negative" in result["hint"], (
+            f"a scanned zero-row result must be stated as real: {result['hint']!r}"
+        )
+
+    def test_misparsed_query_is_visible_live(self):
+        """An SPL-ism returns rows under a parse the caller did not ask for.
+
+        `| limit 5` is not CQL, and the API runs it without an error.
+        """
+        end_time = datetime.now(timezone.utc)
+        start_time = end_time - timedelta(hours=1)
+
+        result = self.call_method(
+            self.module.search_ngsiem,
+            query_string="#event_simpleName=ProcessRollup2 | limit 5",
+            start=start_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            end=end_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        )
+
+        self.assert_no_error(result, context="misparsed query")
+        assert result["job"]["parsed_query"] == "#event_simpleName=ProcessRollup2 | limit | 5", (
+            f"expected the demoted free-text stages; got {result['job']['parsed_query']!r}"
         )
