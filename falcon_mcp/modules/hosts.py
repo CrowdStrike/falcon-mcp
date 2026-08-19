@@ -142,12 +142,13 @@ class HostsModule(BaseModule):
             examples={"hostname.asc", "last_seen.desc"},
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Search for hosts in your CrowdStrike environment.
+        """Search hosts and their sensor state: filter by hostname, platform, IP, sensor version, containment (network-quarantine) status, assigned policies, or grouping tags.
 
-        Use this to find devices by hostname, platform, IP, sensor version, or other
-        attributes. Consult falcon://hosts/search/fql-guide before constructing filter
-        expressions. Returns full host details including device info, OS, and network
-        context.
+        Use this to find devices and check their protection state - whether a host is
+        contained, what sensor version it runs, which policies apply. For drive encryption,
+        disk/memory/CPU, OS security settings, or internet exposure, use
+        `falcon_search_managed_assets`. See `falcon://hosts/search/fql-guide` for filters;
+        returns full host details.
         Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
         """
         device_ids, pagination = self._base_search_with_meta(

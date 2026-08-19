@@ -266,6 +266,10 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_search_unmanaged_assets": [
         "Show me unmanaged Windows devices on the network",
     ],
+    "falcon_search_managed_assets": [
+        "Which managed Windows hosts are unencrypted?",
+        "List critical assets that don't have Credential Guard enabled",
+    ],
     # Firewall
     "falcon_search_firewall_rules": [
         "Show me all enabled Windows firewall rules",
