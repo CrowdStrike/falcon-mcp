@@ -3,6 +3,7 @@ Tests for the Recon module.
 """
 
 import unittest
+from typing import Any
 
 from falcon_mcp.modules.recon import ReconModule
 from tests.modules.utils.test_modules import TestModules
@@ -25,6 +26,9 @@ class TestReconModule(TestModules):
             "falcon_search_recon_notifications",
             "falcon_search_recon_rules",
             "falcon_search_recon_exposed_data_records",
+            "falcon_aggregate_recon_notifications",
+            "falcon_aggregate_recon_exposed_data_records",
+            "falcon_preview_recon_rule",
         ]
         self.assert_tools_registered(expected_tools)
 
@@ -34,6 +38,9 @@ class TestReconModule(TestModules):
             "falcon_search_recon_notifications_fql_guide",
             "falcon_search_recon_rules_fql_guide",
             "falcon_search_recon_exposed_data_records_fql_guide",
+            "falcon_aggregate_recon_notifications_guide",
+            "falcon_aggregate_recon_exposed_data_records_guide",
+            "falcon_preview_recon_rule_guide",
         ]
         self.assert_resources_registered(expected_resources)
 
@@ -380,6 +387,355 @@ class TestReconModule(TestModules):
 
         # 3 calls total (one query per tool), no details calls
         self.assertEqual(self.mock_client.command.call_count, 3)
+
+    # ------------------------------------------------------------------
+    # Aggregate notifications
+    # ------------------------------------------------------------------
+
+    def _aggregate_notifications(self, **overrides):
+        """Call aggregate_recon_notifications with every Field param supplied.
+
+        Pydantic defaults are not resolved when calling the method directly, so
+        each parameter has to be passed explicitly.
+        """
+        params = {
+            "field": "status",
+            "aggregate_type": "terms",
+            "filter": None,
+            "q": None,
+            "name": "by_status",
+            "size": 10,
+            "sort": None,
+            "interval": None,
+            "date_ranges": None,
+            "ranges": None,
+            "sub_aggregates": None,
+        }
+        params.update(overrides)
+        return self.module.aggregate_recon_notifications(**params)
+
+    def test_aggregate_recon_notifications_success(self):
+        """Verify a terms aggregation returns the API's buckets."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {
+                        "name": "by_status",
+                        "buckets": [
+                            {"label": "new", "count": 8500073},
+                            {"label": "in-progress", "count": 4},
+                        ],
+                    }
+                ],
+                "errors": [],
+            },
+        }
+
+        result = self._aggregate_notifications()
+
+        self.mock_client.command.assert_called_once()
+        args, kwargs = self.mock_client.command.call_args
+        self.assertEqual(args[0], "AggregateNotificationsV1")
+        # The endpoint 400s on a bare object; the spec must be list-wrapped.
+        self.assertEqual(
+            kwargs["body"],
+            [{"type": "terms", "field": "status", "name": "by_status", "size": 10}],
+        )
+        self.assertEqual(result[0]["buckets"][0]["label"], "new")
+
+    def test_aggregate_recon_notifications_omits_unset_spec_keys(self):
+        """Verify unset optional params are absent from the body, not sent as null."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [], "errors": []},
+        }
+
+        self._aggregate_notifications(size=None)
+
+        spec = self.mock_client.command.call_args[1]["body"][0]
+        for absent in ("filter", "q", "sort", "interval", "date_ranges", "sub_aggregates", "size"):
+            self.assertNotIn(absent, spec)
+
+    def test_aggregate_recon_notifications_forwards_all_spec_params(self):
+        """Verify filter, q, sort, interval, date_ranges, and sub_aggregates reach the body."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [], "errors": []},
+        }
+
+        sub = [{"type": "terms", "field": "status", "name": "inner"}]
+        self._aggregate_notifications(
+            field="created_date",
+            aggregate_type="date_range",
+            filter="rule_topic:'SA_TYPOSQUATTING'",
+            q="crowdstrike",
+            sort="_count|asc",
+            interval="day",
+            date_ranges=[{"from": "now-30d", "to": "now"}],
+            sub_aggregates=sub,
+        )
+
+        spec = self.mock_client.command.call_args[1]["body"][0]
+        self.assertEqual(spec["type"], "date_range")
+        self.assertEqual(spec["field"], "created_date")
+        self.assertEqual(spec["filter"], "rule_topic:'SA_TYPOSQUATTING'")
+        self.assertEqual(spec["q"], "crowdstrike")
+        self.assertEqual(spec["sort"], "_count|asc")
+        self.assertEqual(spec["interval"], "day")
+        self.assertEqual(spec["date_ranges"], [{"from": "now-30d", "to": "now"}])
+        self.assertEqual(spec["sub_aggregates"], sub)
+
+    def test_aggregate_every_declared_type_sends_required_companion_args(self):
+        """Every aggregate_type the Literal allows must be able to build a usable spec.
+
+        `date_histogram` needs `interval`, `date_range` needs `date_ranges`, and `range`
+        needs `ranges`; without them the API 500s, so the tool has to expose a way to
+        supply each.
+        """
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [], "errors": []},
+        }
+
+        # aggregate_type -> the companion key its spec cannot work without.
+        required_companion = {
+            "terms": None,
+            "cardinality": None,
+            "max": None,
+            "min": None,
+            "date_histogram": "interval",
+            "date_range": "date_ranges",
+            "range": "ranges",
+        }
+        companion_values: dict[str, Any] = {
+            "interval": "day",
+            "date_ranges": [{"from": "now-30d", "to": "now"}],
+            "ranges": [{"From": 0, "To": 100}],
+        }
+
+        for aggregate_type, companion in required_companion.items():
+            extra = {companion: companion_values[companion]} if companion else {}
+            for call in (self._aggregate_notifications, self._aggregate_records):
+                self.mock_client.command.reset_mock()
+                call(aggregate_type=aggregate_type, **extra)
+                spec = self.mock_client.command.call_args[1]["body"][0]
+                self.assertEqual(spec["type"], aggregate_type)
+                if companion:
+                    self.assertIn(
+                        companion,
+                        spec,
+                        f"{aggregate_type} must forward {companion} into the spec",
+                    )
+
+    def test_aggregate_recon_notifications_server_error(self):
+        """A 500 (as `rule_name` returns live) surfaces as an error, not empty buckets."""
+        self.mock_client.command.return_value = {
+            "status_code": 500,
+            "body": {"errors": [{"message": "Internal Server Error"}]},
+        }
+
+        result = self._aggregate_notifications(field="rule_name")
+
+        self.assertIn("error", result)
+
+    def test_aggregate_recon_notifications_body_level_error_on_200(self):
+        """A 2xx carrying body-level errors must not be reported as success."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [], "errors": [{"message": "Invalid aggregates request"}]},
+        }
+
+        result = self._aggregate_notifications()
+
+        self.assertIn("error", result)
+        self.assertIn("Invalid aggregates request", result["error"])
+
+    # ------------------------------------------------------------------
+    # Aggregate exposed-data records
+    # ------------------------------------------------------------------
+
+    def _aggregate_records(self, **overrides):
+        """Call aggregate_recon_exposed_data_records with every Field param supplied."""
+        params = {
+            "field": "credential_status",
+            "aggregate_type": "terms",
+            "filter": None,
+            "q": None,
+            "name": "by_cs",
+            "size": 10,
+            "sort": None,
+            "interval": None,
+            "date_ranges": None,
+            "ranges": None,
+            "sub_aggregates": None,
+        }
+        params.update(overrides)
+        return self.module.aggregate_recon_exposed_data_records(**params)
+
+    def test_aggregate_recon_exposed_data_records_success(self):
+        """Verify the exposed-data aggregate hits its own operation and returns buckets."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {
+                        "name": "by_cs",
+                        "buckets": [
+                            {"label": "previously_reported", "count": 49577530},
+                            {"label": "newly_reported", "count": 38150176},
+                        ],
+                    }
+                ],
+                "errors": [],
+            },
+        }
+
+        result = self._aggregate_records()
+
+        args, kwargs = self.mock_client.command.call_args
+        self.assertEqual(args[0], "AggregateNotificationsExposedDataRecordsV1")
+        self.assertEqual(
+            kwargs["body"],
+            [
+                {
+                    "type": "terms",
+                    "field": "credential_status",
+                    "name": "by_cs",
+                    "size": 10,
+                }
+            ],
+        )
+        self.assertEqual(result[0]["buckets"][1]["label"], "newly_reported")
+
+    def test_aggregate_recon_exposed_data_records_rejected_field(self):
+        """This endpoint 400s on fields outside its whitelist (e.g. `email`)."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "Invalid aggregates request"}]},
+        }
+
+        result = self._aggregate_records(field="email")
+
+        self.assertIn("error", result)
+
+    def test_aggregate_recon_exposed_data_records_sub_aggregates(self):
+        """Verify nested sub-aggregates are forwarded and returned intact."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {
+                        "name": "topic",
+                        "buckets": [
+                            {
+                                "label": "SA_DOMAIN",
+                                "count": 86295590,
+                                "sub_aggregates": [
+                                    {
+                                        "name": "cs",
+                                        "buckets": [{"label": "newly_reported", "count": 37788056}],
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+                "errors": [],
+            },
+        }
+
+        sub = [{"type": "terms", "field": "credential_status", "name": "cs", "size": 2}]
+        result = self._aggregate_records(field="rule.topic", name="topic", sub_aggregates=sub)
+
+        spec = self.mock_client.command.call_args[1]["body"][0]
+        self.assertEqual(spec["sub_aggregates"], sub)
+        self.assertEqual(result[0]["buckets"][0]["sub_aggregates"][0]["name"], "cs")
+
+    # ------------------------------------------------------------------
+    # Preview rule
+    # ------------------------------------------------------------------
+
+    def test_preview_recon_rule_success(self):
+        """Verify the preview body is a bare object and the fixed trio comes back."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    {"name": "channel", "buckets": [{"label": "public_repo", "count": 64}]},
+                    {"name": "count", "buckets": [{"label": "Total", "count": 99}]},
+                    {"name": "site", "buckets": [{"label": "github.com", "count": 57}]},
+                ],
+                "errors": [],
+            },
+        }
+
+        result = self.module.preview_recon_rule(
+            topic="SA_BRAND_PRODUCT",
+            filter="(phrase:'Acme')+(keyword:'Acme')",
+            lookback_days=30,
+        )
+
+        args, kwargs = self.mock_client.command.call_args
+        self.assertEqual(args[0], "PreviewRuleV1")
+        # Unlike the aggregate endpoints, this one takes a bare object, not a list.
+        self.assertEqual(
+            kwargs["body"],
+            {
+                "topic": "SA_BRAND_PRODUCT",
+                "filter": "(phrase:'Acme')+(keyword:'Acme')",
+                "lookback_days": 30,
+            },
+        )
+        self.assertEqual([agg["name"] for agg in result], ["channel", "count", "site"])
+
+    def test_preview_recon_rule_omits_unset_lookback(self):
+        """lookback_days=None must be absent from the body rather than sent as null."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [], "errors": []},
+        }
+
+        self.module.preview_recon_rule(
+            topic="SA_DOMAIN",
+            filter="(domain:'example.com')",
+            lookback_days=None,
+        )
+
+        body = self.mock_client.command.call_args[1]["body"]
+        self.assertNotIn("lookback_days", body)
+        self.assertEqual(body["topic"], "SA_DOMAIN")
+
+    def test_preview_recon_rule_invalid_filter_returns_guide(self):
+        """A rejected rule filter returns the preview guide so the agent can self-correct."""
+        self.mock_client.command.return_value = {
+            "status_code": 400,
+            "body": {
+                "errors": [
+                    {
+                        "message": "Invalid request",
+                        "details": [
+                            {
+                                "field": "filter",
+                                "message_key": "RULE_FILTER_INVALID_FQL",
+                            }
+                        ],
+                    }
+                ]
+            },
+        }
+
+        result = self.module.preview_recon_rule(
+            topic="SA_DOMAIN",
+            filter="example.com",
+            lookback_days=None,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("fql_guide", result)
+        self.assertEqual(result["filter_used"], "example.com")
+        # The guide must actually explain the rule-FQL dialect, not the search dialect.
+        self.assertIn("(domain:'example.com')", result["fql_guide"])
 
 
 if __name__ == "__main__":

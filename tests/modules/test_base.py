@@ -1262,6 +1262,39 @@ class TestBaseAggregate(TestModules):
             "PostAggregatesAlertsV2", body=[{"type": "terms", "field": "status"}]
         )
 
+    def test_parameters_are_sent_alongside_the_body(self):
+        """A few aggregate endpoints take query params as well as the body."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"name": "t", "buckets": []}]},
+        }
+
+        self.module._base_aggregate(
+            "PostAggregatesFileDetailsV1",
+            agg_type="terms",
+            field="name",
+            parameters={"ids": ["case-a"]},
+        )
+
+        self.mock_client.command.assert_called_once_with(
+            "PostAggregatesFileDetailsV1",
+            body=[{"type": "terms", "field": "name"}],
+            parameters={"ids": ["case-a"]},
+        )
+
+    def test_parameters_omitted_when_not_given(self):
+        """Endpoints without query params get a body-only call."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"name": "t", "buckets": []}]},
+        }
+
+        self.module._base_aggregate(
+            "PostAggregatesAlertsV2", agg_type="terms", field="status"
+        )
+
+        self.assertNotIn("parameters", self.mock_client.command.call_args[1])
+
     def test_multi_spec_passes_through_in_one_list(self):
         """N specs go out in a single list body; N results come back."""
         self.mock_client.command.return_value = {

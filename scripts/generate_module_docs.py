@@ -118,6 +118,25 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_list_case_templates": [
         "What case templates are available?",
     ],
+    "falcon_aggregate_case_slas": [
+        "How many case SLA policies do we have?",
+        "Break down our case SLAs by who created them",
+    ],
+    "falcon_aggregate_case_templates": [
+        "How many case templates has each person created?",
+        "Count the case templates added in the last 30 days",
+    ],
+    "falcon_aggregate_case_access_tags": [
+        "What access tags are used to restrict case visibility, and how many of each?",
+    ],
+    "falcon_aggregate_case_notification_groups": [
+        "How many case notification groups are configured?",
+        "Show notification group counts by creator",
+    ],
+    "falcon_aggregate_case_file_details": [
+        "What file names show up most often across case attachments?",
+        "How many files are attached to these two cases?",
+    ],
     # Correlation Rules
     "falcon_search_correlation_rules": [
         "Show me all active high-severity correlation rules",
@@ -412,6 +431,22 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Find exposed credentials for example.com",
         "Show leaked credentials from the past 7 days",
         "Find exposed data records for a specific notification",
+    ],
+    "falcon_aggregate_recon_notifications": [
+        "How many recon notifications are there by status?",
+        "What are the top 10 noisiest recon monitoring rules this month?",
+        "Show recon notification volume per day for the past 30 days",
+        "Break down typosquatting notifications by priority",
+    ],
+    "falcon_aggregate_recon_exposed_data_records": [
+        "Which sites leak the most of our credentials?",
+        "How many exposed credentials are newly reported vs previously reported?",
+        "Show exposed data record volume per day",
+    ],
+    "falcon_preview_recon_rule": [
+        "How noisy would a rule monitoring example.com be?",
+        "Preview how many notifications a brand rule for Acme would generate in the past 30 days",
+        "Estimate the notification volume before I create this monitoring rule",
     ],
     # Scheduled Reports
     "falcon_search_scheduled_reports": [

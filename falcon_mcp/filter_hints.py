@@ -64,6 +64,39 @@ FILTER_HINTS: dict[str, str] = {
         "severity (Integer 1-100: Informational=1, Low~25, Medium~50, High~75, Critical=100), "
         "name, assigned_to_name, created_timestamp (UTC datetime), tags."
     ),
+    "falcon_aggregate_case_slas": (
+        "Common fields: name, id, cid, created_by_name, updated_by_name, "
+        "created_timestamp, updated_timestamp. "
+        "Substring match uses :* (name:*'*Corp*'); ~ and 'val*' return nothing. "
+        "Date filters: created_timestamp:>'now-30d' (relative). "
+        "Ex: created_timestamp:>'now-30d'"
+    ),
+    "falcon_aggregate_case_templates": (
+        "Common fields: name, id, cid, created_by_name, updated_by_name, "
+        "created_timestamp, updated_timestamp. "
+        "Substring match uses :* (name:*'*Case*'); ~ and 'val*' return nothing. "
+        "Date filters: created_timestamp:>'now-30d' (relative). "
+        "Ex: created_by_name:'analyst@example.com'"
+    ),
+    "falcon_aggregate_case_access_tags": (
+        "Common fields: key, id, cid — access tags accept no other field. "
+        "Substring match uses :* (key:*'*ANALYST*'); ~ and 'val*' return nothing. "
+        "Ex: key:'ANALYST1'"
+    ),
+    "falcon_aggregate_case_notification_groups": (
+        "Common fields: name, id, cid, created_by_name, updated_by_name, "
+        "created_timestamp, updated_timestamp. "
+        "Substring match uses :* (name:*'*Analyst*'); ~ and 'val*' return nothing. "
+        "Date filters: created_timestamp:>'now-90d' (relative). "
+        "Ex: name:*'*Analyst*'"
+    ),
+    "falcon_aggregate_case_file_details": (
+        "Common fields: name (file name), case_id, id (file id), cid, "
+        "file_size (a string such as '114.8 KB', not a number). "
+        "Substring match uses :* (name:*'*.png'); ~ returns nothing. "
+        "Prefer the case_ids parameter over a case_id filter. "
+        "Ex: name:*'*.png'"
+    ),
     # === Cloud: Kubernetes Containers ===
     "falcon_search_kubernetes_containers": (
         "Common fields: cluster_name, namespace, container_name, "
@@ -132,15 +165,21 @@ FILTER_HINTS: dict[str, str] = {
     # === Firewall Rules ===
     "falcon_search_firewall_rules": (
         "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime)."
+        "enabled (true|false), created_on (UTC datetime). "
+        "name: use the contains operator name:~'value' (whole-word substring); a "
+        "name:'value*' glob is treated literally and returns nothing."
     ),
     "falcon_search_firewall_rule_groups": (
         "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime)."
+        "enabled (true|false), created_on (UTC datetime). "
+        "name: use the contains operator name:~'value' (whole-word substring); a "
+        "name:'value*' glob is treated literally and returns nothing."
     ),
     "falcon_search_firewall_policy_rules": (
         "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime)."
+        "enabled (true|false), created_on (UTC datetime). "
+        "name: use the contains operator name:~'value' (whole-word substring); a "
+        "name:'value*' glob is treated literally and returns nothing."
     ),
     # === Intel: Actors ===
     "falcon_search_actors": (
@@ -270,6 +309,24 @@ FILTER_HINTS: dict[str, str] = {
         "rule.topic (SA_DOMAIN|...), "
         "created_date:>'now-7d' (relative date). "
         "Ex: domain:'example.com'+credential_status:'newly_reported'"
+    ),
+    "falcon_aggregate_recon_notifications": (
+        "Filters which notifications are counted. Common fields: "
+        "status (new|in-progress|pending-review|closed-true-positive|closed-false-positive), "
+        "rule_priority (low|medium|high|critical), "
+        "rule_topic (SA_TYPOSQUATTING|SA_THIRD_PARTY|SA_CUSTOM|SA_DOMAIN|SA_IP|SA_BRAND_PRODUCT), "
+        "rule_id, item_type, item_site, source_category, "
+        "created_date:>'now-30d' (relative date). "
+        "Ex: rule_topic:'SA_TYPOSQUATTING'+created_date:>'now-30d'"
+    ),
+    "falcon_aggregate_recon_exposed_data_records": (
+        "Filters which records are counted. Common fields: domain, email, "
+        "credential_status (newly_reported|confirmed_active|previously_reported), "
+        "site (telegram.org|stealer_logs|malware_logs), source_category, notification_id, "
+        "rule.topic (SA_DOMAIN|SA_EMAIL), "
+        "created_date:>'now-7d' (relative date). "
+        "NOTE: the aggregatable `field` list is narrower than what this filter accepts. "
+        "Ex: credential_status:'newly_reported'+created_date:>'now-30d'"
     ),
     # === Scheduled Reports ===
     "falcon_search_scheduled_reports": (

@@ -129,11 +129,12 @@ class IntelModule(BaseModule):
             default=None,
             description=(
                 "The field and direction to sort results on. The format is "
-                "{field}|{asc/desc}. Valid values include: name, target_countries, "
+                "{field}.{asc/desc}. Valid values include: name, target_countries, "
                 "target_industries, type, created_date, last_activity_date and "
-                "last_modified_date. Ex: created_date|desc"
+                "last_modified_date. Prefer the dot separator, supported on every "
+                "Falcon sort endpoint. Ex: created_date.desc"
             ),
-            examples={"created_date|desc"},
+            examples={"created_date.desc"},
         ),
         q: str | None = Field(
             default=None,
@@ -161,7 +162,9 @@ class IntelModule(BaseModule):
         )
 
         if self._is_error(api_response):
-            return [api_response]
+            return self._format_fql_error_response(
+                [api_response], filter, QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION
+            )
 
         return self._build_pagination_envelope(api_response or [], pagination, filter)
 
@@ -188,10 +191,12 @@ class IntelModule(BaseModule):
             default=None,
             description=(
                 "The field and direction to sort results on. The format is "
-                "{field}|{asc/desc}. Valid values are: id, indicator, type, "
-                "published_date, last_updated, and _marker. Ex: published_date|desc"
+                "{field}.{asc/desc}. Valid values are: id, indicator, type, "
+                "published_date, last_updated, and _marker. Prefer the dot "
+                "separator, supported on every Falcon sort endpoint. Ex: "
+                "published_date.desc"
             ),
-            examples={"published_date|desc"},
+            examples={"published_date.desc"},
         ),
         q: str | None = Field(
             default=None,
@@ -234,7 +239,9 @@ class IntelModule(BaseModule):
         )
 
         if self._is_error(api_response):
-            return [api_response]
+            return self._format_fql_error_response(
+                [api_response], filter, QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION
+            )
 
         return self._build_pagination_envelope(api_response or [], pagination, filter)
 
@@ -262,9 +269,9 @@ class IntelModule(BaseModule):
                 "The field and direction to sort results on in the format of: "
                 "{field}.{asc}or {field}.{desc}. Valid values include: name, "
                 "target_countries, target_industries, type, created_date, "
-                "last_modified_date. Ex: created_date|desc"
+                "last_modified_date. Ex: created_date.desc"
             ),
-            examples={"created_date|desc"},
+            examples={"created_date.desc"},
         ),
         q: str | None = Field(
             default=None,
@@ -291,7 +298,9 @@ class IntelModule(BaseModule):
         )
 
         if self._is_error(api_response):
-            return [api_response]
+            return self._format_fql_error_response(
+                [api_response], filter, QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION
+            )
 
         return self._build_pagination_envelope(api_response or [], pagination, filter)
 

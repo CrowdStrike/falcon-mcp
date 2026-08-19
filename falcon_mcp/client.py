@@ -67,7 +67,7 @@ class FalconClient:
             )
 
         # Build APIHarnessV2 initialization parameters
-        api_params = {
+        api_params: dict[str, Any] = {
             "client_id": self.client_id,
             "client_secret": self.client_secret,
             "base_url": self.base_url,

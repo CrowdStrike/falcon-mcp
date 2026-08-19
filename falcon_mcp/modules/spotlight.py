@@ -63,7 +63,7 @@ class SpotlightModule(BaseModule):
             default=10,
             ge=1,
             le=5000,
-            description="Maximum number of results to return. (Max: 5000, Default: 10)",
+            description="Maximum number of results to return. (Max: 5000, Default: 10) For large pulls, a single big page can time out on busy tenants; prefer smaller pages combined with `after`-based pagination (pass `pagination.next` from the previous response as the `after` parameter) instead of raising this to the maximum.",
         ),
         sort: str | None = Field(
             default=None,
@@ -76,14 +76,15 @@ class SpotlightModule(BaseModule):
                 • updated_timestamp: When the vulnerability was last updated
 
                 Sort either asc (ascending) or desc (descending).
-                Format: 'field|direction'
+                Format: 'field.direction' — prefer the dot separator, supported
+                on every Falcon sort endpoint.
 
-                Examples: 'created_timestamp|desc', 'updated_timestamp|desc', 'closed_timestamp|asc'
+                Examples: 'created_timestamp.desc', 'updated_timestamp.desc', 'closed_timestamp.asc'
             """).strip(),
             examples=[
-                "created_timestamp|desc",
-                "updated_timestamp|desc",
-                "closed_timestamp|asc",
+                "created_timestamp.desc",
+                "updated_timestamp.desc",
+                "closed_timestamp.asc",
             ],
         ),
         after: str | None = Field(
@@ -134,6 +135,8 @@ class SpotlightModule(BaseModule):
         )
 
         if self._is_error(vulnerabilities):
-            return [vulnerabilities]
+            return self._format_fql_error_response(
+                [vulnerabilities], filter, SEARCH_VULNERABILITIES_FQL_DOCUMENTATION
+            )
 
         return self._build_pagination_envelope(vulnerabilities or [], pagination, filter)

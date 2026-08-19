@@ -42,11 +42,6 @@ def prepare_api_parameters(params: dict[str, Any]) -> dict[str, Any]:
     # Remove None values
     filtered = filter_none_values(params)
 
-    # Handle special parameter formatting if needed
-    if "filter" in filtered and isinstance(filtered["filter"], dict):
-        # Convert filter dict to FQL string if needed
-        pass
-
     return filtered
 
 

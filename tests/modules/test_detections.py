@@ -1525,6 +1525,132 @@ class TestDetectionsModule(TestModules):
         param_names = [p["name"] for p in call_body["action_parameters"]]
         self.assertNotIn("unassign", param_names)
 
+    def test_update_detections_single_batch_no_chunking(self):
+        """Exactly 1000 ids stay in one call (the API cap is inclusive)."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+        ids = [f"id{i}" for i in range(1000)]
+
+        result = self.module.update_detections(
+            ids=ids,
+            status="closed",
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=["true_positive"],
+            remove_tags=None,
+            remove_tags_by_prefix=None,
+        )
+
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        self.assertEqual(
+            self.mock_client.command.call_args[1]["body"]["composite_ids"], ids
+        )
+        self.assertEqual(result, [])
+
+    def test_update_detections_chunks_over_1000_ids(self):
+        """More than 1000 ids are split into batches of the API max and aggregated."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
+        ids = [f"id{i}" for i in range(2500)]
+
+        result = self.module.update_detections(
+            ids=ids,
+            status="in_progress",
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
+        )
+
+        # 2500 ids -> 1000 + 1000 + 500
+        self.assertEqual(self.mock_client.command.call_count, 3)
+        batches = [
+            call.kwargs["body"]["composite_ids"]
+            for call in self.mock_client.command.call_args_list
+        ]
+        self.assertEqual([len(b) for b in batches], [1000, 1000, 500])
+        # Every id is covered exactly once, in order, with no overlap or gaps.
+        self.assertEqual([cid for b in batches for cid in b], ids)
+        # Each batch carries the same action parameters.
+        for call in self.mock_client.command.call_args_list:
+            self.assertEqual(
+                call.kwargs["body"]["action_parameters"],
+                [{"name": "update_status", "value": "in_progress"}],
+            )
+        self.assertEqual(result, [])
+
+    def test_update_detections_failing_batch_surfaces_error(self):
+        """A failure on any batch returns an error dict and stops further calls."""
+        ok = {"status_code": 200, "body": {"resources": []}}
+        boom = {"status_code": 500, "body": {"errors": [{"message": "boom"}]}}
+        # First batch succeeds, second fails; third must never be attempted.
+        self.mock_client.command.side_effect = [ok, boom, ok]
+        ids = [f"id{i}" for i in range(2500)]
+
+        result = self.module.update_detections(
+            ids=ids,
+            status="closed",
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=["true_positive"],
+            remove_tags=None,
+            remove_tags_by_prefix=None,
+        )
+
+        self.assertEqual(self.mock_client.command.call_count, 2)
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result)
+        # The first batch already mutated its ids on the backend (no rollback), so
+        # the error must report them for a safe partial retry.
+        self.assertIn("partial_success", result)
+        self.assertEqual(result["partial_success"]["updated_count"], 1000)
+        self.assertEqual(result["partial_success"]["updated_ids"], ids[:1000])
+        self.assertEqual(result["partial_success"]["failed_and_remaining_ids"], ids[1000:])
+
+    def test_update_detections_first_batch_failure_has_no_partial_success(self):
+        """A failure on the very first batch reports no partial success (nothing applied)."""
+        self.mock_client.command.return_value = {
+            "status_code": 500,
+            "body": {"errors": [{"message": "boom"}]},
+        }
+        ids = [f"id{i}" for i in range(2500)]
+
+        result = self.module.update_detections(
+            ids=ids,
+            status="in_progress",
+            assign_to_uuid=None,
+            assign_to_user_id=None,
+            assign_to_name=None,
+            unassign=None,
+            append_comment=None,
+            show_in_ui=None,
+            add_tags=None,
+            remove_tags=None,
+            remove_tags_by_prefix=None,
+        )
+
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result)
+        self.assertNotIn("partial_success", result)
+
 
 if __name__ == "__main__":
     unittest.main()

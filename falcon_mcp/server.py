@@ -22,6 +22,7 @@ from falcon_mcp.common.auth import (
     normalize_content_type_middleware,
     strip_trailing_slash_middleware,
 )
+from falcon_mcp.common.fql import FQL_FILTER_HINT_SUFFIX
 from falcon_mcp.common.logging import configure_logging, get_logger
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS, offload_to_thread
 from falcon_mcp.tool_filter import Resolution, ToolPolicy, ToolRecord
@@ -37,6 +38,18 @@ TransportType = Literal["stdio", "sse", "streamable-http"]
 # Hosts that keep the server reachable only from the local machine. Binding to
 # anything else exposes it on the network, where an unauthenticated endpoint is a risk.
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
+BASE_INSTRUCTIONS = (
+    "This server provides access to CrowdStrike Falcon capabilities.\n\n"
+    f"Composing filters: {FQL_FILTER_HINT_SUFFIX} When a tool's filter parameter names "
+    "a falcon:// guide resource, read it before composing a filter: it lists the fields "
+    "and operators that endpoint actually accepts, and an unsupported field returns an "
+    "empty result rather than an error, which is indistinguishable from a genuine "
+    "no-match.\n\n"
+    "Changing state: readOnlyHint=false marks a tool that changes tenant state, and "
+    "destructiveHint=true marks one whose effect cannot be undone. Confirm the user's "
+    "intent before calling either."
+)
 
 
 class FalconMCPServer:
@@ -151,7 +164,7 @@ class FalconMCPServer:
         # Initialize the MCP server
         self.server = FastMCP(
             name="Falcon MCP Server",
-            instructions="This server provides access to CrowdStrike Falcon capabilities.",
+            instructions=self._instructions(),
             debug=self.debug,
             log_level="DEBUG" if self.debug else "INFO",
             stateless_http=self.stateless_http,
@@ -208,6 +221,35 @@ class FalconMCPServer:
                 "tool" if withheld == 1 else "tools",
             )
 
+    def _instructions(self) -> str:
+        """Describe the server, and in dynamic mode the loop for reaching a tool.
+
+        Both modes inherit BASE_INSTRUCTIONS, which carries the cross-cutting guidance
+        no single tool description owns.
+        """
+        if not self.dynamic:
+            return BASE_INSTRUCTIONS
+        return (
+            f"{BASE_INSTRUCTIONS}\n\nThis server is running in dynamic mode: the "
+            "Falcon tools are not individually registered, and are reached through "
+            "three tools instead — falcon_search_tools and falcon_execute_tool for "
+            "discovery, plus the always-on falcon_list_enabled_tools inventory.\n\n"
+            "1. falcon_search_tools with a keyword query, or a module name, lists "
+            "candidate tools ordered by likely relevance. These entries carry each "
+            "tool's name, description, and read_only / destructive flags, but no "
+            "parameters. The order is a keyword match, not a judgement of intent, so "
+            "read the descriptions and flags and pick the tool that fits.\n"
+            "2. falcon_search_tools again with tool_names=[chosen name] returns the "
+            "full parameter schema for those tools, including filter syntax hints. "
+            "Name more than one to compare candidates.\n"
+            "3. falcon_execute_tool runs the tool with those parameters.\n\n"
+            "falcon_list_enabled_tools gives the full inventory of Falcon tools "
+            "available here, grouped by the module each belongs to. A capability "
+            "absent from that list is not available on this server, whether because "
+            "its module is off or a filter withholds it — report that rather than "
+            "searching repeatedly."
+        )
+
     def _validate_filter_tool_names(
         self,
         allowed: set[str],
@@ -250,7 +292,7 @@ class FalconMCPServer:
             int: Number of tools left registered
         """
         # falcon_list_enabled_tools is always registered: it is the cheap way to see
-        # the whole served surface, and dynamic mode's zero-hit hint points here.
+        # every tool available, and dynamic mode's zero-hit hint points here.
         # Meta-tools are exempt from the policy — withholding them leaves the server
         # undiscoverable.
         self.server.add_tool(
@@ -318,7 +360,7 @@ class FalconMCPServer:
                 self.server.remove_tool(name)
                 logger.debug("Withheld tool: %s", name)
 
-        # Keep module.tools mirroring what the server serves.
+        # Keep module.tools mirroring what is registered.
         for module in self.modules.values():
             module.tools = [name for name in module.tools if name not in resolution.removed]
 
@@ -363,23 +405,40 @@ class FalconMCPServer:
         return {"modules": sorted(self.enabled_modules & set(self.modules))}
 
     def list_enabled_tools(self) -> dict[str, Any]:
-        """Lists every Falcon capability tool this server serves.
+        """Lists the Falcon tools available on this server.
 
-        Call this to see the complete inventory before hunting for a capability: a
-        name absent from this list is not available on this server, whether because
-        its module is not enabled or because a tool filter withholds it. Returns the
-        sorted tool names plus their total count, and filters_active naming the filter
-        rules in effect when any are configured. Excludes this server's own meta-tools,
-        which are always present and visible in tools/list.
+        Call this to see the full inventory before hunting for a capability: a name
+        absent from this list is not available here, whether because its module is not
+        enabled or because a tool filter withholds it. Returns the sorted tool names,
+        their count, and a by_module mapping grouping each tool under the module it
+        belongs to — the names listed under a module are the only ones available from
+        it, and are the exact spellings falcon_search_tools accepts as module=.
+        filters_active names the filter rules whenever any are configured. Excludes
+        this server's own meta-tools, which are always present in tools/list.
         """
         if self._dynamic_mode is not None:
             # Building the catalog clears module.tools, so it is the only record of
             # what falcon_execute_tool accepts.
-            names = set(self._dynamic_mode.catalog.entries)
+            entries = self._dynamic_mode.catalog.entries
+            names = set(entries)
+            by_module: dict[str, list[str]] = {}
+            for name, entry in entries.items():
+                by_module.setdefault(entry.module, []).append(name)
         else:
-            # _apply_policy() prunes module.tools to the served surface.
-            names = {name for module in self.modules.values() for name in module.tools}
-        result: dict[str, Any] = {"tools": sorted(names), "total": len(names)}
+            # _apply_policy() prunes module.tools to what stayed registered.
+            by_module = {
+                module_name: sorted(module.tools)
+                for module_name, module in self.modules.items()
+                if module.tools
+            }
+            names = {name for tools in by_module.values() for name in tools}
+        result: dict[str, Any] = {
+            "tools": sorted(names),
+            "total": len(names),
+            # Same catalog the search dispatches from, so the published vocabulary
+            # cannot drift from what module= accepts.
+            "by_module": {mod: sorted(by_module[mod]) for mod in sorted(by_module)},
+        }
         # Only present when a filter narrowed the list, so an unfiltered server's
         # response is unchanged and the key's presence is itself the signal.
         if self.tool_policy.active:

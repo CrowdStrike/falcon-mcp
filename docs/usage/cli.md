@@ -81,7 +81,7 @@ falcon-mcp --help
 | `--stateless-http` | `FALCON_MCP_STATELESS_HTTP` | `false` | Stateless mode for scalable deployments |
 | `--member-cid` | `FALCON_MEMBER_CID` | — | Flight Control child CID |
 | `--proxy` | `FALCON_PROXY_URL` | — | HTTP/HTTPS proxy for outbound API connections |
-| `--dynamic` | `FALCON_MCP_DYNAMIC` | `false` | [Dynamic mode](/falcon-mcp/usage/dynamic-mode/): expose three meta-tools (list-enabled-tools, search, execute) instead of all module tools to reduce context usage |
+| `--dynamic` | `FALCON_MCP_DYNAMIC` | `false` | [Dynamic mode](/falcon-mcp/usage/dynamic-mode/): expose three tools (list-enabled-tools, search, execute) instead of all module tools to reduce context usage |
 | `--read-only` | `FALCON_MCP_READ_ONLY` | `false` | Register only read-only tools, disabling every tool that mutates tenant state |
 | `--tools` | `FALCON_MCP_TOOLS` | — | Comma-separated allow-list of tool names, added to the enabled modules |
 | `--exclude-tools` | `FALCON_MCP_EXCLUDE_TOOLS` | — | Comma-separated deny-list of tool names to withhold |
@@ -115,7 +115,8 @@ instead of being ignored, so a typo in a deny-list cannot silently leave a tool 
 - `--modules detections --tools X` registers every `detections` tool **plus** X, even when X belongs
   to a module that is not enabled. That module contributes only X, not its whole surface, and
   `falcon_list_enabled_modules` does not list it. `falcon_list_enabled_tools` does list X — it
-  reports served tools, so it is the reliable answer to "is this capability available here?"
+  reports the tools available on the server, so it is the reliable answer to "is this capability
+  available here?"
 
 To *subtract*, use `--exclude-tools` or `--read-only`. All four options compose and resolve in a
 fixed order:

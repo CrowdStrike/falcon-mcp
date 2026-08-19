@@ -45,7 +45,7 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | [Policies](https://developer.crowdstrike.com/falcon-mcp/modules/policies/) | Search, create, update, and delete prevention, sensor update, firewall, device control, response, and content update policies; manage host-group assignment, enable/disable, and precedence |
 | [Quarantine](https://developer.crowdstrike.com/falcon-mcp/modules/quarantine/) | Search quarantine records, preview action counts, and release, unrelease, or delete quarantined files |
 | [Real Time Response](https://developer.crowdstrike.com/falcon-mcp/modules/rtr/) | Audit, summarize, and run read-only RTR triage workflows |
-| [Recon](https://developer.crowdstrike.com/falcon-mcp/modules/recon/) | Search Falcon Intelligence Recon notifications (recon alerts), monitoring rules, and exposed-data records for dark web, leaked credentials, and typosquatting |
+| [Recon](https://developer.crowdstrike.com/falcon-mcp/modules/recon/) | Search and aggregate Falcon Intelligence Recon notifications (recon alerts), monitoring rules, and exposed-data records for dark web, leaked credentials, and typosquatting, and preview prospective rule noise |
 | [Scheduled Reports](https://developer.crowdstrike.com/falcon-mcp/modules/scheduled-reports/) | Manage scheduled reports and download report files |
 | [Sensor Usage](https://developer.crowdstrike.com/falcon-mcp/modules/sensor-usage/) | Access and analyze sensor usage data |
 | [Serverless](https://developer.crowdstrike.com/falcon-mcp/modules/serverless/) | Search for vulnerabilities in serverless functions |
@@ -177,8 +177,9 @@ See the [Docker Deployment guide](https://developer.crowdstrike.com/falcon-mcp/d
 
 Running many modules at once inflates the context window every AI client must hold. Dynamic mode
 replaces the full tool surface with three tools — `falcon_list_enabled_tools` to see every tool the
-server serves, `falcon_search_tools` to look up a tool's parameters on demand, and
-`falcon_execute_tool` to run it — so agents only load the schemas they actually need.
+server has available, `falcon_search_tools` to find candidate tools by keyword and then fetch the parameter
+schema for the one you pick, and `falcon_execute_tool` to run it — so agents only load the schemas
+they actually need.
 
 ```bash
 falcon-mcp --dynamic
@@ -225,7 +226,8 @@ startup rather than being ignored, so a typo in a deny-list cannot silently leav
 - `--modules detections --tools X` registers every `detections` tool **plus** X, even when X
   belongs to a module that is not enabled. That module contributes only X, not its whole surface,
   and `falcon_list_enabled_modules` does not list it. `falcon_list_enabled_tools` does list X — it
-  reports served tools, so it is the reliable answer to "is this capability available here?"
+  reports the tools available on the server, so it is the reliable answer to "is this capability
+  available here?"
 
 To *subtract*, use `--exclude-tools` or `--read-only`. All four knobs compose, and they resolve in
 a fixed order:
@@ -259,7 +261,7 @@ guides are static field documentation carrying no tenant data.
 ## Deployment Options
 
 - [Amazon Bedrock AgentCore](https://developer.crowdstrike.com/falcon-mcp/deployment/amazon-bedrock/)
-- [Google Cloud (Cloud Run / Vertex AI)](./examples/adk/README.md)
+- [Google Cloud (Agent Platform / Gemini Enterprise)](./examples/adk/README.md)
 
 ## Contributing
 

@@ -57,9 +57,10 @@ class TestCasesIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_cases")
         self.assert_valid_list_response(result, min_length=0, context="search_cases")
 
-        if len(result) > 0:
+        cases = self._unwrap_results(result)
+        if len(cases) > 0:
             self.assert_search_returns_details(
-                result,
+                cases,
                 expected_fields=["id", "name", "status", "severity"],
                 context="search_cases full details",
             )
@@ -109,7 +110,9 @@ class TestCasesIntegration(BaseIntegrationTest):
 
     def test_get_cases_with_valid_id(self):
         """Test get_cases with a valid case ID from search."""
-        search_result = self.call_method(self.module.search_cases, limit=1)
+        search_result = self._unwrap_results(
+            self.call_method(self.module.search_cases, limit=1)
+        )
 
         if not search_result or len(search_result) == 0:
             self.skip_with_warning(
@@ -272,3 +275,227 @@ class TestCasesIntegration(BaseIntegrationTest):
         )
 
         self.assert_no_error(result, context="FQL combined filter")
+
+    # -------------------------------------------------------------------------
+    # Aggregate Tests
+    # -------------------------------------------------------------------------
+
+    AGGREGATE_METHODS = (
+        ("aggregate_case_slas", "name"),
+        ("aggregate_case_templates", "name"),
+        ("aggregate_case_access_tags", "key"),
+        ("aggregate_case_notification_groups", "name"),
+    )
+
+    def _aggregate(self, method_name, **kwargs):
+        """Call an aggregate tool with every optional argument defaulted."""
+        defaults = {
+            "agg_type": "terms",
+            "filter": None,
+            "size": None,
+            "from_": None,
+            "date_ranges": None,
+            "name": None,
+        }
+        if method_name == "aggregate_case_file_details":
+            defaults["case_ids"] = None
+        defaults.update(kwargs)
+        return self.call_method(getattr(self.module, method_name), **defaults)
+
+    def test_operation_names_aggregates(self):
+        """Validate the four /casemgmt/aggregates operation names are correct."""
+        for method_name, field in self.AGGREGATE_METHODS:
+            result = self._aggregate(method_name, field=field)
+            self.assert_no_error(result, context=f"{method_name} operation name")
+
+    def test_operation_name_aggregate_file_details(self):
+        """Validate aggregates_file_details_post_v1 is correct."""
+        result = self._aggregate("aggregate_case_file_details", field="name")
+        self.assert_no_error(
+            result, context="aggregate_case_file_details operation name"
+        )
+
+    def test_aggregates_return_labeled_buckets(self):
+        """Test that aggregates return buckets keyed on label and count."""
+        for method_name, field in self.AGGREGATE_METHODS:
+            result = self._aggregate(method_name, field=field, name="probe")
+
+            self.assert_no_error(result, context=f"{method_name} buckets")
+            assert isinstance(result, list), f"{method_name} should return a list"
+            if not result:
+                self.skip_with_warning(
+                    f"No aggregate resources for {method_name}", "bucket shape"
+                )
+                continue
+
+            assert result[0].get("name") == "probe", (
+                f"{method_name} should echo the aggregation name back"
+            )
+            for bucket in result[0].get("buckets") or []:
+                assert "label" in bucket, f"{method_name} bucket missing label"
+                assert "count" in bucket, f"{method_name} bucket missing count"
+
+    def test_aggregate_size_limits_buckets(self):
+        """Test that size actually caps the number of buckets returned."""
+        unbounded = self._aggregate("aggregate_case_templates", field="name")
+        self.assert_no_error(unbounded, context="templates unbounded")
+
+        if not unbounded or len(unbounded[0].get("buckets") or []) < 2:
+            self.skip_with_warning("Fewer than 2 template buckets", "size limit")
+            return
+
+        limited = self._aggregate("aggregate_case_templates", field="name", size=1)
+        self.assert_no_error(limited, context="templates size=1")
+        assert len(limited[0]["buckets"]) == 1, "size=1 should return exactly 1 bucket"
+
+    def test_aggregate_access_tags_supports_key_only(self):
+        """Test the access-tags field set: key works, name is rejected.
+
+        Access tags accept a narrower field set than the other case aggregates,
+        so a shared field list would silently break this tool.
+        """
+        ok = self._aggregate("aggregate_case_access_tags", field="key")
+        self.assert_no_error(ok, context="access tags field=key")
+
+        rejected = self._aggregate("aggregate_case_access_tags", field="name")
+        assert isinstance(rejected, list) and "error" in rejected[0], (
+            "access tags should reject field=name with an error"
+        )
+
+    def test_aggregate_unsupported_field_returns_error(self):
+        """Test that an unsupported aggregation field errors rather than returning empty.
+
+        These endpoints validate the field server-side, so a typo is visible
+        instead of silently producing zero buckets.
+        """
+        result = self._aggregate("aggregate_case_templates", field="not_a_real_field")
+
+        assert isinstance(result, list), "unsupported field should return a list"
+        assert "error" in result[0], "unsupported field should return an error"
+        # The FQL guide documents the filter param, not the aggregation field.
+        assert "fql_guide" not in result[0], (
+            "a field error should not be reported as a filter problem"
+        )
+
+    def test_aggregate_bad_filter_returns_fql_guide(self):
+        """Test that an unsupported filter field surfaces the FQL guide."""
+        result = self._aggregate(
+            "aggregate_case_templates", field="name", filter="not_a_real_field:'x'"
+        )
+
+        assert isinstance(result, dict), "filter error should return a dict"
+        assert "fql_guide" in result, "filter error should attach the FQL guide"
+
+    def test_aggregate_date_range_type(self):
+        """Test that agg_type='date_range' returns range buckets."""
+        result = self._aggregate(
+            "aggregate_case_templates",
+            field="created_timestamp",
+            agg_type="date_range",
+            date_ranges=[
+                {"from": "2025-01-01T00:00:00Z", "to": "2030-01-01T00:00:00Z"}
+            ],
+        )
+
+        self.assert_no_error(result, context="templates date_range")
+        if not result:
+            self.skip_with_warning("No date_range resources", "date_range shape")
+            return
+        buckets = result[0].get("buckets") or []
+        assert buckets, "date_range should return at least one bucket"
+        assert "count" in buckets[0], "date_range bucket missing count"
+
+    def test_aggregate_fql_filter_narrows_results(self):
+        """Test that a documented FQL filter genuinely reduces the aggregated count.
+
+        Guards the FQL guide: an unsupported filter field or operator would leave
+        the count unchanged or error, either of which fails here.
+        """
+        unfiltered = self._aggregate("aggregate_case_templates", field="name")
+        self.assert_no_error(unfiltered, context="templates unfiltered")
+
+        buckets = (unfiltered[0].get("buckets") or []) if unfiltered else []
+        if len(buckets) < 2:
+            self.skip_with_warning("Fewer than 2 template buckets", "FQL narrowing")
+            return
+
+        target = buckets[0]["label"]
+        filtered = self._aggregate(
+            "aggregate_case_templates", field="name", filter=f"name:'{target}'"
+        )
+        self.assert_no_error(filtered, context="templates name filter")
+        assert filtered, "filter on a known name should return a resource"
+        assert len(filtered[0].get("buckets") or []) < len(buckets), (
+            "filtering on one known name should return fewer buckets than unfiltered"
+        )
+
+    def test_aggregate_substring_operator(self):
+        """Test that the documented :* substring operator returns results.
+
+        The guide documents `:*` rather than `~` or a quoted trailing wildcard;
+        this asserts the documented form is the one that works.
+        """
+        unfiltered = self._aggregate("aggregate_case_templates", field="name")
+        buckets = (unfiltered[0].get("buckets") or []) if unfiltered else []
+        if not buckets:
+            self.skip_with_warning("No template buckets", "substring operator")
+            return
+
+        fragment = str(buckets[0]["label"])[:3]
+        result = self._aggregate(
+            "aggregate_case_templates", field="name", filter=f"name:*'*{fragment}*'"
+        )
+
+        self.assert_no_error(result, context="templates :* substring")
+        assert result and (result[0].get("buckets") or []), (
+            f"substring filter name:*'*{fragment}*' should match at least one record"
+        )
+
+    def test_aggregate_file_details_case_ids_scopes_results(self):
+        """Test that case_ids narrows file aggregation to the named cases.
+
+        The endpoint's ids query param does not filter, so this asserts the
+        case_id filter path that does.
+        """
+        unscoped = self._aggregate("aggregate_case_file_details", field="case_id")
+        self.assert_no_error(unscoped, context="file details unscoped")
+
+        buckets = (unscoped[0].get("buckets") or []) if unscoped else []
+        if len(buckets) < 2:
+            self.skip_with_warning(
+                "Fewer than 2 cases with attached files", "case_ids scoping"
+            )
+            return
+
+        target = buckets[0]["label"]
+        scoped = self._aggregate(
+            "aggregate_case_file_details", field="case_id", case_ids=[target]
+        )
+
+        self.assert_no_error(scoped, context="file details scoped")
+        scoped_labels = [b["label"] for b in (scoped[0].get("buckets") or [])]
+        assert scoped_labels == [target], (
+            f"case_ids=[{target}] should return only that case, got {scoped_labels}"
+        )
+
+    def test_aggregate_file_details_file_size_is_filterable(self):
+        """Test that file_size works as a filter, matched as a string not a number."""
+        sizes = self._aggregate("aggregate_case_file_details", field="file_size")
+        self.assert_no_error(sizes, context="file details file_size")
+
+        buckets = (sizes[0].get("buckets") or []) if sizes else []
+        if not buckets:
+            self.skip_with_warning("No files with a size", "file_size filter")
+            return
+
+        target = buckets[0]["label"]
+        filtered = self._aggregate(
+            "aggregate_case_file_details",
+            field="file_size",
+            filter=f"file_size:'{target}'",
+        )
+
+        self.assert_no_error(filtered, context="file details file_size filter")
+        assert filtered and (filtered[0].get("buckets") or []), (
+            f"file_size:'{target}' should match at least one file"
+        )

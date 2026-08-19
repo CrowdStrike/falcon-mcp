@@ -513,6 +513,120 @@ class TestExclusionsModule(TestModules):
         self.assertIn("error", result[0])
         self.assertEqual(self.mock_client.command.call_count, 0)
 
+    def test_create_ioa_rejects_zero_width_assertions(self):
+        """IOA create rejects each zero-width regex assertion pre-flight, naming it."""
+        for token in ["^", "$", r"\b", r"\A", r"\Z"]:
+            with self.subTest(token=token):
+                self.mock_client.command.reset_mock()
+                result = self.module.create_exclusion(
+                    exclusion_type="ioa",
+                    **self._create_kwargs(
+                        name="n",
+                        pattern_id="1",
+                        ifn_regex=f"{token}foo",
+                        cl_regex="/tmp/bar",
+                    ),
+                )
+                self.assertIn("error", result[0])
+                self.assertIn(token, result[0]["error"])
+                self.assertIn("ifn_regex", result[0]["error"])
+                self.assertEqual(self.mock_client.command.call_count, 0)
+
+    def test_create_ioa_rejects_zero_width_in_any_regex_field(self):
+        """Zero-width assertions are caught in optional IOA regex fields too."""
+        for field in ["cl_regex", "parent_ifn_regex", "grandparent_cl_regex"]:
+            with self.subTest(field=field):
+                self.mock_client.command.reset_mock()
+                kwargs = self._create_kwargs(
+                    name="n", pattern_id="1", ifn_regex="/tmp/x", cl_regex="/tmp/y"
+                )
+                kwargs[field] = r"\bfoo"
+                result = self.module.create_exclusion(exclusion_type="ioa", **kwargs)
+                self.assertIn("error", result[0])
+                self.assertIn(field, result[0]["error"])
+                self.assertEqual(self.mock_client.command.call_count, 0)
+
+    def test_create_ioa_valid_regex_passes(self):
+        """A valid IOA regex with no zero-width assertion reaches the API unchanged."""
+        self.mock_client.command.return_value = self._create_response(
+            {"id": "ioa-1", "name": "n"}
+        )
+        result = self.module.create_exclusion(
+            exclusion_type="ioa",
+            **self._create_kwargs(
+                name="n",
+                pattern_id="1",
+                ifn_regex="/usr/bin/foo",
+                cl_regex="--flag value",
+            ),
+        )
+        call = self.mock_client.command.call_args_list[0]
+        self.assertEqual(call[0][0], "ss_ioa_exclusions_create_v2")
+        self.assertEqual(
+            call[1]["body"]["exclusions"][0]["ifn_regex"], "/usr/bin/foo"
+        )
+        self.assertEqual(result[0]["id"], "ioa-1")
+
+    def test_create_ioa_escaped_and_char_class_tokens_pass(self):
+        """Escaped ^/$ and char-class contexts are literals, not assertions."""
+        self.mock_client.command.return_value = self._create_response(
+            {"id": "ioa-1", "name": "n"}
+        )
+        result = self.module.create_exclusion(
+            exclusion_type="ioa",
+            **self._create_kwargs(
+                name="n",
+                pattern_id="1",
+                ifn_regex=r"/tmp/\$cache",
+                cl_regex=r"[$^]value",
+            ),
+        )
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        self.assertEqual(result[0]["id"], "ioa-1")
+
+    def test_create_ioa_leading_bracket_class_member_passes(self):
+        """A ] as the first class member is a literal, so the class still absorbs
+        following ^/$ tokens (e.g. `[]^]`) rather than false-flagging them."""
+        self.mock_client.command.return_value = self._create_response(
+            {"id": "ioa-1", "name": "n"}
+        )
+        result = self.module.create_exclusion(
+            exclusion_type="ioa",
+            **self._create_kwargs(
+                name="n",
+                pattern_id="1",
+                ifn_regex="/bin/foo[]^]",
+                cl_regex="[^]$]bar",
+            ),
+        )
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        self.assertEqual(result[0]["id"], "ioa-1")
+
+    def test_create_ml_value_with_caret_unaffected(self):
+        """Non-IOA types are not subject to the IOA regex assertion check."""
+        self.mock_client.command.return_value = self._create_response(
+            {"id": "ml-1", "value": "^weird$"}
+        )
+        result = self.module.create_exclusion(
+            exclusion_type="ml",
+            **self._create_kwargs(value="^weird$", host_groups=["grp-1"]),
+        )
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        self.assertEqual(result[0]["id"], "ml-1")
+
+    def test_update_ioa_rejects_zero_width_assertion(self):
+        """IOA update shares the builder, so it also rejects assertions pre-flight."""
+        result = self.module.update_exclusion(
+            exclusion_type="ioa",
+            id="ioa-1",
+            **self._create_kwargs(
+                name="n", pattern_id="1", ifn_regex="^foo", cl_regex="/tmp/y"
+            ),
+        )
+        self.assertIn("error", result[0])
+        self.assertIn("^", result[0]["error"])
+        self.assertEqual(self.mock_client.command.call_count, 0)
+
     def test_create_sv_empty_host_groups(self):
         """Sensor visibility create with no host_groups returns a guiding error."""
         result = self.module.create_exclusion(

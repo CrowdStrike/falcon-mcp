@@ -23,7 +23,8 @@ SEARCH_FIREWALL_RULES_FQL_FILTERS = [
     (
         "name",
         "String",
-        "Rule or rule group name. Example: name:'Block*'",
+        "Rule or rule group name. For substring matching use the contains operator, "
+        "name:~'value'. Example: name:~'Block'",
     ),
     (
         "description",
@@ -78,11 +79,18 @@ Use either `field.asc` / `field.desc` or `field|asc` / `field|desc`.
   - `filter="enabled:true"`
 - Windows rule groups:
   - `filter="platform:'windows'"`
+- Rules whose name contains a word:
+  - `filter="name:~'Block'"`
 - Recently modified entities:
   - `sort="modified_on.desc"`
 
 ## Notes
 
+- For name matching, use the contains operator `name:~'value'` (case-insensitive,
+  matches whole words). A `name:'value*'` glob is treated literally — the `*` is a
+  literal character, so the query silently returns nothing. For an arbitrary
+  substring (not a whole word), use the wildcard form `name:*'*value*'`. A plain
+  `name:'value'` exact match also works when you know the full name.
 - For policy-specific searches, use `falcon_search_firewall_policy_rules` with `policy_id`.
 - Start broad, then refine your filter if results are empty.
 """

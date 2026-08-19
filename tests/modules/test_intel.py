@@ -5,6 +5,11 @@ Tests for the Intel module.
 import unittest
 
 from falcon_mcp.modules.intel import IntelModule
+from falcon_mcp.resources.intel import (
+    QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION,
+    QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION,
+    QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION,
+)
 from tests.modules.utils.test_modules import TestModules
 
 
@@ -93,7 +98,7 @@ class TestIntelModule(TestModules):
         self.assertEqual(result["results"], [])
 
     def test_search_actors_error(self):
-        """Test searching actors with API error."""
+        """Test searching actors with a filter error returns the FQL guide."""
         # Setup mock response with error
         mock_response = {
             "status_code": 400,
@@ -102,14 +107,19 @@ class TestIntelModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call search_actors
-        results = self.module.query_actor_entities(filter="invalid query")
-        result = results[0]
+        result = self.module.query_actor_entities(filter="invalid query")
 
-        # Verify result contains error
-        self.assertIn("error", result)
-        self.assertIn("details", result)
-        # Check that the error message starts with the expected prefix
-        self.assertTrue(result["error"].startswith("Failed to search actors"))
+        # Verify result wraps the error alongside the FQL guide and hint
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("error", result["results"][0])
+        self.assertTrue(
+            result["results"][0]["error"].startswith("Failed to search actors")
+        )
+        self.assertIn("fql_guide", result)
+        self.assertEqual(result["fql_guide"], QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION)
+        self.assertIn("hint", result)
+        self.assertEqual(result["filter_used"], "invalid query")
 
     def test_query_indicator_entities_success(self):
         """Test querying indicator entities with successful response."""
@@ -182,7 +192,7 @@ class TestIntelModule(TestModules):
         self.assertEqual(result["results"], [])
 
     def test_query_indicator_entities_error(self):
-        """Test querying indicator entities with API error."""
+        """Test querying indicator entities with a filter error returns the FQL guide."""
         # Setup mock response with error
         mock_response = {
             "status_code": 400,
@@ -193,12 +203,19 @@ class TestIntelModule(TestModules):
         # Call query_indicator_entities
         result = self.module.query_indicator_entities(filter="invalid query")
 
-        # Verify result contains error
-        self.assertEqual(len(result), 1)
-        self.assertIn("error", result[0])
-        self.assertIn("details", result[0])
-        # Check that the error message starts with the expected prefix
-        self.assertTrue(result[0]["error"].startswith("Failed to search indicators"))
+        # Verify result wraps the error alongside the FQL guide and hint
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("error", result["results"][0])
+        self.assertTrue(
+            result["results"][0]["error"].startswith("Failed to search indicators")
+        )
+        self.assertIn("fql_guide", result)
+        self.assertEqual(
+            result["fql_guide"], QUERY_INDICATOR_ENTITIES_FQL_DOCUMENTATION
+        )
+        self.assertIn("hint", result)
+        self.assertEqual(result["filter_used"], "invalid query")
 
     def test_query_report_entities_success(self):
         """Test querying report entities with successful response."""
@@ -267,7 +284,7 @@ class TestIntelModule(TestModules):
         self.assertEqual(result["results"], [])
 
     def test_query_report_entities_error(self):
-        """Test querying report entities with API error."""
+        """Test querying report entities with a filter error returns the FQL guide."""
         # Setup mock response with error
         mock_response = {
             "status_code": 400,
@@ -278,12 +295,17 @@ class TestIntelModule(TestModules):
         # Call query_report_entities
         result = self.module.query_report_entities(filter="invalid query")
 
-        # Verify result contains error
-        self.assertEqual(len(result), 1)
-        self.assertIn("error", result[0])
-        self.assertIn("details", result[0])
-        # Check that the error message starts with the expected prefix
-        self.assertTrue(result[0]["error"].startswith("Failed to search reports"))
+        # Verify result wraps the error alongside the FQL guide and hint
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("error", result["results"][0])
+        self.assertTrue(
+            result["results"][0]["error"].startswith("Failed to search reports")
+        )
+        self.assertIn("fql_guide", result)
+        self.assertEqual(result["fql_guide"], QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION)
+        self.assertIn("hint", result)
+        self.assertEqual(result["filter_used"], "invalid query")
 
     def test_get_mitre_report_success(self):
         """Test getting MITRE report with successful response.

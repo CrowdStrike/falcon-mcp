@@ -5,6 +5,7 @@ Tests for the Spotlight module.
 import unittest
 
 from falcon_mcp.modules.spotlight import SpotlightModule
+from falcon_mcp.resources.spotlight import SEARCH_VULNERABILITIES_FQL_DOCUMENTATION
 from tests.modules.utils.test_modules import TestModules
 
 
@@ -231,7 +232,7 @@ class TestSpotlightModule(TestModules):
         self.assertEqual(result["results"], [])
 
     def test_search_vulnerabilities_error(self):
-        """Test searching vulnerabilities with API error."""
+        """Test searching vulnerabilities with a filter error returns the FQL guide."""
         # Setup mock response with error
         mock_response = {
             "status_code": 400,
@@ -240,14 +241,19 @@ class TestSpotlightModule(TestModules):
         self.mock_client.command.return_value = mock_response
 
         # Call search_vulnerabilities
-        results = self.module.search_vulnerabilities(filter="invalid query")
-        result = results[0]
+        result = self.module.search_vulnerabilities(filter="invalid query")
 
-        # Verify result contains error
-        self.assertIn("error", result)
-        self.assertIn("details", result)
-        # Check that the error message starts with the expected prefix
-        self.assertTrue(result["error"].startswith("Failed to search vulnerabilities"))
+        # Verify result wraps the error alongside the FQL guide and hint
+        self.assertIsInstance(result, dict)
+        self.assertIn("results", result)
+        self.assertIn("error", result["results"][0])
+        self.assertTrue(
+            result["results"][0]["error"].startswith("Failed to search vulnerabilities")
+        )
+        self.assertIn("fql_guide", result)
+        self.assertEqual(result["fql_guide"], SEARCH_VULNERABILITIES_FQL_DOCUMENTATION)
+        self.assertIn("hint", result)
+        self.assertEqual(result["filter_used"], "invalid query")
 
 
 if __name__ == "__main__":
