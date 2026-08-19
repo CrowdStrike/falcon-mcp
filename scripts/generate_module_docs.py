@@ -30,6 +30,9 @@ SITE_BASE_PATH = "/falcon-mcp"
 # Titles and descriptions are auto-derived from module docstrings.
 # Add entries here when you need a custom title, slug, or description.
 MODULE_METADATA: dict[str, dict[str, Any]] = {
+    "agentworks": {
+        "title": "AgentWorks",
+    },
     "cases": {
         "title": "Case Management",
         "slug": "cases",
@@ -65,6 +68,27 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
 
 # Natural language prompt examples for each tool, shown in generated docs
 TOOL_EXAMPLES: dict[str, list[str]] = {
+    # AgentWorks
+    "falcon_search_agentworks_agents": [
+        "List my AgentWorks agents",
+        "Which agents run on the claude-4-6-sonnet model?",
+    ],
+    "falcon_search_agentworks_agent_versions": [
+        "Show me all versions of agent 467e856f",
+        "Find the published versions of this agent",
+    ],
+    "falcon_search_agentworks_spans": [
+        "Show the spans for trace abc123",
+        "Find errored LLM spans in trace abc123",
+    ],
+    "falcon_get_agentworks_agent_invocation": [
+        "Check the status of invocation inv-123",
+    ],
+    "falcon_invoke_agentworks_agent": [
+        "Run the IOC review agent with the prompt 'Reply OK'",
+        "Invoke agent 467e856f and summarize today's critical detections",
+        "Test version v-42 of this agent with the prompt 'Reply OK'",
+    ],
     # Cases
     "falcon_search_cases": [
         "Show me any open cases with high severity or above",

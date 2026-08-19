@@ -26,6 +26,7 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | Module | Description |
 | ------ | ----------- |
 | Core | Basic connectivity and system information |
+| [AgentWorks](https://developer.crowdstrike.com/falcon-mcp/modules/agentworks/) | Call, list, and observe Charlotte AI agents and their execution traces |
 | [Case Management](https://developer.crowdstrike.com/falcon-mcp/modules/cases/) | Case lifecycle management, evidence attachment, tagging, and templates |
 | [Cloud Security](https://developer.crowdstrike.com/falcon-mcp/modules/cloud/) | Kubernetes containers, image vulnerabilities, CSPM asset inventory, IOM findings, suppression rules, cloud risks, and cloud groups |
 | [Correlation Rules](https://developer.crowdstrike.com/falcon-mcp/modules/correlationrules/) | Search, create, update, and manage NG-SIEM correlation rules |
