@@ -684,36 +684,34 @@ class TestPoliciesModule(TestModules):
     # ---- Perform action --------------------------------------------------------
 
     def test_perform_action_rule_group_validity_per_type(self):
-        """add-rule-group is valid for prevention/sensor_update/response, rejected for firewall/dc."""
-        # prevention/sensor_update/response accept add-rule-group (with a group_id).
-        for policy_type, action_op in (
-            ("prevention", "performPreventionPoliciesAction"),
-            ("sensor_update", "performSensorUpdatePoliciesAction"),
-            ("response", "performRTResponsePoliciesAction"),
-        ):
-            with self.subTest(policy_type=policy_type, expect="accepted"):
+        """Rule-group actions are valid for prevention only, rejected for every other type."""
+        for action_name in ("add-rule-group", "remove-rule-group"):
+            with self.subTest(policy_type="prevention", action_name=action_name):
                 self.mock_client.command.reset_mock()
                 self.mock_client.command.return_value = {
                     "status_code": 200,
                     "body": {"resources": [{"id": "p-1"}]},
                 }
                 result = self.module.perform_policy_action(
-                    policy_type=policy_type,
-                    action_name="add-rule-group",
+                    policy_type="prevention",
+                    action_name=action_name,
                     ids=["p-1"],
                     group_id="rg-1",
                 )
                 self.assertNotIn("error", result[0])
                 self.assertEqual(self.mock_client.command.call_count, 1)
                 call = self.mock_client.command.call_args_list[0]
-                self.assertEqual(call[0][0], action_op)
+                self.assertEqual(call[0][0], "performPreventionPoliciesAction")
                 self.assertEqual(
                     call[1]["body"]["action_parameters"],
-                    [{"name": "group_id", "value": "rg-1"}],
+                    [{"name": "rule_group_id", "value": "rg-1"}],
                 )
 
-        # firewall and device_control reject rule-group actions before any API call.
-        for policy_type in ("firewall", "device_control"):
+        # Every other type rejects rule-group actions before any API call. firewall
+        # and device_control are rejected by the SDK; sensor_update and response
+        # accept the action_name but have no rule-group support behind it — the API
+        # returns 200 with zero affected resources and attaches nothing.
+        for policy_type in ("sensor_update", "response", "firewall", "device_control"):
             with self.subTest(policy_type=policy_type, expect="rejected"):
                 self.mock_client.command.reset_mock()
                 result = self.module.perform_policy_action(
@@ -724,6 +722,37 @@ class TestPoliciesModule(TestModules):
                 )
                 self.assertIn("error", result[0])
                 self.assertEqual(self.mock_client.command.call_count, 0)
+
+    def test_perform_action_group_param_name_is_per_action(self):
+        """Group actions use the action_parameters name their endpoint requires.
+
+        Host-group actions take 'group_id'; rule-group actions take 'rule_group_id'.
+        The names are not interchangeable — the wrong one returns HTTP 400 "Group
+        action parameters must be provided" and changes nothing.
+        """
+        for action_name, expected_name in (
+            ("add-host-group", "group_id"),
+            ("remove-host-group", "group_id"),
+            ("add-rule-group", "rule_group_id"),
+            ("remove-rule-group", "rule_group_id"),
+        ):
+            with self.subTest(action_name=action_name):
+                self.mock_client.command.reset_mock()
+                self.mock_client.command.return_value = {
+                    "status_code": 200,
+                    "body": {"resources": [{"id": "p-1"}]},
+                }
+                self.module.perform_policy_action(
+                    policy_type="prevention",
+                    action_name=action_name,
+                    ids=["p-1"],
+                    group_id="g-1",
+                )
+                call = self.mock_client.command.call_args_list[0]
+                self.assertEqual(
+                    call[1]["body"]["action_parameters"],
+                    [{"name": expected_name, "value": "g-1"}],
+                )
 
     def test_perform_action_rule_group_requires_group_id(self):
         """add-rule-group without group_id returns a guiding error, no API call.

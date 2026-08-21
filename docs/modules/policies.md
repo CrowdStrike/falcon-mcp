@@ -65,11 +65,12 @@ the API response for the deletion.
 
 Perform an action on one or more policies of the given type.
 
-Use this to enable/disable policies or attach/detach host groups and rule
-groups (and, for content_update, content overrides). action_name is
-validated against the actions valid for that policy_type. The
-add/remove-host-group and add/remove-rule-group actions require a group_id.
-Returns the updated policy records.
+Use this to enable/disable policies or attach/detach host groups (and, for
+prevention, Custom IOA rule groups; for content_update, content overrides).
+action_name is validated against the actions valid for that policy_type —
+rule-group actions are prevention-only. The add/remove-host-group and
+add/remove-rule-group actions require a group_id. Returns the updated policy
+records.
 
 **Example prompts:**
 
