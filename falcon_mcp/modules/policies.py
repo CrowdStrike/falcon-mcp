@@ -174,7 +174,11 @@ class PoliciesModule(BaseModule):
 
     # Valid action_name values per type for perform_policy_action. The SDK rejects
     # rule-group actions for firewall/device_control; content_update has unique
-    # pin/override actions.
+    # pin/override actions. Rule-group actions are prevention-only: the
+    # sensor_update and response endpoints advertise them but have no rule-group
+    # support behind them — they return 200 with zero affected resources, attach
+    # nothing, and their policy schema has no rule-group field to hold an
+    # attachment. Reject them up front rather than report a silent no-op as success.
     _VALID_ACTIONS: dict[str, set[str]] = {
         "prevention": {
             "enable",
@@ -189,16 +193,12 @@ class PoliciesModule(BaseModule):
             "disable",
             "add-host-group",
             "remove-host-group",
-            "add-rule-group",
-            "remove-rule-group",
         },
         "response": {
             "enable",
             "disable",
             "add-host-group",
             "remove-host-group",
-            "add-rule-group",
-            "remove-rule-group",
         },
         "firewall": {
             "enable",
@@ -227,6 +227,18 @@ class PoliciesModule(BaseModule):
             # Pinning a specific content version is out of scope until a dedicated
             # parameter is wired in.
         },
+    }
+
+    # The action_parameters name each group action requires. Host-group actions take
+    # 'group_id'; rule-group actions take 'rule_group_id'. The two are not
+    # interchangeable — sending the wrong name returns HTTP 400 "Group action
+    # parameters must be provided" and changes nothing, the same response as sending
+    # no action_parameters at all.
+    _GROUP_ACTION_PARAM: dict[str, str] = {
+        "add-host-group": "group_id",
+        "remove-host-group": "group_id",
+        "add-rule-group": "rule_group_id",
+        "remove-rule-group": "rule_group_id",
     }
 
     # Whether a create/update body may carry a `settings` object. The firewall
@@ -843,23 +855,24 @@ class PoliciesModule(BaseModule):
             ),
         ),
         action_name: str = Field(
-            description="The action to perform. Common to all types: 'enable', 'disable', 'add-host-group', 'remove-host-group'. prevention/sensor_update/response also allow 'add-rule-group'/'remove-rule-group'; content_update also allows 'override-allow'/'override-pause'/'override-revert'. The valid set is validated per type.",
+            description="The action to perform. Common to all types: 'enable', 'disable', 'add-host-group', 'remove-host-group'. prevention also allows 'add-rule-group'/'remove-rule-group' (attach/detach a Custom IOA rule group); content_update also allows 'override-allow'/'override-pause'/'override-revert'. The valid set is validated per type.",
         ),
         ids: list[str] = Field(
             description="IDs of the policies to act on.",
         ),
         group_id: str | None = Field(
             default=None,
-            description="Group ID for group actions. Required for 'add-host-group'/'remove-host-group' (a host group ID) and 'add-rule-group'/'remove-rule-group' (a rule group ID); omit for other actions.",
+            description="Group ID for group actions. Required for 'add-host-group'/'remove-host-group' (a host group ID) and, on prevention policies, 'add-rule-group'/'remove-rule-group' (a Custom IOA rule group ID); omit for other actions.",
         ),
     ) -> list[dict[str, Any]]:
         """Perform an action on one or more policies of the given type.
 
-        Use this to enable/disable policies or attach/detach host groups and rule
-        groups (and, for content_update, content overrides). action_name is
-        validated against the actions valid for that policy_type. The
-        add/remove-host-group and add/remove-rule-group actions require a group_id.
-        Returns the updated policy records.
+        Use this to enable/disable policies or attach/detach host groups (and, for
+        prevention, Custom IOA rule groups; for content_update, content overrides).
+        action_name is validated against the actions valid for that policy_type —
+        rule-group actions are prevention-only. The add/remove-host-group and
+        add/remove-rule-group actions require a group_id. Returns the updated policy
+        records.
         """
         type_error = self._validate_policy_type(policy_type)
         if type_error is not None:
@@ -884,12 +897,7 @@ class PoliciesModule(BaseModule):
             ]
 
         body: dict[str, Any] = {"ids": ids}
-        if action_name in (
-            "add-host-group",
-            "remove-host-group",
-            "add-rule-group",
-            "remove-rule-group",
-        ):
+        if action_name in self._GROUP_ACTION_PARAM:
             if not group_id:
                 return [
                     _format_error_response(
@@ -899,7 +907,9 @@ class PoliciesModule(BaseModule):
                         operation=self._OPERATIONS[policy_type]["action"],
                     )
                 ]
-            body["action_parameters"] = [{"name": "group_id", "value": group_id}]
+            body["action_parameters"] = [
+                {"name": self._GROUP_ACTION_PARAM[action_name], "value": group_id}
+            ]
 
         result = self._base_query_api_call(
             operation=self._OPERATIONS[policy_type]["action"],
