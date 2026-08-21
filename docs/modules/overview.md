@@ -33,3 +33,4 @@ The Falcon MCP Server provides the following modules. Each module requires speci
 | [Serverless](/falcon-mcp/modules/serverless/) | `Falcon Container Image:read` | Accessing and managing CrowdStrike Falcon Serverless Vulnerabilities |
 | [Shield](/falcon-mcp/modules/shield/) | `SaaS Security:read`, `SaaS Security:write` | Shield module for CrowdStrike Falcon. |
 | [Spotlight](/falcon-mcp/modules/spotlight/) | `Vulnerabilities:read` | Accessing and managing CrowdStrike Falcon Spotlight vulnerabilities |
+| [Zero Trust Assessment](/falcon-mcp/modules/zero-trust-assessment/) | `Zero Trust Assessment:read` | Retrieving Zero Trust Assessment posture scores and sensor and OS hardening signals for hosts |

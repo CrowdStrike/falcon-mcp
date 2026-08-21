@@ -64,6 +64,10 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     "shield": {
         "title": "Shield",
     },
+    "zerotrustassessment": {
+        "title": "Zero Trust Assessment",
+        "slug": "zero-trust-assessment",
+    },
 }
 
 # Natural language prompt examples for each tool, shown in generated docs
@@ -568,6 +572,19 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     ],
     "falcon_delete_rtr_session": [
         "End the RTR session abc123",
+    ],
+    # Zero Trust Assessment
+    "falcon_search_zta_assessments": [
+        "Which hosts have the weakest Zero Trust posture?",
+        "Show me hosts scoring below 40 on Zero Trust Assessment",
+    ],
+    "falcon_get_zta_assessments": [
+        "What is the security posture of host WEB-01?",
+        "Show the Zero Trust hardening signals for this agent ID",
+    ],
+    "falcon_get_zta_audit": [
+        "What is our overall Zero Trust score?",
+        "Break down our Zero Trust posture by platform",
     ],
 }
 

@@ -277,6 +277,10 @@ API_SCOPE_REQUIREMENTS = {
     "deleteContentUpdatePolicies": ["Content Update Policies:write"],
     "performContentUpdatePoliciesAction": ["Content Update Policies:write"],
     "setContentUpdatePoliciesPrecedence": ["Content Update Policies:write"],
+    # Zero Trust Assessment operations
+    "getAssessmentsByScoreV1": ["Zero Trust Assessment:read"],
+    "getAssessmentV1": ["Zero Trust Assessment:read"],
+    "getAuditV1": ["Zero Trust Assessment:read"],
 }
 
 
