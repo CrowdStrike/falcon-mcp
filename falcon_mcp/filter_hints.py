@@ -281,8 +281,7 @@ FILTER_HINTS: dict[str, str] = {
         "is_default (true|false), precedence, created_at (UTC datetime), modified_by."
     ),
     "falcon_search_data_protection_content_patterns": (
-        "Common fields: name, category, type, region, "
-        "example, deleted (true|false)."
+        "Common fields: name, category, type, region, example, deleted (true|false)."
     ),
     # === Recon ===
     "falcon_search_recon_notifications": (
@@ -369,8 +368,10 @@ QUERY_STRING_HINTS: dict[str, str] = {
         "(no SELECT/WHERE/stats/`| limit`). Start from a tag filter "
         "`#event_simpleName=ProcessRollup2`, then pipe into `groupBy([field], "
         "function=count())`, `sort(_count, order=desc)`, and `head(n)` to cap raw "
-        "events. For distinct count, time bucketing, regex/contains match, or "
+        "events. Unrecognized words become free-text stages instead of an error, so "
+        "check `job.parsed_query` against your intent; on zero rows, "
+        "`job.processed_events` above zero means a real negative. "
+        "For distinct count, time bucketing, regex/contains match, or "
         "filtering on an aggregate, see `falcon://ngsiem/search/cql-guide`."
     ),
 }
-

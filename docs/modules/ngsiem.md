@@ -25,13 +25,14 @@ filter (e.g. `#event_simpleName=ProcessRollup2`, `UserName=*`) and pipe into
 commands like `groupBy([...], function=count())` and `sort()`; keep the time
 range tight. Consult `falcon://ngsiem/search/cql-guide` to construct the query —
 it has the pipe model, core commands, and working examples (distinct count, time
-bucketing, regex match, filtering on an aggregate). Returns matching event
-records, or an error/empty dict carrying the CQL guide when the job fails,
-times out, or returns no rows. Note: the API does not return detailed CQL parser
-diagnostics — a malformed query may error or silently return unexpected/empty
-results rather than a helpful message, so a result is not proof the query parsed
-as intended. Search times out after FALCON_MCP_NGSIEM_TIMEOUT seconds
-(default: 300).
+bucketing, regex match, filtering on an aggregate). Returns
+`{results, query_used, job}`, where `job` carries the row count, events scanned,
+the window searched, and `job.parsed_query` — the API's own normalization of the
+query it ran. Check `job.parsed_query` against your intent: unrecognized words
+become free-text stages instead of an error, so `| limit 5` runs as `| limit | 5`
+and returns the wrong rows silently. On zero rows a hint says whether the job
+scanned events (a real negative) or scanned none (unresolved). Search times out
+after FALCON_MCP_NGSIEM_TIMEOUT seconds (default: 300).
 
 **Example prompts:**
 

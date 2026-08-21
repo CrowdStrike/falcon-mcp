@@ -95,19 +95,27 @@ containing `powershell` case-insensitively, then show 10 events:
 `i` after the closing slash for case-insensitive matching. (The `=~` operator is
 something else — it pipes a field into a function like `wildcard()`, not a bare regex.)
 
-## Important caveat: no useful parser error on failure
+## Important: check what the API actually ran
 
-The API does NOT return a detailed CQL parser diagnostic. A malformed query may come
-back with a generic error, or — worse — the API free-text-matches the raw query text
-and returns HTTP 200 with unrelated rows or an empty result. **A result is not proof
-your query parsed as intended.** Because of this:
+The API returns no CQL parser diagnostic. Anything it cannot recognize as a command is
+demoted to a free-text filter stage and run anyway, so a malformed query returns HTTP
+200 with unrelated rows or none at all. **A result is not proof your query parsed as
+intended.** Two fields in the response's `job` block settle it:
 
-- Do NOT rely on a "run it, read the parser error, repair" loop — the error signal is
-  not reliable here.
-- Construct the query correctly up front using the shapes above.
-- If a query returns unexpected rows or zero rows, re-check the syntax against this
-  guide (SPL/SQL-isms and a missing/incorrect `#tag` filter are the usual causes)
-  rather than assuming the data simply isn't there.
+- **`job.parsed_query`** — the API's normalization of the stages it ran. Compare it
+  against your intent. `| limit 5` comes back as `| limit | 5`, each stray word now its
+  own free-text match. Normalization also turns an implicit-AND space into a `|`, so
+  expect that one difference even on a correct query.
+- **`job.processed_events`** — how many events the engine read through your filter.
+
+On zero rows: above zero means the job scanned that many events and none matched, which
+is a real negative — report it as the answer. Zero means nothing reached the filter, so
+check `job.parsed_query`; if it matches your intent the negative is real (a tag or field
+value with no data behaves this way), otherwise fix the syntax.
+
+Because the error signal is unreliable, build the query correctly up front rather than
+running it to read a parser error. SPL/SQL-isms and a misspelled `#tag` filter are the
+usual causes of a surprising result.
 
 ## Authoritative external references
 
