@@ -757,8 +757,9 @@ class TestPoliciesModule(TestModules):
     def test_perform_action_rule_group_requires_group_id(self):
         """add-rule-group without group_id returns a guiding error, no API call.
 
-        Rule-group actions need the same action_parameters group_id payload as
-        host-group actions; omitting it must be caught before the API call.
+        Rule-group actions carry the group through action_parameters as host-group
+        actions do, but under their own parameter name; either way an omitted
+        group_id must be caught before the API call.
         """
         result = self.module.perform_policy_action(
             policy_type="prevention",
