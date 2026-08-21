@@ -51,6 +51,7 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | [Serverless](https://developer.crowdstrike.com/falcon-mcp/modules/serverless/) | Search for vulnerabilities in serverless functions |
 | [Shield](https://developer.crowdstrike.com/falcon-mcp/modules/shield/) | SaaS security posture, checks, alerts, and app inventory |
 | [Spotlight](https://developer.crowdstrike.com/falcon-mcp/modules/spotlight/) | Manage and analyze vulnerability data and security assessments |
+| [Zero Trust Assessment](https://developer.crowdstrike.com/falcon-mcp/modules/zero-trust-assessment/) | Retrieve Zero Trust Assessment posture scores and sensor and OS hardening signals for hosts |
 
 See the [Module Overview](https://developer.crowdstrike.com/falcon-mcp/modules/overview/) for required API scopes, available tools, and FQL resources.
 
