@@ -23,21 +23,26 @@ class TestDiscoverModule(unittest.TestCase):
     def test_register_tools(self):
         """Test that tools are registered correctly."""
         self.module.register_tools(self.server)
-        self.assertEqual(self.server.add_tool.call_count, 2)
-        self.assertEqual(len(self.module.tools), 2)
+        self.assertEqual(self.server.add_tool.call_count, 3)
+        self.assertEqual(len(self.module.tools), 3)
         self.assertEqual(self.module.tools[0], "falcon_search_applications")
         self.assertEqual(self.module.tools[1], "falcon_search_unmanaged_assets")
+        self.assertEqual(self.module.tools[2], "falcon_search_managed_assets")
 
     def test_register_resources(self):
         """Test that resources are registered correctly."""
         self.module.register_resources(self.server)
-        self.assertEqual(self.server.add_resource.call_count, 2)
-        self.assertEqual(len(self.module.resources), 2)
+        self.assertEqual(self.server.add_resource.call_count, 3)
+        self.assertEqual(len(self.module.resources), 3)
         self.assertEqual(
             str(self.module.resources[0]), "falcon://discover/applications/fql-guide"
         )
         self.assertEqual(
             str(self.module.resources[1]), "falcon://discover/hosts/fql-guide"
+        )
+        self.assertEqual(
+            str(self.module.resources[2]),
+            "falcon://discover/managed-assets/fql-guide",
         )
 
     def test_search_applications(self):
@@ -188,6 +193,101 @@ class TestDiscoverModule(unittest.TestCase):
         self.assertEqual(
             result["results"], [{"device_id": "host1", "hostname": "PC-001"}]
         )
+
+    def test_search_managed_assets(self):
+        """Test search_managed_assets method enforces entity_type:'managed'."""
+        mock_response = {
+            "status_code": 200,
+            "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
+                "resources": [
+                    {"id": "host1", "encryption_status": "Unencrypted"}
+                ],
+            },
+        }
+        self.client.command.return_value = mock_response
+
+        result = self.module.search_managed_assets(
+            filter="encryption_status:'Unencrypted'"
+        )
+
+        first_call = self.client.command.call_args_list[0]
+        self.assertEqual(first_call[0][0], "combined_hosts")
+        self.assertEqual(
+            first_call[1]["parameters"]["filter"],
+            "entity_type:'managed'+encryption_status:'Unencrypted'",
+        )
+        self.assertEqual(
+            result["results"], [{"id": "host1", "encryption_status": "Unencrypted"}]
+        )
+        self.assertEqual(result["pagination"]["total"], 1)
+        self.assertEqual(result["filter_used"], "encryption_status:'Unencrypted'")
+
+    def test_search_managed_assets_without_filter(self):
+        """Test search_managed_assets method without user filter."""
+        mock_response = {
+            "status_code": 200,
+            "body": {
+                "meta": {"pagination": {"offset": 0, "limit": 100, "total": 1}},
+                "resources": [{"id": "host1", "hostname": "PC-001"}],
+            },
+        }
+        self.client.command.return_value = mock_response
+
+        result = self.module.search_managed_assets(filter=None)
+
+        first_call = self.client.command.call_args_list[0]
+        self.assertEqual(first_call[0][0], "combined_hosts")
+        self.assertEqual(
+            first_call[1]["parameters"]["filter"], "entity_type:'managed'"
+        )
+        self.assertEqual(result["results"], [{"id": "host1", "hostname": "PC-001"}])
+
+    def test_search_managed_assets_with_error(self):
+        """Test search_managed_assets returns the FQL guide when an error occurs."""
+        mock_response = {
+            "status_code": 400,
+            "body": {"errors": [{"message": "property foo not allowed"}]},
+        }
+        self.client.command.return_value = mock_response
+
+        result = self.module.search_managed_assets(filter="foo:'bar'")
+
+        # combined_hosts 400s loudly on a bad filter field, so the tool attaches the
+        # FQL guide instead of returning a bare error.
+        self.assertIsInstance(result, dict)
+        self.assertIn("fql_guide", result)
+        self.assertEqual(result["filter_used"], "foo:'bar'")
+        self.assertIn("error", result["results"][0])
+
+    def test_search_managed_assets_with_all_params(self):
+        """Test search_managed_assets method with all parameters."""
+        mock_response = {
+            "status_code": 200,
+            "body": {
+                "meta": {"pagination": {"offset": 10, "limit": 50, "total": 1}},
+                "resources": [{"id": "host1", "hostname": "PC-001"}],
+            },
+        }
+        self.client.command.return_value = mock_response
+
+        result = self.module.search_managed_assets(
+            filter="criticality:'Critical'",
+            limit=50,
+            offset=10,
+            sort="hostname.asc",
+        )
+
+        first_call = self.client.command.call_args_list[0]
+        self.assertEqual(first_call[0][0], "combined_hosts")
+        params = first_call[1]["parameters"]
+        self.assertEqual(
+            params["filter"], "entity_type:'managed'+criticality:'Critical'"
+        )
+        self.assertEqual(params["limit"], 50)
+        self.assertEqual(params["offset"], 10)
+        self.assertEqual(params["sort"], "hostname.asc")
+        self.assertEqual(result["results"], [{"id": "host1", "hostname": "PC-001"}])
 
 
 if __name__ == "__main__":

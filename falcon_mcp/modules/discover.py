@@ -1,7 +1,7 @@
 """
 Discover module for Falcon MCP Server
 
-This module provides tools for accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets.
+This module provides tools for accessing and managing CrowdStrike Falcon Discover applications, managed assets, and unmanaged assets.
 """
 
 from textwrap import dedent
@@ -14,12 +14,13 @@ from pydantic import AnyUrl, Field
 from falcon_mcp.modules.base import BaseModule
 from falcon_mcp.resources.discover import (
     SEARCH_APPLICATIONS_FQL_DOCUMENTATION,
+    SEARCH_MANAGED_ASSETS_FQL_DOCUMENTATION,
     SEARCH_UNMANAGED_ASSETS_FQL_DOCUMENTATION,
 )
 
 
 class DiscoverModule(BaseModule):
-    """Module for accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets."""
+    """Module for accessing and managing CrowdStrike Falcon Discover applications, managed assets, and unmanaged assets."""
 
     def register_tools(self, server: FastMCP) -> None:
         """Register tools with the MCP server.
@@ -38,6 +39,12 @@ class DiscoverModule(BaseModule):
             server=server,
             method=self.search_unmanaged_assets,
             name="search_unmanaged_assets",
+        )
+
+        self._add_tool(
+            server=server,
+            method=self.search_managed_assets,
+            name="search_managed_assets",
         )
 
     def register_resources(self, server: FastMCP) -> None:
@@ -60,6 +67,13 @@ class DiscoverModule(BaseModule):
             text=SEARCH_UNMANAGED_ASSETS_FQL_DOCUMENTATION,
         )
 
+        search_managed_assets_fql_resource = TextResource(
+            uri=AnyUrl("falcon://discover/managed-assets/fql-guide"),
+            name="falcon_search_managed_assets_fql_guide",
+            description="Contains the guide for the `filter` param of the `falcon_search_managed_assets` tool.",
+            text=SEARCH_MANAGED_ASSETS_FQL_DOCUMENTATION,
+        )
+
         self._add_resource(
             server,
             search_applications_fql_resource,
@@ -68,6 +82,11 @@ class DiscoverModule(BaseModule):
         self._add_resource(
             server,
             search_unmanaged_assets_fql_resource,
+        )
+
+        self._add_resource(
+            server,
+            search_managed_assets_fql_resource,
         )
 
     def search_applications(
@@ -196,5 +215,84 @@ class DiscoverModule(BaseModule):
 
         if self._is_error(assets):
             return [assets]
+
+        return self._build_pagination_envelope(assets, pagination, filter)
+
+    def search_managed_assets(
+        self,
+        filter: str | None = Field(
+            default=None,
+            description="FQL filter expression. See `falcon://discover/managed-assets/fql-guide` for syntax. Note: entity_type:'managed' is automatically applied.",
+            examples={"encryption_status:'Unencrypted'", "os_security.credential_guard_status:false"},
+        ),
+        limit: int = Field(
+            default=100,
+            ge=1,
+            le=5000,
+            description="Maximum number of items to return: 1-5000. Default is 100.",
+        ),
+        offset: int | None = Field(
+            default=None,
+            description="Starting index of overall result set from which to return results.",
+        ),
+        sort: str | None = Field(
+            default=None,
+            description=dedent("""
+                Sort managed assets using these options:
+
+                hostname: Host name/computer name
+                last_seen_timestamp: Timestamp when the asset was last seen
+                first_seen_timestamp: Timestamp when the asset was first seen
+                platform_name: Operating system platform
+                os_version: Operating system version
+                external_ip: External IP address
+                country: Country location
+                criticality: Criticality level
+
+                Sort either asc (ascending) or desc (descending). Use the dot
+                separator ('hostname.desc'), which is supported on every Falcon
+                sort endpoint. The pipe form ('hostname|desc') is accepted here
+                but rejected by some endpoints, so prefer the dot form.
+
+                Examples: 'hostname.asc', 'last_seen_timestamp.desc', 'criticality.desc'
+            """).strip(),
+            examples={"hostname.asc", "last_seen_timestamp.desc", "criticality.desc"},
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Search hosts by asset and configuration posture: drive encryption status, encrypted/unencrypted drives, OS security settings (Secure Boot, Credential Guard, IOMMU), disk/memory/CPU usage, asset criticality, and internet exposure.
+
+        Use this when the question is about a device's storage, hardware, or security
+        configuration rather than its sensor state. For containment status, sensor version,
+        or policy assignment, use `falcon_search_hosts`. See
+        `falcon://discover/managed-assets/fql-guide` for filters; returns full asset details.
+        Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+        """
+        # Always enforce entity_type:'managed' filter
+        base_filter = "entity_type:'managed'"
+
+        # Combine with user filter if provided
+        if filter:
+            combined_filter = f"{base_filter}+{filter}"
+        else:
+            combined_filter = base_filter
+
+        assets, pagination = self._base_search_with_meta(
+            operation="combined_hosts",
+            search_params={
+                "filter": combined_filter,
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+            },
+            error_message="Failed to search managed assets",
+        )
+
+        if self._is_error(assets):
+            # combined_hosts validates filter fields loudly (HTTP 400 on an unknown
+            # field or wrong type), so surface the FQL guide to help correct the query
+            # rather than returning a bare error.
+            return self._format_fql_error_response(
+                [assets], filter, SEARCH_MANAGED_ASSETS_FQL_DOCUMENTATION
+            )
 
         return self._build_pagination_envelope(assets, pagination, filter)

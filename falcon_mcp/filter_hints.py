@@ -162,6 +162,20 @@ FILTER_HINTS: dict[str, str] = {
         "external_ip, local_ip_addresses, os_version, "
         "first_seen_timestamp (UTC datetime), last_seen_timestamp (UTC datetime)."
     ),
+    # === Discover: Managed Assets ===
+    "falcon_search_managed_assets": (
+        "Common fields: aid (Falcon agent ID - same value as the device ID from "
+        "falcon_search_hosts; if you already have one, prefer it since it is unique "
+        "per sensor, but you do not need to fetch it first), "
+        "encryption_status (Encrypted|Unencrypted), "
+        "unencrypted_drives_count/number_of_disk_drives (numbers, use :>0), "
+        "os_security.credential_guard_status / os_security.secure_boot_enabled_status / "
+        "os_security.iommu_protection_status (booleans, use true|false - NOT 'Enabled'), "
+        "used_disk_space/total_memory/average_processor_usage (numbers, use :>0), "
+        "platform_name (Windows|Linux|Mac), criticality, internet_exposure (Yes|No), "
+        "last_seen_timestamp:>'now-24h' (relative date). "
+        "Ex: encryption_status:'Unencrypted'+platform_name:'Windows'"
+    ),
     # === Firewall Rules ===
     "falcon_search_firewall_rules": (
         "Common fields: platform (windows|mac|linux), name, "
