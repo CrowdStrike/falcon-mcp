@@ -107,10 +107,12 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_create_case": [
         "Create a critical case called 'Suspicious lateral movement from WORKSTATION-42'",
         "Open a high-severity case for the credential theft alerts and attach them as evidence",
+        "Create a case with a markdown-formatted description",
     ],
     "falcon_update_case": [
         "Set that case to in_progress and assign it to the analyst",
         "Close the case — investigation is complete",
+        "Rewrite the case description as markdown",
     ],
     "falcon_add_case_alert_evidence": [
         "Attach these detection alerts to the case",
