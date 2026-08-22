@@ -281,6 +281,11 @@ API_SCOPE_REQUIREMENTS = {
     "getAssessmentsByScoreV1": ["Zero Trust Assessment:read"],
     "getAssessmentV1": ["Zero Trust Assessment:read"],
     "getAuditV1": ["Zero Trust Assessment:read"],
+    # Fusion SOAR Workflows operations
+    "WorkflowDefinitionsCombined": ["Workflows:read"],
+    "WorkflowExecutionsCombined": ["Workflows:read"],
+    "WorkflowExecutionResults": ["Workflows:read"],
+    "WorkflowExecute": ["Workflows:write"],
 }
 
 

@@ -369,6 +369,27 @@ FILTER_HINTS: dict[str, str] = {
         "status (open|closed|reopen), host_info.hostname, "
         "cve.exploit_status, created_timestamp (UTC datetime)."
     ),
+    # === Fusion SOAR ===
+    "falcon_search_workflow_definitions": (
+        "Common fields: name.raw (exact: name.raw:'Full Name'; substring: name.raw:*'*part*'), "
+        "id, enabled (true|false), trigger.type (On demand|Signal|Scheduled), version, "
+        "description, last_modified_timestamp. "
+        "Use name.raw, NOT name — name is analyzed and matches whole tokens only. "
+        "trigger.type:'On demand' workflows are the ones to execute; 'Signal' ones are refused. "
+        "Date filters: last_modified_timestamp:>'now-30d' (relative). "
+        "Sort uses dots (name.asc), not pipes. "
+        "Ex: enabled:true+trigger.type:'On demand'"
+    ),
+    "falcon_search_workflow_executions": (
+        "Common fields: id (the response calls it execution_id), definition_id, "
+        "ui_status (Completed|Failed|In progress|Action required), definition_name (~ token match), "
+        "definition_version, test_mode, contains_mocks. "
+        "Filter status via ui_status — the `status` field uses a different vocabulary "
+        "('Succeeded' not 'Completed'). "
+        "Date filters: started_timestamp:>'now-7d', completed_timestamp:>'now-1d' "
+        "(NOT start_timestamp/end_timestamp — those are response-only names). "
+        "Ex: ui_status:'Completed'+started_timestamp:>'now-7d'"
+    ),
 }
 
 
