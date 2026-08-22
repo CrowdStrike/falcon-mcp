@@ -46,6 +46,9 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     "dataprotection": {
         "slug": "data-protection",
     },
+    "fusion": {
+        "title": "Fusion SOAR",
+    },
     "hostgroups": {
         "slug": "host-groups",
     },
@@ -585,6 +588,25 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_get_zta_audit": [
         "What is our overall Zero Trust score?",
         "Break down our Zero Trust posture by platform",
+    ],
+    # Fusion SOAR
+    "falcon_search_workflow_definitions": [
+        "What Fusion SOAR workflows can I trigger on demand?",
+        "Find the Fusion workflow called 'Adversary Exposure Mitigation'",
+        "Which Fusion workflows are currently disabled?",
+    ],
+    "falcon_search_workflow_executions": [
+        "Show me workflow executions that completed",
+        "Which Fusion workflows failed in the last 7 days?",
+        "Are any workflow runs waiting on someone to approve them?",
+    ],
+    "falcon_get_workflow_execution_results": [
+        "What did workflow execution 714511d8 actually do?",
+        "Show me the ticket number the incident workflow created",
+    ],
+    "falcon_execute_workflow": [
+        "Run the 'Notify SOC Channel' workflow",
+        "Start workflow 2617e3fc with the hash abc123",
     ],
 }
 
