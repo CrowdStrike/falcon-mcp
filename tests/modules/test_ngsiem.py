@@ -648,6 +648,107 @@ class TestNGSIEMModule(TestModules):
         self.assertIsInstance(empty["results"], list)
         self.assertEqual(sorted(populated["job"]), sorted(empty["job"]))
 
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_repository_that_would_alter_the_request_path_is_rejected(self, mock_sleep):
+        """`repository` reaches a URL path variable, so it must not carry path syntax.
+
+        FalconPy interpolates path variables into the route, and `requests` then
+        normalizes the path before sending it. An unencoded separator or dot-segment
+        therefore retargets the request: `a/../../oauth2/token` builds
+        `/humio/api/v1/repositories/a/../../oauth2/token/queryjobs`, which normalizes
+        to `/humio/api/v1/oauth2/token/queryjobs` — a different route than
+        StartSearchV1 selected. Reject before any call rather than relying on the SDK.
+
+        The client is wired to succeed, so without the guard this reports a clean
+        search result and the assertions fail on that, not on a mock error.
+        """
+        for repository in (
+            "a/../../oauth2/token",
+            "search-all/queryjobs",
+            "..",
+            "../search-all",
+            "search\\all",
+            "search%2Fall",
+        ):
+            with self.subTest(repository=repository):
+                self.mock_client.command.reset_mock()
+                self.mock_client.command.side_effect = [
+                    {"status_code": 200, "body": {"id": "job-should-not-run"}},
+                    {"status_code": 200, "body": {"done": True, "events": []}},
+                ]
+
+                result = asyncio.run(
+                    self.module.search_ngsiem(
+                        query_string="aid=abc123",
+                        start="2025-01-01T00:00:00Z",
+                        repository=repository,
+                    )
+                )
+
+                self.assertIn("error", result)
+                self.assertIn("repository", result["error"])
+                # The guard is worthless if the request still goes out.
+                self.assertEqual(self.mock_client.command.call_count, 0)
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_repository_rejection_does_not_offer_the_cql_guide(self, mock_sleep):
+        """A bad `repository` is not a CQL mistake, so it must not ship the CQL guide.
+
+        Every other error path here routes through `_format_cql_error_response`, which
+        attaches the full guide and tells the model to correct its query. Doing that
+        for an argument error would send the model to rewrite a query that was fine.
+        """
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"id": "job-should-not-run"}},
+            {"status_code": 200, "body": {"done": True, "events": []}},
+        ]
+
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="aid=abc123",
+                start="2025-01-01T00:00:00Z",
+                repository="a/../../oauth2/token",
+            )
+        )
+
+        self.assertIn("error", result)
+        self.assertNotIn("cql_guide", result)
+        self.assertNotIn("hint", result)
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_documented_repository_names_still_pass_the_guard(self, mock_sleep):
+        """The guard must not reject the repositories the tool advertises.
+
+        The field description names these and says custom views may also be passed,
+        so an over-strict rule would break normal use. This is the counterweight to
+        the rejection test above.
+        """
+        for repository in (
+            "search-all",
+            "investigate_view",
+            "xdr",
+            "third-party",
+            "falcon_for_it_view",
+            "forensics_view",
+        ):
+            with self.subTest(repository=repository):
+                self.mock_client.command.reset_mock()
+                self.mock_client.command.side_effect = [
+                    {"status_code": 200, "body": {"id": "job-ok"}},
+                    {"status_code": 200, "body": {"done": True, "events": []}},
+                ]
+
+                result = asyncio.run(
+                    self.module.search_ngsiem(
+                        query_string="aid=abc123",
+                        start="2025-01-01T00:00:00Z",
+                        repository=repository,
+                    )
+                )
+
+                self.assertNotIn("error", result)
+                self.assertEqual(self.mock_client.command.call_count, 2)
+
 
 class TestNGSIEMModuleConfig(unittest.TestCase):
     """Test configuration handling for NGSIEM module."""
