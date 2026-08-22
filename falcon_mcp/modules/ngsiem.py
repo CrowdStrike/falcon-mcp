@@ -47,6 +47,54 @@ _CQL_UNSCANNED_ZERO_HINT = (
 POLL_INTERVAL_SECONDS = int(os.environ.get("FALCON_MCP_NGSIEM_POLL_INTERVAL", "5"))
 TIMEOUT_SECONDS = int(os.environ.get("FALCON_MCP_NGSIEM_TIMEOUT", "300"))
 
+# `repository` is the only caller-supplied value in this server that reaches a URL
+# path variable (/humio/api/v1/repositories/{repository}/queryjobs). FalconPy
+# interpolates it into the route and `requests` normalizes the path before sending,
+# so a separator or a bare dot-segment retargets the request at a route the calling
+# operation never selected. A separator is what makes traversal possible, so once
+# those are rejected only a whole-value dot-segment can still alter the path —
+# `a..b` is inert and stays allowed.
+_UNSAFE_REPOSITORY_CHARS = ("/", "\\", "%")
+_DOT_SEGMENTS = (".", "..")
+
+
+def _validate_repository(repository: Any) -> dict[str, Any] | None:
+    """Reject a repository value that would change which route is called.
+
+    Returns an error response to hand straight back to the caller, or None when the
+    value is safe to interpolate.
+
+    A non-str value is an unresolved Pydantic `Field` default, which happens only when
+    the tool method is called directly instead of through FastMCP — the same reason
+    `end` is guarded with `isinstance` below. FastMCP validates against the `str`
+    annotation before dispatch, and the declared default is safe, so let it through.
+
+    Args:
+        repository: The caller-supplied repository or view name
+
+    Returns:
+        An error response dict, or None if the value is acceptable
+    """
+    if not isinstance(repository, str):
+        return None
+
+    if not repository.strip():
+        return _format_error_response(
+            "Invalid repository: must be a non-empty repository or view name, "
+            "for example 'search-all'.",
+            operation="StartSearchV1",
+        )
+
+    if any(char in repository for char in _UNSAFE_REPOSITORY_CHARS) or repository in _DOT_SEGMENTS:
+        return _format_error_response(
+            f"Invalid repository {repository!r}: must not contain '/', '\\', or '%', "
+            "or be '.' or '..'. Pass a plain repository or view name, "
+            "for example 'search-all'.",
+            operation="StartSearchV1",
+        )
+
+    return None
+
 
 def _iso_to_epoch_ms(iso_timestamp: str) -> int:
     """Convert ISO 8601 timestamp to Unix epoch milliseconds.
@@ -256,7 +304,8 @@ class NGSIEMModule(BaseModule):
                 "third-party (third-party source events), "
                 "falcon_for_it_view (Falcon for IT data), "
                 "forensics_view (Falcon Forensics triage data). "
-                "Custom and other built-in repositories/views can also be passed by name."
+                "Custom and other built-in repositories/views can also be passed by name. "
+                "Pass the bare name only: values containing '/', '\\', or '%' are rejected."
             ),
         ),
         end: str | None = Field(
@@ -286,6 +335,12 @@ class NGSIEMModule(BaseModule):
         scanned events (a real negative) or scanned none (unresolved). Search times out
         after FALCON_MCP_NGSIEM_TIMEOUT seconds (default: 300).
         """
+        # `repository` is interpolated into the request path, so validate it before it
+        # can reach any of the three calls below.
+        repository_error = _validate_repository(repository)
+        if repository_error is not None:
+            return repository_error
+
         # Step 1: Start the search job
         # Note: FalconPy uber class passes body unchanged; API expects camelCase keys
         body_params: dict[str, Any] = {
