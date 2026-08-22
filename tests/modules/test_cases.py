@@ -261,6 +261,7 @@ class TestCasesModule(TestModules):
             name="My Case",
             severity=75,
             description=None,
+            description_format=None,
             status=None,
             assigned_to_user_uuid=None,
             tags=None,
@@ -274,6 +275,7 @@ class TestCasesModule(TestModules):
         body = call_args[1]["body"]
         self.assertEqual(body["name"], "My Case")
         self.assertEqual(body["severity"], 75)
+        self.assertNotIn("description_format", body)
 
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 1)
@@ -290,6 +292,7 @@ class TestCasesModule(TestModules):
             name="Evidence Case",
             severity=50,
             description=None,
+            description_format=None,
             status=None,
             assigned_to_user_uuid=None,
             tags=None,
@@ -315,6 +318,7 @@ class TestCasesModule(TestModules):
             name="Template Case",
             severity=25,
             description=None,
+            description_format=None,
             status=None,
             assigned_to_user_uuid=None,
             tags=None,
@@ -363,6 +367,7 @@ class TestCasesModule(TestModules):
             name="Bad Case",
             severity=50,
             description=None,
+            description_format=None,
             status=None,
             assigned_to_user_uuid=None,
             tags=None,
@@ -393,7 +398,14 @@ class TestCasesModule(TestModules):
         result = self.module.update_case(
             id="case-id-1",
             name="Updated Name",
+            description=None,
+            description_format=None,
             status="in_progress",
+            severity=None,
+            assigned_to_user_uuid=None,
+            remove_user_assignment=None,
+            template_id=None,
+            expected_version=None,
         )
 
         call_args = self.mock_client.command.call_args
@@ -403,6 +415,7 @@ class TestCasesModule(TestModules):
         self.assertIn("fields", body)
         self.assertEqual(body["fields"]["name"], "Updated Name")
         self.assertEqual(body["fields"]["status"], "in_progress")
+        self.assertNotIn("description_format", body["fields"])
 
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 1)
@@ -416,7 +429,14 @@ class TestCasesModule(TestModules):
 
         self.module.update_case(
             id="case-id-1",
+            name=None,
+            description=None,
+            description_format=None,
+            status=None,
             severity=90,
+            assigned_to_user_uuid=None,
+            remove_user_assignment=None,
+            template_id=None,
             expected_version=2,
         )
 
@@ -452,7 +472,18 @@ class TestCasesModule(TestModules):
             "body": {"resources": [{"id": "case-id-1"}]},
         }
 
-        self.module.update_case(id="case-id-1", template_id="tmpl-xyz-789")
+        self.module.update_case(
+            id="case-id-1",
+            name=None,
+            description=None,
+            description_format=None,
+            status=None,
+            severity=None,
+            assigned_to_user_uuid=None,
+            remove_user_assignment=None,
+            template_id="tmpl-xyz-789",
+            expected_version=None,
+        )
 
         call_args = self.mock_client.command.call_args
         body = call_args[1]["body"]
@@ -691,6 +722,7 @@ class TestCasesModule(TestModules):
             name="Unauthorized Case",
             severity=50,
             description=None,
+            description_format=None,
             status=None,
             assigned_to_user_uuid=None,
             tags=None,
@@ -713,6 +745,13 @@ class TestCasesModule(TestModules):
         result = self.module.update_case(
             id="case-id-1",
             name="Conflicting Update",
+            description=None,
+            description_format=None,
+            status=None,
+            severity=None,
+            assigned_to_user_uuid=None,
+            remove_user_assignment=None,
+            template_id=None,
             expected_version=1,
         )
 

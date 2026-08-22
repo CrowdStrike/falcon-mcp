@@ -232,6 +232,89 @@ class TestCasesIntegration(BaseIntegrationTest):
         )
         self.assert_no_error(close_result, context="close case cleanup")
 
+    def test_description_format_roundtrip(self):
+        """Create with a description_format, then change it, and verify each step.
+
+        The PATCH body nests description_format inside 'fields'. Sending it at the
+        body top level returns 200 and silently ignores it, so step 3 is the only
+        assertion that catches that mistake. The case is left closed as cleanup.
+        """
+        unique_name = f"falcon-mcp-test-fmt-{int(time.time())}"
+
+        # Step 1: Create with markdown format
+        create_result = self.call_method(
+            self.module.create_case,
+            name=unique_name,
+            severity=25,
+            description="# Integration test case\n\nSafe to delete.",
+            description_format="markdown",
+            status="new",
+        )
+
+        self.assert_no_error(create_result, context="create_case with markdown")
+        self.assert_valid_list_response(
+            create_result, min_length=1, context="create_case with markdown"
+        )
+
+        case = create_result[0]
+        case_id = case["id"]
+        assert case.get("description_format") == "markdown", (
+            "Created case did not report description_format 'markdown'. "
+            f"Got '{case.get('description_format')}'. Fields: {list(case.keys())}"
+        )
+
+        # Step 2: Patch the description alone - the format must survive
+        desc_result = self.call_method(
+            self.module.update_case,
+            id=case_id,
+            description="## Updated body\n\nStill markdown.",
+            expected_version=case.get("version", 1),
+        )
+
+        self.assert_no_error(desc_result, context="update description only")
+        self.assert_valid_list_response(
+            desc_result, min_length=1, context="update description only"
+        )
+
+        desc_case = desc_result[0]
+        assert desc_case.get("description_format") == "markdown", (
+            "Updating the description alone changed description_format. "
+            f"Expected 'markdown', got '{desc_case.get('description_format')}'"
+        )
+
+        # Step 3: Flip the format to plaintext - the regression guard.
+        # Pair it with a second field so 'fields' stays non-empty even if
+        # description_format is misplaced, forcing the API to be the judge.
+        fmt_result = self.call_method(
+            self.module.update_case,
+            id=case_id,
+            description_format="plaintext",
+            severity=50,
+            expected_version=desc_case.get("version", 2),
+        )
+
+        self.assert_no_error(fmt_result, context="update description_format")
+        self.assert_valid_list_response(
+            fmt_result, min_length=1, context="update description_format"
+        )
+
+        fmt_case = fmt_result[0]
+        assert fmt_case.get("description_format") == "plaintext", (
+            "description_format did not change to 'plaintext'. Got "
+            f"'{fmt_case.get('description_format')}'. The PATCH body most likely "
+            "sent the field at the top level instead of inside 'fields', which "
+            "the API accepts with 200 and ignores."
+        )
+
+        # Step 4: Close the case (cleanup)
+        close_result = self.call_method(
+            self.module.update_case,
+            id=case_id,
+            status="closed",
+            expected_version=fmt_case.get("version", 3),
+        )
+        self.assert_no_error(close_result, context="close case cleanup")
+
     # -------------------------------------------------------------------------
     # Template Tests
     # -------------------------------------------------------------------------

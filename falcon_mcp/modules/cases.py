@@ -286,9 +286,9 @@ class CasesModule(BaseModule):
             default=None,
             description="Case description (max 2048 characters).",
         ),
-        description_format: str | None = Field(
+        description_format: Literal["markdown", "plaintext"] | None = Field(
             default=None,
-            description="Rendering format for the description. Values: plaintext, markdown. Defaults to CrowdStrike's server-side default (plaintext) when omitted.",
+            description="Rendering format for the description. Omit to leave it unset.",
         ),
         status: str | None = Field(
             default=None,
@@ -372,9 +372,9 @@ class CasesModule(BaseModule):
             default=None,
             description="New case description.",
         ),
-        description_format: str | None = Field(
+        description_format: Literal["markdown", "plaintext"] | None = Field(
             default=None,
-            description="Rendering format for the description. Values: plaintext, markdown. Left unchanged when omitted.",
+            description="Rendering format for the description. Left unchanged when omitted.",
         ),
         status: str | None = Field(
             default=None,
