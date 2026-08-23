@@ -9,7 +9,6 @@ from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 
-
 _PFM_QUERY_PAGE_SIZE = 500
 
 
