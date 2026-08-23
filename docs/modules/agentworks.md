@@ -15,6 +15,8 @@ Calling, listing, and observing CrowdStrike AgentWorks (agentic-studio) Charlott
 
 ### `falcon_get_agentworks_agent_invocation`
 
+**Required scopes:** `Charlotte AI Agent Definition:read`
+
 Get the current state of an AgentWorks agent invocation by ID.
 
 Use this to resume or observe a run that paused (waiting_for_tool_approval) or
@@ -31,7 +33,7 @@ conversation, ai_trace_id, and any tool approvals.
 > [!NOTE]
 > This tool modifies data.
 
-**Required scopes:** `Charlotte AI Agent Definition:write`
+**Required scopes:** `Charlotte AI Agent Definition:read`, `Charlotte AI Agent Definition:write`
 
 Invoke an AgentWorks (Charlotte AI) agent and return its reply.
 
