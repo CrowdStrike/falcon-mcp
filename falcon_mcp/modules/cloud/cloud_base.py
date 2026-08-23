@@ -10,6 +10,9 @@ from falcon_mcp.common.utils import prepare_api_parameters
 from falcon_mcp.modules.base import BaseModule
 
 
+_PFM_QUERY_PAGE_SIZE = 500
+
+
 class _CloudBase(BaseModule):
     """Extends BaseModule with cloud-specific shared helpers."""
 
@@ -84,7 +87,7 @@ class _CloudBase(BaseModule):
         uuids: list[str] = []
         offset = 0
         while True:
-            params = prepare_api_parameters({"filter": filter, "limit": 500, "offset": offset})
+            params = prepare_api_parameters({"filter": filter, "limit": _PFM_QUERY_PAGE_SIZE, "offset": offset})
             response = self.client.command("QueryRule", parameters=params)
             page = handle_api_response(
                 response,
@@ -103,10 +106,7 @@ class _CloudBase(BaseModule):
                 .get("pagination", {})
                 .get("total")
             )
-            if total is not None:
-                if len(uuids) >= total:
-                    break
-            elif len(page) < 500:
+            if total is not None and len(uuids) >= total:
                 break
             offset += len(page)
 

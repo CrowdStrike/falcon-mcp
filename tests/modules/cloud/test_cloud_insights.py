@@ -54,7 +54,7 @@ class TestCloudInsightsTools(TestModules):
         uuids = [f"uuid-{iid}" for iid in ids]
         rules = [{"uuid": f"uuid-{iid}", "insight_id": iid, "category": "Network"} for iid in ids]
         return [
-            {"status_code": 200, "body": {"resources": uuids}},
+            {"status_code": 200, "body": {"resources": uuids, "meta": {"pagination": {"total": len(uuids), "offset": 0, "limit": 500}}}},
             {"status_code": 200, "body": {"resources": rules}},
         ]
 
@@ -666,7 +666,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
     def _insights_definition_api_responses(self, rules):
         """Build [QueryRule response, GetRule response] from raw rule dicts."""
         uuids = [f"uuid-{r['insight_id']}" for r in rules]
-        query_resp = {"status_code": 200, "body": {"resources": uuids}}
+        query_resp = {"status_code": 200, "body": {"resources": uuids, "meta": {"pagination": {"total": len(uuids), "offset": 0, "limit": 500}}}}
         get_resp = {"status_code": 200, "body": {"resources": rules}}
         return [query_resp, get_resp]
 
@@ -807,7 +807,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
 
     def test_definitions_skips_non_dict_rules(self):
         """Non-dict entries in GetRule response are silently skipped."""
-        query_resp = {"status_code": 200, "body": {"resources": ["uuid-1", "uuid-2"]}}
+        query_resp = {"status_code": 200, "body": {"resources": ["uuid-1", "uuid-2"], "meta": {"pagination": {"total": 2, "offset": 0, "limit": 500}}}}
         get_resp = {"status_code": 200, "body": {"resources": [
             "not-a-dict",
             {"insight_id": "iid1", "category": "Network", "name": "N", "description": "d",
@@ -876,8 +876,8 @@ class TestCloudInsightDefinitionsTools(TestModules):
             batch_responses.append({"status_code": 200, "body": {"resources": rules[i : i + 100]}})
 
         self.mock_client.command.side_effect = [
-            {"status_code": 200, "body": {"resources": page1_uuids}},
-            {"status_code": 200, "body": {"resources": page2_uuids}},
+            {"status_code": 200, "body": {"resources": page1_uuids, "meta": {"pagination": {"total": 510, "offset": 0, "limit": 500}}}},
+            {"status_code": 200, "body": {"resources": page2_uuids, "meta": {"pagination": {"total": 510, "offset": 500, "limit": 500}}}},
             *batch_responses,
         ]
 
