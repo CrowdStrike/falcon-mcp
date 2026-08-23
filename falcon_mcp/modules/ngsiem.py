@@ -7,7 +7,7 @@ Next-Gen SIEM via the asynchronous job-based search API.
 
 import asyncio
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from mcp.server import FastMCP
@@ -27,16 +27,73 @@ _CQL_ERROR_HINT = (
     "language (filter | command | command) — not SQL or Splunk SPL. Consult "
     "`falcon://ngsiem/search/cql-guide` for the syntax and working examples."
 )
-_CQL_EMPTY_HINT = (
-    "0 events returned. This can mean no data matched, but it is also how the API "
-    "reports an invalid query (it free-text-matches malformed CQL rather than "
-    "erroring). If this is unexpected, review the CQL guide above and verify your "
-    "query syntax and field names. Consult `falcon://ngsiem/search/cql-guide`."
+# The API demotes unrecognized CQL words to free-text stages instead of erroring, so
+# `job.parsed_query` (its own normalization of what ran) is the only misparse signal.
+_CQL_CONFIRMED_ZERO_HINT = (
+    "No rows matched, and the job scanned {processed_events:,} events — a real "
+    "negative. Report it as such rather than retrying. If you expected rows, check "
+    "`job.parsed_query` against the query you sent."
+)
+
+# A correct filter over an empty partition and a misparsed query both scan nothing.
+_CQL_UNSCANNED_ZERO_HINT = (
+    "No rows, and `job.processed_events` does not show a completed scan, so this alone "
+    "is not a confirmed negative. Compare `job.parsed_query` to the query you sent: "
+    "unrecognized words become free-text stages instead of an error. If it matches your "
+    "intent the negative is real; if not, correct the syntax using the guide above."
 )
 
 # Configurable polling settings
 POLL_INTERVAL_SECONDS = int(os.environ.get("FALCON_MCP_NGSIEM_POLL_INTERVAL", "5"))
 TIMEOUT_SECONDS = int(os.environ.get("FALCON_MCP_NGSIEM_TIMEOUT", "300"))
+
+# `repository` is the only caller-supplied value in this server that reaches a URL
+# path variable (/humio/api/v1/repositories/{repository}/queryjobs). FalconPy
+# interpolates it into the route and `requests` normalizes the path before sending,
+# so a separator or a bare dot-segment retargets the request at a route the calling
+# operation never selected. A separator is what makes traversal possible, so once
+# those are rejected only a whole-value dot-segment can still alter the path —
+# `a..b` is inert and stays allowed.
+_UNSAFE_REPOSITORY_CHARS = ("/", "\\", "%")
+_DOT_SEGMENTS = (".", "..")
+
+
+def _validate_repository(repository: Any) -> dict[str, Any] | None:
+    """Reject a repository value that would change which route is called.
+
+    Returns an error response to hand straight back to the caller, or None when the
+    value is safe to interpolate.
+
+    A non-str value is an unresolved Pydantic `Field` default, which happens only when
+    the tool method is called directly instead of through FastMCP — the same reason
+    `end` is guarded with `isinstance` below. FastMCP validates against the `str`
+    annotation before dispatch, and the declared default is safe, so let it through.
+
+    Args:
+        repository: The caller-supplied repository or view name
+
+    Returns:
+        An error response dict, or None if the value is acceptable
+    """
+    if not isinstance(repository, str):
+        return None
+
+    if not repository.strip():
+        return _format_error_response(
+            "Invalid repository: must be a non-empty repository or view name, "
+            "for example 'search-all'.",
+            operation="StartSearchV1",
+        )
+
+    if any(char in repository for char in _UNSAFE_REPOSITORY_CHARS) or repository in _DOT_SEGMENTS:
+        return _format_error_response(
+            f"Invalid repository {repository!r}: must not contain '/', '\\', or '%', "
+            "or be '.' or '..'. Pass a plain repository or view name, "
+            "for example 'search-all'.",
+            operation="StartSearchV1",
+        )
+
+    return None
 
 
 def _iso_to_epoch_ms(iso_timestamp: str) -> int:
@@ -50,6 +107,27 @@ def _iso_to_epoch_ms(iso_timestamp: str) -> int:
     """
     dt = datetime.fromisoformat(iso_timestamp.replace("Z", "+00:00"))
     return int(dt.timestamp() * 1000)
+
+
+def _epoch_ms_to_iso(epoch_ms: Any) -> str | None:
+    """Convert Unix epoch milliseconds to an ISO 8601 UTC timestamp.
+
+    Args:
+        epoch_ms: Unix epoch time in milliseconds
+
+    Returns:
+        ISO 8601 timestamp string, or None if the value is not a usable number
+    """
+    if isinstance(epoch_ms, bool) or not isinstance(epoch_ms, (int, float)):
+        return None
+    try:
+        return (
+            datetime.fromtimestamp(epoch_ms / 1000, tz=timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
+    except (OSError, OverflowError, ValueError):
+        return None
 
 
 class NGSIEMModule(BaseModule):
@@ -109,6 +187,84 @@ class NGSIEMModule(BaseModule):
         error_response["hint"] = _CQL_ERROR_HINT
         return error_response
 
+    @staticmethod
+    def _extract_job_metadata(
+        body: dict[str, Any],
+        repository: str,
+        job_id: str,
+    ) -> dict[str, Any]:
+        """Map a search-status body onto the `job` block of the response envelope.
+
+        Fields the response omits are reported as None, never defaulted to 0.
+
+        Args:
+            body: The `body` of a 200 GetSearchStatusV1 response
+            repository: The repository the job ran against
+            job_id: The search job ID
+
+        Returns:
+            Dict of job metadata suitable for the `job` key of the response envelope
+        """
+        meta = body.get("metaData") or {}
+        filter_query = meta.get("filterQuery") or {}
+        # Job-level and query-level warnings are scoped separately; callers want both.
+        warnings = [*(body.get("warnings") or []), *(meta.get("warnings") or [])]
+
+        return {
+            "job_id": job_id,
+            "repository": repository,
+            "event_count": meta.get("eventCount"),
+            "processed_events": meta.get("processedEvents"),
+            "processed_bytes": meta.get("processedBytes"),
+            "parsed_query": filter_query.get("queryString"),
+            "search_start": _epoch_ms_to_iso(meta.get("queryStart")),
+            "search_end": _epoch_ms_to_iso(meta.get("queryEnd")),
+            "duration_ms": meta.get("timeMillis"),
+            "is_aggregate": meta.get("isAggregate"),
+            "cancelled": body.get("cancelled"),
+            "warnings": warnings,
+        }
+
+    def _build_job_envelope(
+        self,
+        events: list[dict[str, Any]],
+        job: dict[str, Any],
+        query_string: str,
+    ) -> dict[str, Any]:
+        """Assemble the response envelope, identical in shape for any row count.
+
+        NG-SIEM jobs carry no `meta.pagination`, so this keeps the house `results` key
+        and swaps the pagination block for a `job` block. Zero rows also get the CQL
+        guide and a hint chosen from `job.processed_events`.
+
+        Args:
+            events: The event records returned by the job
+            job: Job metadata from `_extract_job_metadata`
+            query_string: The CQL query as submitted
+
+        Returns:
+            Dict with `results`, `query_used`, `job`, and on zero rows also
+            `cql_guide` and `hint`
+        """
+        envelope: dict[str, Any] = {
+            "results": events,
+            "query_used": query_string,
+            "job": job,
+        }
+
+        if events:
+            return envelope
+
+        processed = job.get("processed_events")
+        if isinstance(processed, int) and not isinstance(processed, bool) and processed > 0:
+            hint = _CQL_CONFIRMED_ZERO_HINT.format(processed_events=processed)
+        else:
+            hint = _CQL_UNSCANNED_ZERO_HINT
+
+        envelope["cql_guide"] = SEARCH_NGSIEM_CQL_DOCUMENTATION
+        envelope["hint"] = hint
+        return envelope
+
     async def search_ngsiem(
         self,
         query_string: str = Field(
@@ -148,7 +304,8 @@ class NGSIEMModule(BaseModule):
                 "third-party (third-party source events), "
                 "falcon_for_it_view (Falcon for IT data), "
                 "forensics_view (Falcon Forensics triage data). "
-                "Custom and other built-in repositories/views can also be passed by name."
+                "Custom and other built-in repositories/views can also be passed by name. "
+                "Pass the bare name only: values containing '/', '\\', or '%' are rejected."
             ),
         ),
         end: str | None = Field(
@@ -160,7 +317,7 @@ class NGSIEMModule(BaseModule):
             ),
             examples={"2025-01-01T00:00:00Z"},
         ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a CQL (CrowdStrike Query Language) query against CrowdStrike Next-Gen SIEM.
 
         Use this to search security events, logs, and telemetry with CQL. CQL is a
@@ -169,14 +326,21 @@ class NGSIEMModule(BaseModule):
         commands like `groupBy([...], function=count())` and `sort()`; keep the time
         range tight. Consult `falcon://ngsiem/search/cql-guide` to construct the query —
         it has the pipe model, core commands, and working examples (distinct count, time
-        bucketing, regex match, filtering on an aggregate). Returns matching event
-        records, or an error/empty dict carrying the CQL guide when the job fails,
-        times out, or returns no rows. Note: the API does not return detailed CQL parser
-        diagnostics — a malformed query may error or silently return unexpected/empty
-        results rather than a helpful message, so a result is not proof the query parsed
-        as intended. Search times out after FALCON_MCP_NGSIEM_TIMEOUT seconds
-        (default: 300).
+        bucketing, regex match, filtering on an aggregate). Returns
+        `{results, query_used, job}`, where `job` carries the row count, events scanned,
+        the window searched, and `job.parsed_query` — the API's own normalization of the
+        query it ran. Check `job.parsed_query` against your intent: unrecognized words
+        become free-text stages instead of an error, so `| limit 5` runs as `| limit | 5`
+        and returns the wrong rows silently. On zero rows a hint says whether the job
+        scanned events (a real negative) or scanned none (unresolved). Search times out
+        after FALCON_MCP_NGSIEM_TIMEOUT seconds (default: 300).
         """
+        # `repository` is interpolated into the request path, so validate it before it
+        # can reach any of the three calls below.
+        repository_error = _validate_repository(repository)
+        if repository_error is not None:
+            return repository_error
+
         # Step 1: Start the search job
         # Note: FalconPy uber class passes body unchanged; API expects camelCase keys
         body_params: dict[str, Any] = {
@@ -217,6 +381,7 @@ class NGSIEMModule(BaseModule):
 
         # Step 2: Poll for completion
         elapsed = 0.0
+        last_job_meta: dict[str, Any] | None = None
         while elapsed < TIMEOUT_SECONDS:
             await asyncio.sleep(POLL_INTERVAL_SECONDS)
             elapsed += POLL_INTERVAL_SECONDS
@@ -238,33 +403,36 @@ class NGSIEMModule(BaseModule):
                 return self._format_cql_error_response(error_response, query_string)
 
             body = poll_response.get("body", {})
+            last_job_meta = self._extract_job_metadata(body, repository, job_id)
             if body.get("done"):
                 logger.debug("NGSIEM search job completed: %s", job_id)
-                events = body.get("events", [])
-                if not events:
-                    # The API free-text-matches invalid CQL and returns 200 with an
-                    # empty list, so an empty result is the most common silent-failure
-                    # signal. Return the guide + hint so the model can self-correct.
-                    return {
-                        "results": [],
-                        "query_used": query_string,
-                        "cql_guide": SEARCH_NGSIEM_CQL_DOCUMENTATION,
-                        "hint": _CQL_EMPTY_HINT,
-                    }
-                return events
+                return self._build_job_envelope(
+                    body.get("events") or [],
+                    last_job_meta,
+                    query_string,
+                )
 
         # Step 3: Timeout — attempt cleanup
         logger.warning("NGSIEM search job timed out: %s", job_id)
-        await self.client.command_async(
+        stop_response = await self.client.command_async(
             operation="StopSearchV1",
             repository=repository,
             id=job_id,
         )
 
+        # How far the job got, and whether cleanup actually stopped it.
+        details: dict[str, Any] = {
+            "job_id": job_id,
+            "timeout_seconds": TIMEOUT_SECONDS,
+            "stop_status_code": stop_response.get("status_code"),
+        }
+        if last_job_meta is not None:
+            details["last_job_status"] = last_job_meta
+
         error_response = _format_error_response(
             message=f"NGSIEM search timed out after {TIMEOUT_SECONDS} seconds. "
             "Try narrowing your query or reducing the time range.",
-            details={"job_id": job_id, "timeout_seconds": TIMEOUT_SECONDS},
+            details=details,
             operation="GetSearchStatusV1",
         )
         return self._format_cql_error_response(error_response, query_string)

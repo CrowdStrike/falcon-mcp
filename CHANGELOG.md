@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.17.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.16.1...v0.17.0) (2026-08-22)
+
+
+### Features
+
+* **modules/agentworks:** add AgentWorks module for calling and observing Charlotte AI agents ([#538](https://github.com/CrowdStrike/falcon-mcp/issues/538)) ([7919f50](https://github.com/CrowdStrike/falcon-mcp/commit/7919f505384713d3b6b37bd098ef150f544d145c))
+* **modules/cases:** add description_format to create/update case ([#531](https://github.com/CrowdStrike/falcon-mcp/issues/531)) ([fa52750](https://github.com/CrowdStrike/falcon-mcp/commit/fa52750dcc403dad9ad361d7fa73130757092f13))
+* **modules/discover:** add falcon_search_managed_assets ([#537](https://github.com/CrowdStrike/falcon-mcp/issues/537)) ([5148e3c](https://github.com/CrowdStrike/falcon-mcp/commit/5148e3cec25a194216907988c10f941c48de8904))
+* **modules/fusion:** add Fusion SOAR module for running and observing workflows ([#543](https://github.com/CrowdStrike/falcon-mcp/issues/543)) ([1b76e26](https://github.com/CrowdStrike/falcon-mcp/commit/1b76e26521f672b5f4f5efe6cfc04ee404a4fcab))
+* **modules/recon:** add aggregation and rule-preview tools ([#527](https://github.com/CrowdStrike/falcon-mcp/issues/527)) ([ecf8813](https://github.com/CrowdStrike/falcon-mcp/commit/ecf8813cc62655f29dcc9386d40e44c744bd6daa))
+* **modules/zero-trust-assessment:** add Zero Trust Assessment module ([#542](https://github.com/CrowdStrike/falcon-mcp/issues/542)) ([a3267e6](https://github.com/CrowdStrike/falcon-mcp/commit/a3267e6da4692b2ec1727e90f8628df5d50d6c21))
+
+
+### Bug Fixes
+
+* **modules/firewall:** drop ignored q param and fix name-glob filter docs ([#528](https://github.com/CrowdStrike/falcon-mcp/issues/528)) ([a9da031](https://github.com/CrowdStrike/falcon-mcp/commit/a9da031de52f13b8606d71c10b64b3f78dcfca89)), closes [#525](https://github.com/CrowdStrike/falcon-mcp/issues/525)
+* **modules/ngsiem:** reject repository values that break path construction ([#544](https://github.com/CrowdStrike/falcon-mcp/issues/544)) ([e8b649f](https://github.com/CrowdStrike/falcon-mcp/commit/e8b649f6d1750e38547ab90088bd8a4049fce3eb))
+* **modules/ngsiem:** return job metadata so a zero-row result is provably one ([#539](https://github.com/CrowdStrike/falcon-mcp/issues/539)) ([1ff6323](https://github.com/CrowdStrike/falcon-mcp/commit/1ff6323b669d47c885c2ec8eac63f09c30fea6b0))
+* **modules/policies:** reject settings for firewall policies ([#529](https://github.com/CrowdStrike/falcon-mcp/issues/529)) ([c92c69f](https://github.com/CrowdStrike/falcon-mcp/commit/c92c69f46b0c432bb8fe659f09c23a48b9cb9800)), closes [#526](https://github.com/CrowdStrike/falcon-mcp/issues/526)
+* **modules/policies:** send rule_group_id for rule-group actions ([#540](https://github.com/CrowdStrike/falcon-mcp/issues/540)) ([42aafb1](https://github.com/CrowdStrike/falcon-mcp/commit/42aafb162a3ad2749723370725c8e8b0d9e4beee))
+
 ## [0.16.1](https://github.com/CrowdStrike/falcon-mcp/compare/v0.16.0...v0.16.1) (2026-08-10)
 
 

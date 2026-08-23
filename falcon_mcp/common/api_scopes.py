@@ -96,6 +96,16 @@ API_SCOPE_REQUIREMENTS = {
     "StartSearchV1": ["NGSIEM:write"],
     "GetSearchStatusV1": ["NGSIEM:read"],
     "StopSearchV1": ["NGSIEM:write"],
+    # AgentWorks (agentic-studio, override endpoints)
+    "QueryAgentsV2": ["Charlotte AI Agent Definition:read"],
+    "GetAgentsV2": ["Charlotte AI Agent Definition:read"],
+    "QueryAgentVersionsV1": ["Charlotte AI Agent Definition:read"],
+    "GetAgentVersionsV1": ["Charlotte AI Agent Definition:read"],
+    "QueriesSpansV1": ["Charlotte AI Agent Definition:read"],
+    "EntitiesSpansV1": ["Charlotte AI Agent Definition:read"],
+    "GetAgentInvocationV3": ["Charlotte AI Agent Definition:read"],
+    "InvokePublishedAgentExternalV1": ["Charlotte AI Agent Definition:write"],
+    "InvokeAgentVersionExternalV1": ["Charlotte AI Agent Definition:write"],
     # Real Time Response operations
     "RTR_ListAllSessions": ["Real time response:read"],
     "RTR_ListSessions": ["Real time response:read"],
@@ -270,6 +280,15 @@ API_SCOPE_REQUIREMENTS = {
     "deleteContentUpdatePolicies": ["Content Update Policies:write"],
     "performContentUpdatePoliciesAction": ["Content Update Policies:write"],
     "setContentUpdatePoliciesPrecedence": ["Content Update Policies:write"],
+    # Zero Trust Assessment operations
+    "getAssessmentsByScoreV1": ["Zero Trust Assessment:read"],
+    "getAssessmentV1": ["Zero Trust Assessment:read"],
+    "getAuditV1": ["Zero Trust Assessment:read"],
+    # Fusion SOAR Workflows operations
+    "WorkflowDefinitionsCombined": ["Workflows:read"],
+    "WorkflowExecutionsCombined": ["Workflows:read"],
+    "WorkflowExecutionResults": ["Workflows:read"],
+    "WorkflowExecute": ["Workflows:write"],
 }
 
 

@@ -7,6 +7,28 @@ without needing to read the full FQL resource.
 """
 
 FILTER_HINTS: dict[str, str] = {
+    # === AgentWorks ===
+    "falcon_search_agentworks_agents": (
+        "Common fields: template_id, active_version.model "
+        "(e.g. 'bedrock.claude-4-6-sonnet'), published_version_ids. "
+        "The agent has no top-level name/model — filter model via active_version.model. "
+        "No wildcards. Sort by created_date. "
+        "Ex: active_version.model:'bedrock.claude-4-6-sonnet'"
+    ),
+    "falcon_search_agentworks_agent_versions": (
+        "Common fields: agent_id, name (exact, no wildcards), model, "
+        "is_published (true|false), is_enabled (true|false), created_at (UTC datetime). "
+        "Sort by created_at. "
+        "Ex: agent_id:'<uuid>'+is_published:true"
+    ),
+    "falcon_search_agentworks_spans": (
+        "ALWAYS filter, usually by trace_id (pass an invocation's ai_trace_id). "
+        "Common fields: trace_id, span_type (llm|aw_agent|aiplatform_agent|...), "
+        "status (unset|ok|error), name, duration_ms, "
+        "start_time (last 90 days only, e.g. start_time:>'now-7d'). "
+        "Sort by start_time. "
+        "Ex: trace_id:'<ai_trace_id>'"
+    ),
     # === Detections ===
     "falcon_search_detections": (
         "Common fields: severity_name (Critical|High|Medium|Low|Informational), "
@@ -153,6 +175,20 @@ FILTER_HINTS: dict[str, str] = {
         "external_ip, local_ip_addresses, os_version, "
         "first_seen_timestamp (UTC datetime), last_seen_timestamp (UTC datetime)."
     ),
+    # === Discover: Managed Assets ===
+    "falcon_search_managed_assets": (
+        "Common fields: aid (Falcon agent ID - same value as the device ID from "
+        "falcon_search_hosts; if you already have one, prefer it since it is unique "
+        "per sensor, but you do not need to fetch it first), "
+        "encryption_status (Encrypted|Unencrypted), "
+        "unencrypted_drives_count/number_of_disk_drives (numbers, use :>0), "
+        "os_security.credential_guard_status / os_security.secure_boot_enabled_status / "
+        "os_security.iommu_protection_status (booleans, use true|false - NOT 'Enabled'), "
+        "used_disk_space/total_memory/average_processor_usage (numbers, use :>0), "
+        "platform_name (Windows|Linux|Mac), criticality, internet_exposure (Yes|No), "
+        "last_seen_timestamp:>'now-24h' (relative date). "
+        "Ex: encryption_status:'Unencrypted'+platform_name:'Windows'"
+    ),
     # === Firewall Rules ===
     "falcon_search_firewall_rules": (
         "Common fields: platform (windows|mac|linux), name, "
@@ -272,8 +308,7 @@ FILTER_HINTS: dict[str, str] = {
         "is_default (true|false), precedence, created_at (UTC datetime), modified_by."
     ),
     "falcon_search_data_protection_content_patterns": (
-        "Common fields: name, category, type, region, "
-        "example, deleted (true|false)."
+        "Common fields: name, category, type, region, example, deleted (true|false)."
     ),
     # === Recon ===
     "falcon_search_recon_notifications": (
@@ -347,6 +382,27 @@ FILTER_HINTS: dict[str, str] = {
         "status (open|closed|reopen), host_info.hostname, "
         "cve.exploit_status, created_timestamp (UTC datetime)."
     ),
+    # === Fusion SOAR ===
+    "falcon_search_workflow_definitions": (
+        "Common fields: name.raw (exact: name.raw:'Full Name'; substring: name.raw:*'*part*'), "
+        "id, enabled (true|false), trigger.type (On demand|Signal|Scheduled), version, "
+        "description, last_modified_timestamp. "
+        "Use name.raw, NOT name — name is analyzed and matches whole tokens only. "
+        "trigger.type:'On demand' workflows are the ones to execute; 'Signal' ones are refused. "
+        "Date filters: last_modified_timestamp:>'now-30d' (relative). "
+        "Sort uses dots (name.asc), not pipes. "
+        "Ex: enabled:true+trigger.type:'On demand'"
+    ),
+    "falcon_search_workflow_executions": (
+        "Common fields: id (the response calls it execution_id), definition_id, "
+        "ui_status (Completed|Failed|In progress|Action required), definition_name (~ token match), "
+        "definition_version, test_mode, contains_mocks. "
+        "Filter status via ui_status — the `status` field uses a different vocabulary "
+        "('Succeeded' not 'Completed'). "
+        "Date filters: started_timestamp:>'now-7d', completed_timestamp:>'now-1d' "
+        "(NOT start_timestamp/end_timestamp — those are response-only names). "
+        "Ex: ui_status:'Completed'+started_timestamp:>'now-7d'"
+    ),
 }
 
 
@@ -360,8 +416,10 @@ QUERY_STRING_HINTS: dict[str, str] = {
         "(no SELECT/WHERE/stats/`| limit`). Start from a tag filter "
         "`#event_simpleName=ProcessRollup2`, then pipe into `groupBy([field], "
         "function=count())`, `sort(_count, order=desc)`, and `head(n)` to cap raw "
-        "events. For distinct count, time bucketing, regex/contains match, or "
+        "events. Unrecognized words become free-text stages instead of an error, so "
+        "check `job.parsed_query` against your intent; on zero rows, "
+        "`job.processed_events` above zero means a real negative. "
+        "For distinct count, time bucketing, regex/contains match, or "
         "filtering on an aggregate, see `falcon://ngsiem/search/cql-guide`."
     ),
 }
-

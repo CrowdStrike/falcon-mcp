@@ -1,6 +1,6 @@
 {
   "name": "falcon-mcp",
-  "version": "0.16.1",
+  "version": "0.17.0",
   "mcpServers": {
     "falcon-mcp": {
       "command": "uvx",

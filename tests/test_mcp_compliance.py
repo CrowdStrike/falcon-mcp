@@ -62,6 +62,8 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     # cloud module (cspm suppression rules)
     "falcon_create_cspm_suppression_rule",
     "falcon_delete_cspm_suppression_rules",
+    # agentworks module
+    "falcon_invoke_agentworks_agent",
     # cases module
     "falcon_create_case",
     "falcon_update_case",
@@ -87,6 +89,8 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     "falcon_set_policy_precedence",
     # detections module
     "falcon_update_detections",
+    # fusion module
+    "falcon_execute_workflow",
 }
 
 RESOURCE_URI_PATTERN = re.compile(r"^falcon://[a-z0-9-]+(/[a-z0-9-]+)+/[a-z]+-guide$")

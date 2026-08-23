@@ -117,11 +117,13 @@ class TestNGSIEMModule(TestModules):
         self.assertEqual(second_call[1]["search_id"], "job-123")
         self.assertEqual(second_call[1]["repository"], "search-all")
 
-        # Verify result is the events list
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["aid"], "agent-1")
-        self.assertEqual(result[1]["event"], "DnsRequest")
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["results"][0]["aid"], "agent-1")
+        self.assertEqual(result["results"][1]["event"], "DnsRequest")
+        # A populated result carries no guide/hint
+        self.assertNotIn("cql_guide", result)
+        self.assertNotIn("hint", result)
 
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
     def test_search_ngsiem_multiple_polls(self, mock_sleep):
@@ -159,9 +161,9 @@ class TestNGSIEMModule(TestModules):
         self.assertEqual(self.mock_client.command.call_count, 4)
 
         # Verify result
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["aid"], "agent-1")
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["results"][0]["aid"], "agent-1")
 
     @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
     def test_search_ngsiem_start_error(self, mock_sleep):
@@ -232,7 +234,7 @@ class TestNGSIEMModule(TestModules):
         }
         poll_not_done = {
             "status_code": 200,
-            "body": {"done": False},
+            "body": {"done": False, "metaData": {"processedEvents": 4200, "timeMillis": 9000}},
         }
         stop_response = {
             "status_code": 200,
@@ -267,6 +269,10 @@ class TestNGSIEMModule(TestModules):
         self.assertIn("details", result)
         self.assertEqual(result["details"]["job_id"], "job-timeout")
         self.assertEqual(result["details"]["timeout_seconds"], 10)
+        # Cleanup outcome and how far the job got before the deadline
+        self.assertEqual(result["details"]["stop_status_code"], 200)
+        self.assertEqual(result["details"]["last_job_status"]["processed_events"], 4200)
+        self.assertEqual(result["details"]["last_job_status"]["duration_ms"], 9000)
         # Verify the CQL guide + repair hint reach the model on timeout
         self.assertIn("cql_guide", result)
         self.assertIn("hint", result)
@@ -405,6 +411,343 @@ class TestNGSIEMModule(TestModules):
         self.assertIn("cql_guide", result)
         self.assertIn("hint", result)
         self.assertEqual(result["query_used"], "aid=abc123")
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_search_ngsiem_surfaces_job_metadata_on_success(self, mock_sleep):
+        """A populated result carries the job metadata, mapped from the real body shape."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"id": "job-meta"}},
+            {
+                "status_code": 200,
+                "body": {
+                    "done": True,
+                    "cancelled": False,
+                    "events": [{"aid": "agent-1"}],
+                    "warnings": [],
+                    "metaData": {
+                        "eventCount": 1,
+                        "processedEvents": 189064,
+                        "processedBytes": 498887584,
+                        "timeMillis": 5799,
+                        "isAggregate": False,
+                        "queryStart": 1735689600000,  # 2025-01-01T00:00:00Z
+                        "queryEnd": 1735693200000,  # 2025-01-01T01:00:00Z
+                        "warnings": [],
+                        "filterQuery": {"queryString": "#event_simpleName=ProcessRollup2"},
+                    },
+                },
+            },
+        ]
+
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="#event_simpleName=ProcessRollup2 | head(1)",
+                start="2025-01-01T00:00:00Z",
+                repository="search-all",
+            )
+        )
+
+        job = result["job"]
+        self.assertEqual(job["job_id"], "job-meta")
+        self.assertEqual(job["repository"], "search-all")
+        self.assertEqual(job["event_count"], 1)
+        self.assertEqual(job["processed_events"], 189064)
+        self.assertEqual(job["processed_bytes"], 498887584)
+        self.assertEqual(job["duration_ms"], 5799)
+        self.assertIs(job["is_aggregate"], False)
+        self.assertIs(job["cancelled"], False)
+        self.assertEqual(job["warnings"], [])
+        self.assertEqual(job["search_start"], "2025-01-01T00:00:00Z")
+        self.assertEqual(job["search_end"], "2025-01-01T01:00:00Z")
+        self.assertEqual(result["query_used"], "#event_simpleName=ProcessRollup2 | head(1)")
+        self.assertEqual(job["parsed_query"], "#event_simpleName=ProcessRollup2")
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_search_ngsiem_exposes_misparse_on_populated_result(self, mock_sleep):
+        """A misparsed query still returns rows, so parsed_query must survive success.
+
+        Live, `| limit 5` returns 147 rows for a query the caller believes caps at 5.
+        """
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"id": "job-misparse"}},
+            {
+                "status_code": 200,
+                "body": {
+                    "done": True,
+                    "events": [{"aid": f"agent-{i}"} for i in range(147)],
+                    "metaData": {
+                        "eventCount": 147,
+                        "processedEvents": 66067,
+                        "filterQuery": {
+                            "queryString": "#event_simpleName=ProcessRollup2 | limit | 5"
+                        },
+                    },
+                },
+            },
+        ]
+
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="#event_simpleName=ProcessRollup2 | limit 5",
+                start="2025-01-01T00:00:00Z",
+            )
+        )
+
+        self.assertEqual(len(result["results"]), 147)
+        self.assertEqual(
+            result["job"]["parsed_query"], "#event_simpleName=ProcessRollup2 | limit | 5"
+        )
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_zero_rows_with_events_scanned_is_reported_as_a_real_negative(self, mock_sleep):
+        """A job that scanned events and matched none is stated as a true negative.
+
+        Live, a valid filter on an absent aid scans thousands of events; a misparsed
+        query scans zero. So a nonzero scan count settles it.
+        """
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"id": "job-zero"}},
+            {
+                "status_code": 200,
+                "body": {
+                    "done": True,
+                    "events": [],
+                    "metaData": {
+                        "eventCount": 0,
+                        "processedEvents": 90102,
+                        "processedBytes": 23734288,
+                        "filterQuery": {"queryString": "#event_simpleName=DnsRequest"},
+                    },
+                },
+            },
+        ]
+
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="#event_simpleName=DnsRequest DomainName=*example*",
+                start="2025-01-01T00:00:00Z",
+            )
+        )
+
+        self.assertEqual(result["results"], [])
+        self.assertEqual(result["job"]["processed_events"], 90102)
+        # The scan count is quoted back, and the verdict is stated, not doubted
+        self.assertIn("90,102", result["hint"])
+        self.assertIn("a real negative", result["hint"])
+        self.assertNotIn("not a confirmed negative", result["hint"])
+        self.assertNotIn("it is also how the API reports an invalid query", result["hint"])
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_zero_rows_with_nothing_scanned_stays_unresolved(self, mock_sleep):
+        """Zero scanned events is ambiguous, so the hint points at parsed_query.
+
+        Live, both an empty tag partition and a misparse scan zero.
+        """
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"id": "job-unscanned"}},
+            {
+                "status_code": 200,
+                "body": {
+                    "done": True,
+                    "events": [],
+                    "metaData": {
+                        "eventCount": 0,
+                        "processedEvents": 0,
+                        "processedBytes": 0,
+                        "filterQuery": {"queryString": "#event_simpleName=ProcessRollupTwo"},
+                    },
+                },
+            },
+        ]
+
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="#event_simpleName=ProcessRollupTwo | head(3)",
+                start="2025-01-01T00:00:00Z",
+            )
+        )
+
+        self.assertEqual(result["job"]["processed_events"], 0)
+        self.assertIn("not a confirmed negative", result["hint"])
+        self.assertIn("parsed_query", result["hint"])
+        self.assertIn("cql_guide", result)
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_absent_metadata_reports_none_rather_than_zero(self, mock_sleep):
+        """A response without metaData reports None, not a fabricated 0."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"id": "job-bare"}},
+            {"status_code": 200, "body": {"done": True, "events": []}},
+        ]
+
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="aid=abc123",
+                start="2025-01-01T00:00:00Z",
+            )
+        )
+
+        job = result["job"]
+        self.assertIsNone(job["event_count"])
+        self.assertIsNone(job["processed_events"])
+        self.assertIsNone(job["parsed_query"])
+        self.assertIsNone(job["search_start"])
+        self.assertIsNone(job["search_end"])
+        self.assertIn("not a confirmed negative", result["hint"])
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_warnings_are_merged_from_both_scopes(self, mock_sleep):
+        """Warnings from both the job-level and metaData scopes reach the caller."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"id": "job-warn"}},
+            {
+                "status_code": 200,
+                "body": {
+                    "done": True,
+                    "events": [{"aid": "agent-1"}],
+                    "warnings": ["job-level warning"],
+                    "metaData": {"warnings": ["query-level warning"]},
+                },
+            },
+        ]
+
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="aid=abc123",
+                start="2025-01-01T00:00:00Z",
+            )
+        )
+
+        self.assertEqual(result["job"]["warnings"], ["job-level warning", "query-level warning"])
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_empty_and_populated_results_share_one_shape(self, mock_sleep):
+        """Both outcomes must be the same shape, so a caller needs one parse path."""
+        common = ["results", "query_used", "job"]
+
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"id": "job-a"}},
+            {"status_code": 200, "body": {"done": True, "events": [{"aid": "agent-1"}]}},
+        ]
+        populated = asyncio.run(
+            self.module.search_ngsiem(query_string="aid=a", start="2025-01-01T00:00:00Z")
+        )
+
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"id": "job-b"}},
+            {"status_code": 200, "body": {"done": True, "events": []}},
+        ]
+        empty = asyncio.run(
+            self.module.search_ngsiem(query_string="aid=b", start="2025-01-01T00:00:00Z")
+        )
+
+        for key in common:
+            self.assertIn(key, populated)
+            self.assertIn(key, empty)
+        self.assertIsInstance(populated["results"], list)
+        self.assertIsInstance(empty["results"], list)
+        self.assertEqual(sorted(populated["job"]), sorted(empty["job"]))
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_repository_that_would_alter_the_request_path_is_rejected(self, mock_sleep):
+        """`repository` reaches a URL path variable, so it must not carry path syntax.
+
+        FalconPy interpolates path variables into the route, and `requests` then
+        normalizes the path before sending it. An unencoded separator or dot-segment
+        therefore retargets the request: `a/../../oauth2/token` builds
+        `/humio/api/v1/repositories/a/../../oauth2/token/queryjobs`, which normalizes
+        to `/humio/api/v1/oauth2/token/queryjobs` — a different route than
+        StartSearchV1 selected. Reject before any call rather than relying on the SDK.
+
+        The client is wired to succeed, so without the guard this reports a clean
+        search result and the assertions fail on that, not on a mock error.
+        """
+        for repository in (
+            "a/../../oauth2/token",
+            "search-all/queryjobs",
+            "..",
+            "../search-all",
+            "search\\all",
+            "search%2Fall",
+        ):
+            with self.subTest(repository=repository):
+                self.mock_client.command.reset_mock()
+                self.mock_client.command.side_effect = [
+                    {"status_code": 200, "body": {"id": "job-should-not-run"}},
+                    {"status_code": 200, "body": {"done": True, "events": []}},
+                ]
+
+                result = asyncio.run(
+                    self.module.search_ngsiem(
+                        query_string="aid=abc123",
+                        start="2025-01-01T00:00:00Z",
+                        repository=repository,
+                    )
+                )
+
+                self.assertIn("error", result)
+                self.assertIn("repository", result["error"])
+                # The guard is worthless if the request still goes out.
+                self.assertEqual(self.mock_client.command.call_count, 0)
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_repository_rejection_does_not_offer_the_cql_guide(self, mock_sleep):
+        """A bad `repository` is not a CQL mistake, so it must not ship the CQL guide.
+
+        Every other error path here routes through `_format_cql_error_response`, which
+        attaches the full guide and tells the model to correct its query. Doing that
+        for an argument error would send the model to rewrite a query that was fine.
+        """
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"id": "job-should-not-run"}},
+            {"status_code": 200, "body": {"done": True, "events": []}},
+        ]
+
+        result = asyncio.run(
+            self.module.search_ngsiem(
+                query_string="aid=abc123",
+                start="2025-01-01T00:00:00Z",
+                repository="a/../../oauth2/token",
+            )
+        )
+
+        self.assertIn("error", result)
+        self.assertNotIn("cql_guide", result)
+        self.assertNotIn("hint", result)
+
+    @patch("falcon_mcp.modules.ngsiem.asyncio.sleep", new_callable=AsyncMock)
+    def test_documented_repository_names_still_pass_the_guard(self, mock_sleep):
+        """The guard must not reject the repositories the tool advertises.
+
+        The field description names these and says custom views may also be passed,
+        so an over-strict rule would break normal use. This is the counterweight to
+        the rejection test above.
+        """
+        for repository in (
+            "search-all",
+            "investigate_view",
+            "xdr",
+            "third-party",
+            "falcon_for_it_view",
+            "forensics_view",
+        ):
+            with self.subTest(repository=repository):
+                self.mock_client.command.reset_mock()
+                self.mock_client.command.side_effect = [
+                    {"status_code": 200, "body": {"id": "job-ok"}},
+                    {"status_code": 200, "body": {"done": True, "events": []}},
+                ]
+
+                result = asyncio.run(
+                    self.module.search_ngsiem(
+                        query_string="aid=abc123",
+                        start="2025-01-01T00:00:00Z",
+                        repository=repository,
+                    )
+                )
+
+                self.assertNotIn("error", result)
+                self.assertEqual(self.mock_client.command.call_count, 2)
 
 
 class TestNGSIEMModuleConfig(unittest.TestCase):

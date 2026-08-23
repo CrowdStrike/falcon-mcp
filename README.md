@@ -26,15 +26,17 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | Module | Description |
 | ------ | ----------- |
 | Core | Basic connectivity and system information |
+| [AgentWorks](https://developer.crowdstrike.com/falcon-mcp/modules/agentworks/) | Call, list, and observe Charlotte AI agents and their execution traces |
 | [Case Management](https://developer.crowdstrike.com/falcon-mcp/modules/cases/) | Case lifecycle management, evidence attachment, tagging, and templates |
 | [Cloud Security](https://developer.crowdstrike.com/falcon-mcp/modules/cloud/) | Kubernetes containers, image vulnerabilities, CSPM asset inventory, IOM findings, suppression rules, cloud risks, cloud insights, and cloud groups |
 | [Correlation Rules](https://developer.crowdstrike.com/falcon-mcp/modules/correlationrules/) | Search, create, update, and manage NG-SIEM correlation rules |
 | [Custom IOA](https://developer.crowdstrike.com/falcon-mcp/modules/custom-ioa/) | Create and manage Custom IOA behavioral detection rules and rule groups |
 | [Data Protection](https://developer.crowdstrike.com/falcon-mcp/modules/data-protection/) | Search Data Protection classifications, policies, and content patterns |
 | [Detections](https://developer.crowdstrike.com/falcon-mcp/modules/detections/) | Find, aggregate, and analyze detections to understand malicious activity |
-| [Discover](https://developer.crowdstrike.com/falcon-mcp/modules/discover/) | Search application inventory and discover unmanaged assets |
+| [Discover](https://developer.crowdstrike.com/falcon-mcp/modules/discover/) | Search application inventory and managed/unmanaged assets, including drive encryption and system-insights posture |
 | [Exclusions](https://developer.crowdstrike.com/falcon-mcp/modules/exclusions/) | Search, create, update, and delete IOA, machine learning, sensor visibility, and certificate-based exclusions |
 | [Firewall Management](https://developer.crowdstrike.com/falcon-mcp/modules/firewall/) | Search and manage firewall rules and rule groups |
+| [Fusion SOAR](https://developer.crowdstrike.com/falcon-mcp/modules/fusion/) | Search Fusion SOAR workflow definitions and executions, read execution results, and run on-demand workflows |
 | [Host Groups](https://developer.crowdstrike.com/falcon-mcp/modules/host-groups/) | Search, create, update, and delete host groups; manage group membership |
 | [Hosts](https://developer.crowdstrike.com/falcon-mcp/modules/hosts/) | Manage and query host/device information |
 | [Identity Protection](https://developer.crowdstrike.com/falcon-mcp/modules/idp/) | Entity investigation and identity protection analysis |
@@ -50,6 +52,7 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | [Serverless](https://developer.crowdstrike.com/falcon-mcp/modules/serverless/) | Search for vulnerabilities in serverless functions |
 | [Shield](https://developer.crowdstrike.com/falcon-mcp/modules/shield/) | SaaS security posture, checks, alerts, and app inventory |
 | [Spotlight](https://developer.crowdstrike.com/falcon-mcp/modules/spotlight/) | Manage and analyze vulnerability data and security assessments |
+| [Zero Trust Assessment](https://developer.crowdstrike.com/falcon-mcp/modules/zero-trust-assessment/) | Retrieve Zero Trust Assessment posture scores and sensor and OS hardening signals for hosts |
 
 See the [Module Overview](https://developer.crowdstrike.com/falcon-mcp/modules/overview/) for required API scopes, available tools, and FQL resources.
 

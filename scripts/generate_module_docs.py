@@ -30,6 +30,9 @@ SITE_BASE_PATH = "/falcon-mcp"
 # Titles and descriptions are auto-derived from module docstrings.
 # Add entries here when you need a custom title, slug, or description.
 MODULE_METADATA: dict[str, dict[str, Any]] = {
+    "agentworks": {
+        "title": "AgentWorks",
+    },
     "cases": {
         "title": "Case Management",
         "slug": "cases",
@@ -42,6 +45,9 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     },
     "dataprotection": {
         "slug": "data-protection",
+    },
+    "fusion": {
+        "title": "Fusion SOAR",
     },
     "hostgroups": {
         "slug": "host-groups",
@@ -61,10 +67,35 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     "shield": {
         "title": "Shield",
     },
+    "zerotrustassessment": {
+        "title": "Zero Trust Assessment",
+        "slug": "zero-trust-assessment",
+    },
 }
 
 # Natural language prompt examples for each tool, shown in generated docs
 TOOL_EXAMPLES: dict[str, list[str]] = {
+    # AgentWorks
+    "falcon_search_agentworks_agents": [
+        "List my AgentWorks agents",
+        "Which agents run on the claude-4-6-sonnet model?",
+    ],
+    "falcon_search_agentworks_agent_versions": [
+        "Show me all versions of agent 467e856f",
+        "Find the published versions of this agent",
+    ],
+    "falcon_search_agentworks_spans": [
+        "Show the spans for trace abc123",
+        "Find errored LLM spans in trace abc123",
+    ],
+    "falcon_get_agentworks_agent_invocation": [
+        "Check the status of invocation inv-123",
+    ],
+    "falcon_invoke_agentworks_agent": [
+        "Run the IOC review agent with the prompt 'Reply OK'",
+        "Invoke agent 467e856f and summarize today's critical detections",
+        "Test version v-42 of this agent with the prompt 'Reply OK'",
+    ],
     # Cases
     "falcon_search_cases": [
         "Show me any open cases with high severity or above",
@@ -76,10 +107,12 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_create_case": [
         "Create a critical case called 'Suspicious lateral movement from WORKSTATION-42'",
         "Open a high-severity case for the credential theft alerts and attach them as evidence",
+        "Create a case with a markdown-formatted description",
     ],
     "falcon_update_case": [
         "Set that case to in_progress and assign it to the analyst",
         "Close the case — investigation is complete",
+        "Rewrite the case description as markdown",
     ],
     "falcon_add_case_alert_evidence": [
         "Attach these detection alerts to the case",
@@ -256,6 +289,10 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     ],
     "falcon_search_unmanaged_assets": [
         "Show me unmanaged Windows devices on the network",
+    ],
+    "falcon_search_managed_assets": [
+        "Which managed Windows hosts are unencrypted?",
+        "List critical assets that don't have Credential Guard enabled",
     ],
     # Firewall
     "falcon_search_firewall_rules": [
@@ -555,6 +592,38 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     ],
     "falcon_delete_rtr_session": [
         "End the RTR session abc123",
+    ],
+    # Zero Trust Assessment
+    "falcon_search_zta_assessments": [
+        "Which hosts have the weakest Zero Trust posture?",
+        "Show me hosts scoring below 40 on Zero Trust Assessment",
+    ],
+    "falcon_get_zta_assessments": [
+        "What is the security posture of host WEB-01?",
+        "Show the Zero Trust hardening signals for this agent ID",
+    ],
+    "falcon_get_zta_audit": [
+        "What is our overall Zero Trust score?",
+        "Break down our Zero Trust posture by platform",
+    ],
+    # Fusion SOAR
+    "falcon_search_workflow_definitions": [
+        "What Fusion SOAR workflows can I trigger on demand?",
+        "Find the Fusion workflow called 'Adversary Exposure Mitigation'",
+        "Which Fusion workflows are currently disabled?",
+    ],
+    "falcon_search_workflow_executions": [
+        "Show me workflow executions that completed",
+        "Which Fusion workflows failed in the last 7 days?",
+        "Are any workflow runs waiting on someone to approve them?",
+    ],
+    "falcon_get_workflow_execution_results": [
+        "What did workflow execution 714511d8 actually do?",
+        "Show me the ticket number the incident workflow created",
+    ],
+    "falcon_execute_workflow": [
+        "Run the 'Notify SOC Channel' workflow",
+        "Start workflow 2617e3fc with the hash abc123",
     ],
 }
 

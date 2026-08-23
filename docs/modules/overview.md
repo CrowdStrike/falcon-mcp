@@ -8,15 +8,17 @@ The Falcon MCP Server provides the following modules. Each module requires speci
 
 | Module | API Scopes | Description |
 |--------|-------------------|-------------|
+| [AgentWorks](/falcon-mcp/modules/agentworks/) | `Charlotte AI Agent Definition:read`, `Charlotte AI Agent Definition:write` | Calling, listing, and observing CrowdStrike AgentWorks (agentic-studio) Charlotte AI agents and their execution traces |
 | [Case Management](/falcon-mcp/modules/cases/) | `Case Templates:read`, `Cases:read`, `Cases:write` | Managing CrowdStrike cases, including searching, creating, updating, and managing evidence and tags |
 | [Cloud Security](/falcon-mcp/modules/cloud/) | `Cloud Groups V2:read`, `Cloud Security API Assets:read`, `Cloud Security API Detections:read`, `Cloud Security API Risks:read`, `Cloud Security Policies:read`, `Falcon Container Image:read`, `Cloud Security Policies:write` | Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Containers Inventory, Images Vulnerabilities, Cloud Assets, IOM Findings, CSPM Suppression Rules, Cloud Risks, Cloud Groups, and Cloud Insights |
 | [Correlation Rules](/falcon-mcp/modules/correlationrules/) | `Correlation Rules:read`, `Correlation Rules:write` | Correlation Rules module for CrowdStrike Falcon. |
 | [Custom IOA](/falcon-mcp/modules/custom-ioa/) | `Custom IOA Rules:read`, `Custom IOA Rules:write` | Searching, creating, updating, and deleting Custom IOA (Indicators of Attack) behavioral rules and rule groups using Falcon Custom IOA Service Collection endpoints |
 | [Data Protection](/falcon-mcp/modules/data-protection/) | `Data Protection:read` | Provides read-only access to Data Protection configuration data — classifications, policies, and content patterns — so an LLM can reason about why a Data Protection detection fired |
 | [Detections](/falcon-mcp/modules/detections/) | `Alerts:read`, `Alerts:write` | Accessing and analyzing CrowdStrike Falcon detections |
-| [Discover](/falcon-mcp/modules/discover/) | `Assets:read` | Accessing and managing CrowdStrike Falcon Discover applications and unmanaged assets |
+| [Discover](/falcon-mcp/modules/discover/) | `Assets:read` | Accessing and managing CrowdStrike Falcon Discover applications, managed assets, and unmanaged assets |
 | [Exclusions](/falcon-mcp/modules/exclusions/) | `IOA Exclusions:read`, `Machine Learning Exclusions:read`, `Sensor Visibility Exclusions:read`, `IOA Exclusions:write`, `Machine Learning Exclusions:write`, `Sensor Visibility Exclusions:write` | This module provides a unified set of tools for managing CrowdStrike exclusions across four types — IOA, Machine Learning, Sensor Visibility, and Certificate-Based — behind a single `exclusion_type` discriminator |
 | [Firewall Management](/falcon-mcp/modules/firewall/) | `Firewall Management:read`, `Firewall Management:write` | Searching and managing firewall rules and rule groups |
+| [Fusion SOAR](/falcon-mcp/modules/fusion/) | `Workflows:read`, `Workflows:write` | Searching Fusion SOAR workflow definitions and executions, reading what an execution produced, and running an on-demand workflow |
 | [Host Groups](/falcon-mcp/modules/host-groups/) | `Host Groups:read`, `Host Groups:write` | Searching, creating, updating, and deleting CrowdStrike Falcon host groups, as well as managing group membership |
 | [Hosts](/falcon-mcp/modules/hosts/) | `Hosts:read`, `Hosts:write` | Accessing and managing CrowdStrike Falcon hosts/devices |
 | [Identity Protection](/falcon-mcp/modules/idp/) | `Identity Protection Assessment:read`, `Identity Protection Detections:read`, `Identity Protection Entities:read`, `Identity Protection Timeline:read`, `Identity Protection GraphQL:write` | Accessing and managing CrowdStrike Falcon Identity Protection capabilities |
@@ -32,3 +34,4 @@ The Falcon MCP Server provides the following modules. Each module requires speci
 | [Serverless](/falcon-mcp/modules/serverless/) | `Falcon Container Image:read` | Accessing and managing CrowdStrike Falcon Serverless Vulnerabilities |
 | [Shield](/falcon-mcp/modules/shield/) | `SaaS Security:read`, `SaaS Security:write` | Shield module for CrowdStrike Falcon. |
 | [Spotlight](/falcon-mcp/modules/spotlight/) | `Vulnerabilities:read` | Accessing and managing CrowdStrike Falcon Spotlight vulnerabilities |
+| [Zero Trust Assessment](/falcon-mcp/modules/zero-trust-assessment/) | `Zero Trust Assessment:read` | Retrieving Zero Trust Assessment posture scores and sensor and OS hardening signals for hosts |
