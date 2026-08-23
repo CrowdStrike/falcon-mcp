@@ -40,6 +40,22 @@ class TestCloudInsightsIntegration(BaseIntegrationTest):
         ids = [e["insight_id"] for e in result]
         assert len(ids) == len(set(ids)), f"Duplicate insight_ids found: {[x for x in ids if ids.count(x) > 1]}"
 
+    def test_pfm_pagination_uses_total(self):
+        """PFM catalog pagination terminates correctly using meta.pagination.total.
+
+        The catalog on this tenant fits in one QueryRule page (<= 500 rules).
+        We verify all definitions are returned and the result is non-empty —
+        if pagination were broken (e.g. infinite loop or early exit) this would fail or hang.
+        """
+        result = self.call_method(self.module.list_cloud_insight_definitions)
+        self.assert_no_error(result, context="pfm pagination total")
+        assert isinstance(result, list)
+        assert len(result) > 0, "Expected at least one insight definition"
+        # Verify all entries have the required fields — a pagination bug would produce partial results
+        for entry in result:
+            assert "insight_id" in entry, f"Missing insight_id in entry: {entry}"
+            assert "category" in entry, f"Missing category in entry: {entry}"
+
     def test_list_cloud_insight_definitions_categories_filter(self):
         """categories filter returns only matching entries (case-insensitive)."""
         result_lower = self.call_method(

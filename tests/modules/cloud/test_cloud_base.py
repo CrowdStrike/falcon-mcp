@@ -1,6 +1,7 @@
 """Tests for _CloudBase shared helpers."""
 
 import unittest
+from typing import Any
 from unittest.mock import patch
 
 from falcon_mcp.modules.cloud.cloud import CloudModule
@@ -14,8 +15,11 @@ class TestFetchPfmRules(TestModules):
     def setUp(self):
         self.setup_module(CloudModule)
 
-    def _query_resp(self, uuids):
-        return {"status_code": 200, "body": {"resources": uuids}}
+    def _query_resp(self, uuids, total: int | None = None) -> dict[str, Any]:
+        body: dict[str, Any] = {"resources": uuids}
+        if total is not None:
+            body["meta"] = {"pagination": {"total": total, "offset": 0, "limit": 500}}
+        return {"status_code": 200, "body": body}
 
     def _get_resp(self, rules):
         return {"status_code": 200, "body": {"resources": rules}}
@@ -24,7 +28,7 @@ class TestFetchPfmRules(TestModules):
         """Single page of UUIDs → single GetRule call → returns rules."""
         rules = [{"insight_id": "iid1", "category": "Network"}]
         self.mock_client.command.side_effect = [
-            self._query_resp(["uuid-1"]),
+            self._query_resp(["uuid-1"], total=1),
             self._get_resp(rules),
         ]
         result = self.module._fetch_pfm_rules("rule_domain:'CSPM'")
@@ -51,8 +55,8 @@ class TestFetchPfmRules(TestModules):
         rules_p1 = [{"insight_id": f"id-{i}", "category": "N"} for i in range(500)]
         rules_p2 = [{"insight_id": "id-extra", "category": "N"}]
         self.mock_client.command.side_effect = [
-            self._query_resp(page1),
-            self._query_resp(page2),
+            self._query_resp(page1, total=501),
+            self._query_resp(page2, total=501),
             *[self._get_resp(rules_p1[i:i+100]) for i in range(0, 500, 100)],
             self._get_resp(rules_p2),
         ]
@@ -61,12 +65,26 @@ class TestFetchPfmRules(TestModules):
         self.assertEqual(ops.count("QueryRule"), 2)
         self.assertEqual(len(result), 501)
 
+    def test_terminates_at_total_without_extra_request(self):
+        """When total is known and all IDs fetched, no extra QueryRule is made."""
+        uuids = [f"uuid-{i}" for i in range(500)]
+        rules = [{"insight_id": f"id-{i}", "category": "N"} for i in range(500)]
+        # total=500 means exactly one page — should NOT make a second QueryRule call
+        self.mock_client.command.side_effect = [
+            self._query_resp(uuids, total=500),
+            *[self._get_resp(rules[i:i+100]) for i in range(0, 500, 100)],
+        ]
+        result = self.module._fetch_pfm_rules("f")
+        ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+        self.assertEqual(ops.count("QueryRule"), 1)
+        self.assertEqual(len(result), 500)
+
     def test_batches_get_rule_at_100(self):
         """More than 100 UUIDs are fetched in batches of 100."""
         uuids = [f"uuid-{i}" for i in range(150)]
         rules = [{"insight_id": f"id-{i}", "category": "N"} for i in range(150)]
         self.mock_client.command.side_effect = [
-            self._query_resp(uuids),
+            self._query_resp(uuids, total=150),
             self._get_resp(rules[:100]),
             self._get_resp(rules[100:]),
         ]
@@ -87,7 +105,7 @@ class TestFetchPfmRules(TestModules):
     def test_get_rule_error_raises_runtime_error(self):
         """GetRule API error raises RuntimeError."""
         self.mock_client.command.side_effect = [
-            self._query_resp(["uuid-1"]),
+            self._query_resp(["uuid-1"], total=1),
             {"status_code": 500, "body": {"errors": [{"message": "boom"}]}},
         ]
         with self.assertRaises(RuntimeError):
@@ -162,8 +180,11 @@ class TestFetchPfmRulesCache(TestModules):
     def setUp(self):
         self.setup_module(CloudModule)
 
-    def _query_resp(self, uuids):
-        return {"status_code": 200, "body": {"resources": uuids}}
+    def _query_resp(self, uuids, total: int | None = None) -> dict[str, Any]:
+        body: dict[str, Any] = {"resources": uuids}
+        if total is not None:
+            body["meta"] = {"pagination": {"total": total, "offset": 0, "limit": 500}}
+        return {"status_code": 200, "body": body}
 
     def _get_resp(self, rules):
         return {"status_code": 200, "body": {"resources": rules}}
@@ -172,7 +193,7 @@ class TestFetchPfmRulesCache(TestModules):
         """Second call with same filter within TTL does not hit the API again."""
         rules = [{"insight_id": "iid1", "category": "Network"}]
         self.mock_client.command.side_effect = [
-            self._query_resp(["uuid-1"]),
+            self._query_resp(["uuid-1"], total=1),
             self._get_resp(rules),
         ]
 
@@ -186,9 +207,9 @@ class TestFetchPfmRulesCache(TestModules):
         """After TTL expires, a fresh API call is made."""
         rules = [{"insight_id": "iid1", "category": "Network"}]
         self.mock_client.command.side_effect = [
-            self._query_resp(["uuid-1"]),
+            self._query_resp(["uuid-1"], total=1),
             self._get_resp(rules),
-            self._query_resp(["uuid-1"]),
+            self._query_resp(["uuid-1"], total=1),
             self._get_resp(rules),
         ]
 
@@ -210,9 +231,9 @@ class TestFetchPfmRulesCache(TestModules):
         rules_a = [{"insight_id": "a", "category": "Network"}]
         rules_b = [{"insight_id": "b", "category": "Identity"}]
         self.mock_client.command.side_effect = [
-            self._query_resp(["uuid-a"]),
+            self._query_resp(["uuid-a"], total=1),
             self._get_resp(rules_a),
-            self._query_resp(["uuid-b"]),
+            self._query_resp(["uuid-b"], total=1),
             self._get_resp(rules_b),
         ]
 
@@ -232,9 +253,9 @@ class TestFetchPfmRulesCache(TestModules):
         try:
             rules = [{"insight_id": "iid1", "category": "Network"}]
             self.mock_client.command.side_effect = [
-                self._query_resp(["uuid-1"]),
+                self._query_resp(["uuid-1"], total=1),
                 self._get_resp(rules),
-                self._query_resp(["uuid-1"]),
+                self._query_resp(["uuid-1"], total=1),
                 self._get_resp(rules),
             ]
             self.module._fetch_pfm_rules("f")
@@ -247,9 +268,9 @@ class TestFetchPfmRulesCache(TestModules):
         """Two module instances do not share a cache."""
         rules = [{"insight_id": "iid1", "category": "Network"}]
         self.mock_client.command.side_effect = [
-            self._query_resp(["uuid-1"]),
+            self._query_resp(["uuid-1"], total=1),
             self._get_resp(rules),
-            self._query_resp(["uuid-1"]),
+            self._query_resp(["uuid-1"], total=1),
             self._get_resp(rules),
         ]
         module2 = CloudModule(self.mock_client)

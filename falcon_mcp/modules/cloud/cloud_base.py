@@ -97,7 +97,16 @@ class _CloudBase(BaseModule):
             if not isinstance(page, list) or not page:
                 break
             uuids.extend(page)
-            if len(page) < 500:
+            total = (
+                (response.get("body") or {})
+                .get("meta", {})
+                .get("pagination", {})
+                .get("total")
+            )
+            if total is not None:
+                if len(uuids) >= total:
+                    break
+            elif len(page) < 500:
                 break
             offset += len(page)
 
