@@ -406,19 +406,20 @@ class TestGenerateModulePage(unittest.TestCase):
         self.assertEqual(count, 14)
 
     def test_tool_order_follows_mixin_registration_order(self):
-        # Tools appear in MRO registration order, not alphabetically.
+        # Tools appear in runtime registration order (super() unwind = reverse MRO).
+        # insights → assets → containers → iom → risks
         def heading_pos(name: str) -> int:
             return self.page.index(f"### `{name}`")
 
-        risks_pos = heading_pos("falcon_search_cloud_risks")
-        iom_pos = heading_pos("falcon_search_iom_findings")
-        container_pos = heading_pos("falcon_search_kubernetes_containers")
-        asset_pos = heading_pos("falcon_search_cspm_assets")
         insights_pos = heading_pos("falcon_search_cloud_insights")
-        self.assertLess(risks_pos, iom_pos)
-        self.assertLess(iom_pos, container_pos)
-        self.assertLess(container_pos, asset_pos)
-        self.assertLess(asset_pos, insights_pos)
+        asset_pos = heading_pos("falcon_search_cspm_assets")
+        container_pos = heading_pos("falcon_search_kubernetes_containers")
+        iom_pos = heading_pos("falcon_search_iom_findings")
+        risks_pos = heading_pos("falcon_search_cloud_risks")
+        self.assertLess(insights_pos, asset_pos)
+        self.assertLess(asset_pos, container_pos)
+        self.assertLess(container_pos, iom_pos)
+        self.assertLess(iom_pos, risks_pos)
 
 
 # ---------------------------------------------------------------------------

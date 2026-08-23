@@ -1,6 +1,9 @@
 """Shared base class for all Cloud Security mixins."""
 
+import time
 from typing import Any
+
+from mcp.server import FastMCP
 
 from falcon_mcp.common.errors import handle_api_response
 from falcon_mcp.common.utils import prepare_api_parameters
@@ -9,6 +12,17 @@ from falcon_mcp.modules.base import BaseModule
 
 class _CloudBase(BaseModule):
     """Extends BaseModule with cloud-specific shared helpers."""
+
+    # How long (seconds) a cached _fetch_pfm_rules result is considered fresh.
+    # Set to 0 to disable caching entirely.
+    PFM_RULES_CACHE_TTL: int = 600
+
+    def __init__(self, client: Any) -> None:
+        super().__init__(client)
+        self._pfm_rules_cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
+
+    def register_tools(self, server: FastMCP) -> None:
+        pass
 
     def _batch_get_cspm_assets(self, asset_ids: list[str]) -> list[dict[str, Any]] | dict[str, Any]:
         """Fetch CSPM asset details in batches of 100 (API limit).
@@ -38,8 +52,8 @@ class _CloudBase(BaseModule):
     def _fetch_pfm_rules(self, filter: str) -> list[dict[str, Any]]:
         """Fetch PFM rules matching the given FQL filter, paginating as needed.
 
-        Queries QueryRule with the provided filter (500 per page), then fetches
-        full rule details via GetRule in batches of 100.
+        Results are cached per instance per filter string for PFM_RULES_CACHE_TTL
+        seconds. Set PFM_RULES_CACHE_TTL = 0 to disable caching.
 
         Args:
             filter: FQL filter string passed to QueryRule (e.g.
@@ -51,6 +65,22 @@ class _CloudBase(BaseModule):
         Raises:
             RuntimeError: If any API call returns an error.
         """
+        if self.PFM_RULES_CACHE_TTL > 0:
+            cached = self._pfm_rules_cache.get(filter)
+            if cached is not None:
+                cached_at, rules = cached
+                if time.monotonic() - cached_at < self.PFM_RULES_CACHE_TTL:
+                    return rules
+
+        rules = self._fetch_pfm_rules_uncached(filter)
+
+        if self.PFM_RULES_CACHE_TTL > 0:
+            self._pfm_rules_cache[filter] = (time.monotonic(), rules)
+
+        return rules
+
+    def _fetch_pfm_rules_uncached(self, filter: str) -> list[dict[str, Any]]:
+        """Fetch PFM rules from the API without consulting the cache."""
         uuids: list[str] = []
         offset = 0
         while True:

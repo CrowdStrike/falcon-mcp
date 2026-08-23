@@ -62,22 +62,17 @@ class _CloudInsightsMixin(_CloudBase):
                 "Case-insensitive. Omit to return all categories."
             ),
         ),
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Return all available cloud insight definitions, deduplicated by insight_id.
 
         Each entry represents one unique insight type with aggregated providers,
-        resource_types, and (when non-empty) compliance framework controls.
-
-        Call this first whenever you are not certain which insight_id covers the user's
-        question. Do not guess insight IDs or reach for other tools before checking
-        whether a relevant insight type exists — the definitions catalog is the
-        authoritative source for what CSPM tracks as insight facts. If a relevant
-        definition is found here, use its insight_id in falcon_search_cloud_insights.
+        resource_types, and (when non-empty) compliance framework controls. Call this
+        first to discover valid insight_ids before filtering with falcon_search_cloud_insights.
         """
         try:
             definitions = self._get_insight_definitions()
         except RuntimeError as exc:
-            return [{"error": "Failed to load insight definitions from Policy Framework API", "detail": str(exc)}]
+            return {"error": "Failed to load insight definitions from Policy Framework API", "detail": str(exc)}
 
         resolved_categories = unwrap_field_default(categories)
         if resolved_categories is None:
@@ -133,35 +128,11 @@ class _CloudInsightsMixin(_CloudBase):
         """Search for cloud security insights using FQL.
 
         Returns asset records — one per asset — each with asset context and a nested
-        `insights` array of the insight facts found on that asset.
-
-        To filter by category or specific insight types, first call
-        `list_cloud_insight_definitions` to get the insight_ids for the category you
-        care about, then pass `insights.id:['id1','id2']` (or a single value
-        `insights.id:'id1'`) in the `filter` param. Omit `filter` entirely to
-        return all assets that have any insight across all categories — the server
-        automatically scopes the query to insight-bearing assets only, so omitting
-        filter does NOT return plain asset inventory.
-
-        The `insights` array in each result contains ALL insight entries on that asset.
-        Use `falcon_get_cloud_asset_insights` to drill into a specific asset's full
-        insight detail including the richer `details{}` map.
-        For the top-down correlated risk view use `falcon_search_cloud_risks`.
-
-        Responses include `pagination.total` (total assets matching the filter, or null
-        when the API does not report a count). Use `pagination.next` as the `after`
-        cursor on the next call to page through results.
-
-        The `rule_id` field in each insight entry is the PFM rule instance ID that
-        triggered the insight. The `value` field is polymorphic: boolean, string,
-        integer, list of strings, or date/timestamp depending on the insight_id.
-        The `category` field is null — use `list_cloud_insight_definitions` if you need
-        the category label for a given insight_id.
-        Consult falcon://cloud/cloud-insights/fql-guide for filter field details.
-
-        When the user asks for "all" results and `pagination.total` exceeds the count
-        returned, continue paginating with the `after` cursor until all pages are
-        retrieved before summarising — do not summarise a partial result set.
+        `insights` array of insight facts. Omit `filter` to return all assets that have
+        any insight; pass `insights.id:['id1','id2']` to scope by insight type. Use
+        `falcon_get_cloud_asset_insights` for the full per-asset detail. Consult
+        falcon://cloud/cloud-insights/fql-guide for filter syntax and field reference.
+        Responses include `pagination.total` and `pagination.next` for cursor-based paging.
         """
         resolved_fql = unwrap_field_default(filter)
         resolved_after = unwrap_field_default(after)
@@ -176,7 +147,10 @@ class _CloudInsightsMixin(_CloudBase):
             }
 
         if effective_filter is None:
-            return self._build_pagination_envelope([], None, None)
+            return {
+                **self._build_pagination_envelope([], None, None),
+                "message": "No insight definitions found in the Policy Framework catalog. The catalog may be empty or unavailable.",
+            }
 
         raw_ids, pagination = self._base_search_with_meta(
             operation="cloud_security_assets_queries",
@@ -193,7 +167,7 @@ class _CloudInsightsMixin(_CloudBase):
 
         asset_ids: list[str] = raw_ids  # type: ignore[assignment]
         if not asset_ids:
-            return self._build_pagination_envelope([], pagination, None)
+            return self._build_pagination_envelope([], pagination, effective_filter)
 
         raw_details = self._batch_get_cspm_assets(asset_ids)
         if self._is_error(raw_details):
@@ -202,7 +176,7 @@ class _CloudInsightsMixin(_CloudBase):
         details: list[dict[str, Any]] = self._reorder_by_ids(asset_ids, raw_details, id_field="id")  # type: ignore[arg-type,assignment]
         records = self._group_insights_by_asset(details)
 
-        return self._build_pagination_envelope(records, pagination, None)
+        return self._build_pagination_envelope(records, pagination, effective_filter)
 
     def get_cloud_asset_insights(
         self,

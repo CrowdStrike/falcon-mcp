@@ -34,8 +34,9 @@ CLOUD_INSIGHTS_FQL_FILTERS = [
         Maps to the `value` field in output when the insight stores a boolean
         (e.g. identityIsAdmin, publiclyExposedToTheInternet).
 
-        NOTE: FQL filter field names use snake_case (insights.boolean_value),
-        while the response payload uses camelCase (booleanValue). These are the same field.
+        NOTE: FQL filter field names are snake_case (insights.boolean_value) — do NOT
+        write them as camelCase (insights.booleanValue). Insight ID values used in
+        insights.id: remain camelCase (e.g. insights.id:'publiclyExposedToTheInternet').
 
         NOTE: Asset-level semantics — insights.id:'X'+insights.boolean_value:true matches
         any asset that has insight X AND has at least one boolean-true insight. Those two
@@ -63,8 +64,7 @@ CLOUD_INSIGHTS_FQL_FILTERS = [
         "Number",
         """
         Filter assets where at least one insight has the given integer value.
-        Maps to the `value` field in output when the insight stores an integer
-        (e.g. groupsMembers). Supports comparison operators.
+        Maps to the `value` field in output when the insight stores an integer. Supports comparison operators.
 
         Ex: insights.integer_value:>0
         Ex: insights.integer_value:>=5
@@ -75,8 +75,7 @@ CLOUD_INSIGHTS_FQL_FILTERS = [
         "Timestamp",
         """
         Filter assets where at least one insight has the given date value.
-        Maps to the `value` field in output when the insight stores a date
-        (e.g. accessKeyLastRotated). Supports comparison operators.
+        Maps to the `value` field in output when the insight stores a date. Supports comparison operators.
         Use ISO-8601 format.
 
         Ex: insights.date_value:<'2025-01-01T00:00:00Z'
@@ -167,15 +166,14 @@ depends on the insight's value type:
 | date/timestamp      | insights.date_value         |
 | list of strings     | insights.string_list_value  |
 
-IMPORTANT: FQL filter field names are snake_case (insights.boolean_value), but the
-response payload uses camelCase (booleanValue). Do not use camelCase in filters —
-the API rejects them with HTTP 400.
+IMPORTANT: FQL filter field names are snake_case (e.g. insights.boolean_value),
+Insight ID values in insights.id: are in camelCase (e.g. insights.id:'publiclyExposedToTheInternet').
 
 === falcon_search_cloud_insights FQL filter examples ===
 
 For any question about a security property that is not obviously covered by a known
 insight_id, call list_cloud_insight_definitions first to discover the correct IDs.
-The examples below show one representative ID per category — the actual catalog
+The examples below show only a few representative IDs per category — the actual catalog
 contains many more. Always discover IDs from the catalog rather than guessing.
 
 --- Network category ---
@@ -192,21 +190,13 @@ insights.id:'publiclyExposedAccessRange'+insights.string_value:'Internet (0.0.0.
 # Find admin identities
 insights.id:'identityIsAdmin'+insights.boolean_value:true
 
-# Find identities where MFA is not enabled
-# (call list_cloud_insight_definitions(categories=['Identity']) to get the exact ID)
-insights.id:'identityMfaEnabled'+insights.boolean_value:false
-
 # Find unused identities
 insights.id:'unusedIdentity'+insights.boolean_value:true
 
 # Find identities with unrotated credentials
 insights.id:'identityUnrotatedAccessKeys'+insights.boolean_value:true
 
-# Find identities with stale access keys (rotated before a date)
-insights.id:'accessKey1LastRotated'+insights.date_value:<'2025-01-01T00:00:00Z'
 
-# Find identities belonging to large groups
-insights.id:'groupsMembers'+insights.integer_value:>5
 
 --- Vulnerabilities category ---
 # Find assets with reachable critical CVEs

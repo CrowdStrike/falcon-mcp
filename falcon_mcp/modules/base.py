@@ -4,7 +4,7 @@ Base module for Falcon MCP Server
 This module provides the base class for all Falcon MCP server modules.
 """
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from functools import partial, wraps
 from inspect import iscoroutinefunction
 from typing import Any, Callable
@@ -89,6 +89,7 @@ class BaseModule(ABC):
         self.tools: list[str] = []  # List to track registered tools
         self.resources: list[str] = []  # List to track registered resources
 
+    @abstractmethod
     def register_tools(self, server: FastMCP) -> None:
         """Register tools with the MCP server.
 

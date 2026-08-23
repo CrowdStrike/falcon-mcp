@@ -157,6 +157,94 @@ class TestCloudInsightsIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_cloud_insights no filter")
         assert isinstance(result, dict)
 
+    def test_search_cloud_insights_string_value_wildcard(self):
+        """insights.string_value wildcard returns only assets with a matching string insight."""
+        result = self.call_method(
+            self.module.search_cloud_insights,
+            filter="insights.string_value:*'*Internet*'",
+            limit=5,
+        )
+        self.assert_no_error(result, context="string_value wildcard")
+        assert isinstance(result, dict)
+        if not result.get("results"):
+            self.skip_with_warning("No string insights containing 'Internet'", "string_value wildcard")
+            return
+        for record in result["results"]:
+            has_internet = any(
+                isinstance(ins.get("value"), str) and "Internet" in ins["value"]
+                for ins in record.get("insights", [])
+            )
+            assert has_internet, (
+                f"Asset {record.get('asset_id')} returned by wildcard filter but no insight "
+                f"value contains 'Internet'. Values: {[i.get('value') for i in record.get('insights', [])]}"
+            )
+
+    def test_search_cloud_insights_integer_value_comparison(self):
+        """insights.integer_value comparison returns only assets with a matching integer insight."""
+        result = self.call_method(
+            self.module.search_cloud_insights,
+            filter="insights.integer_value:>0",
+            limit=5,
+        )
+        self.assert_no_error(result, context="integer_value comparison")
+        assert isinstance(result, dict)
+        if not result.get("results"):
+            self.skip_with_warning("No integer insights with value > 0", "integer_value comparison")
+            return
+        for record in result["results"]:
+            has_positive_int = any(
+                isinstance(ins.get("value"), int) and ins["value"] > 0
+                for ins in record.get("insights", [])
+            )
+            assert has_positive_int, (
+                f"Asset {record.get('asset_id')} returned by integer_value:>0 filter but no "
+                f"insight has integer value > 0. Values: {[i.get('value') for i in record.get('insights', [])]}"
+            )
+
+    def test_search_cloud_insights_date_value_comparison(self):
+        """insights.date_value comparison returns only assets with a matching date insight."""
+        result = self.call_method(
+            self.module.search_cloud_insights,
+            filter="insights.date_value:<'2030-01-01T00:00:00Z'",
+            limit=5,
+        )
+        self.assert_no_error(result, context="date_value comparison")
+        assert isinstance(result, dict)
+        if not result.get("results"):
+            self.skip_with_warning("No date insights with value < 2030", "date_value comparison")
+            return
+        for record in result["results"]:
+            has_date = any(
+                isinstance(ins.get("value"), str) and ins["value"].endswith("Z")
+                for ins in record.get("insights", [])
+            )
+            assert has_date, (
+                f"Asset {record.get('asset_id')} returned by date_value filter but no "
+                f"insight has a date value. Values: {[i.get('value') for i in record.get('insights', [])]}"
+            )
+
+    def test_search_cloud_insights_string_list_value_containment(self):
+        """insights.string_list_value containment returns only assets whose list insight contains the member."""
+        result = self.call_method(
+            self.module.search_cloud_insights,
+            filter="insights.string_list_value:*'*'",
+            limit=5,
+        )
+        self.assert_no_error(result, context="string_list_value containment")
+        assert isinstance(result, dict)
+        if not result.get("results"):
+            self.skip_with_warning("No list-valued insights in environment", "string_list_value containment")
+            return
+        for record in result["results"]:
+            has_list = any(
+                isinstance(ins.get("value"), list)
+                for ins in record.get("insights", [])
+            )
+            assert has_list, (
+                f"Asset {record.get('asset_id')} returned by string_list_value filter but no "
+                f"insight has a list value. Values: {[i.get('value') for i in record.get('insights', [])]}"
+            )
+
     def test_search_cloud_insights_with_sort(self):
         result = self.call_method(
             self.module.search_cloud_insights,
@@ -240,3 +328,90 @@ class TestCloudInsightsIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="get_cloud_asset_insights multiple ids")
         assert isinstance(result, list)
         assert len(result) == 2, f"Expected 2 records for 2 asset IDs, got {len(result)}"
+
+    # --- Insight ID coverage: confirmed IDs from the FQL guide ---
+
+    def _assert_insight_id_in_catalog(self, insight_id: str) -> None:
+        """Assert that insight_id exists in the PFM catalog via list_cloud_insight_definitions."""
+        result = self.call_method(self.module.list_cloud_insight_definitions)
+        self.assert_no_error(result, context=f"list_cloud_insight_definitions for {insight_id}")
+        assert isinstance(result, list)
+        catalog_ids = {entry["insight_id"] for entry in result}
+        assert insight_id in catalog_ids, (
+            f"insight_id {insight_id!r} not found in catalog. "
+            f"Available IDs: {sorted(catalog_ids)}"
+        )
+
+    def test_insight_id_publicly_exposed_to_the_internet(self):
+        self._assert_insight_id_in_catalog("publiclyExposedToTheInternet")
+
+    def test_insight_id_publicly_exposed_access_range(self):
+        self._assert_insight_id_in_catalog("publiclyExposedAccessRange")
+
+    def test_insight_id_identity_is_admin(self):
+        self._assert_insight_id_in_catalog("identityIsAdmin")
+
+    def test_insight_id_unused_identity(self):
+        self._assert_insight_id_in_catalog("unusedIdentity")
+
+    def test_insight_id_identity_unrotated_access_keys(self):
+        self._assert_insight_id_in_catalog("identityUnrotatedAccessKeys")
+
+    def test_insight_id_reachable_critical_vulnerabilities(self):
+        self._assert_insight_id_in_catalog("reachableCriticalVulnerabilities")
+
+    def test_insight_id_reachable_rce_vulnerabilities(self):
+        self._assert_insight_id_in_catalog("reachableRceVulnerabilities")
+
+    def test_insight_id_has_sensor(self):
+        self._assert_insight_id_in_catalog("hasSensor")
+
+    def test_insight_id_has_secrets(self):
+        self._assert_insight_id_in_catalog("hasSecrets")
+
+    def test_insight_id_has_sensitive_data(self):
+        self._assert_insight_id_in_catalog("hasSensitiveData")
+
+    def test_insight_id_logging_enabled(self):
+        self._assert_insight_id_in_catalog("loggingEnabled")
+
+    def test_insight_id_uses_ai_services(self):
+        self._assert_insight_id_in_catalog("usesAiServices")
+
+    def test_insight_id_has_excessive_actions(self):
+        self._assert_insight_id_in_catalog("hasExcessiveActions")
+
+    def test_insight_id_exposes_mcp_server_interface(self):
+        self._assert_insight_id_in_catalog("exposesMcpServerInterface")
+
+    def test_insight_id_groups_members(self):
+        self._assert_insight_id_in_catalog("groupsMembers")
+
+    def test_insight_id_access_key1_last_rotated(self):
+        self._assert_insight_id_in_catalog("accessKey1LastRotated")
+
+    def test_filter_used_present_on_empty_result(self):
+        """filter_used is returned in the envelope when filter matches no assets."""
+        result = self.call_method(
+            self.module.search_cloud_insights,
+            filter="insights.id:'publiclyExposedToTheInternet'+account_id:'this-account-does-not-exist-xyzzy'",
+            limit=1,
+        )
+        self.assert_no_error(result, context="filter_used on empty result")
+        assert isinstance(result, dict)
+        assert "filter_used" in result, f"Expected filter_used in result. Got: {sorted(result.keys())}"
+
+    def test_filter_used_present_on_success(self):
+        """filter_used is returned in the envelope when filter matches assets."""
+        result = self.call_method(
+            self.module.search_cloud_insights,
+            filter="insights.boolean_value:true",
+            limit=1,
+        )
+        self.assert_no_error(result, context="filter_used on success")
+        assert isinstance(result, dict)
+        if not result.get("results"):
+            self.skip_with_warning("No boolean insights in environment", "filter_used on success")
+            return
+        assert "filter_used" in result, f"Expected filter_used in result. Got: {sorted(result.keys())}"
+        assert result["filter_used"] == "insights.boolean_value:true"

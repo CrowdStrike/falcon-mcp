@@ -1,8 +1,10 @@
 """Tests for _CloudBase shared helpers."""
 
 import unittest
+from unittest.mock import patch
 
 from falcon_mcp.modules.cloud.cloud import CloudModule
+from falcon_mcp.modules.cloud.cloud_base import _CloudBase
 from tests.modules.utils.test_modules import TestModules
 
 
@@ -152,6 +154,110 @@ class TestBatchGetCspmAssets(TestModules):
         call = self.mock_client.command.call_args_list[0]
         self.assertEqual(call[0][0], "cloud_security_assets_entities_get")
         self.assertIn("parameters", call[1])
+
+
+class TestFetchPfmRulesCache(TestModules):
+    """Tests for _CloudBase._fetch_pfm_rules per-instance caching."""
+
+    def setUp(self):
+        self.setup_module(CloudModule)
+
+    def _query_resp(self, uuids):
+        return {"status_code": 200, "body": {"resources": uuids}}
+
+    def _get_resp(self, rules):
+        return {"status_code": 200, "body": {"resources": rules}}
+
+    def test_second_call_within_ttl_uses_cache(self):
+        """Second call with same filter within TTL does not hit the API again."""
+        rules = [{"insight_id": "iid1", "category": "Network"}]
+        self.mock_client.command.side_effect = [
+            self._query_resp(["uuid-1"]),
+            self._get_resp(rules),
+        ]
+
+        result1 = self.module._fetch_pfm_rules("f")
+        result2 = self.module._fetch_pfm_rules("f")
+
+        self.assertEqual(self.mock_client.command.call_count, 2)  # QueryRule + GetRule, not 4
+        self.assertEqual(result1, result2)
+
+    def test_expired_cache_refetches(self):
+        """After TTL expires, a fresh API call is made."""
+        rules = [{"insight_id": "iid1", "category": "Network"}]
+        self.mock_client.command.side_effect = [
+            self._query_resp(["uuid-1"]),
+            self._get_resp(rules),
+            self._query_resp(["uuid-1"]),
+            self._get_resp(rules),
+        ]
+
+        ttl = _CloudBase.PFM_RULES_CACHE_TTL
+        expired_t = float(ttl + 100)
+        with patch("falcon_mcp.modules.cloud.cloud_base.time") as mock_time:
+            mock_time.monotonic.side_effect = [
+                0.0,        # call 1: write timestamp
+                expired_t,  # call 2: read timestamp (expired_t - 0 > TTL → expired)
+                expired_t,  # call 2: write timestamp
+            ]
+            self.module._fetch_pfm_rules("f")
+            self.module._fetch_pfm_rules("f")
+
+        self.assertEqual(self.mock_client.command.call_count, 4)  # both calls hit API
+
+    def test_different_filters_cached_independently(self):
+        """Each distinct filter string has its own cache entry."""
+        rules_a = [{"insight_id": "a", "category": "Network"}]
+        rules_b = [{"insight_id": "b", "category": "Identity"}]
+        self.mock_client.command.side_effect = [
+            self._query_resp(["uuid-a"]),
+            self._get_resp(rules_a),
+            self._query_resp(["uuid-b"]),
+            self._get_resp(rules_b),
+        ]
+
+        result_a = self.module._fetch_pfm_rules("filter_a")
+        result_b = self.module._fetch_pfm_rules("filter_b")
+        # Third call — should hit cache for filter_a
+        result_a2 = self.module._fetch_pfm_rules("filter_a")
+
+        self.assertEqual(self.mock_client.command.call_count, 4)  # only 2 API round-trips
+        self.assertEqual(result_a, result_a2)
+        self.assertNotEqual(result_a, result_b)
+
+    def test_cache_disabled_when_ttl_zero(self):
+        """Setting PFM_RULES_CACHE_TTL=0 disables caching — every call hits the API."""
+        original_ttl = _CloudBase.PFM_RULES_CACHE_TTL
+        _CloudBase.PFM_RULES_CACHE_TTL = 0
+        try:
+            rules = [{"insight_id": "iid1", "category": "Network"}]
+            self.mock_client.command.side_effect = [
+                self._query_resp(["uuid-1"]),
+                self._get_resp(rules),
+                self._query_resp(["uuid-1"]),
+                self._get_resp(rules),
+            ]
+            self.module._fetch_pfm_rules("f")
+            self.module._fetch_pfm_rules("f")
+            self.assertEqual(self.mock_client.command.call_count, 4)
+        finally:
+            _CloudBase.PFM_RULES_CACHE_TTL = original_ttl
+
+    def test_cache_is_per_instance(self):
+        """Two module instances do not share a cache."""
+        rules = [{"insight_id": "iid1", "category": "Network"}]
+        self.mock_client.command.side_effect = [
+            self._query_resp(["uuid-1"]),
+            self._get_resp(rules),
+            self._query_resp(["uuid-1"]),
+            self._get_resp(rules),
+        ]
+        module2 = CloudModule(self.mock_client)
+
+        self.module._fetch_pfm_rules("f")
+        module2._fetch_pfm_rules("f")
+
+        self.assertEqual(self.mock_client.command.call_count, 4)
 
 
 if __name__ == "__main__":

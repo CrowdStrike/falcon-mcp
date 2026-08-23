@@ -92,7 +92,7 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Cloud: CSPM Assets ===
     "falcon_search_cspm_assets": (
-        "Common fields: cloud_provider (case-sensitive: AWS|Azure|GCP), account_name, "
+        "Common fields: cloud_provider (aws|azure|gcp), account_name, "
         "resource_type, region, service, active (true|false), tags."
     ),
     # === Cloud: IOM Findings ===

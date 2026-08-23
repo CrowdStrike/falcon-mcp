@@ -95,6 +95,22 @@ class TestCloudInsightsTools(TestModules):
         self.assertEqual(records[0]["insights"][0]["insight_id"], "publiclyExposed")
         self.assertEqual(records[1]["asset_id"], "a2")
 
+    def test_search_cloud_insights_success_exposes_filter_used(self):
+        """filter_used in the envelope reflects the FQL expression sent to the API."""
+        query_response = {"status_code": 200, "body": {"resources": ["a1"]}}
+        get_response = {
+            "status_code": 200,
+            "body": {"resources": [self._asset_with_insights("a1", [{"id": "x", "ruleId": "r", "booleanValue": True}])]},
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_cloud_insights(
+            filter="insights.id:'publiclyExposed'+insights.boolean_value:true", limit=10
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result.get("filter_used"), "insights.id:'publiclyExposed'+insights.boolean_value:true")
+
     def test_search_cloud_insights_all_insights_shown(self):
         """All insight entries on an asset appear in the output regardless of insight ID."""
         catalog = self._catalog_responses(["netInsight", "idInsight"])
@@ -250,7 +266,7 @@ class TestCloudInsightsTools(TestModules):
         self.assertNotIn("sort", params)
 
     def test_search_cloud_insights_empty_returns_empty_response(self):
-        """No matching assets returns the empty envelope."""
+        """No matching assets returns the empty envelope with filter_used set."""
         query_response = {"status_code": 200, "body": {"resources": []}}
         self.mock_client.command.side_effect = [query_response]
 
@@ -259,6 +275,7 @@ class TestCloudInsightsTools(TestModules):
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
         self.assertIn("pagination", result)
+        self.assertEqual(result.get("filter_used"), "insights.id:'x'")
 
     def test_search_cloud_insights_entity_api_error(self):
         """An error fetching asset entities is returned as a flat error dict."""
@@ -457,11 +474,12 @@ class TestCloudInsightsTools(TestModules):
         self.assertIn("error", result)
 
     def test_search_cloud_insights_no_filter_empty_definitions_returns_empty(self):
-        """Empty PFM definitions when no filter returns empty envelope without querying assets."""
+        """Empty PFM definitions when no filter returns empty envelope with message, without querying assets."""
         self.mock_client.command.return_value = {"status_code": 200, "body": {"resources": []}}
         result = self.module.search_cloud_insights(limit=100)
         self.assertIsInstance(result, dict)
         self.assertEqual(result["results"], [])
+        self.assertIn("message", result)
         ops = [c[0][0] for c in self.mock_client.command.call_args_list]
         self.assertNotIn("cloud_security_assets_queries", ops)
 
@@ -754,17 +772,16 @@ class TestCloudInsightDefinitionsTools(TestModules):
         result = self.module.list_cloud_insight_definitions()
         self.assertNotIn("controls", result[0])
 
-    def test_api_error_returns_error_dict_in_list(self):
-        """QueryRule API error returns [{"error": ..., "detail": ...}]."""
+    def test_api_error_returns_error_dict(self):
+        """QueryRule API error returns {"error": ..., "detail": ...} — a dict, not a list."""
         self.mock_client.command.return_value = {
             "status_code": 403,
             "body": {"errors": [{"message": "forbidden"}]},
         }
         result = self.module.list_cloud_insight_definitions()
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 1)
-        self.assertIn("error", result[0])
-        self.assertIn("detail", result[0])
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result)
+        self.assertIn("detail", result)
 
     def test_tool_registered(self):
         """list_cloud_insight_definitions is registered as a tool."""
@@ -779,14 +796,14 @@ class TestCloudInsightDefinitionsTools(TestModules):
         self.assertEqual(result, [])
 
     def test_fetch_pfm_rules_getRule_error_returns_error_dict(self):
-        """GetRule API error → RuntimeError → list_cloud_insight_definitions wraps as error."""
+        """GetRule API error → RuntimeError → list_cloud_insight_definitions returns dict, not list."""
         query_resp = {"status_code": 200, "body": {"resources": ["uuid-1"]}}
         error_resp = {"status_code": 500, "body": {"errors": [{"message": "boom"}]}}
         self.mock_client.command.side_effect = [query_resp, error_resp]
         result = self.module.list_cloud_insight_definitions()
-        self.assertIsInstance(result, list)
-        self.assertIn("error", result[0])
-        self.assertIn("detail", result[0])
+        self.assertIsInstance(result, dict)
+        self.assertIn("error", result)
+        self.assertIn("detail", result)
 
     def test_definitions_skips_non_dict_rules(self):
         """Non-dict entries in GetRule response are silently skipped."""

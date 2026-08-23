@@ -774,7 +774,7 @@ def _collect_method_source(module_cls: type, method_name: str) -> str:
     """
     parts: list[str] = []
     seen: set[type] = set()
-    for klass in module_cls.__mro__:
+    for klass in reversed(module_cls.__mro__):
         if klass in seen or method_name not in klass.__dict__:
             continue
         seen.add(klass)
@@ -928,7 +928,7 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
     description = meta.get("description", fallback_desc)
     scopes = extract_module_scopes(module_cls)
 
-    # Extract tools in registration order (MRO order, as built by _collect_method_source)
+    # Extract tools in runtime registration order (reverse-MRO, as built by _collect_method_source)
     tools = []
     tool_annotations = extract_tool_annotations(module_cls)
     registered_tool_names = extract_registered_tool_names(module_cls)
