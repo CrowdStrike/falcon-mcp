@@ -45,9 +45,10 @@ class TestCorrelationRulesIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_correlation_rules full details")
         self.assert_valid_list_response(result, min_length=0, context="search_correlation_rules")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_correlation_rules full details")
+        if len(records) > 0:
             self.assert_search_returns_details(
-                result,
+                records,
                 expected_fields=["rule_id", "id", "name", "severity", "status", "state", "search"],
                 context="search_correlation_rules full details",
             )
@@ -63,7 +64,8 @@ class TestCorrelationRulesIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search with status filter")
         self.assert_valid_list_response(result, min_length=0, context="search with status filter")
 
-        for rule in result:
+        records = self.records(result, context="search with status filter")
+        for rule in records:
             assert isinstance(rule, dict), f"Expected dict, got {type(rule)}"
             assert rule.get("status") == "active", (
                 f"Expected status 'active', got '{rule.get('status')}'"
@@ -74,8 +76,8 @@ class TestCorrelationRulesIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_correlation_rules, limit=3)
 
         self.assert_no_error(result, context="search with limit=3")
-        assert isinstance(result, list), f"Expected list, got {type(result)}"
-        assert len(result) <= 3, f"Expected at most 3 results, got {len(result)}"
+        records = self.records(result, context="search with limit=3")
+        assert len(records) <= 3, f"Expected at most 3 results, got {len(records)}"
 
     def test_search_invalid_filter_returns_error(self):
         """Test that an invalid FQL filter returns a structured error, not a crash."""
@@ -87,7 +89,8 @@ class TestCorrelationRulesIntegration(BaseIntegrationTest):
 
         # Should return a structured error response (dict or list with error), not raise
         assert result is not None, "Expected a response, got None"
-        if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict):
+        records = self.records(result, context="search_correlation_rules invalid filter")
+        if len(records) > 0 and isinstance(records[0], dict):
             # Error surfaced in list — acceptable
             pass
         elif isinstance(result, dict):
@@ -106,7 +109,8 @@ class TestCorrelationRulesIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search rule_id and version id")
         self.assert_valid_list_response(result, min_length=0, context="search rule_id and id")
 
-        for i, rule in enumerate(result):
+        records = self.records(result, context="search rule_id and version id")
+        for i, rule in enumerate(records):
             assert isinstance(rule, dict), f"Expected dict at index {i}"
             assert "rule_id" in rule, (
                 f"Missing 'rule_id' at index {i}. Fields: {list(rule.keys())}"
@@ -122,7 +126,8 @@ class TestCorrelationRulesIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search object presence")
         self.assert_valid_list_response(result, min_length=0, context="search object presence")
 
-        for i, rule in enumerate(result):
+        records = self.records(result, context="search object presence")
+        for i, rule in enumerate(records):
             assert isinstance(rule, dict), f"Expected dict at index {i}"
             assert "search" in rule, (
                 f"Missing 'search' key at index {i}. Fields: {list(rule.keys())}"
@@ -146,12 +151,11 @@ class TestCorrelationRulesIntegration(BaseIntegrationTest):
         Any created rule is deleted in a finally block to avoid leaving test data.
         """
         # Resolve customer_id from an existing rule
-        search_result = self.call_method(self.module.search_correlation_rules, limit=1)
-        if not search_result or not isinstance(search_result, list) or len(search_result) == 0:
-            self.skip_with_warning(
-                "No existing rules to derive customer_id from",
-                context="test_create_rule_lifecycle",
-            )
+        search_result = self.skip_unless_tenant_has(
+            self.call_method(self.module.search_correlation_rules, limit=1),
+            "existing rules to derive customer_id from",
+            context="test_create_rule_lifecycle",
+        )
         customer_id = search_result[0].get("customer_id")
         if not customer_id:
             self.skip_with_warning(
@@ -210,13 +214,13 @@ class TestCorrelationRulesIntegration(BaseIntegrationTest):
         search_result = self.call_method(self.module.search_correlation_rules, limit=1)
         self.assert_no_error(search_result, context="search before update test")
 
-        if not search_result or not isinstance(search_result, list) or len(search_result) == 0:
-            self.skip_with_warning(
-                "No rules available to test update",
-                context="test_update_rule",
-            )
+        records = self.skip_unless_tenant_has(
+            search_result,
+            "rules available to test update",
+            context="test_update_rule",
+        )
 
-        rule = search_result[0]
+        rule = records[0]
         rule_id = rule.get("rule_id")
         original_description = rule.get("description", "")
 

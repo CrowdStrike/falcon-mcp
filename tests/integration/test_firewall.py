@@ -45,9 +45,10 @@ class TestFirewallIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_firewall_rules")
         self.assert_valid_list_response(result, min_length=0, context="search_firewall_rules")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_firewall_rules")
+        if len(records) > 0:
             self.assert_search_returns_details(
-                result,
+                records,
                 expected_fields=["id", "platform_ids"],
                 context="search_firewall_rules",
             )
@@ -63,10 +64,9 @@ class TestFirewallIntegration(BaseIntegrationTest):
         )
 
         self.assert_no_error(result, context="search_firewall_rules with filter")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result, min_length=0, context="search_firewall_rules with filter"
-            )
+        self.assert_valid_list_response(
+            result, min_length=0, context="search_firewall_rules with filter"
+        )
 
     def test_search_firewall_rule_groups_returns_details(self):
         """Test that search_firewall_rule_groups returns full details."""
@@ -83,9 +83,10 @@ class TestFirewallIntegration(BaseIntegrationTest):
             result, min_length=0, context="search_firewall_rule_groups"
         )
 
-        if len(result) > 0:
+        records = self.records(result, context="search_firewall_rule_groups")
+        if len(records) > 0:
             self.assert_search_returns_details(
-                result,
+                records,
                 expected_fields=["id", "platform"],
                 context="search_firewall_rule_groups",
             )
@@ -101,10 +102,9 @@ class TestFirewallIntegration(BaseIntegrationTest):
         )
 
         self.assert_no_error(result, context="search_firewall_rule_groups with filter")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result, min_length=0, context="search_firewall_rule_groups with filter"
-            )
+        self.assert_valid_list_response(
+            result, min_length=0, context="search_firewall_rule_groups with filter"
+        )
 
     def test_search_firewall_policy_rules(self):
         """Test searching policy rules using a discovered rule group ID.
@@ -112,16 +112,14 @@ class TestFirewallIntegration(BaseIntegrationTest):
         Uses dynamic ID discovery: first searches for a rule group,
         then uses its ID to search for policy rules.
         """
-        groups_result = self.call_method(
-            self.module.search_firewall_rule_groups,
-            limit=1,
+        groups_result = self.skip_unless_tenant_has(
+            self.call_method(
+                self.module.search_firewall_rule_groups,
+                limit=1,
+            ),
+            "firewall rule groups",
+            context="test_search_firewall_policy_rules",
         )
-
-        if not groups_result or (isinstance(groups_result, list) and len(groups_result) == 0):
-            self.skip_with_warning(
-                "No firewall rule groups available",
-                context="test_search_firewall_policy_rules",
-            )
 
         group_id = self.get_first_id(groups_result)
         if not group_id:
@@ -137,16 +135,16 @@ class TestFirewallIntegration(BaseIntegrationTest):
         )
 
         # Gracefully handle cases where no firewall policy matches the ID
-        if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict):
-            if "error" in result[0]:
+        policy_records = self.records(result, context="search_firewall_policy_rules")
+        if len(policy_records) > 0 and isinstance(policy_records[0], dict):
+            if "error" in policy_records[0]:
                 self.skip_with_warning(
                     "No firewall policy found for the discovered ID",
                     context="test_search_firewall_policy_rules",
                 )
 
         self.assert_no_error(result, context="search_firewall_policy_rules")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result, min_length=0, context="search_firewall_policy_rules"
-            )
+        self.assert_valid_list_response(
+            result, min_length=0, context="search_firewall_policy_rules"
+        )
 

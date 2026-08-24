@@ -36,7 +36,8 @@ class TestDiscoverIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_applications")
         self.assert_valid_list_response(result, min_length=0, context="search_applications")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_applications")
+        if len(records) > 0:
             # Verify we get full details
             self.assert_search_returns_details(
                 result,
@@ -78,7 +79,8 @@ class TestDiscoverIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_unmanaged_assets")
         self.assert_valid_list_response(result, min_length=0, context="search_unmanaged_assets")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_unmanaged_assets")
+        if len(records) > 0:
             # Verify we get full details
             self.assert_search_returns_details(
                 result,
@@ -119,7 +121,8 @@ class TestDiscoverIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_managed_assets")
         self.assert_valid_list_response(result, min_length=0, context="search_managed_assets")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_managed_assets")
+        if len(records) > 0:
             # Verify we get full details
             self.assert_search_returns_details(
                 result,

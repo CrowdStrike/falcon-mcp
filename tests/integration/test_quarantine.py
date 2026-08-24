@@ -26,13 +26,13 @@ class TestQuarantineIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_quarantined_files, limit=5)
 
         self.assert_no_error(result, context="search_quarantined_files")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result,
-                min_length=0,
-                context="search_quarantined_files",
-            )
-        if isinstance(result, list) and len(result) > 0:
+        self.assert_valid_list_response(
+            result,
+            min_length=0,
+            context="search_quarantined_files",
+        )
+        records = self.records(result, context="search_quarantined_files")
+        if len(records) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["id", "sha256", "hostname"],
@@ -48,12 +48,11 @@ class TestQuarantineIntegration(BaseIntegrationTest):
         )
 
         self.assert_no_error(result, context="search_quarantined_files with sort")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result,
-                min_length=0,
-                context="search_quarantined_files with sort",
-            )
+        self.assert_valid_list_response(
+            result,
+            min_length=0,
+            context="search_quarantined_files with sort",
+        )
 
     def test_preview_quarantine_actions_with_filter(self):
         """Test the read-only quarantine action count with a valid FQL filter."""

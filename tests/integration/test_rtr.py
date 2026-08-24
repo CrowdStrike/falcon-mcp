@@ -78,15 +78,15 @@ class TestRTRIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_sessions, limit=5)
 
         self.assert_no_error(result, context="search_rtr_sessions")
+        self.assert_valid_list_response(result, min_length=0, context="search_rtr_sessions")
 
-        if isinstance(result, list):
-            self.assert_valid_list_response(result, min_length=0, context="search_rtr_sessions")
-            if len(result) > 0:
-                self.assert_search_returns_details(
-                    result,
-                    expected_fields=["id", "device_id", "hostname"],
-                    context="search_rtr_sessions",
-                )
+        records = self.records(result, context="search_rtr_sessions")
+        if len(records) > 0:
+            self.assert_search_returns_details(
+                result,
+                expected_fields=["id", "device_id", "hostname"],
+                context="search_rtr_sessions",
+            )
 
     def test_search_rtr_sessions_with_sort(self):
         """Test RTR session search with a supported sort expression."""
@@ -97,22 +97,19 @@ class TestRTRIntegration(BaseIntegrationTest):
         )
 
         self.assert_no_error(result, context="search_rtr_sessions with sort")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result,
-                min_length=0,
-                context="search_rtr_sessions with sort",
-            )
+        self.assert_valid_list_response(
+            result,
+            min_length=0,
+            context="search_rtr_sessions with sort",
+        )
 
     def test_get_rtr_session_details_with_valid_id(self):
         """Test session detail lookup using a valid session ID."""
-        search_result = self.call_method(self.module.search_sessions, limit=1)
-
-        if not isinstance(search_result, list) or len(search_result) == 0:
-            self.skip_with_warning(
-                "No RTR sessions available to test get_rtr_session_details",
-                context="test_get_rtr_session_details_with_valid_id",
-            )
+        search_result = self.skip_unless_tenant_has(
+            self.call_method(self.module.search_sessions, limit=1),
+            "RTR sessions",
+            context="test_get_rtr_session_details_with_valid_id",
+        )
 
         session_id = self.get_first_id(search_result)
         if not session_id:
@@ -151,13 +148,11 @@ class TestRTRIntegration(BaseIntegrationTest):
             "search_rtr_audit_sessions",
         )
         self.assert_no_error(result, context="search_rtr_audit_sessions")
-
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result,
-                min_length=0,
-                context="search_rtr_audit_sessions",
-            )
+        self.assert_valid_list_response(
+            result,
+            min_length=0,
+            context="search_rtr_audit_sessions",
+        )
 
     def test_aggregate_rtr_sessions(self):
         """Validate RTR session aggregation operation and request body shape."""
@@ -197,10 +192,9 @@ class TestRTRIntegration(BaseIntegrationTest):
         )
 
         self.assert_no_error(result, context="search_rtr_sessions with filter")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result, min_length=0, context="search_rtr_sessions with filter"
-            )
+        self.assert_valid_list_response(
+            result, min_length=0, context="search_rtr_sessions with filter"
+        )
 
     def test_fql_string_fields_are_accepted(self):
         """Validate that all documented string FQL fields are accepted."""
@@ -321,10 +315,11 @@ class TestRTRLifecycleIntegration(BaseIntegrationTest):
         )
         hosts_result = hosts_module.search_hosts(**host_kwargs)
 
-        if not isinstance(hosts_result, list) or len(hosts_result) == 0:
+        hosts = self.records(hosts_result, context="init_rtr_session host search")
+        if len(hosts) == 0:
             pytest.skip("No hosts found in environment")
 
-        first_host = hosts_result[0]
+        first_host = hosts[0]
         if isinstance(first_host, dict) and "error" in first_host:
             pytest.skip(f"Host search failed (check Hosts:read scope): {first_host}")
 

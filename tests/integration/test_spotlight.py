@@ -35,7 +35,8 @@ class TestSpotlightIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_vulnerabilities")
         self.assert_valid_list_response(result, min_length=0, context="search_vulnerabilities")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_vulnerabilities")
+        if len(records) > 0:
             # Verify we get full details, not just IDs
             self.assert_search_returns_details(
                 result,
@@ -78,7 +79,8 @@ class TestSpotlightIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_vulnerabilities with facet")
         self.assert_valid_list_response(result, min_length=0, context="search_vulnerabilities with facet")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_vulnerabilities with facet")
+        if len(records) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["cve"],
@@ -101,7 +103,8 @@ class TestSpotlightIntegration(BaseIntegrationTest):
 
         # Verify both requested facet blocks are actually present in a single
         # response — this is the core contract of the multi-facet enhancement.
-        if len(result) > 0:
+        records = self.records(result, context="search_vulnerabilities with multiple facets")
+        if len(records) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["cve", "host_info"],

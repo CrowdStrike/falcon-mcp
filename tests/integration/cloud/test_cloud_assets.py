@@ -88,11 +88,7 @@ class TestCloudAssetsIntegration(BaseIntegrationTest):
             limit=10,
         )
         self.assert_no_error(result, context="search_cspm_assets with tag filter")
-        if isinstance(result, list):
-            self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets with tag filter")
-        else:
-            assert isinstance(result, dict), "Expected dict or list response for tag filter"
-            assert "results" in result or "total" in result
+        self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets with tag filter")
 
     def test_search_cspm_assets_with_sort(self):
         result = self.call_method(

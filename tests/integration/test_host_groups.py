@@ -122,7 +122,8 @@ class TestHostGroupsIntegration(BaseIntegrationTest):
             result, min_length=0, context="search_host_groups"
         )
 
-        if isinstance(result, list) and len(result) > 0:
+        records = self.records(result, context="search_host_groups")
+        if len(records) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["id", "name", "group_type"],
@@ -152,7 +153,8 @@ class TestHostGroupsIntegration(BaseIntegrationTest):
             result, min_length=0, context="search_host_group_members"
         )
 
-        if isinstance(result, list) and len(result) > 0:
+        records = self.records(result, context="search_host_group_members")
+        if len(records) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["device_id"],
@@ -170,12 +172,11 @@ class TestHostGroupsIntegration(BaseIntegrationTest):
         Note: do NOT use filter="*" here — the live API rejects it with HTTP 400.
         Omitting `filter` is the "all members" path.
         """
-        groups = self.call_method(self.module.search_host_groups, limit=50)
-        if not isinstance(groups, list) or len(groups) == 0:
-            self.skip_with_warning(
-                "No host groups in tenant", context="member filter validation"
-            )
-            return
+        groups = self.skip_unless_tenant_has(
+            self.call_method(self.module.search_host_groups, limit=50),
+            "host groups",
+            context="member filter validation",
+        )
 
         populated_id = None
         for group in groups:
@@ -184,7 +185,8 @@ class TestHostGroupsIntegration(BaseIntegrationTest):
             members = self.call_method(
                 self.module.search_host_group_members, id=group["id"], limit=1
             )
-            if isinstance(members, list) and len(members) > 0:
+            member_records = self.records(members, context="member filter validation")
+            if len(member_records) > 0:
                 populated_id = group["id"]
                 break
 
@@ -234,8 +236,9 @@ class TestHostGroupsIntegration(BaseIntegrationTest):
             result, min_length=1, context="round-trip search"
         )
 
+        records = self.records(result, context="round-trip search")
         found_ids = [
-            item.get("id") for item in result if isinstance(item, dict)
+            item.get("id") for item in records if isinstance(item, dict)
         ]
         assert lifecycle_group["id"] in found_ids, (
             f"Created group {lifecycle_group['id']} not found in search results. "
