@@ -9,6 +9,7 @@ Usage:
 
 from __future__ import annotations
 
+import ast
 import importlib
 import inspect
 import pkgutil
@@ -702,12 +703,50 @@ def discover_module_classes() -> dict[str, dict[str, Any]]:
     return result
 
 
+def _module_string_constants(module_cls: type) -> dict[str, str]:
+    """Map the module-level ``NAME = "literal"`` assignments a module class can see.
+
+    Scope detection works by spotting operation-name string literals in the source. A
+    module may instead name its operation once in a module-level constant and reference
+    it by name at every call site, as ``agentworks.py`` does with ``_GET_INVOCATION_OP``.
+    `inspect.getsource` on the class, or on one method, never sees that assignment, so
+    the literal is absent and the tool silently documents no scopes at all. Resolving
+    these constants first closes that hole for any module that factors its operation
+    name out.
+    """
+    module = sys.modules.get(module_cls.__module__)
+    if module is None:
+        return {}
+    try:
+        tree = ast.parse(inspect.getsource(module))
+    except (TypeError, OSError, SyntaxError):
+        return {}
+
+    constants: dict[str, str] = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant):
+            if isinstance(node.value.value, str):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        constants[target.id] = node.value.value
+    return constants
+
+
+def _operation_names_in(source: str, module_cls: type) -> set[str]:
+    """Operation names referenced by ``source``, as literals or via a constant."""
+    names = set(re.findall(r'["\'](\w+)["\']', source))
+    constants = _module_string_constants(module_cls)
+    if constants:
+        referenced = set(re.findall(r"\b([A-Za-z_]\w*)\b", source))
+        names |= {constants[n] for n in referenced & constants.keys()}
+    return names
+
+
 def extract_module_scopes(module_cls: type) -> list[str]:
     """Derive API scopes by finding operation names in module source and looking them up in API_SCOPE_REQUIREMENTS."""
     source = inspect.getsource(module_cls)
 
-    # Find all string literals that match known operation names
-    all_strings = set(re.findall(r'["\'](\w+)["\']', source))
+    all_strings = _operation_names_in(source, module_cls)
     scopes: set[str] = set()
     for op_name, op_scopes in API_SCOPE_REQUIREMENTS.items():
         if op_name in all_strings:
@@ -720,33 +759,46 @@ def extract_module_scopes(module_cls: type) -> list[str]:
 def extract_tool_scopes(method: Any, module_cls: type) -> list[str]:
     """Derive API scopes for a single tool method by tracing its helper calls.
 
-    Only follows private helpers defined on the concrete module class itself,
-    NOT inherited BaseModule helpers (which contain operation names from all modules).
+    Only follows helpers defined on the concrete module class itself, NOT inherited
+    BaseModule helpers (which contain operation names from all modules). Follows the
+    chain transitively and includes public methods, because a tool that reaches the API
+    only through another tool method needs the union of the scopes of everything it
+    calls: ``agentworks.py``'s ``invoke_agentworks_agent`` polls
+    ``get_agentworks_agent_invocation``, so it needs that operation's read scope on top
+    of its own write scope.
     """
     try:
         method_source = inspect.getsource(method)
     except (TypeError, OSError):
         return []
 
-    # Collect combined source: the method itself + own-class private helpers it calls
-    combined_source = method_source
-
-    # Only trace helpers defined directly on this class (not inherited from BaseModule)
+    # Only trace methods defined directly on this class (not inherited from BaseModule)
     own_methods = set(module_cls.__dict__.keys())
 
-    # Find private helper calls: self._something(
-    helper_names = re.findall(r"self\.(_\w+)\(", method_source)
-    for helper_name in helper_names:
-        if helper_name in own_methods:
-            helper = module_cls.__dict__[helper_name]
-            if callable(helper):
-                try:
-                    combined_source += "\n" + inspect.getsource(helper)
-                except (TypeError, OSError):
-                    pass
+    # Walk the helper chain breadth-first, guarding against recursion. Match bare
+    # `self.name` too, not just `self.name(`, so a method passed as a callable rather
+    # than called directly is still followed.
+    combined_source = method_source
+    seen: set[str] = set()
+    pending = re.findall(r"self\.(\w+)", method_source)
+    while pending:
+        helper_name = pending.pop()
+        if helper_name in seen or helper_name not in own_methods:
+            continue
+        seen.add(helper_name)
+        helper = module_cls.__dict__[helper_name]
+        if not callable(helper):
+            continue
+        try:
+            helper_source = inspect.getsource(helper)
+        except (TypeError, OSError):
+            continue
+        combined_source += "\n" + helper_source
+        pending.extend(re.findall(r"self\.(\w+)", helper_source))
 
-    # Find all string literals and look them up in API_SCOPE_REQUIREMENTS
-    all_strings = set(re.findall(r'["\'](\w+)["\']', combined_source))
+    # Find all string literals (and constant-referenced operation names) and look
+    # them up in API_SCOPE_REQUIREMENTS
+    all_strings = _operation_names_in(combined_source, module_cls)
     scopes: set[str] = set()
     for op_name, op_scopes in API_SCOPE_REQUIREMENTS.items():
         if op_name in all_strings:
