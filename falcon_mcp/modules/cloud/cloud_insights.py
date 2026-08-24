@@ -18,7 +18,9 @@ _INSIGHT_RULES_FILTER = "rule_domain:'CSPM'+rule_subdomain:'Insight'"
 # The value-bearing keys an insight entry may carry, in the order they are consulted.
 # Live data holds exactly one per entry; the explicit tuple keeps the choice
 # deterministic instead of depending on dict insertion order, and maps 1:1 onto the
-# insights.<type>_value FQL filter fields documented in the FQL guide.
+# insights.<type>_value FQL filter fields documented in the FQL guide. The list is closed,
+# so _insight_value falls back to any other `*Value` key rather than reporting None for a
+# type the API adds later.
 _INSIGHT_VALUE_KEYS = (
     "booleanValue",
     "stringValue",
@@ -454,6 +456,24 @@ class _CloudInsightsMixin(_CloudBase):
             "service_category": asset.get("service_category"),
         }
 
+    @staticmethod
+    def _insight_value(item: dict[str, Any]) -> Any:
+        """Read an insight entry's single value, whatever key it arrives under.
+
+        Prefers the known keys in a fixed order so the result never depends on dict
+        ordering, then falls back to any other `*Value` key. The fallback matters because
+        the known list is closed: without it, a value type the API adds later would read
+        as None and the insight would look empty rather than unrecognized.
+        """
+        for key in _INSIGHT_VALUE_KEYS:
+            if key in item:
+                return item[key]
+        for key, value in item.items():
+            if key.endswith("Value"):
+                logger.debug("Unrecognized insight value key %r on insight %r", key, item.get("id"))
+                return value
+        return None
+
     def _group_insights_by_asset(
         self,
         assets: list[dict[str, Any]],
@@ -461,8 +481,8 @@ class _CloudInsightsMixin(_CloudBase):
         """Group insight instances by asset, one result per asset.
 
         Assets with no well-formed insight entries are skipped. Each entry's value is read
-        from the first key in `_INSIGHT_VALUE_KEYS` that is present; live entries carry
-        exactly one, so the order only matters if that ever stops being true.
+        by `_insight_value`, which prefers the known `*Value` keys in a fixed order and
+        falls back to any other one.
         """
         records: list[dict[str, Any]] = []
 
@@ -484,9 +504,6 @@ class _CloudInsightsMixin(_CloudBase):
                 insight_id_val = item.get("id")
                 if not isinstance(insight_id_val, str):
                     continue
-                value = next(
-                    (item[key] for key in _INSIGHT_VALUE_KEYS if key in item), None
-                )
                 asset_insights.append({
                     "insight_id": insight_id_val,
                     # Deliberately null: the per-insight category lives in the Policy
@@ -494,7 +511,7 @@ class _CloudInsightsMixin(_CloudBase):
                     # would add a PFM round-trip to every search. Call
                     # falcon_list_cloud_insight_definitions to map insight_id -> category.
                     "category": None,
-                    "value": value,
+                    "value": self._insight_value(item),
                     "rule_id": item.get("ruleId"),
                 })
 

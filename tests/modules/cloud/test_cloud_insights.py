@@ -508,6 +508,65 @@ class TestCloudInsightsTools(TestModules):
         result = self.module.search_cloud_insights(filter="insights.id:'accessKeyLastRotated'", limit=100)
         self.assertEqual(result["results"][0]["insights"][0]["value"], "2024-11-01T00:00:00Z")
 
+    def test_group_insights_unknown_value_key_falls_back(self):
+        """A *Value key outside the known list is still surfaced, not read as None.
+
+        The known-key tuple is closed, so without the fallback scan a value type the API
+        adds later would make the insight look empty instead of unrecognized.
+        """
+        query_response = {"status_code": 200, "body": {"resources": ["a1"]}}
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    self._asset_with_insights(
+                        "a1", [{"id": "futureInsight", "ruleId": "r1", "durationValue": 42}]
+                    )
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_cloud_insights(filter="insights.id:'futureInsight'", limit=10)
+
+        self.assertEqual(result["results"][0]["insights"][0]["value"], 42)
+
+    def test_group_insights_known_key_wins_over_unknown(self):
+        """When a known and an unknown *Value key co-occur, the known one is chosen.
+
+        Live entries carry exactly one value key, so this only pins the ordering rule.
+        """
+        query_response = {"status_code": 200, "body": {"resources": ["a1"]}}
+        get_response = {
+            "status_code": 200,
+            "body": {
+                "resources": [
+                    self._asset_with_insights(
+                        "a1",
+                        [{"id": "x", "ruleId": "r1", "durationValue": 42, "booleanValue": True}],
+                    )
+                ]
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_cloud_insights(filter="insights.id:'x'", limit=10)
+
+        self.assertIs(result["results"][0]["insights"][0]["value"], True)
+
+    def test_group_insights_no_value_key_yields_none(self):
+        """An entry with no *Value key at all reports value=None rather than raising."""
+        query_response = {"status_code": 200, "body": {"resources": ["a1"]}}
+        get_response = {
+            "status_code": 200,
+            "body": {"resources": [self._asset_with_insights("a1", [{"id": "x", "ruleId": "r1"}])]},
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_cloud_insights(filter="insights.id:'x'", limit=10)
+
+        self.assertIsNone(result["results"][0]["insights"][0]["value"])
+
     def test_search_cloud_insights_no_filter_pfm_error_returns_error(self):
         """PFM failure when no filter is provided returns a structured error."""
         self.mock_client.command.return_value = {

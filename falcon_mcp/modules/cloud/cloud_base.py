@@ -118,14 +118,29 @@ class _CloudBase(BaseModule):
                 break
 
             # Dedupe: a repeated UUID across pages would otherwise be fetched twice.
+            new_count = 0
             for uuid in page:
                 if uuid not in seen:
                     seen.add(uuid)
                     uuids.append(uuid)
+                    new_count += 1
 
             # A short page is the last page. Check this before `total`, so a `total`
             # that under-reports can never truncate a full page of results.
             if len(page) < _PFM_QUERY_PAGE_SIZE:
+                break
+
+            # A full page that contributed nothing new means the server stopped honoring
+            # `offset` and is replaying a page. Progress has to be judged on new UUIDs:
+            # the dedupe keeps `uuids` from growing here, so any cap measured against it
+            # would never be reached.
+            if new_count == 0:
+                logger.warning(
+                    "PFM QueryRule returned a full page with no new rules for filter %r "
+                    "at offset %d; stopping to avoid re-requesting the same page.",
+                    filter,
+                    offset,
+                )
                 break
 
             total = (
@@ -143,7 +158,9 @@ class _CloudBase(BaseModule):
 
             offset += len(page)
 
-            if len(uuids) >= _PFM_MAX_RULES:
+            # Bound on `offset`, which advances on every iteration, rather than on
+            # len(uuids), which the dedupe can hold flat.
+            if offset >= _PFM_MAX_RULES:
                 logger.warning(
                     "PFM rule pagination hit the %d-rule cap for filter %r; "
                     "results are truncated.",

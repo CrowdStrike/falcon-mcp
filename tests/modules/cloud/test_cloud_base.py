@@ -184,6 +184,63 @@ class TestFetchPfmRules(TestModules):
         ops = [c[0][0] for c in self.mock_client.command.call_args_list]
         self.assertEqual(ops.count("QueryRule"), 3)
 
+    def test_repeated_identical_page_stops_instead_of_looping(self):
+        """A server that keeps returning the same full page must not spin forever.
+
+        The dedupe means an all-duplicate page adds nothing to `uuids`, so a cap measured
+        against the deduped count can never be reached — progress has to be judged by
+        whether the page contributed anything new. The mock aborts after a small number of
+        calls so this fails loudly rather than hanging the suite.
+        """
+        page = [f"uuid-{i}" for i in range(500)]  # identical every time, ignores offset
+        calls = {"n": 0}
+
+        def stuck(operation, **kwargs):
+            if operation == "QueryRule":
+                calls["n"] += 1
+                if calls["n"] > 10:
+                    raise AssertionError(
+                        f"QueryRule called {calls['n']} times on a repeating page — "
+                        "pagination is not terminating"
+                    )
+                return self._query_resp(page)
+            return self._get_resp([])
+
+        self.mock_client.command.side_effect = stuck
+        self.module._fetch_pfm_rules("f")
+
+        ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+        self.assertEqual(ops.count("QueryRule"), 2)  # first page, then one no-progress page
+        self.assertEqual(ops.count("GetRule"), 5)  # the 500 unique UUIDs, batched at 100
+
+    def test_cap_is_reached_even_when_every_page_is_a_duplicate(self):
+        """The cap must be measured against something that always advances.
+
+        Distinct from the test above: here the pages alternate between two full pages, so
+        each individual page does contribute new UUIDs on its first appearance but the walk
+        never converges. Keyed on the deduped count the cap would never fire.
+        """
+        page_a = [f"a-{i}" for i in range(500)]
+        page_b = [f"b-{i}" for i in range(500)]
+        calls = {"n": 0}
+
+        def alternating(operation, **kwargs):
+            if operation == "QueryRule":
+                calls["n"] += 1
+                if calls["n"] > 20:
+                    raise AssertionError(
+                        f"QueryRule called {calls['n']} times — cap never fired"
+                    )
+                return self._query_resp(page_a if calls["n"] % 2 else page_b)
+            return self._get_resp([])
+
+        self.mock_client.command.side_effect = alternating
+        with patch("falcon_mcp.modules.cloud.cloud_base._PFM_MAX_RULES", 1500):
+            self.module._fetch_pfm_rules("f")
+
+        ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+        self.assertLessEqual(ops.count("QueryRule"), 4)
+
     def test_query_rule_error_raises_runtime_error(self):
         """QueryRule API error raises RuntimeError."""
         self.mock_client.command.return_value = {
