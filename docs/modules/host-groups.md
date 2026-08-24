@@ -13,6 +13,40 @@ Searching, creating, updating, and deleting CrowdStrike Falcon host groups, as w
 
 ## Tools
 
+### `falcon_search_host_groups`
+
+**Required scopes:** `Host Groups:read`
+
+Search for host groups in your CrowdStrike environment.
+
+Use this to find host groups by name, type, creator, or timestamps. Consult
+falcon://host-groups/search/fql-guide before constructing filter expressions.
+Returns full host group details including id, name, group_type, description,
+and audit metadata in a single call.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+
+**Example prompts:**
+
+- "Show me all static host groups"
+- "Find host groups created in the last 30 days"
+
+### `falcon_search_host_group_members`
+
+**Required scopes:** `Host Groups:read`
+
+Search for the host members of a specific host group.
+
+Use this to list the devices that belong to a host group. Requires the group
+`id` and filters on HOST attributes (platform, hostname, etc.) — consult
+falcon://hosts/search/fql-guide for the filter syntax. Returns full host device
+entities including device_id, hostname, platform, and network context.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+
+**Example prompts:**
+
+- "List the Windows hosts in host group abc123"
+- "Show me the members of the Production Servers group"
+
 ### `falcon_create_host_group`
 
 > [!NOTE]
@@ -31,6 +65,24 @@ falcon_perform_host_group_action. Returns the created host group record on succe
 
 - "Create a static host group called 'Critical Servers'"
 - "Create a dynamic host group for all Windows hosts"
+
+### `falcon_update_host_group`
+
+> [!NOTE]
+> This tool modifies data.
+
+**Required scopes:** `Host Groups:write`
+
+Update an existing host group.
+
+Provide the group `id` and any fields to change. name and description are safe
+for any group type; only set assignment_rule on 'dynamic' groups. Unspecified
+fields are left unchanged. Returns the updated host group record on success.
+
+**Example prompts:**
+
+- "Rename host group abc123 to 'Decommissioned'"
+- "Update the assignment rule for the dynamic Windows group"
 
 ### `falcon_delete_host_groups`
 
@@ -65,58 +117,6 @@ static groups. Returns the updated host group records on success.
 
 - "Add the hosts matching platform_name Windows to group abc123"
 - "Remove host device xyz from host group abc123"
-
-### `falcon_search_host_group_members`
-
-**Required scopes:** `Host Groups:read`
-
-Search for the host members of a specific host group.
-
-Use this to list the devices that belong to a host group. Requires the group
-`id` and filters on HOST attributes (platform, hostname, etc.) — consult
-falcon://hosts/search/fql-guide for the filter syntax. Returns full host device
-entities including device_id, hostname, platform, and network context.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
-
-**Example prompts:**
-
-- "List the Windows hosts in host group abc123"
-- "Show me the members of the Production Servers group"
-
-### `falcon_search_host_groups`
-
-**Required scopes:** `Host Groups:read`
-
-Search for host groups in your CrowdStrike environment.
-
-Use this to find host groups by name, type, creator, or timestamps. Consult
-falcon://host-groups/search/fql-guide before constructing filter expressions.
-Returns full host group details including id, name, group_type, description,
-and audit metadata in a single call.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
-
-**Example prompts:**
-
-- "Show me all static host groups"
-- "Find host groups created in the last 30 days"
-
-### `falcon_update_host_group`
-
-> [!NOTE]
-> This tool modifies data.
-
-**Required scopes:** `Host Groups:write`
-
-Update an existing host group.
-
-Provide the group `id` and any fields to change. name and description are safe
-for any group type; only set assignment_rule on 'dynamic' groups. Unspecified
-fields are left unchanged. Returns the updated host group record on success.
-
-**Example prompts:**
-
-- "Rename host group abc123 to 'Decommissioned'"
-- "Update the assignment rule for the dynamic Windows group"
 
 ## Resources
 

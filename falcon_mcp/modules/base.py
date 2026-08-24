@@ -219,7 +219,7 @@ class BaseModule(ABC):
         Returns:
             The entities reordered to match ordered_ids.
         """
-        by_id = {str(entity.get(id_field, "")): entity for entity in entities}
+        by_id = {str(entity.get(id_field, "")): entity for entity in entities if isinstance(entity, dict)}
 
         result: list[dict[str, Any]] = []
         placed: set[str] = set()
@@ -232,7 +232,7 @@ class BaseModule(ABC):
         # Preserve entities not referenced by ordered_ids rather than dropping them
         result.extend(
             entity for entity in entities
-            if str(entity.get(id_field, "")) not in placed
+            if isinstance(entity, dict) and str(entity.get(id_field, "")) not in placed
         )
 
         return result
@@ -396,7 +396,7 @@ class BaseModule(ABC):
         operation: str,
         search_params: dict[str, Any],
         error_message: str = "Search operation failed",
-    ) -> tuple[list[dict[str, Any]] | dict[str, Any], dict[str, Any] | None]:
+    ) -> tuple[list[Any] | dict[str, Any], dict[str, Any] | None]:
         """Like _base_search_api_call but also returns the response's pagination metadata.
 
         Hydration (fetching full entity details by ID) discards `body.meta.pagination`

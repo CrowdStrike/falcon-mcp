@@ -27,6 +27,22 @@ Responses include `pagination.total` (the total number of records matching the f
 
 - "Find all Chrome installations across my environment"
 
+### `falcon_search_unmanaged_assets`
+
+**Required scopes:** `Assets:read`
+
+Search for unmanaged assets (hosts without Falcon sensor) in your environment.
+
+Finds systems discovered by Falcon-managed hosts that lack a sensor themselves.
+Consult falcon://discover/hosts/fql-guide before constructing filter expressions.
+The tool automatically adds entity_type:'unmanaged' to all queries. Returns full
+asset details including platform, network, and criticality information.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+
+**Example prompts:**
+
+- "Show me unmanaged Windows devices on the network"
+
 ### `falcon_search_managed_assets`
 
 **Required scopes:** `Assets:read`
@@ -43,22 +59,6 @@ Responses include `pagination.total` (the total number of records matching the f
 
 - "Which managed Windows hosts are unencrypted?"
 - "List critical assets that don't have Credential Guard enabled"
-
-### `falcon_search_unmanaged_assets`
-
-**Required scopes:** `Assets:read`
-
-Search for unmanaged assets (hosts without Falcon sensor) in your environment.
-
-Finds systems discovered by Falcon-managed hosts that lack a sensor themselves.
-Consult falcon://discover/hosts/fql-guide before constructing filter expressions.
-The tool automatically adds entity_type:'unmanaged' to all queries. Returns full
-asset details including platform, network, and criticality information.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
-
-**Example prompts:**
-
-- "Show me unmanaged Windows devices on the network"
 
 ## Resources
 

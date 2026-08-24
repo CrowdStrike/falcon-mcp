@@ -12,6 +12,27 @@ Retrieving Zero Trust Assessment posture scores and sensor and OS hardening sign
 
 ## Tools
 
+### `falcon_search_zta_assessments`
+
+**Required scopes:** `Zero Trust Assessment:read`
+
+Search Zero Trust Assessment scores and return full assessment details.
+
+Use this to rank hosts by security posture: pass `max_score` to list the weakest
+hosts, `min_score` to list the strongest. Score is the only attribute this tool can
+select on, so start from `falcon_get_zta_assessments` when you already have an agent
+ID (AID) and from `falcon_search_hosts` when you have a hostname.
+Returns each host's Zero Trust score with its full sensor and OS hardening signals,
+in the standard pagination envelope; feed `pagination.next` back as `after`.
+
+Results name hosts only by AID, so pair this with `falcon_search_hosts` to report
+hostnames. Each record carries a long signal list, so raise `limit` deliberately.
+
+**Example prompts:**
+
+- "Which hosts have the weakest Zero Trust posture?"
+- "Show me hosts scoring below 40 on Zero Trust Assessment"
+
 ### `falcon_get_zta_assessments`
 
 **Required scopes:** `Zero Trust Assessment:read`
@@ -49,24 +70,3 @@ tenant, broken down by platform.
 
 - "What is our overall Zero Trust score?"
 - "Break down our Zero Trust posture by platform"
-
-### `falcon_search_zta_assessments`
-
-**Required scopes:** `Zero Trust Assessment:read`
-
-Search Zero Trust Assessment scores and return full assessment details.
-
-Use this to rank hosts by security posture: pass `max_score` to list the weakest
-hosts, `min_score` to list the strongest. Score is the only attribute this tool can
-select on, so start from `falcon_get_zta_assessments` when you already have an agent
-ID (AID) and from `falcon_search_hosts` when you have a hostname.
-Returns each host's Zero Trust score with its full sensor and OS hardening signals,
-in the standard pagination envelope; feed `pagination.next` back as `after`.
-
-Results name hosts only by AID, so pair this with `falcon_search_hosts` to report
-hostnames. Each record carries a long signal list, so raise `limit` deliberately.
-
-**Example prompts:**
-
-- "Which hosts have the weakest Zero Trust posture?"
-- "Show me hosts scoring below 40 on Zero Trust Assessment"

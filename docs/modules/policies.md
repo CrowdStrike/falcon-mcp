@@ -23,60 +23,6 @@ This module provides a unified set of tools for managing CrowdStrike host-based 
 
 ## Tools
 
-### `falcon_create_policy`
-
-> [!NOTE]
-> This tool modifies data.
-
-Create a host-based policy of the given type.
-
-Provide a name and (for every type except content_update) a platform_name.
-Detailed per-type settings construction is out of scope for v1 — the
-typical flow is to clone an existing policy with clone_id and then adjust
-it via falcon_update_policy, or pass an opaque settings object. New
-policies are created disabled. Returns the created policy record.
-
-**Example prompts:**
-
-- "Create a disabled firewall policy named 'Test FW' for Windows"
-
-### `falcon_delete_policies`
-
-> [!CAUTION]
-> This tool performs destructive operations.
-
-Delete one or more host-based policies of the given type.
-
-Provide the policy_type and a non-empty list of policy `ids`. A policy
-usually must be DISABLED before it can be deleted — an enabled policy
-returns an HTTP 400. Disable it first with
-falcon_perform_policy_action(action_name="disable"); this tool does not
-auto-disable. The Default policy of each type cannot be deleted. Returns
-the API response for the deletion.
-
-**Example prompts:**
-
-- "Delete firewall policy 1a2b3c"
-
-### `falcon_perform_policy_action`
-
-> [!NOTE]
-> This tool modifies data.
-
-Perform an action on one or more policies of the given type.
-
-Use this to enable/disable policies or attach/detach host groups (and, for
-prevention, Custom IOA rule groups; for content_update, content overrides).
-action_name is validated against the actions valid for that policy_type —
-rule-group actions are prevention-only. The add/remove-host-group and
-add/remove-rule-group actions require a group_id. Returns the updated policy
-records.
-
-**Example prompts:**
-
-- "Disable prevention policy 1a2b3c"
-- "Add host group 9z8y7x to sensor update policy 1a2b3c"
-
 ### `falcon_search_policies`
 
 Search host-based policies of a given type and return full policy records.
@@ -115,21 +61,22 @@ Responses include `pagination.total` (the total number of records matching the f
 
 - "What hosts are assigned to firewall policy 1a2b3c?"
 
-### `falcon_set_policy_precedence`
+### `falcon_create_policy`
 
 > [!NOTE]
 > This tool modifies data.
 
-Set the precedence (evaluation order) of policies for a platform.
+Create a host-based policy of the given type.
 
-The `ids` list must be the COMPLETE ordered set of non-Default policies for
-the given platform — the first id is highest precedence. Partial lists are
-rejected by the API. platform_name is required for every type except
-content_update. Returns the API response.
+Provide a name and (for every type except content_update) a platform_name.
+Detailed per-type settings construction is out of scope for v1 — the
+typical flow is to clone an existing policy with clone_id and then adjust
+it via falcon_update_policy, or pass an opaque settings object. New
+policies are created disabled. Returns the created policy record.
 
 **Example prompts:**
 
-- "Set the precedence order of these Windows prevention policies: 1a2b3c, 4d5e6f, 7g8h9i"
+- "Create a disabled firewall policy named 'Test FW' for Windows"
 
 ### `falcon_update_policy`
 
@@ -148,6 +95,59 @@ the updated policy record.
 **Example prompts:**
 
 - "Rename prevention policy 1a2b3c to 'Servers - Strict'"
+
+### `falcon_delete_policies`
+
+> [!CAUTION]
+> This tool performs destructive operations.
+
+Delete one or more host-based policies of the given type.
+
+Provide the policy_type and a non-empty list of policy `ids`. A policy
+usually must be DISABLED before it can be deleted — an enabled policy
+returns an HTTP 400. Disable it first with
+falcon_perform_policy_action(action_name="disable"); this tool does not
+auto-disable. The Default policy of each type cannot be deleted. Returns
+the API response for the deletion.
+
+**Example prompts:**
+
+- "Delete firewall policy 1a2b3c"
+
+### `falcon_perform_policy_action`
+
+> [!NOTE]
+> This tool modifies data.
+
+Perform an action on one or more policies of the given type.
+
+Use this to enable/disable policies or attach/detach host groups (and, for
+prevention, Custom IOA rule groups; for content_update, content overrides).
+action_name is validated against the actions valid for that policy_type —
+rule-group actions are prevention-only. The add/remove-host-group and
+add/remove-rule-group actions require a group_id. Returns the updated policy
+records.
+
+**Example prompts:**
+
+- "Disable prevention policy 1a2b3c"
+- "Add host group 9z8y7x to sensor update policy 1a2b3c"
+
+### `falcon_set_policy_precedence`
+
+> [!NOTE]
+> This tool modifies data.
+
+Set the precedence (evaluation order) of policies for a platform.
+
+The `ids` list must be the COMPLETE ordered set of non-Default policies for
+the given platform — the first id is highest precedence. Partial lists are
+rejected by the API. platform_name is required for every type except
+content_update. Returns the API response.
+
+**Example prompts:**
+
+- "Set the precedence order of these Windows prevention policies: 1a2b3c, 4d5e6f, 7g8h9i"
 
 ## Resources
 

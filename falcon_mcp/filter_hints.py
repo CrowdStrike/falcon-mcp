@@ -120,8 +120,22 @@ FILTER_HINTS: dict[str, str] = {
     # === Cloud: IOM Findings ===
     "falcon_search_iom_findings": (
         "Common fields: severity (Critical|High|Medium|Low|Informational), "
-        "status (open|suppressed|pass), cloud_provider (aws|azure|gcp), "
+        "status (open|suppressed|pass), cloud_provider (aws|azure|gcp — lowercase "
+        "required; uppercase returns an empty result, not an error), "
         "service, region, resource_type, account_name, rule_name."
+    ),
+    # === Cloud: Cloud Insights ===
+    "falcon_search_cloud_insights": (
+        "Filter on insights.id (insight ID), insights.boolean_value (true|false), "
+        "insights.string_value (string; substring match needs :*'*val*' — 'val*' and ~ return nothing), "
+        "insights.integer_value (integer, supports range ops e.g. :>0), "
+        "insights.date_value (ISO-8601 timestamp, e.g. :<'2025-01-01T00:00:00Z'), "
+        "insights.string_list_value (list member match). "
+        "All fields are asset-level: a condition matches if any insight on the asset satisfies it. "
+        "Use snake_case field names — camelCase is rejected. "
+        "To scope by category: call list_cloud_insight_definitions(categories=['X']) first, "
+        "then pass the returned insight_ids as insights.id:['id1','id2']. "
+        "Ex: insights.id:'identityIsAdmin'+insights.boolean_value:true"
     ),
     # === Cloud: Cloud Risks ===
     "falcon_search_cloud_groups": (

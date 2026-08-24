@@ -13,6 +13,52 @@ Searching and managing firewall rules and rule groups
 
 ## Tools
 
+### `falcon_search_firewall_rules`
+
+**Required scopes:** `Firewall Management:read`
+
+Search firewall rules and return full rule details.
+
+Use this to find firewall rules by name, platform, or enabled state. Consult
+falcon://firewall/rules/fql-guide before constructing filter expressions.
+Returns complete rule objects including conditions and actions.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
+
+**Example prompts:**
+
+- "Show me all enabled Windows firewall rules"
+- "Find firewall rules matching 'outbound'"
+
+### `falcon_search_firewall_rule_groups`
+
+**Required scopes:** `Firewall Management:read`
+
+Search firewall rule groups and return full rule group details.
+
+Use this to find rule groups by name, platform, or enabled state. Consult
+falcon://firewall/rules/fql-guide before constructing filter expressions.
+Returns rule group objects including their contained rules.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
+
+**Example prompts:**
+
+- "Find all enabled firewall rule groups for Windows"
+
+### `falcon_search_firewall_policy_rules`
+
+**Required scopes:** `Firewall Management:read`
+
+Search firewall rules within a specific policy container.
+
+Use this when you need rules scoped to a particular policy. Consult
+falcon://firewall/rules/fql-guide before constructing filter expressions.
+Returns full rule details for the specified policy.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+
+**Example prompts:**
+
+- "Show me all rules in firewall policy abc123"
+
 ### `falcon_create_firewall_rule_group`
 
 > [!NOTE]
@@ -44,52 +90,6 @@ Returns an empty list on success.
 **Example prompts:**
 
 - "Delete firewall rule group abc123"
-
-### `falcon_search_firewall_policy_rules`
-
-**Required scopes:** `Firewall Management:read`
-
-Search firewall rules within a specific policy container.
-
-Use this when you need rules scoped to a particular policy. Consult
-falcon://firewall/rules/fql-guide before constructing filter expressions.
-Returns full rule details for the specified policy.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
-
-**Example prompts:**
-
-- "Show me all rules in firewall policy abc123"
-
-### `falcon_search_firewall_rule_groups`
-
-**Required scopes:** `Firewall Management:read`
-
-Search firewall rule groups and return full rule group details.
-
-Use this to find rule groups by name, platform, or enabled state. Consult
-falcon://firewall/rules/fql-guide before constructing filter expressions.
-Returns rule group objects including their contained rules.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
-
-**Example prompts:**
-
-- "Find all enabled firewall rule groups for Windows"
-
-### `falcon_search_firewall_rules`
-
-**Required scopes:** `Firewall Management:read`
-
-Search firewall rules and return full rule details.
-
-Use this to find firewall rules by name, platform, or enabled state. Consult
-falcon://firewall/rules/fql-guide before constructing filter expressions.
-Returns complete rule objects including conditions and actions.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.
-
-**Example prompts:**
-
-- "Show me all enabled Windows firewall rules"
-- "Find firewall rules matching 'outbound'"
 
 ## Resources
 

@@ -207,6 +207,21 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_get_cloud_groups": [
         "Get the details for cloud group abc-123",
     ],
+    "falcon_search_cloud_insights": [
+        "What is internet-exposed in my cloud accounts?",
+        "Which IAM identities have admin and are actually unused?",
+        "Which exposed storage might hold sensitive data?",
+        "Which access keys are stale or unrotated?",
+    ],
+    "falcon_get_cloud_asset_insights": [
+        "Show me all the insight facts and context for cloud asset abc-123",
+        "Why is this asset flagged — give me its full insight detail",
+    ],
+    "falcon_list_cloud_insight_definitions": [
+        "What cloud security insights are available for Identity?",
+        "List all insight definitions across all categories",
+        "Which compliance controls map to cloud network insights?",
+    ],
     # Custom IOA
     "falcon_search_ioa_rule_groups": [
         "Find enabled Windows Custom IOA rule groups",
@@ -645,60 +660,84 @@ def clean_docstring(doc: str) -> str:
     return "\n".join(result).strip()
 
 
+def _extract_module_meta(mod: Any) -> tuple[str, str]:
+    """Derive (auto_title, auto_description) from a module's docstring."""
+    doc_lines = (mod.__doc__ or "").strip().splitlines() if mod.__doc__ else []
+
+    # Extract title from first line:
+    # "Real Time Response module for Falcon MCP Server." → "Real Time Response"
+    first_line = doc_lines[0].strip() if doc_lines else ""
+    auto_title = re.sub(
+        r"\s+module for Falcon MCP Server\.?$", "", first_line, flags=re.IGNORECASE
+    )
+
+    # Extract description from the second paragraph (first non-blank line after title)
+    # Stops at the next blank line so numbered lists / extra sections aren't included.
+    auto_description = ""
+    past_blank = False
+    desc_parts: list[str] = []
+    for line in doc_lines[1:]:
+        stripped = line.strip()
+        if not stripped:
+            if past_blank and desc_parts:
+                break  # stop at the next blank line after description
+            past_blank = True
+            continue
+        if past_blank:
+            desc_parts.append(stripped)
+    if desc_parts:
+        desc_text = " ".join(desc_parts)
+        # Take only the first sentence to avoid leaking numbered lists / extra sections
+        first_sentence = re.split(r"(?<=\.)\s", desc_text, maxsplit=1)[0].rstrip(".")
+        # Strip the common "This module provides tools for ..." prefix
+        auto_description = re.sub(
+            r"^This module provides tools? for\s+", "", first_sentence, flags=re.IGNORECASE
+        )
+        # Capitalise first letter after stripping
+        if auto_description:
+            auto_description = auto_description[0].upper() + auto_description[1:]
+
+    return auto_title, auto_description
+
+
+def _register_module_classes(mod: Any, result: dict[str, dict[str, Any]]) -> None:
+    """Find *Module classes in a module and add them to result, deriving meta from docstring."""
+    auto_title, auto_description = _extract_module_meta(mod)
+    for attr_name in dir(mod):
+        if attr_name.endswith("Module") and attr_name != "BaseModule":
+            cls = getattr(mod, attr_name)
+            # Skip classes imported from other modules — only register classes defined here.
+            if cls.__module__ != mod.__name__:
+                continue
+            module_key = attr_name.lower().replace("module", "")
+            result[module_key] = {
+                "cls": cls,
+                "auto_title": auto_title or module_key.title(),
+                "auto_description": auto_description,
+            }
+
+
 def discover_module_classes() -> dict[str, dict[str, Any]]:
     """Discover all module classes and auto-derive titles/descriptions from file docstrings."""
-    modules_path = str(PROJECT_ROOT / "falcon_mcp" / "modules")
+    modules_path = PROJECT_ROOT / "falcon_mcp" / "modules"
     result: dict[str, dict[str, Any]] = {}
 
-    for _, name, is_pkg in pkgutil.iter_modules([modules_path]):
-        if is_pkg or name == "base":
+    for _, name, is_pkg in pkgutil.iter_modules([str(modules_path)]):
+        if name == "base":
             continue
-        mod = importlib.import_module(f"falcon_mcp.modules.{name}")
 
-        doc_lines = (mod.__doc__ or "").strip().splitlines() if mod.__doc__ else []
-
-        # Extract title from first line:
-        # "Real Time Response module for Falcon MCP Server." → "Real Time Response"
-        first_line = doc_lines[0].strip() if doc_lines else ""
-        auto_title = re.sub(
-            r"\s+module for Falcon MCP Server\.?$", "", first_line, flags=re.IGNORECASE
-        )
-
-        # Extract description from the second paragraph (first non-blank line after title)
-        # Stops at the next blank line so numbered lists / extra sections aren't included.
-        auto_description = ""
-        past_blank = False
-        desc_parts: list[str] = []
-        for line in doc_lines[1:]:
-            stripped = line.strip()
-            if not stripped:
-                if past_blank and desc_parts:
-                    break  # stop at the next blank line after description
-                past_blank = True
-                continue
-            if past_blank:
-                desc_parts.append(stripped)
-        if desc_parts:
-            desc_text = " ".join(desc_parts)
-            # Take only the first sentence to avoid leaking numbered lists / extra sections
-            first_sentence = re.split(r"(?<=\.)\s", desc_text, maxsplit=1)[0].rstrip(".")
-            # Strip the common "This module provides tools for ..." prefix
-            auto_description = re.sub(
-                r"^This module provides tools? for\s+", "", first_sentence, flags=re.IGNORECASE
-            )
-            # Capitalise first letter after stripping
-            if auto_description:
-                auto_description = auto_description[0].upper() + auto_description[1:]
-
-        for attr_name in dir(mod):
-            if attr_name.endswith("Module") and attr_name != "BaseModule":
-                cls = getattr(mod, attr_name)
-                module_key = attr_name.lower().replace("module", "")
-                result[module_key] = {
-                    "cls": cls,
-                    "auto_title": auto_title or module_key.title(),
-                    "auto_description": auto_description,
-                }
+        if is_pkg:
+            # Recurse into the package: each submodule is scanned independently so that
+            # each file's docstring drives its own title/description without dir() collisions.
+            pkg_path = modules_path / name
+            for _, subname, sub_is_pkg in pkgutil.iter_modules([str(pkg_path)]):
+                if sub_is_pkg or subname == "__init__":
+                    continue
+                submod = importlib.import_module(f"falcon_mcp.modules.{name}.{subname}")
+                _register_module_classes(submod, result)
+        else:
+            mod = importlib.import_module(f"falcon_mcp.modules.{name}")
+            _register_module_classes(mod, result)
 
     return result
 
@@ -742,9 +781,36 @@ def _operation_names_in(source: str, module_cls: type) -> set[str]:
     return names
 
 
+def _own_classes(module_cls: type) -> list[type]:
+    """The MRO classes belonging to this module, stopping before BaseModule.
+
+    A module assembled from mixins spreads its tools and helpers over several classes, so
+    scope detection has to read all of them. It must stop at BaseModule: that source is
+    shared by every module and mentions operation names from all of them, which would
+    attribute unrelated scopes to whichever module was being documented.
+    """
+    import abc
+
+    from falcon_mcp.modules.base import BaseModule
+
+    stop_at = {BaseModule, abc.ABC, object}
+    classes: list[type] = []
+    for klass in module_cls.__mro__:
+        if klass in stop_at:
+            break
+        classes.append(klass)
+    return classes
+
+
 def extract_module_scopes(module_cls: type) -> list[str]:
     """Derive API scopes by finding operation names in module source and looking them up in API_SCOPE_REQUIREMENTS."""
-    source = inspect.getsource(module_cls)
+    parts: list[str] = []
+    for klass in _own_classes(module_cls):
+        try:
+            parts.append(inspect.getsource(klass))
+        except (TypeError, OSError):
+            pass
+    source = "\n".join(parts)
 
     all_strings = _operation_names_in(source, module_cls)
     scopes: set[str] = set()
@@ -772,27 +838,31 @@ def extract_tool_scopes(method: Any, module_cls: type) -> list[str]:
     except (TypeError, OSError):
         return []
 
-    # Only trace methods defined directly on this class (not inherited from BaseModule)
-    own_methods = set(module_cls.__dict__.keys())
+    # Build a map of method name → source from every class this module owns, so a mixin
+    # package resolves a helper that lives on a sibling mixin. Public methods are included
+    # too: a tool that reaches the API only through another tool method needs that
+    # operation's scopes as well.
+    own_method_source: dict[str, str] = {}
+    for klass in _own_classes(module_cls):
+        for attr, val in klass.__dict__.items():
+            if attr not in own_method_source and callable(val):
+                try:
+                    own_method_source[attr] = inspect.getsource(val)
+                except (TypeError, OSError):
+                    pass
 
-    # Walk the helper chain breadth-first, guarding against recursion. Match bare
-    # `self.name` too, not just `self.name(`, so a method passed as a callable rather
-    # than called directly is still followed.
+    # Walk the chain breadth-first, guarding against recursion. Match bare `self.name`
+    # too, not just `self.name(`, so a method passed as a callable rather than called
+    # directly is still followed.
     combined_source = method_source
     seen: set[str] = set()
     pending = re.findall(r"self\.(\w+)", method_source)
     while pending:
         helper_name = pending.pop()
-        if helper_name in seen or helper_name not in own_methods:
+        if helper_name in seen or helper_name not in own_method_source:
             continue
         seen.add(helper_name)
-        helper = module_cls.__dict__[helper_name]
-        if not callable(helper):
-            continue
-        try:
-            helper_source = inspect.getsource(helper)
-        except (TypeError, OSError):
-            continue
+        helper_source = own_method_source[helper_name]
         combined_source += "\n" + helper_source
         pending.extend(re.findall(r"self\.(\w+)", helper_source))
 
@@ -816,6 +886,26 @@ def extract_tool_info(method: Any) -> dict[str, Any]:
     }
 
 
+def _collect_method_source(module_cls: type, method_name: str) -> str:
+    """Collect source from every class in the MRO that defines method_name.
+
+    Needed because CloudModule (and similar) is assembled from multiple mixins,
+    each with its own register_tools/register_resources. Plain
+    inspect.getsource(cls.method) resolves via MRO to only the first definition.
+    """
+    parts: list[str] = []
+    seen: set[type] = set()
+    for klass in reversed(module_cls.__mro__):
+        if klass in seen or method_name not in klass.__dict__:
+            continue
+        seen.add(klass)
+        try:
+            parts.append(inspect.getsource(klass.__dict__[method_name]))
+        except (TypeError, OSError):
+            pass
+    return "\n".join(parts)
+
+
 def extract_registered_tool_names(module_cls: type) -> dict[str, str]:
     """Extract method-to-tool-name mappings from register_tools.
 
@@ -823,7 +913,7 @@ def extract_registered_tool_names(module_cls: type) -> dict[str, str]:
     should show the actual tool names exposed to MCP clients.
     """
     try:
-        source = inspect.getsource(module_cls.register_tools)  # type: ignore[attr-defined]
+        source = _collect_method_source(module_cls, "register_tools")
     except (AttributeError, TypeError):
         return {}
 
@@ -894,7 +984,7 @@ def _extract_kwarg_string(block: str, kwarg: str) -> str:
 def extract_resource_info(module_cls: type) -> list[dict[str, str]]:
     """Extract resource URIs and descriptions by inspecting register_resources."""
     try:
-        source = inspect.getsource(module_cls.register_resources)  # type: ignore[attr-defined]
+        source = _collect_method_source(module_cls, "register_resources")
     except (AttributeError, TypeError):
         return []
 
@@ -931,7 +1021,7 @@ def extract_resource_info(module_cls: type) -> list[dict[str, str]]:
 
 def extract_tool_annotations(module_cls: type) -> dict[str, dict[str, bool]]:
     """Extract tool annotations from register_tools source."""
-    source = inspect.getsource(module_cls.register_tools)  # type: ignore[attr-defined]
+    source = _collect_method_source(module_cls, "register_tools")
     annotations = {}
 
     # Find _add_tool calls with explicit annotations
@@ -959,42 +1049,37 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
     description = meta.get("description", fallback_desc)
     scopes = extract_module_scopes(module_cls)
 
-    # Extract tools
+    # Extract tools in runtime registration order (reverse-MRO, as built by _collect_method_source)
     tools = []
     tool_annotations = extract_tool_annotations(module_cls)
     registered_tool_names = extract_registered_tool_names(module_cls)
 
-    for attr_name in dir(module_cls):
-        method = getattr(module_cls, attr_name)
-        if (
-            callable(method)
-            and not attr_name.startswith("_")
-            and attr_name not in ("register_tools", "register_resources")
-        ):
-            registered_name = registered_tool_names.get(attr_name)
-            if registered_name:
-                info = extract_tool_info(method)
-                info["name"] = f"falcon_{registered_name}"
-                info["raw_name"] = registered_name
-                info["method"] = method
+    for attr_name, registered_name in registered_tool_names.items():
+        method = getattr(module_cls, attr_name, None)
+        if method is None or not callable(method):
+            continue
+        info = extract_tool_info(method)
+        info["name"] = f"falcon_{registered_name}"
+        info["raw_name"] = registered_name
+        info["method"] = method
 
-                # Get annotations
-                if registered_name in tool_annotations:
-                    info["annotations"] = tool_annotations[registered_name]
-                else:
-                    info["annotations"] = {
-                        "readOnlyHint": True,
-                        "destructiveHint": False,
-                        "idempotentHint": True,
-                    }
+        # Get annotations
+        if registered_name in tool_annotations:
+            info["annotations"] = tool_annotations[registered_name]
+        else:
+            info["annotations"] = {
+                "readOnlyHint": True,
+                "destructiveHint": False,
+                "idempotentHint": True,
+            }
 
-                # Get per-tool scopes
-                info["scopes"] = extract_tool_scopes(method, module_cls)
+        # Get per-tool scopes
+        info["scopes"] = extract_tool_scopes(method, module_cls)
 
-                # Example prompts (from static TOOL_EXAMPLES dict)
-                info["examples"] = TOOL_EXAMPLES.get(info["name"], [])
+        # Example prompts (from static TOOL_EXAMPLES dict)
+        info["examples"] = TOOL_EXAMPLES.get(info["name"], [])
 
-                tools.append(info)
+        tools.append(info)
 
     # Extract resources
     resources = extract_resource_info(module_cls)
@@ -1137,5 +1222,5 @@ def main() -> None:
     print(f"\nDone. {len(modules) + 1} files written to {OUTPUT_DIR}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

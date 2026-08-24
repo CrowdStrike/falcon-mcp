@@ -13,6 +13,24 @@ Accessing and managing CrowdStrike Falcon hosts/devices
 
 ## Tools
 
+### `falcon_search_hosts`
+
+**Required scopes:** `Hosts:read`
+
+Search hosts and their sensor state: filter by hostname, platform, IP, sensor version, containment (network-quarantine) status, assigned policies, or grouping tags.
+
+Use this to find devices and check their protection state - whether a host is
+contained, what sensor version it runs, which policies apply. For drive encryption,
+disk/memory/CPU, OS security settings, or internet exposure, use
+`falcon_search_managed_assets`. See `falcon://hosts/search/fql-guide` for filters;
+returns full host details.
+Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
+
+**Example prompts:**
+
+- "Find all Windows hosts in my environment"
+- "Show me hosts last seen in the past 24 hours"
+
 ### `falcon_get_host_details`
 
 **Required scopes:** `Hosts:read`
@@ -43,24 +61,6 @@ Adding a tag a host already has, or removing one it lacks, is a no-op. Returns
 one record per device, each with `device_id`, `updated`, and `code`. Tag names
 are case-sensitive, so removing a tag requires the exact casing it was created
 with.
-
-### `falcon_search_hosts`
-
-**Required scopes:** `Hosts:read`
-
-Search hosts and their sensor state: filter by hostname, platform, IP, sensor version, containment (network-quarantine) status, assigned policies, or grouping tags.
-
-Use this to find devices and check their protection state - whether a host is
-contained, what sensor version it runs, which policies apply. For drive encryption,
-disk/memory/CPU, OS security settings, or internet exposure, use
-`falcon_search_managed_assets`. See `falcon://hosts/search/fql-guide` for filters;
-returns full host details.
-Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
-
-**Example prompts:**
-
-- "Find all Windows hosts in my environment"
-- "Show me hosts last seen in the past 24 hours"
 
 ## Resources
 

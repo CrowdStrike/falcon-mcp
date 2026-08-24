@@ -69,6 +69,9 @@ API_SCOPE_REQUIREMENTS = {
     "GetSuppressionRules": ["Cloud Security Policies:read"],
     "CreateSuppressionRule": ["Cloud Security Policies:write"],
     "DeleteSuppressionRules": ["Cloud Security Policies:write"],
+    # PFM insight rules (native CloudPolicies ops — used for insight definitions)
+    "QueryRule": ["Cloud Security Policies:read"],
+    "GetRule": ["Cloud Security Policies:read"],
     # Identity Protection operations
     "api_preempt_proxy_post_graphql": [
         "Identity Protection Entities:read",

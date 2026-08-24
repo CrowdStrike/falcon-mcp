@@ -13,56 +13,6 @@ Searching Fusion SOAR workflow definitions and executions, reading what an execu
 
 ## Tools
 
-### `falcon_execute_workflow`
-
-> [!CAUTION]
-> This tool performs destructive operations.
-
-**Required scopes:** `Workflows:write`
-
-Start a Fusion SOAR workflow by definition ID.
-
-Use this to run a workflow a team has already built and reviewed — notifying
-a channel, opening a ticket, or running a containment sequence. What this
-tool does depends entirely on the workflow you name and cannot be known from
-this tool's name: a workflow may contain a host, disable an identity, or
-notify third parties. Confirm the definition with
-falcon_search_workflow_definitions and check its `trigger.parameters`,
-`enabled` and `version` first; prefer a `trigger.type` of 'On demand', and
-note the API refuses a disabled definition or a 'Signal'-triggered one with
-a 412 whose message says which. Match `parameters` to `trigger.parameters`
-exactly — a missing required field is rejected and starts nothing, but a
-wrong type or malformed value is accepted and starts a real run. Returns
-`[{"execution_id": "<id>"}]`; the run is asynchronous, so read the outcome
-with falcon_get_workflow_execution_results.
-
-**Example prompts:**
-
-- "Run the 'Notify SOC Channel' workflow"
-- "Start workflow 2617e3fc with the hash abc123"
-
-### `falcon_get_workflow_execution_results`
-
-**Required scopes:** `Workflows:read`
-
-Read what one or more Fusion SOAR workflow executions produced.
-
-Use this to look up executions directly by ID — up to 500 at once, with no
-filter to construct — and to read each activity's own `result` payload:
-ticket numbers, script output, API responses. This is the step after
-falcon_execute_workflow, which returns only an execution ID. Returns the
-full execution records including `status` and every activity's result;
-`skip_fields` trims the largest sections when the records are too big. A run
-still going reports `status` 'In progress': report that state back rather
-than re-polling in a tight loop. 'Completed' and 'Failed' are terminal;
-'Action required' means the run is waiting on a human, so polling will never
-finish it.
-
-**Example prompts:**
-
-- "What did workflow execution 714511d8 actually do?"
-- "Show me the ticket number the incident workflow created"
-
 ### `falcon_search_workflow_definitions`
 
 **Required scopes:** `Workflows:read`
@@ -113,6 +63,56 @@ Responses include `pagination.total` (the total number of records matching the f
 - "Show me workflow executions that completed"
 - "Which Fusion workflows failed in the last 7 days?"
 - "Are any workflow runs waiting on someone to approve them?"
+
+### `falcon_get_workflow_execution_results`
+
+**Required scopes:** `Workflows:read`
+
+Read what one or more Fusion SOAR workflow executions produced.
+
+Use this to look up executions directly by ID — up to 500 at once, with no
+filter to construct — and to read each activity's own `result` payload:
+ticket numbers, script output, API responses. This is the step after
+falcon_execute_workflow, which returns only an execution ID. Returns the
+full execution records including `status` and every activity's result;
+`skip_fields` trims the largest sections when the records are too big. A run
+still going reports `status` 'In progress': report that state back rather
+than re-polling in a tight loop. 'Completed' and 'Failed' are terminal;
+'Action required' means the run is waiting on a human, so polling will never
+finish it.
+
+**Example prompts:**
+
+- "What did workflow execution 714511d8 actually do?"
+- "Show me the ticket number the incident workflow created"
+
+### `falcon_execute_workflow`
+
+> [!CAUTION]
+> This tool performs destructive operations.
+
+**Required scopes:** `Workflows:write`
+
+Start a Fusion SOAR workflow by definition ID.
+
+Use this to run a workflow a team has already built and reviewed — notifying
+a channel, opening a ticket, or running a containment sequence. What this
+tool does depends entirely on the workflow you name and cannot be known from
+this tool's name: a workflow may contain a host, disable an identity, or
+notify third parties. Confirm the definition with
+falcon_search_workflow_definitions and check its `trigger.parameters`,
+`enabled` and `version` first; prefer a `trigger.type` of 'On demand', and
+note the API refuses a disabled definition or a 'Signal'-triggered one with
+a 412 whose message says which. Match `parameters` to `trigger.parameters`
+exactly — a missing required field is rejected and starts nothing, but a
+wrong type or malformed value is accepted and starts a real run. Returns
+`[{"execution_id": "<id>"}]`; the run is asynchronous, so read the outcome
+with falcon_get_workflow_execution_results.
+
+**Example prompts:**
+
+- "Run the 'Notify SOC Channel' workflow"
+- "Start workflow 2617e3fc with the hash abc123"
 
 ## Resources
 
