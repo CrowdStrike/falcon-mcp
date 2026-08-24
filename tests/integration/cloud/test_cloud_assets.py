@@ -27,19 +27,59 @@ class TestCloudAssetsIntegration(BaseIntegrationTest):
             )
 
     def test_search_cspm_assets_with_cloud_provider_filter(self):
-        result = self.call_method(
+        """cloud_provider filters on the lowercase value the API returns.
+
+        Asserts the returned value literally rather than via .upper(), which passed for
+        either casing and so never covered which spelling the tool should document.
+        """
+        result = self.assert_filter_matches(
             self.module.search_cspm_assets,
-            filter="cloud_provider:'AWS'",
+            "cloud_provider:'aws'",
+            predicate=lambda asset: asset.get("cloud_provider") == "aws",
+            predicate_desc="asset.cloud_provider == 'aws'",
+            note="Every guide, filter hint and example in this repo uses lowercase.",
             limit=3,
         )
-        self.assert_no_error(result, context="search_cspm_assets with cloud_provider filter")
-        self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets cloud_provider filter")
-        if len(result) > 0:
-            for asset in result:
-                assert "cloud_provider" in asset, "Asset should have cloud_provider field"
-                assert asset["cloud_provider"].upper() == "AWS", (
-                    f"Expected cloud_provider AWS, got {asset['cloud_provider']}"
-                )
+        assert self._unwrap_results(result), "Expected at least one AWS asset"
+
+    def test_cloud_provider_casing_differs_across_cloud_endpoints(self):
+        """This endpoint is case-insensitive on cloud_provider; search_iom_findings is not.
+
+        Documented because the failure is silent: `cloud_provider:'AWS'` against
+        cspm_evaluations_iom_queries returns an empty HTTP 200 rather than an error, so a
+        model that learned uppercase from one cloud tool gets zero findings from the other
+        with nothing to explain why. Lowercase is the only spelling that works on both,
+        which is why every guide and hint in the repo uses it.
+
+        The assertion is zero-versus-nonzero rather than exact equality: the two calls run
+        seconds apart against a live inventory, so their totals routinely differ by a
+        record or two.
+        """
+        lower = self.call_method(self.module.search_cspm_assets, filter="cloud_provider:'aws'", limit=1)
+        upper = self.call_method(self.module.search_cspm_assets, filter="cloud_provider:'AWS'", limit=1)
+        self.assert_no_error(lower, context="cspm assets lowercase")
+        self.assert_no_error(upper, context="cspm assets uppercase")
+        lower_total = lower["pagination"]["total"]
+        upper_total = upper["pagination"]["total"]
+        assert lower_total, "cloud_provider:'aws' matched no assets, so this test proves nothing"
+        assert upper_total > lower_total * 0.9, (
+            "cloud_security_assets_queries used to treat cloud_provider case-insensitively; "
+            "uppercase now returns a materially different count. "
+            f"lowercase total={lower_total}, uppercase total={upper_total}"
+        )
+
+        iom_lower = self.call_method(self.module.search_iom_findings, filter="cloud_provider:'aws'", limit=1)
+        iom_upper = self.call_method(self.module.search_iom_findings, filter="cloud_provider:'AWS'", limit=1)
+        self.assert_no_error(iom_lower, context="iom lowercase")
+        self.assert_no_error(iom_upper, context="iom uppercase")
+        assert iom_lower["pagination"]["total"], (
+            "cloud_provider:'aws' returned no IOM findings, so the comparison below proves nothing"
+        )
+        assert not iom_upper["pagination"]["total"], (
+            "cspm_evaluations_iom_queries now matches uppercase cloud_provider. If that is "
+            "real, the lowercase-only warning in the IOM FQL guide can be relaxed. "
+            f"uppercase total={iom_upper['pagination']['total']}"
+        )
 
     def test_search_cspm_assets_with_tag_filter(self):
         result = self.call_method(

@@ -162,12 +162,16 @@ class _CloudInsightsMixin(_CloudBase):
         sort: str | None = Field(
             default=None,
             description=(
-                "Sort assets using field.asc or field.desc. Supported fields:"
+                "Sort assets using field.asc or field.desc. Asset fields:"
                 " cloud_provider, account_id, account_name, resource_type, region,"
-                " creation_time, updated_at. Insight-field sorting is also supported"
-                " (e.g. 'publiclyExposedToTheInternet.desc')."
-                " Use the dot separator ('updated_at.desc')."
+                " resource_name, service, creation_time, first_seen, updated_at."
+                " Three insight fields are also sortable — publiclyExposedToTheInternet,"
+                " publiclyExposedAccessRange, publiclyExposedExposureMethod — but no other"
+                " insight ID is; sorting by one returns an error naming the valid fields."
+                " Use the dot separator ('updated_at.desc'); the pipe form"
+                " ('updated_at|desc') is equivalent here."
             ),
+            examples=["updated_at.desc", "resource_name.asc", "publiclyExposedToTheInternet.desc"],
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for cloud security insights using FQL.

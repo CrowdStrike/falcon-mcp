@@ -818,6 +818,11 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         """
         The cloud provider. Values: aws, azure, gcp.
 
+        Lowercase is REQUIRED here. Unlike the CSPM asset and cloud risk endpoints,
+        this one is case-sensitive on cloud_provider, and an uppercase value such as
+        'AWS' returns an empty HTTP 200 rather than an error — so the query looks
+        like "no findings" instead of "wrong value".
+
         Ex: cloud_provider:'aws'
         Ex: cloud_provider:['aws', 'azure']
         """,

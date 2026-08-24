@@ -53,9 +53,13 @@ CLOUD_INSIGHTS_FQL_FILTERS = [
         """
         Filter assets where at least one insight has the given string value.
         Maps to the `value` field in output when the insight stores a string
-        (e.g. publiclyExposedAccessRange). Supports wildcards.
+        (e.g. publiclyExposedAccessRange, publiclyExposedExposureMethod).
 
-        Ex: insights.string_value:'Internet (0.0.0.0/0)'
+        Substring match requires the :* operator with wildcards on both sides.
+        A trailing-only wildcard ('Global*') returns nothing, and the ~ operator
+        is rejected outright on this endpoint.
+
+        Ex: insights.string_value:'Global Access'
         Ex: insights.string_value:*'*Internet*'
         """,
     ),
@@ -64,7 +68,7 @@ CLOUD_INSIGHTS_FQL_FILTERS = [
         "Number",
         """
         Filter assets where at least one insight has the given integer value.
-        Maps to the `value` field in output when the insight stores an integer. Supports comparison operators.
+        Maps to the `value` field in output when the insight stores an integer.
 
         Ex: insights.integer_value:>0
         Ex: insights.integer_value:>=5
@@ -75,7 +79,7 @@ CLOUD_INSIGHTS_FQL_FILTERS = [
         "Timestamp",
         """
         Filter assets where at least one insight has the given date value.
-        Maps to the `value` field in output when the insight stores a date. Supports comparison operators.
+        Maps to the `value` field in output when the insight stores a date.
         Use ISO-8601 format.
 
         Ex: insights.date_value:<'2025-01-01T00:00:00Z'
@@ -88,9 +92,11 @@ CLOUD_INSIGHTS_FQL_FILTERS = [
         """
         Filter assets where at least one insight has a list value containing the given member.
         Maps to the `value` field in output when the insight stores a list of strings
-        (e.g. llmModelsUsed). Matches if the list contains the specified value.
+        (e.g. identityAssumableByService, enabledLoggingSources, identityExternallyAssumableBy).
+        Matches if the list contains the specified value exactly — pass one member, not a list.
 
-        Ex: insights.string_list_value:'claude-sonnet-4-20250514'
+        Ex: insights.string_list_value:'ssm.amazonaws.com'
+        Ex: insights.string_list_value:'Cloud Logging Scope'
         """,
     ),
     (
@@ -98,6 +104,8 @@ CLOUD_INSIGHTS_FQL_FILTERS = [
         "String",
         """
         Filter by cloud provider. Matches the `cloud_provider` field in output.
+        Use lowercase — it is the value the API returns, and the only spelling that
+        works across every cloud tool.
 
         Ex: cloud_provider:'aws'
         Ex: cloud_provider:['aws', 'azure']
@@ -147,7 +155,9 @@ To filter by category:
   2. Pass insights.id:['id1','id2'] in the filter param here.
 
 NOTE: When filter is omitted, the tool automatically queries all known insight IDs from
-the catalog so only assets with insights are returned.
+the catalog so only assets with insights are returned. The response then carries
+`auto_filter_applied: true` and `auto_filter_insight_count` instead of `filter_used`,
+since you did not supply a filter.
 
 """
     + generate_md_table(CLOUD_INSIGHTS_FQL_FILTERS)
@@ -166,8 +176,56 @@ depends on the insight's value type:
 | date/timestamp      | insights.date_value         |
 | list of strings     | insights.string_list_value  |
 
+Most insights are boolean. To find the right filter field for a specific insight,
+query it by ID first and look at the `value` type in the response.
+
 IMPORTANT: FQL filter field names are snake_case (e.g. insights.boolean_value),
 Insight ID values in insights.id: are in camelCase (e.g. insights.id:'publiclyExposedToTheInternet').
+
+=== The `category` field in search output is always null ===
+
+Each entry in a search result's `insights` array carries `category: null`. The
+per-insight category lives in the Policy Framework catalog, not on the asset record,
+so resolving it during a search would add a round-trip to every query. To map an
+insight_id to its category, call list_cloud_insight_definitions — its entries carry
+the real category. The six categories are Identity, Network, Vulnerabilities, Data,
+AI and Application.
+
+=== Sorting ===
+
+Pass `sort` as `field.asc` or `field.desc`. The pipe form (`field|desc`) is
+equivalent. An invalid sort field is rejected with an error naming the valid ones,
+so a sort is never silently ignored — but note the direction suffix is
+case-sensitive: `updated_at.DESC` is an error.
+
+Asset fields commonly worth sorting on:
+
+| Field           | Notes                                            |
+|-----------------|--------------------------------------------------|
+| updated_at      | Most recently changed assets first with .desc    |
+| creation_time   | Asset creation time                              |
+| first_seen      | When the asset was first observed                |
+| resource_name   | Alphabetical by asset name                       |
+| account_id      | Group by cloud account                           |
+| account_name    | Group by cloud account name                      |
+| cloud_provider  | Group by provider                                |
+| resource_type   | Group by resource type                           |
+| region          | Group by region                                  |
+| service         | Group by cloud service                           |
+
+Three insight fields are also sortable, and only these three:
+
+  publiclyExposedToTheInternet
+  publiclyExposedAccessRange
+  publiclyExposedExposureMethod
+
+**Any other insight ID is NOT a valid sort field.** `identityIsAdmin.desc` returns an
+error even though `insights.id:'identityIsAdmin'` is a perfectly good filter — the
+filterable and sortable field sets are different. `severity` is another example: a
+valid filter field, not a valid sort field.
+
+Ex: sort="updated_at.desc"
+Ex: sort="publiclyExposedToTheInternet.desc"   # exposed assets first
 
 === falcon_search_cloud_insights FQL filter examples ===
 
@@ -180,11 +238,14 @@ contains many more. Always discover IDs from the catalog rather than guessing.
 # Find publicly exposed assets (boolean insight)
 insights.id:'publiclyExposedToTheInternet'+insights.boolean_value:true
 
-# Find assets with internet-facing exposure (string value)
+# Find assets with internet-facing exposure (string value, substring match)
 insights.string_value:*'*Internet*'
 
 # Find assets open to the full internet by access range
 insights.id:'publiclyExposedAccessRange'+insights.string_value:'Internet (0.0.0.0/0)'
+
+# Rank exposed assets, most exposed first (one of the three sortable insight fields)
+insights.id:'publiclyExposedToTheInternet'   with sort="publiclyExposedToTheInternet.desc"
 
 --- Identity category ---
 # Find admin identities
@@ -196,7 +257,8 @@ insights.id:'unusedIdentity'+insights.boolean_value:true
 # Find identities with unrotated credentials
 insights.id:'identityUnrotatedAccessKeys'+insights.boolean_value:true
 
-
+# Find identities assumable by a specific AWS service (string list insight)
+insights.string_list_value:'ssm.amazonaws.com'
 
 --- Vulnerabilities category ---
 # Find assets with reachable critical CVEs
@@ -226,7 +288,9 @@ insights.id:'loggingEnabled'+insights.boolean_value:false
 insights.id:'usesAiServices'+insights.boolean_value:true
 
 # Find assets using a specific LLM model (string list insight)
-insights.string_list_value:'claude-sonnet-4-20250514'
+# Pass one list member, not a list. Discover the members an insight actually holds by
+# querying it by ID first and reading the `value` arrays.
+insights.id:'llmModelsUsed'+insights.string_list_value:'claude-sonnet-4-20250514'
 
 # Find assets exposing an MCP server interface
 insights.id:'exposesMcpServerInterface'+insights.boolean_value:true

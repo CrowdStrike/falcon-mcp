@@ -120,13 +120,14 @@ FILTER_HINTS: dict[str, str] = {
     # === Cloud: IOM Findings ===
     "falcon_search_iom_findings": (
         "Common fields: severity (Critical|High|Medium|Low|Informational), "
-        "status (open|suppressed|pass), cloud_provider (aws|azure|gcp), "
+        "status (open|suppressed|pass), cloud_provider (aws|azure|gcp — lowercase "
+        "required; uppercase returns an empty result, not an error), "
         "service, region, resource_type, account_name, rule_name."
     ),
     # === Cloud: Cloud Insights ===
     "falcon_search_cloud_insights": (
         "Filter on insights.id (insight ID), insights.boolean_value (true|false), "
-        "insights.string_value (string, supports wildcards), "
+        "insights.string_value (string; substring match needs :*'*val*' — 'val*' and ~ return nothing), "
         "insights.integer_value (integer, supports range ops e.g. :>0), "
         "insights.date_value (ISO-8601 timestamp, e.g. :<'2025-01-01T00:00:00Z'), "
         "insights.string_list_value (list member match). "

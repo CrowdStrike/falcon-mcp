@@ -35,7 +35,7 @@ class _CloudAssetsMixin(_CloudBase):
         filter: str | None = Field(
             default=None,
             description="FQL filter expression. See `falcon://cloud/cspm-assets/fql-guide` for syntax.",
-            examples=["cloud_provider:'AWS'", "tag_key:'Environment'+tag_value:'Production'"],
+            examples=["cloud_provider:'aws'", "tag_key:'Environment'+tag_value:'Production'"],
         ),
         limit: int = Field(
             default=100,
@@ -52,7 +52,7 @@ class _CloudAssetsMixin(_CloudBase):
             description=dedent("""
                 Sort cloud assets using these options:
 
-                cloud_provider: Cloud provider name (AWS, Azure, GCP)
+                cloud_provider: Cloud provider name (aws, azure, gcp)
                 account_id: Cloud account ID
                 account_name: Cloud account name
                 resource_type: Resource type (e.g., AWS::EC2::Instance)
