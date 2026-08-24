@@ -529,20 +529,27 @@ class TestExtractToolScopes(unittest.TestCase):
         self.assertIsInstance(result, list)
 
     def test_helper_getsource_failure_silently_skipped(self):
-        """Lines 692-695: OSError on helper getsource is silently skipped."""
+        """An OSError fetching a helper's source is skipped rather than raised.
+
+        The mock dispatches on the object rather than counting calls. Scope detection
+        calls getsource once per candidate — the tool method, each own-class method, and
+        the module itself when resolving operation-name constants — and that count is an
+        implementation detail a fixed side_effect list would pin.
+        """
         import inspect as _inspect
-        # Create a class with a helper whose source can't be fetched
+
         cls = type("FakeModule", (), {})
-        # Add a callable helper that inspect.getsource will fail on
         cls._my_helper = len  # built-in, not inspectable
 
         def fake_method(self):
             self._my_helper()
 
-        with patch.object(_inspect, "getsource", side_effect=[
-            "self._my_helper()\nsome_operation = 'dummy'",  # method source
-            OSError("no source"),                            # helper source fails
-        ]):
+        def fake_getsource(obj):
+            if obj is fake_method:
+                return "self._my_helper()\nsome_operation = 'dummy'"
+            raise OSError("no source")
+
+        with patch.object(_inspect, "getsource", side_effect=fake_getsource):
             result = extract_tool_scopes(fake_method, cls)
         self.assertIsInstance(result, list)
 
