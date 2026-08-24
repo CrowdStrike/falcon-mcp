@@ -20,13 +20,13 @@ class TestCloudIomIntegration(BaseIntegrationTest):
         """Validates cspm_evaluations_iom_queries and cspm_evaluations_iom_entities operation names."""
         result = self.call_method(self.module.search_iom_findings, limit=5)
         self.assert_no_error(result, context="search_iom_findings")
-        self.assert_valid_list_response(result, min_length=0, context="search_iom_findings")
-        if len(result) > 0:
-            self.assert_search_returns_details(
-                result,
-                expected_fields=["id", "cid", "cloud", "evaluation", "resource"],
-                context="search_iom_findings full details",
-            )
+        self.skip_unless_tenant_has(result, "IOM findings", "search_iom_findings")
+
+        self.assert_search_returns_details(
+            result,
+            expected_fields=["id", "cid", "cloud", "evaluation", "resource"],
+            context="search_iom_findings full details",
+        )
 
     def test_search_iom_findings_with_severity_filter(self):
         result = self.call_method(
@@ -58,21 +58,39 @@ class TestCloudIomIntegration(BaseIntegrationTest):
         self.assert_valid_list_response(result, min_length=0, context="search_iom_findings with sort")
 
     def test_search_iom_findings_batching(self):
+        """A limit above the 100-per-request detail batch size still returns every record.
+
+        `len()` on the envelope counts its keys, so the old `len(result) > 100` guard was
+        always false and this never exercised batching at all.
+        """
         result = self.call_method(self.module.search_iom_findings, limit=200)
         self.assert_no_error(result, context="search_iom_findings batching")
-        self.assert_valid_list_response(result, min_length=0, context="search_iom_findings batching")
-        if len(result) > 100:
-            print(f"✅ IOM batching tested successfully with {len(result)} findings")
+        findings = self.skip_unless_tenant_has(result, "IOM findings", "search_iom_findings batching")
+
+        total = result["pagination"]["total"]
+        if total is not None and total <= 100:
+            self.skip_with_warning(
+                f"tenant has only {total} IOM findings, so batching is not exercised",
+                context="search_iom_findings batching",
+            )
+            return
+
+        assert len(findings) > 100, (
+            f"Requested 200 findings from a tenant reporting {total}, but only "
+            f"{len(findings)} came back — the 100-per-request detail batching is dropping records."
+        )
+        ids = [f.get("id") for f in findings]
+        assert len(set(ids)) == len(ids), "Batching returned the same finding more than once"
 
     def test_search_suppression_rules(self):
         """Validates the override endpoint pattern for suppression rules."""
         result = self.call_method(self.module.search_cspm_suppression_rules, limit=5)
         self.assert_no_error(result, context="search_cspm_suppression_rules")
-        self.assert_valid_list_response(result, min_length=0, context="search_cspm_suppression_rules")
-        if len(result) > 0:
-            first_rule = result[0]
-            assert isinstance(first_rule, dict), "Expected dict items for suppression rules"
-            print(f"✅ Found {len(result)} suppression rule(s). Fields: {list(first_rule.keys())}")
+        rules = self.skip_unless_tenant_has(result, "CSPM suppression rules", "search_cspm_suppression_rules")
+
+        first_rule = rules[0]
+        assert isinstance(first_rule, dict), f"Expected dict items for suppression rules, got {type(first_rule)}"
+        assert first_rule.get("id"), f"Expected 'id' on a suppression rule. Got: {sorted(first_rule.keys())}"
 
     def test_create_and_delete_suppression_rule_roundtrip(self):
         """Creates a narrowly-scoped suppression rule then deletes it."""

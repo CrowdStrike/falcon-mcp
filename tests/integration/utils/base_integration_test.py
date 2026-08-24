@@ -165,6 +165,40 @@ class BaseIntegrationTest:
                 f"Available fields: {list(first_item.keys())}"
             )
 
+    def records(self, result: Any, context: str = "") -> list[Any]:
+        """Pull the entity list out of a search tool's pagination envelope.
+
+        Search tools return `{"results": [...], "pagination": {...}}`. Indexing that dict
+        directly raises `KeyError`, and `len()` on it counts keys rather than records — so
+        both `result[0]` and `len(result) > 100` silently misread it. Unwrap once here, then
+        assert against the list. Get-by-IDs tools return a bare list and pass through
+        unchanged.
+        """
+        ctx = f" ({context})" if context else ""
+        records = self._unwrap_results(result)
+        assert isinstance(records, list), f"Expected a list of records{ctx}, got {type(records)}"
+        return records
+
+    def skip_unless_tenant_has(self, result: Any, thing: str, context: str = "") -> list[Any]:
+        """Return the records, or skip only once the API confirms the tenant has none.
+
+        `pagination.total == 0` is the API stating there is nothing to find, which is a
+        legitimate reason to skip. An empty page alongside a non-zero total means the query
+        step found records the detail step did not return — a bug, not a bare tenant — so
+        that fails instead.
+        """
+        records = self.records(result, context)
+        if records:
+            return records
+
+        total = (result.get("pagination") or {}).get("total") if isinstance(result, dict) else None
+        assert not total, (
+            f"No {thing} returned but pagination.total is {total} — the query step found "
+            f"records the detail step did not return{f' ({context})' if context else ''}."
+        )
+        self.skip_with_warning(f"tenant has no {thing}", context=context)
+        return []
+
     def assert_filter_matches(
         self,
         search: Any,

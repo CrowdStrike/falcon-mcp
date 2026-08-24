@@ -18,13 +18,13 @@ class TestCloudContainersIntegration(BaseIntegrationTest):
         """Validates the ReadContainerCombined operation name is correct."""
         result = self.call_method(self.module.search_kubernetes_containers, limit=5)
         self.assert_no_error(result, context="search_kubernetes_containers")
-        self.assert_valid_list_response(result, min_length=0, context="search_kubernetes_containers")
-        if len(result) > 0:
-            self.assert_search_returns_details(
-                result,
-                expected_fields=["container_id", "container_name"],
-                context="search_kubernetes_containers",
-            )
+        self.skip_unless_tenant_has(result, "Kubernetes containers", "search_kubernetes_containers")
+
+        self.assert_search_returns_details(
+            result,
+            expected_fields=["container_id", "container_name"],
+            context="search_kubernetes_containers",
+        )
 
     def test_search_kubernetes_containers_with_filter(self):
         result = self.call_method(

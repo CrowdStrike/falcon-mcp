@@ -34,10 +34,9 @@ class TestCloudRisksIntegration(BaseIntegrationTest):
     def test_search_cloud_risks_returns_full_details(self):
         result = self.call_method(self.module.search_cloud_risks, limit=3)
         self.assert_no_error(result, context="search_cloud_risks full details")
-        if not result:
-            self.skip_with_warning("No cloud risks found in environment", "search_cloud_risks details")
-            return
-        first = result[0]
+        risks = self.skip_unless_tenant_has(result, "cloud risks", "search_cloud_risks details")
+
+        first = risks[0]
         assert isinstance(first, dict), f"Expected dict, got {type(first)}"
         for field in ["id", "severity", "status"]:
             assert field in first, f"Expected '{field}' in risk entity. Got: {sorted(first.keys())}"
@@ -56,16 +55,18 @@ class TestCloudRisksIntegration(BaseIntegrationTest):
         """Regression: lowercase severity/status values silently return 0 on this endpoint."""
         baseline = self.call_method(self.module.search_cloud_risks, limit=1)
         self.assert_no_error(baseline, context="baseline cloud risks")
-        if not baseline:
-            self.skip_with_warning("No cloud risks in environment", "cloud risks case-sensitivity")
-            return
+        self.skip_unless_tenant_has(baseline, "cloud risks", "cloud risks case-sensitivity")
+
         result = self.call_method(
             self.module.search_cloud_risks,
             filter="severity:'Critical',severity:'High',severity:'Medium',severity:'Low',severity:'Informational'",
             limit=5,
         )
         self.assert_no_error(result, context="capitalized severity filter")
-        self.assert_valid_list_response(result, min_length=1, context="capitalized severity values must match when risks exist")
+        assert self.records(result, "capitalized severity filter"), (
+            "Capitalized severity values returned nothing even though the tenant has "
+            "risks — these are the spellings the endpoint requires."
+        )
 
     def test_search_cloud_risks_with_cloud_provider_filter(self):
         result = self.call_method(self.module.search_cloud_risks, filter="cloud_provider:'aws'", limit=3)
@@ -92,26 +93,32 @@ class TestCloudRisksIntegration(BaseIntegrationTest):
             self.skip_with_warning("Cloud groups scope not available on this key", "search_cloud_groups details")
             return
         self.assert_no_error(result, context="search_cloud_groups full details")
-        if not result:
-            self.skip_with_warning("No cloud groups found in environment", "search_cloud_groups details")
-            return
-        first = result[0]
+        groups = self.skip_unless_tenant_has(result, "cloud groups", "search_cloud_groups details")
+
+        first = groups[0]
         assert isinstance(first, dict), f"Expected dict, got {type(first)}"
         assert "id" in first, f"Expected 'id' in group entity. Got: {sorted(first.keys())}"
 
     def test_get_cloud_groups_operation_name_correct(self):
-        """Validates ListCloudGroupsByIDExternal operation name is correct."""
-        groups = self.call_method(self.module.search_cloud_groups, limit=1)
-        if self._is_403_error(groups):
+        """Validates ListCloudGroupsByIDExternal operation name is correct.
+
+        search_cloud_groups returns the pagination envelope, get_cloud_groups returns a
+        bare list — so only the first call needs unwrapping.
+        """
+        found = self.call_method(self.module.search_cloud_groups, limit=1)
+        if self._is_403_error(found):
             self.skip_with_warning("Cloud groups scope not available on this key", "get_cloud_groups by ID")
             return
-        self.assert_no_error(groups, context="get groups for ID lookup")
-        if not groups:
-            self.skip_with_warning("No cloud groups found", "get_cloud_groups by ID")
-            return
+        self.assert_no_error(found, context="get groups for ID lookup")
+        groups = self.skip_unless_tenant_has(found, "cloud groups", "get_cloud_groups by ID")
+
         group_id = groups[0].get("id")
-        assert group_id, "Expected 'id' field in group"
+        assert group_id, f"Expected 'id' in group entity. Got: {sorted(groups[0].keys())}"
+
         result = self.call_method(self.module.get_cloud_groups, ids=[group_id])
         self.assert_no_error(result, context="ListCloudGroupsByIDExternal operation name")
+        assert isinstance(result, list), (
+            f"get_cloud_groups is a get-by-IDs tool and returns a bare list, got {type(result)}"
+        )
         self.assert_valid_list_response(result, min_length=1, context="get_cloud_groups by ID")
         assert result[0]["id"] == group_id

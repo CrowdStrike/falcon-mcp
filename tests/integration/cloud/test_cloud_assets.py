@@ -18,13 +18,13 @@ class TestCloudAssetsIntegration(BaseIntegrationTest):
         """Validates cloud_security_assets_queries and cloud_security_assets_entities_get operation names."""
         result = self.call_method(self.module.search_cspm_assets, limit=5)
         self.assert_no_error(result, context="search_cspm_assets")
-        self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets")
-        if len(result) > 0:
-            self.assert_search_returns_details(
-                result,
-                expected_fields=["id", "cloud_provider", "resource_type"],
-                context="search_cspm_assets",
-            )
+        self.skip_unless_tenant_has(result, "CSPM assets", "search_cspm_assets")
+
+        self.assert_search_returns_details(
+            result,
+            expected_fields=["id", "cloud_provider", "resource_type"],
+            context="search_cspm_assets",
+        )
 
     def test_search_cspm_assets_with_cloud_provider_filter(self):
         """cloud_provider filters on the lowercase value the API returns.
@@ -104,9 +104,26 @@ class TestCloudAssetsIntegration(BaseIntegrationTest):
         self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets with sort")
 
     def test_search_cspm_assets_batching(self):
-        """Tests batching logic when environment has >100 assets."""
+        """A limit above the 100-per-request detail batch size still returns every record.
+
+        `len()` on the envelope counts its keys, so the old `len(result) > 100` guard was
+        always false and this never exercised batching at all.
+        """
         result = self.call_method(self.module.search_cspm_assets, limit=500)
         self.assert_no_error(result, context="search_cspm_assets with large limit")
-        self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets large result")
-        if len(result) > 100:
-            print(f"✅ Batching tested successfully with {len(result)} assets")
+        assets = self.skip_unless_tenant_has(result, "CSPM assets", "search_cspm_assets batching")
+
+        total = result["pagination"]["total"]
+        if total is not None and total <= 100:
+            self.skip_with_warning(
+                f"tenant has only {total} CSPM assets, so batching is not exercised",
+                context="search_cspm_assets batching",
+            )
+            return
+
+        assert len(assets) > 100, (
+            f"Requested 500 assets from a tenant reporting {total}, but only {len(assets)} "
+            "came back — the 100-per-request detail batching is dropping records."
+        )
+        ids = [a.get("id") for a in assets]
+        assert len(set(ids)) == len(ids), "Batching returned the same asset more than once"
