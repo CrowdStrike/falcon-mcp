@@ -93,6 +93,97 @@ class TestFetchPfmRules(TestModules):
         self.assertEqual(ops.count("GetRule"), 2)
         self.assertEqual(len(result), 150)
 
+    def test_short_page_terminates_without_extra_request(self):
+        """A page shorter than the page size is the last page, even with no `total`.
+
+        Short-page detection is the primary termination condition: it does not depend on
+        the API reporting `meta.pagination.total`, so it holds even if `total` is absent
+        or wrong.
+        """
+        rules = [{"insight_id": "id-1", "category": "N"}]
+        self.mock_client.command.side_effect = [
+            self._query_resp(["uuid-1"]),  # no total, 1 < 500 → last page
+            self._get_resp(rules),
+        ]
+        result = self.module._fetch_pfm_rules("f")
+        ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+        self.assertEqual(ops, ["QueryRule", "GetRule"])
+        self.assertEqual(result, rules)
+
+    def test_under_reporting_total_does_not_truncate(self):
+        """A full page must never terminate the loop, even if `total` under-reports.
+
+        Regression guard: terminating on `len(uuids) >= total` while the page was full
+        silently drops every rule after page 1 when `total` is wrong. Short-page
+        detection must be checked first.
+        """
+        page1 = [f"uuid-{i}" for i in range(500)]
+        page2 = ["uuid-extra"]
+        rules_p1 = [{"insight_id": f"id-{i}", "category": "N"} for i in range(500)]
+        rules_p2 = [{"insight_id": "id-extra", "category": "N"}]
+        self.mock_client.command.side_effect = [
+            self._query_resp(page1, total=100),  # total lies: says 100, page is full
+            self._query_resp(page2, total=100),
+            *[self._get_resp(rules_p1[i:i + 100]) for i in range(0, 500, 100)],
+            self._get_resp(rules_p2),
+        ]
+        result = self.module._fetch_pfm_rules("f")
+        ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+        self.assertEqual(ops.count("QueryRule"), 2)
+        self.assertEqual(len(result), 501)
+
+    def test_paginates_when_total_is_absent(self):
+        """Multi-page walk works with no `total` at all — driven by page length alone."""
+        page1 = [f"uuid-{i}" for i in range(500)]
+        page2 = ["uuid-extra"]
+        rules_p1 = [{"insight_id": f"id-{i}", "category": "N"} for i in range(500)]
+        rules_p2 = [{"insight_id": "id-extra", "category": "N"}]
+        self.mock_client.command.side_effect = [
+            self._query_resp(page1),  # no meta at all
+            self._query_resp(page2),
+            *[self._get_resp(rules_p1[i:i + 100]) for i in range(0, 500, 100)],
+            self._get_resp(rules_p2),
+        ]
+        result = self.module._fetch_pfm_rules("f")
+        ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+        self.assertEqual(ops.count("QueryRule"), 2)
+        self.assertEqual(len(result), 501)
+
+    def test_duplicate_uuids_across_pages_are_deduped(self):
+        """A UUID repeated across pages is fetched once, not twice."""
+        page1 = [f"uuid-{i}" for i in range(500)]
+        page2 = ["uuid-499", "uuid-new"]  # uuid-499 repeats from page 1
+        self.mock_client.command.side_effect = [
+            self._query_resp(page1),
+            self._query_resp(page2),
+            *[self._get_resp([]) for _ in range(6)],
+        ]
+        self.module._fetch_pfm_rules("f")
+        get_calls = [
+            c[1]["parameters"]["ids"]
+            for c in self.mock_client.command.call_args_list
+            if c[0][0] == "GetRule"
+        ]
+        requested = [uuid for batch in get_calls for uuid in batch]
+        self.assertEqual(len(requested), len(set(requested)))
+        self.assertEqual(len(requested), 501)  # 500 unique + uuid-new
+
+    def test_hard_cap_stops_runaway_pagination(self):
+        """An API that never returns a short page is bounded by _PFM_MAX_RULES."""
+        full_page = [f"uuid-{i}" for i in range(500)]
+
+        def endless(operation, **kwargs):
+            if operation == "QueryRule":
+                offset = kwargs["parameters"]["offset"]
+                return self._query_resp([f"uuid-{offset + i}" for i in range(500)])
+            return self._get_resp([])
+
+        self.mock_client.command.side_effect = endless
+        with patch("falcon_mcp.modules.cloud.cloud_base._PFM_MAX_RULES", len(full_page) * 3):
+            self.module._fetch_pfm_rules("f")
+        ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+        self.assertEqual(ops.count("QueryRule"), 3)
+
     def test_query_rule_error_raises_runtime_error(self):
         """QueryRule API error raises RuntimeError."""
         self.mock_client.command.return_value = {
@@ -190,7 +281,11 @@ class TestFetchPfmRulesCache(TestModules):
         return {"status_code": 200, "body": {"resources": rules}}
 
     def test_second_call_within_ttl_uses_cache(self):
-        """Second call with same filter within TTL does not hit the API again."""
+        """Second call with same filter within TTL makes no further API calls.
+
+        Asserts the operation sequence rather than a bare call count, so this test
+        fails if the second call reaches the API at all.
+        """
         rules = [{"insight_id": "iid1", "category": "Network"}]
         self.mock_client.command.side_effect = [
             self._query_resp(["uuid-1"], total=1),
@@ -198,10 +293,28 @@ class TestFetchPfmRulesCache(TestModules):
         ]
 
         result1 = self.module._fetch_pfm_rules("f")
+        ops_after_first = [c[0][0] for c in self.mock_client.command.call_args_list]
         result2 = self.module._fetch_pfm_rules("f")
+        ops_after_second = [c[0][0] for c in self.mock_client.command.call_args_list]
 
-        self.assertEqual(self.mock_client.command.call_count, 2)  # QueryRule + GetRule, not 4
+        self.assertEqual(ops_after_first, ["QueryRule", "GetRule"])
+        self.assertEqual(ops_after_second, ops_after_first)  # nothing new was called
         self.assertEqual(result1, result2)
+
+    def test_cached_result_is_not_aliased(self):
+        """The cache hands back a copy, so a caller mutating the result cannot poison it."""
+        rules = [{"insight_id": "iid1", "category": "Network"}]
+        self.mock_client.command.side_effect = [
+            self._query_resp(["uuid-1"], total=1),
+            self._get_resp(rules),
+        ]
+
+        first = self.module._fetch_pfm_rules("f")
+        first.append({"insight_id": "injected", "category": "Bogus"})
+        first.clear()
+
+        second = self.module._fetch_pfm_rules("f")
+        self.assertEqual(second, rules)
 
     def test_expired_cache_refetches(self):
         """After TTL expires, a fresh API call is made."""
@@ -224,10 +337,37 @@ class TestFetchPfmRulesCache(TestModules):
             self.module._fetch_pfm_rules("f")
             self.module._fetch_pfm_rules("f")
 
-        self.assertEqual(self.mock_client.command.call_count, 4)  # both calls hit API
+        ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+        self.assertEqual(ops, ["QueryRule", "GetRule", "QueryRule", "GetRule"])
+
+    def test_fresh_cache_within_ttl_does_not_refetch(self):
+        """Discriminates the TTL comparison itself: just inside the TTL is still a hit.
+
+        Paired with test_expired_cache_refetches, this pins the boundary — a helper that
+        ignored the timestamp entirely, or one that always treated entries as stale,
+        fails one of the two.
+        """
+        rules = [{"insight_id": "iid1", "category": "Network"}]
+        self.mock_client.command.side_effect = [
+            self._query_resp(["uuid-1"], total=1),
+            self._get_resp(rules),
+        ]
+
+        fresh_t = float(_CloudBase.PFM_RULES_CACHE_TTL - 1)
+        with patch("falcon_mcp.modules.cloud.cloud_base.time") as mock_time:
+            mock_time.monotonic.side_effect = [0.0, fresh_t]
+            self.module._fetch_pfm_rules("f")
+            self.module._fetch_pfm_rules("f")
+
+        ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+        self.assertEqual(ops, ["QueryRule", "GetRule"])
 
     def test_different_filters_cached_independently(self):
-        """Each distinct filter string has its own cache entry."""
+        """Each distinct filter string has its own cache entry.
+
+        Asserts the filters actually sent to the API, so a cache keyed on something
+        other than the filter string (or not keyed at all) fails here.
+        """
         rules_a = [{"insight_id": "a", "category": "Network"}]
         rules_b = [{"insight_id": "b", "category": "Identity"}]
         self.mock_client.command.side_effect = [
@@ -242,7 +382,12 @@ class TestFetchPfmRulesCache(TestModules):
         # Third call — should hit cache for filter_a
         result_a2 = self.module._fetch_pfm_rules("filter_a")
 
-        self.assertEqual(self.mock_client.command.call_count, 4)  # only 2 API round-trips
+        queried_filters = [
+            c[1]["parameters"]["filter"]
+            for c in self.mock_client.command.call_args_list
+            if c[0][0] == "QueryRule"
+        ]
+        self.assertEqual(queried_filters, ["filter_a", "filter_b"])  # filter_a queried once
         self.assertEqual(result_a, result_a2)
         self.assertNotEqual(result_a, result_b)
 
@@ -260,7 +405,9 @@ class TestFetchPfmRulesCache(TestModules):
             ]
             self.module._fetch_pfm_rules("f")
             self.module._fetch_pfm_rules("f")
-            self.assertEqual(self.mock_client.command.call_count, 4)
+            ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+            self.assertEqual(ops, ["QueryRule", "GetRule", "QueryRule", "GetRule"])
+            self.assertEqual(self.module._pfm_rules_cache, {})  # nothing was stored
         finally:
             _CloudBase.PFM_RULES_CACHE_TTL = original_ttl
 
@@ -278,7 +425,9 @@ class TestFetchPfmRulesCache(TestModules):
         self.module._fetch_pfm_rules("f")
         module2._fetch_pfm_rules("f")
 
-        self.assertEqual(self.mock_client.command.call_count, 4)
+        ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+        self.assertEqual(ops, ["QueryRule", "GetRule", "QueryRule", "GetRule"])
+        self.assertIsNot(self.module._pfm_rules_cache, module2._pfm_rules_cache)
 
 
 if __name__ == "__main__":
