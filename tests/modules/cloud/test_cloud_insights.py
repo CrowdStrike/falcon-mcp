@@ -265,6 +265,51 @@ class TestCloudInsightsTools(TestModules):
         self.assertNotIn("after", params)
         self.assertNotIn("sort", params)
 
+    def test_search_cloud_insights_omitted_limit_sends_int_default(self):
+        """An omitted `limit` reaches the API as its int default, not a FieldInfo object.
+
+        Every other Field-defaulted param on this tool is unwrapped; `limit` was not, so a
+        direct Python call (as opposed to one routed through FastMCP's schema coercion)
+        sent a pydantic FieldInfo as the API's limit.
+        """
+        query_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.side_effect = [query_response]
+
+        self.module.search_cloud_insights(filter="insights.id:'x'")
+
+        params = self.mock_client.command.call_args_list[0][1]["parameters"]
+        self.assertIsInstance(params["limit"], int)
+        self.assertEqual(params["limit"], 100)
+
+    def test_search_cloud_insights_auto_filter_is_flagged_not_echoed(self):
+        """With no filter, the envelope flags auto-scoping instead of echoing the ID list."""
+        catalog = self._catalog_responses(["netInsight", "idInsight"])
+        query_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.side_effect = [*catalog, query_response]
+
+        result = self.module.search_cloud_insights(limit=10)
+
+        # The generated insights.id:[...] expression is still what gets sent to the API...
+        sent = self.mock_client.command.call_args_list[-1][1]["parameters"]["filter"]
+        self.assertIn("insights.id:[", sent)
+        # ...but it is not echoed back to the caller, who did not supply a filter.
+        # _build_pagination_envelope omits filter_used entirely when it is None.
+        self.assertNotIn("filter_used", result)
+        self.assertNotIn("insights.id:[", str(result))
+        self.assertTrue(result["auto_filter_applied"])
+        self.assertEqual(result["auto_filter_insight_count"], 2)
+
+    def test_search_cloud_insights_caller_filter_not_flagged_as_auto(self):
+        """A caller-supplied filter is echoed verbatim and carries no auto-scoping keys."""
+        query_response = {"status_code": 200, "body": {"resources": []}}
+        self.mock_client.command.side_effect = [query_response]
+
+        result = self.module.search_cloud_insights(filter="insights.id:'x'", limit=10)
+
+        self.assertEqual(result["filter_used"], "insights.id:'x'")
+        self.assertNotIn("auto_filter_applied", result)
+        self.assertNotIn("auto_filter_insight_count", result)
+
     def test_search_cloud_insights_empty_returns_empty_response(self):
         """No matching assets returns the empty envelope with filter_used set."""
         query_response = {"status_code": 200, "body": {"resources": []}}
@@ -278,16 +323,16 @@ class TestCloudInsightsTools(TestModules):
         self.assertEqual(result.get("filter_used"), "insights.id:'x'")
 
     def test_search_cloud_insights_entity_api_error(self):
-        """An error fetching asset entities is returned as a flat error dict."""
+        """An error fetching asset entities is wrapped in a list, as the other search tools do."""
         query_response = {"status_code": 200, "body": {"resources": ["a"]}}
         error_response = {"status_code": 500, "body": {"errors": [{"message": "boom"}]}}
         self.mock_client.command.side_effect = [query_response, error_response]
 
         result = self.module.search_cloud_insights(filter="insights.id:'x'", limit=100)
 
-        self.assertIsInstance(result, dict)
-        self.assertIn("error", result)
-        self.assertNotIsInstance(result["error"], dict)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
 
     def test_search_cloud_insights_batching(self):
         """More than 100 matching assets are fetched in batches of 100."""
@@ -670,6 +715,17 @@ class TestCloudInsightDefinitionsTools(TestModules):
         get_resp = {"status_code": 200, "body": {"resources": rules}}
         return [query_resp, get_resp]
 
+    def _definitions(self, **kwargs):
+        """Call list_cloud_insight_definitions and return just the definition list.
+
+        The tool returns the standard pagination envelope; these tests assert on the
+        definition entries, so unwrap here and check the envelope shape once.
+        """
+        result = self.module.list_cloud_insight_definitions(**kwargs)
+        self.assertIsInstance(result, dict)
+        self.assertIn("pagination", result)
+        return result["results"]
+
     def test_deduplicates_by_insight_id(self):
         """Two rules with same insight_id produce one catalog entry."""
         rules = [
@@ -677,7 +733,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
             self._make_rule("iid1", "Network", "MyInsight - S3", provider="aws", resource_types=["S3"]),
         ]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["insight_id"], "iid1")
 
@@ -685,14 +741,14 @@ class TestCloudInsightDefinitionsTools(TestModules):
         """' - <resource_type>' suffix is stripped from the name."""
         rules = [self._make_rule("iid1", "Network", "Public Exposure - EC2")]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertEqual(result[0]["name"], "Public Exposure")
 
     def test_name_no_suffix_unchanged(self):
         """Names without a ' - ' suffix are returned as-is."""
         rules = [self._make_rule("iid1", "Network", "Public Exposure")]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertEqual(result[0]["name"], "Public Exposure")
 
     def test_providers_aggregated_and_sorted(self):
@@ -702,7 +758,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
             self._make_rule("iid1", "Network", "N - S3", provider="aws"),
         ]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertEqual(result[0]["providers"], ["aws", "gcp"])
 
     def test_resource_types_aggregated(self):
@@ -712,7 +768,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
             self._make_rule("iid1", "Network", "N - S3", resource_types=["S3"]),
         ]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertIn("EC2", result[0]["resource_types"])
         self.assertIn("S3", result[0]["resource_types"])
 
@@ -723,7 +779,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
             self._make_rule("iid2", "Identity", "I"),
         ]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions(categories=["network"])
+        result = self._definitions(categories=["network"])
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["category"], "Network")
 
@@ -731,7 +787,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
         """Unknown category returns empty list, not an error."""
         rules = [self._make_rule("iid1", "Network", "N")]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions(categories=["DoesNotExist"])
+        result = self._definitions(categories=["DoesNotExist"])
         self.assertEqual(result, [])
 
     def test_categories_none_returns_all(self):
@@ -741,7 +797,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
             self._make_rule("iid2", "Identity", "I"),
         ]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertEqual(len(result), 2)
 
     def test_controls_slimmed_when_present(self):
@@ -755,7 +811,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
         }
         rules = [self._make_rule("iid1", "Identity", "I", controls=[ctrl])]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertIn("controls", result[0])
         c = result[0]["controls"][0]
         self.assertEqual(set(c.keys()), {"name", "framework", "section", "requirement"})
@@ -769,7 +825,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
         """controls key is absent when no controls on the rule."""
         rules = [self._make_rule("iid1", "Network", "N", controls=[])]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertNotIn("controls", result[0])
 
     def test_api_error_returns_error_dict(self):
@@ -792,18 +848,35 @@ class TestCloudInsightDefinitionsTools(TestModules):
     def test_fetch_pfm_rules_empty_query_returns_empty(self):
         """QueryRule returns empty → no GetRule call → list_cloud_insight_definitions returns []."""
         self.mock_client.command.return_value = {"status_code": 200, "body": {"resources": []}}
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertEqual(result, [])
 
     def test_fetch_pfm_rules_getRule_error_returns_error_dict(self):
-        """GetRule API error → RuntimeError → list_cloud_insight_definitions returns dict, not list."""
-        query_resp = {"status_code": 200, "body": {"resources": ["uuid-1"]}}
+        """A GetRule error surfaces as an error dict — and GetRule is actually reached.
+
+        The QueryRule response deliberately carries meta.pagination.total so the catalog
+        loop terminates on page 1. Without it this test used to spend `error_resp` on a
+        second QueryRule call and assert on a QueryRule failure, never exercising the
+        GetRule path it names. The op-sequence assertion is what keeps that from
+        happening again.
+        """
+        query_resp = {
+            "status_code": 200,
+            "body": {
+                "resources": ["uuid-1"],
+                "meta": {"pagination": {"total": 1, "offset": 0, "limit": 500}},
+            },
+        }
         error_resp = {"status_code": 500, "body": {"errors": [{"message": "boom"}]}}
         self.mock_client.command.side_effect = [query_resp, error_resp]
+
         result = self.module.list_cloud_insight_definitions()
+
+        ops = [c[0][0] for c in self.mock_client.command.call_args_list]
+        self.assertEqual(ops, ["QueryRule", "GetRule"])
         self.assertIsInstance(result, dict)
         self.assertIn("error", result)
-        self.assertIn("detail", result)
+        self.assertIn("GetRule", result["detail"])
 
     def test_definitions_skips_non_dict_rules(self):
         """Non-dict entries in GetRule response are silently skipped."""
@@ -814,7 +887,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
              "provider": "aws", "resource_types": [], "controls": []},
         ]}}
         self.mock_client.command.side_effect = [query_resp, get_resp]
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["insight_id"], "iid1")
 
@@ -828,7 +901,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
             self._make_rule("iid2", "Network", "Good"),
         ]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["insight_id"], "iid2")
 
@@ -838,7 +911,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
         ctrl_good = {"name": "C1", "security_framework": [{"name": "F1"}], "section_name": "s", "requirement": "1.0"}
         rule = self._make_rule("iid1", "Network", "N", controls=[ctrl_bad, ctrl_good])
         self.mock_client.command.side_effect = self._insights_definition_api_responses([rule])
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertEqual(len(result[0]["controls"]), 1)
         self.assertEqual(result[0]["controls"][0]["name"], "C1")
 
@@ -852,7 +925,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
         }
         rules = [self._make_rule("iid1", "Identity", "I", controls=[ctrl])]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertEqual(result[0]["controls"][0]["section"], "IAM")
 
     def test_control_section_empty_when_api_field_absent(self):
@@ -860,7 +933,7 @@ class TestCloudInsightDefinitionsTools(TestModules):
         ctrl = {"name": "C1", "security_framework": [{"name": "CIS"}], "requirement": "1.2"}
         rules = [self._make_rule("iid1", "Identity", "I", controls=[ctrl])]
         self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
-        result = self.module.list_cloud_insight_definitions()
+        result = self._definitions()
         self.assertEqual(result[0]["controls"][0]["section"], "")
 
     def test_fetch_pfm_rules_paginates_query_rule(self):
@@ -881,14 +954,115 @@ class TestCloudInsightDefinitionsTools(TestModules):
             *batch_responses,
         ]
 
-        result = self.module.list_cloud_insight_definitions()
+        result = self.module.list_cloud_insight_definitions(limit=500)
+        page2 = self.module.list_cloud_insight_definitions(limit=500, offset=500)
 
         ops = [c[0][0] for c in self.mock_client.command.call_args_list]
         self.assertEqual(ops.count("QueryRule"), 2)
-        ids = {e["insight_id"] for e in result}
+        self.assertEqual(result["pagination"]["total"], 510)
+        ids = {e["insight_id"] for e in result["results"]} | {
+            e["insight_id"] for e in page2["results"]
+        }
         self.assertIn(f"id-{page1_uuids[0]}", ids)
         self.assertIn(f"id-{page2_uuids[0]}", ids)
-        self.assertEqual(len(result), 510)
+        self.assertEqual(len(ids), 510)
+
+    # --- invariants observed in the live catalog (see the module docstrings) ---
+
+    def test_name_with_multiple_separators_keeps_leading_segment(self):
+        """Splitting on the first ' - ' is the documented choice.
+
+        Live names carry exactly one separator (0 of 262 have more, 0 have none), so this
+        pins behaviour that live data cannot currently distinguish rather than asserting
+        an observed shape.
+        """
+        rules = [self._make_rule("iid1", "Network", "Public Exposure - EC2 - Classic")]
+        self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
+        result = self._definitions()
+        self.assertEqual(result[0]["name"], "Public Exposure")
+
+    def test_first_rule_wins_for_single_valued_fields(self):
+        """category/name/description come from the first rule seen for an insight_id.
+
+        Live data has no insight_id carrying two categories (0 of 61) or two distinct
+        stripped names, so aggregating them would be speculative. This asserts the
+        first-wins rule that the code actually implements, so a future multi-category
+        insight shows up as a test change rather than silently picking an arbitrary value.
+        """
+        rules = [
+            self._make_rule("iid1", "Network", "First Name - EC2", provider="aws", description="first"),
+            self._make_rule("iid1", "Identity", "Second Name - S3", provider="gcp", description="second"),
+        ]
+        self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
+        result = self._definitions()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["category"], "Network")
+        self.assertEqual(result[0]["name"], "First Name")
+        self.assertEqual(result[0]["description"], "first")
+        # Multi-valued fields are still aggregated across both rules.
+        self.assertEqual(result[0]["providers"], ["aws", "gcp"])
+
+    # --- pagination of the client-side catalog ---
+
+    def test_definitions_limit_truncates_and_reports_full_total(self):
+        """`limit` bounds the page while pagination.total stays the full catalog size."""
+        rules = [self._make_rule(f"iid{i}", "Network", f"N{i}") for i in range(5)]
+        self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
+
+        result = self.module.list_cloud_insight_definitions(limit=2)
+
+        self.assertEqual(len(result["results"]), 2)
+        self.assertEqual(result["pagination"]["total"], 5)
+        self.assertEqual(result["pagination"]["limit"], 2)
+        self.assertEqual(result["pagination"]["offset"], 0)
+
+    def test_definitions_offset_selects_a_later_page(self):
+        """`offset` skips entries; consecutive pages cover the catalog without overlap."""
+        rules = [self._make_rule(f"iid{i}", "Network", f"N{i}") for i in range(5)]
+        self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
+
+        page1 = self.module.list_cloud_insight_definitions(limit=2, offset=0)["results"]
+        page2 = self.module.list_cloud_insight_definitions(limit=2, offset=2)["results"]
+        page3 = self.module.list_cloud_insight_definitions(limit=2, offset=4)["results"]
+
+        seen = [e["insight_id"] for e in page1 + page2 + page3]
+        self.assertEqual(seen, [f"iid{i}" for i in range(5)])
+        self.assertEqual(len(page3), 1)
+
+    def test_definitions_offset_past_end_returns_empty_page(self):
+        """An offset beyond the catalog yields an empty page, not an error."""
+        rules = [self._make_rule("iid0", "Network", "N")]
+        self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
+
+        result = self.module.list_cloud_insight_definitions(offset=500)
+
+        self.assertEqual(result["results"], [])
+        self.assertEqual(result["pagination"]["total"], 1)
+
+    def test_definitions_total_reflects_category_filter(self):
+        """pagination.total counts the filtered catalog, not the whole one."""
+        rules = [
+            self._make_rule("iid1", "Network", "N"),
+            self._make_rule("iid2", "Identity", "I"),
+            self._make_rule("iid3", "Identity", "I2"),
+        ]
+        self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
+
+        result = self.module.list_cloud_insight_definitions(categories=["identity"])
+
+        self.assertEqual(result["pagination"]["total"], 2)
+        self.assertEqual(len(result["results"]), 2)
+
+    def test_definitions_omitted_limit_offset_send_int_defaults(self):
+        """Omitted limit/offset are unwrapped to ints before slicing."""
+        rules = [self._make_rule(f"iid{i}", "Network", f"N{i}") for i in range(3)]
+        self.mock_client.command.side_effect = self._insights_definition_api_responses(rules)
+
+        result = self.module.list_cloud_insight_definitions()
+
+        self.assertEqual(len(result["results"]), 3)
+        self.assertIsInstance(result["pagination"]["limit"], int)
+        self.assertIsInstance(result["pagination"]["offset"], int)
 
 
 if __name__ == "__main__":

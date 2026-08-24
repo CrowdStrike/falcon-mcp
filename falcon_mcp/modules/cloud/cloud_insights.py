@@ -15,6 +15,23 @@ logger = get_logger(__name__)
 
 _INSIGHT_RULES_FILTER = "rule_domain:'CSPM'+rule_subdomain:'Insight'"
 
+# The value-bearing keys an insight entry may carry, in the order they are consulted.
+# Live data holds exactly one per entry; the explicit tuple keeps the choice
+# deterministic instead of depending on dict insertion order, and maps 1:1 onto the
+# insights.<type>_value FQL filter fields documented in the FQL guide.
+_INSIGHT_VALUE_KEYS = (
+    "booleanValue",
+    "stringValue",
+    "integerValue",
+    "dateValue",
+    "stringListValue",
+)
+
+# Default page size for the client-side insight definition catalog. The live catalog is
+# ~60 definitions, so the default returns all of them; the cap bounds the response if the
+# catalog grows.
+_DEFINITIONS_DEFAULT_LIMIT = 200
+
 
 class _CloudInsightsMixin(_CloudBase):
     """Tools for querying cloud security insights."""
@@ -62,24 +79,52 @@ class _CloudInsightsMixin(_CloudBase):
                 "Case-insensitive. Omit to return all categories."
             ),
         ),
-    ) -> list[dict[str, Any]] | dict[str, Any]:
+        limit: int = Field(
+            default=_DEFINITIONS_DEFAULT_LIMIT,
+            ge=1,
+            le=500,
+            description=(
+                f"Maximum number of definitions to return (default: {_DEFINITIONS_DEFAULT_LIMIT};"
+                " max: 500). The live catalog is well under the default, so the default"
+                " returns every definition. Use with `offset` if `pagination.total`"
+                " exceeds what you received."
+            ),
+        ),
+        offset: int = Field(
+            default=0,
+            ge=0,
+            description="Number of definitions to skip before returning results (default: 0).",
+        ),
+    ) -> dict[str, Any]:
         """Return all available cloud insight definitions, deduplicated by insight_id.
 
         Each entry represents one unique insight type with aggregated providers,
         resource_types, and (when non-empty) compliance framework controls. Call this
         first to discover valid insight_ids before filtering with falcon_search_cloud_insights.
+        Returns the standard pagination envelope; `pagination.total` is the exact catalog
+        size, since the catalog is assembled and counted locally rather than server-paged.
         """
+        # Resolve unset Pydantic Field defaults to avoid leaking FieldInfo objects (issue #384)
+        resolved_categories = unwrap_field_default(categories)
+        resolved_limit = unwrap_field_default(limit)
+        resolved_offset = unwrap_field_default(offset)
+
         try:
             definitions = self._get_insight_definitions()
         except RuntimeError as exc:
             return {"error": "Failed to load insight definitions from Policy Framework API", "detail": str(exc)}
 
-        resolved_categories = unwrap_field_default(categories)
-        if resolved_categories is None:
-            return definitions
+        if resolved_categories is not None:
+            lower_cats = {c.lower() for c in resolved_categories}
+            definitions = [
+                entry for entry in definitions if entry.get("category", "").lower() in lower_cats
+            ]
 
-        lower_cats = {c.lower() for c in resolved_categories}
-        return [entry for entry in definitions if entry.get("category", "").lower() in lower_cats]
+        page = definitions[resolved_offset : resolved_offset + resolved_limit]
+        return self._build_pagination_envelope(
+            page,
+            {"total": len(definitions), "offset": resolved_offset, "limit": resolved_limit},
+        )
 
     def search_cloud_insights(
         self,
@@ -124,7 +169,7 @@ class _CloudInsightsMixin(_CloudBase):
                 " Use the dot separator ('updated_at.desc')."
             ),
         ),
-    ) -> dict[str, Any]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for cloud security insights using FQL.
 
         Returns asset records — one per asset — each with asset context and a nested
@@ -134,12 +179,14 @@ class _CloudInsightsMixin(_CloudBase):
         falcon://cloud/cloud-insights/fql-guide for filter syntax and field reference.
         Responses include `pagination.total` and `pagination.next` for cursor-based paging.
         """
+        # Resolve unset Pydantic Field defaults to avoid leaking FieldInfo objects (issue #384)
         resolved_fql = unwrap_field_default(filter)
+        resolved_limit = unwrap_field_default(limit)
         resolved_after = unwrap_field_default(after)
         resolved_sort = unwrap_field_default(sort)
 
         try:
-            effective_filter = self._build_insight_filter(resolved_fql)
+            effective_filter, auto_insight_count = self._build_insight_filter(resolved_fql)
         except RuntimeError as exc:
             return {
                 "error": "Failed to load insight definitions from Policy Framework API",
@@ -154,29 +201,62 @@ class _CloudInsightsMixin(_CloudBase):
 
         raw_ids, pagination = self._base_search_with_meta(
             operation="cloud_security_assets_queries",
-            search_params={"filter": effective_filter, "limit": limit, "after": resolved_after, "sort": resolved_sort},
+            search_params={
+                "filter": effective_filter,
+                "limit": resolved_limit,
+                "after": resolved_after,
+                "sort": resolved_sort,
+            },
             error_message="Failed to query cloud insights",
         )
 
         if self._is_error(raw_ids):
+            # The expanded filter is what the API rejected, so echo it rather than the
+            # caller's (possibly absent) one.
             return self._format_fql_error_response(
-                [raw_ids],
+                [raw_ids],  # type: ignore[list-item]
                 effective_filter,
                 CLOUD_INSIGHTS_FQL_DOCUMENTATION,
             )
 
         asset_ids: list[str] = raw_ids  # type: ignore[assignment]
         if not asset_ids:
-            return self._build_pagination_envelope([], pagination, effective_filter)
+            return self._auto_filter_note(
+                self._build_pagination_envelope([], pagination, resolved_fql),
+                resolved_fql,
+                auto_insight_count,
+            )
 
         raw_details = self._batch_get_cspm_assets(asset_ids)
         if self._is_error(raw_details):
-            return raw_details
+            return [raw_details]  # type: ignore[list-item]
 
         details: list[dict[str, Any]] = self._reorder_by_ids(asset_ids, raw_details, id_field="id")  # type: ignore[arg-type,assignment]
         records = self._group_insights_by_asset(details)
 
-        return self._build_pagination_envelope(records, pagination, effective_filter)
+        return self._auto_filter_note(
+            self._build_pagination_envelope(records, pagination, resolved_fql),
+            resolved_fql,
+            auto_insight_count,
+        )
+
+    @staticmethod
+    def _auto_filter_note(
+        envelope: dict[str, Any],
+        resolved_fql: str | None,
+        auto_insight_count: int,
+    ) -> dict[str, Any]:
+        """Flag that the tool supplied the filter itself, without echoing it.
+
+        `filter_used` stays the caller's filter — `None` when they omitted it. Echoing the
+        auto-generated `insights.id:[...]` expression there instead cost ~1.5 KB of every
+        no-filter response (one quoted ID per catalog entry) to restate something the
+        caller did not ask for, so the fact of auto-scoping is reported as two small keys.
+        """
+        if resolved_fql is None:
+            envelope["auto_filter_applied"] = True
+            envelope["auto_filter_insight_count"] = auto_insight_count
+        return envelope
 
     def get_cloud_asset_insights(
         self,
@@ -224,6 +304,10 @@ class _CloudInsightsMixin(_CloudBase):
         same insight_id (one per resource_type) are merged: providers and resource_types
         are aggregated; controls are deduplicated; name suffix is stripped.
 
+        `category` and `name` are taken from the first rule seen for an insight_id rather
+        than aggregated, because an insight_id maps to exactly one of each — see
+        `test_first_rule_wins_for_single_valued_fields`.
+
         Raises:
             RuntimeError: If the API returns an error response.
         """
@@ -258,6 +342,13 @@ class _CloudInsightsMixin(_CloudBase):
 
     @staticmethod
     def _strip_name_suffix(raw_name: str) -> str:
+        """Drop the trailing ``" - <resource type>"`` qualifier from a rule name.
+
+        Splits on the first separator. Every rule name in the catalog carries exactly one,
+        so first and last are equivalent today; splitting on the first keeps the insight
+        name itself intact if a resource-type qualifier ever contains a separator of its
+        own. ``test_name_with_multiple_separators_keeps_leading_segment`` pins the choice.
+        """
         return raw_name.split(" - ")[0].strip() if " - " in raw_name else raw_name
 
     @staticmethod
@@ -315,8 +406,8 @@ class _CloudInsightsMixin(_CloudBase):
     # Search helpers
     # -------------------------------------------------------------------------
 
-    def _build_insight_filter(self, resolved_fql: str | None) -> str | None:
-        """Return the effective FQL filter for the asset query.
+    def _build_insight_filter(self, resolved_fql: str | None) -> tuple[str | None, int]:
+        """Return the effective FQL filter for the asset query, and how many IDs it names.
 
         When no filter is provided, fetches all known insight IDs from the PFM
         definitions and builds an explicit insights.id:[...] expression. A wildcard
@@ -324,13 +415,16 @@ class _CloudInsightsMixin(_CloudBase):
         insights.id expressions to query the internal ruleId field; wildcards fall
         through untransformed and miss assets whose .id field is not backfilled.
 
-        Returns a str filter, or None when the definitions are empty (no results).
+        Returns:
+            (filter, auto_insight_count). The count is 0 when the caller supplied the
+            filter, and the number of catalog IDs when the filter was generated here.
+            The filter is None when the definitions are empty (no results).
 
         Raises:
             RuntimeError: If the PFM API call fails.
         """
         if resolved_fql is not None:
-            return resolved_fql
+            return resolved_fql, 0
 
         rules = self._fetch_pfm_rules(_INSIGHT_RULES_FILTER)
         all_ids = sorted({
@@ -338,10 +432,10 @@ class _CloudInsightsMixin(_CloudBase):
             if isinstance(r, dict) and r.get("insight_id")
         })
         if not all_ids:
-            return None
+            return None, 0
 
         quoted = ", ".join(f"'{iid}'" for iid in all_ids)
-        return f"insights.id:[{quoted}]"
+        return f"insights.id:[{quoted}]", len(all_ids)
 
     @staticmethod
     def _asset_context(asset: dict[str, Any]) -> dict[str, Any]:
@@ -362,7 +456,9 @@ class _CloudInsightsMixin(_CloudBase):
     ) -> list[dict[str, Any]]:
         """Group insight instances by asset, one result per asset.
 
-        Assets with no well-formed insight entries are skipped.
+        Assets with no well-formed insight entries are skipped. Each entry's value is read
+        from the first key in `_INSIGHT_VALUE_KEYS` that is present; live entries carry
+        exactly one, so the order only matters if that ever stops being true.
         """
         records: list[dict[str, Any]] = []
 
@@ -384,9 +480,15 @@ class _CloudInsightsMixin(_CloudBase):
                 insight_id_val = item.get("id")
                 if not isinstance(insight_id_val, str):
                     continue
-                value = next((v for k, v in item.items() if k.endswith("Value")), None)
+                value = next(
+                    (item[key] for key in _INSIGHT_VALUE_KEYS if key in item), None
+                )
                 asset_insights.append({
                     "insight_id": insight_id_val,
+                    # Deliberately null: the per-insight category lives in the Policy
+                    # Framework catalog, not on the asset record, and resolving it here
+                    # would add a PFM round-trip to every search. Call
+                    # falcon_list_cloud_insight_definitions to map insight_id -> category.
                     "category": None,
                     "value": value,
                     "rule_id": item.get("ruleId"),
