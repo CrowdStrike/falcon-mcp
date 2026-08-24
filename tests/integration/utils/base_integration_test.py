@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import warnings
 from typing import Any, Callable, Optional
+from unittest.mock import patch
 
 import pytest
 from pydantic.fields import FieldInfo
@@ -125,6 +126,128 @@ class BaseIntegrationTest:
         assert (
             len(result) >= min_length
         ), f"Expected at least {min_length} items{ctx}, got {len(result)}"
+
+    def assert_sort_orders_rows(
+        self,
+        asc: list[Any],
+        desc: list[Any],
+        key: str,
+        context: str = "",
+    ) -> None:
+        """Assert an ascending/descending sort really ordered the rows.
+
+        This is the assertion that gives a two-step search tool's sort handling teeth. A
+        tool that forwards `sort` but then loses the order during hydration (the bug
+        `BaseModule._reorder_by_ids` exists to fix) still returns rows and still passes
+        `assert_no_error` — only comparing the actual key sequence catches it.
+
+        Both directions must be *strictly* monotone. Ties are treated as a failure rather
+        than tolerated, because a tied key tie-breaks unstably and would make the test
+        flaky; if this starts failing on ties, the field is no longer a valid probe and
+        the test should move to a different one rather than relax the assertion.
+
+        Args:
+            asc: The sort key's value for each row, from the ascending call.
+            desc: The same, from the descending call.
+            key: The sort field name, for error messages.
+            context: Optional context string for the error messages.
+        """
+        ctx = f" ({context})" if context else ""
+
+        # Too little data is a failure, not a skip: silently passing on one row is how a
+        # regression in the reorder path stays green forever.
+        assert len(asc) > 1, (
+            f"Need more than one row to test {key} ordering{ctx}, got {len(asc)}. "
+            "Either the tenant has no data for this query or the filter is too narrow."
+        )
+        assert len(desc) > 1, (
+            f"Need more than one row to test {key} ordering{ctx}, got {len(desc)}"
+        )
+
+        assert len(set(map(str, asc))) == len(asc), (
+            f"{key} has tied values{ctx}, so sort order is not deterministic and this "
+            f"test cannot distinguish a real ordering from a tie-break: {asc}"
+        )
+        assert len(set(map(str, desc))) == len(desc), (
+            f"{key} has tied values{ctx}: {desc}"
+        )
+
+        assert asc == sorted(asc), f"{key}.asc is not ascending{ctx}: {asc}"
+        assert desc == sorted(desc, reverse=True), f"{key}.desc is not descending{ctx}: {desc}"
+        assert asc != desc, (
+            f"{key}.asc and {key}.desc returned the same order{ctx}, so the sort "
+            f"direction was ignored: {asc}"
+        )
+
+    def assert_rows_in_query_step_order(
+        self,
+        method: Callable[..., Any],
+        id_field: str = "id",
+        context: str = "",
+        **kwargs: Any,
+    ) -> Any:
+        """Assert a two-step search returns rows in the order its query step reported.
+
+        This is the alternative to `assert_sort_orders_rows` for endpoints with no strictly
+        monotone sort field, where an asc/desc comparison would tie-break unstably. Rather
+        than checking a sort direction, it asserts `BaseModule._reorder_by_ids`' documented
+        contract directly: whatever order the query step returned IDs in, the hydrated
+        output preserves it. No monotonicity means no tie flakiness.
+
+        Spies on `_base_get_by_ids` because the query step's ID order is only observable
+        from inside a single tool invocation — by the time the tool returns, the reorder has
+        already happened (or failed to).
+
+        Args:
+            method: The bound search method to drive (e.g. `self.module.search_hosts`).
+            id_field: Key holding each row's ID in the response.
+            context: Optional context string for the error messages.
+            **kwargs: Passed to the search method; keep the limit at or under the tool's
+                detail batch size so the query step is captured in one request.
+
+        Returns:
+            The raw tool result, for further assertions.
+        """
+        ctx = f" ({context})" if context else ""
+        captured_id_batches: list[list[str]] = []
+        real_get_by_ids = self.module._base_get_by_ids
+
+        def spy(*args: Any, **spy_kwargs: Any) -> Any:
+            ids = spy_kwargs.get("ids")
+            captured_id_batches.append(list(ids) if ids is not None else [])
+            return real_get_by_ids(*args, **spy_kwargs)
+
+        with patch.object(self.module, "_base_get_by_ids", side_effect=spy):
+            result = self.call_method(method, **kwargs)
+
+        self.assert_no_error(result, context=context)
+        rows = self.skip_unless_tenant_has(result, "records", context)
+
+        assert len(captured_id_batches) == 1, (
+            f"Expected exactly one detail request{ctx}, got {len(captured_id_batches)}. "
+            "Lower the limit below the tool's batch size, or reassemble the query-step "
+            "order across batches before comparing."
+        )
+        query_order = captured_id_batches[0]
+        assert len(query_order) > 1, (
+            f"Need more than one ID to test ordering{ctx}, got {len(query_order)}"
+        )
+
+        returned_order = [row[id_field] for row in rows]
+        # IDs that did not hydrate are skipped rather than reordered, per the helper's
+        # contract, so compare against the query order restricted to what came back.
+        returned_set = set(returned_order)
+        expected_order = [
+            entity_id for entity_id in query_order if entity_id in returned_set
+        ]
+
+        assert returned_order == expected_order, (
+            f"Rows came back in an order that does not match the query step{ctx}. The "
+            "_reorder_by_ids call is missing, or reorders against the wrong list.\n"
+            f"query step: {query_order}\n"
+            f"returned:   {returned_order}"
+        )
+        return result
 
     def assert_search_returns_details(
         self,
