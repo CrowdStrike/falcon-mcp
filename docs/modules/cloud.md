@@ -65,8 +65,10 @@ Return all available cloud insight definitions, deduplicated by insight_id.
 Each entry represents one unique insight type with aggregated providers,
 resource_types, and (when non-empty) compliance framework controls. Call this
 first to discover valid insight_ids before filtering with falcon_search_cloud_insights.
-Returns the standard pagination envelope; `pagination.total` is the exact catalog
-size, since the catalog is assembled and counted locally rather than server-paged.
+Returns the standard pagination envelope; `pagination.total` is an exact count
+rather than an estimate, because the catalog is assembled and counted locally
+rather than server-paged. When `categories` is supplied it counts the matching
+entries, not the whole catalog.
 
 **Example prompts:**
 

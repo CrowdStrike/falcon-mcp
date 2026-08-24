@@ -78,8 +78,9 @@ class _CloudBase(BaseModule):
                     "rule_domain:'CSPM'+rule_subdomain:'Insight'").
 
         Returns:
-            Flat list of raw rule dicts, safe for the caller to mutate. Empty if none
-            found.
+            Flat list of raw rule dicts. Empty if none found. The list itself is a copy,
+            so appending or clearing it cannot disturb the cache, but the dicts inside
+            are shared with the cached entry — treat them as read-only.
 
         Raises:
             RuntimeError: If any API call returns an error.

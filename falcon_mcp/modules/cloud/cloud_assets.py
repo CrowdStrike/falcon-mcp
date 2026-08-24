@@ -56,13 +56,16 @@ class _CloudAssetsMixin(_CloudBase):
                 account_id: Cloud account ID
                 account_name: Cloud account name
                 resource_type: Resource type (e.g., AWS::EC2::Instance)
+                resource_name: Resource name
                 region: Cloud region
+                service: Cloud service the resource belongs to
                 creation_time: When the asset was created
+                first_seen: When the asset was first observed
                 updated_at: When the asset was last updated
 
-                Sort either asc (ascending) or desc (descending). Use the dot
-                separator ('updated_at.desc'), which is supported on every Falcon
-                sort endpoint. The pipe form ('updated_at|desc') is accepted here
+                Sort either asc (ascending) or desc (descending), lowercase. Use the
+                dot separator ('updated_at.desc'), which is supported on every Falcon
+                sort endpoint. The pipe form ('updated_at|desc') is equivalent here,
                 but rejected by some endpoints, so prefer the dot form.
 
                 Examples: 'updated_at.desc', 'resource_type.asc'
