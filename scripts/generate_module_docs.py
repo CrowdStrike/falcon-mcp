@@ -742,45 +742,6 @@ def discover_module_classes() -> dict[str, dict[str, Any]]:
     return result
 
 
-def _module_string_constants(module_cls: type) -> dict[str, str]:
-    """Map the module-level ``NAME = "literal"`` assignments a module class can see.
-
-    Scope detection works by spotting operation-name string literals in the source. A
-    module may instead name its operation once in a module-level constant and reference
-    it by name at every call site, as ``agentworks.py`` does with ``_GET_INVOCATION_OP``.
-    `inspect.getsource` on the class, or on one method, never sees that assignment, so
-    the literal is absent and the tool silently documents no scopes at all. Resolving
-    these constants first closes that hole for any module that factors its operation
-    name out.
-    """
-    module = sys.modules.get(module_cls.__module__)
-    if module is None:
-        return {}
-    try:
-        tree = ast.parse(inspect.getsource(module))
-    except (TypeError, OSError, SyntaxError):
-        return {}
-
-    constants: dict[str, str] = {}
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant):
-            if isinstance(node.value.value, str):
-                for target in node.targets:
-                    if isinstance(target, ast.Name):
-                        constants[target.id] = node.value.value
-    return constants
-
-
-def _operation_names_in(source: str, module_cls: type) -> set[str]:
-    """Operation names referenced by ``source``, as literals or via a constant."""
-    names = set(re.findall(r'["\'](\w+)["\']', source))
-    constants = _module_string_constants(module_cls)
-    if constants:
-        referenced = set(re.findall(r"\b([A-Za-z_]\w*)\b", source))
-        names |= {constants[n] for n in referenced & constants.keys()}
-    return names
-
-
 def _own_classes(module_cls: type) -> list[type]:
     """The MRO classes belonging to this module, stopping before BaseModule.
 
@@ -802,17 +763,65 @@ def _own_classes(module_cls: type) -> list[type]:
     return classes
 
 
+def _module_string_constants(module_name: str) -> dict[str, str]:
+    """Map the module-level ``NAME = "literal"`` assignments declared in one file.
+
+    Scope detection works by spotting operation-name string literals in the source. A
+    module may instead name its operation once in a module-level constant and reference
+    it by name at every call site, as ``agentworks.py`` does with ``_GET_INVOCATION_OP``.
+    `inspect.getsource` on the class, or on one method, never sees that assignment, so
+    the literal is absent and the tool silently documents no scopes at all. Resolving
+    these constants first closes that hole for any module that factors its operation
+    name out.
+    """
+    module = sys.modules.get(module_name)
+    if module is None:
+        return {}
+    try:
+        tree = ast.parse(inspect.getsource(module))
+    except (TypeError, OSError, SyntaxError):
+        return {}
+
+    constants: dict[str, str] = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant):
+            if isinstance(node.value.value, str):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        constants[target.id] = node.value.value
+    return constants
+
+
+def _operation_names_in(chunks: list[tuple[str, str]]) -> set[str]:
+    """Operation names referenced by each ``(source, defining module)`` chunk.
+
+    A module assembled from mixins spreads its methods over several files, and each file
+    may declare its own constants, so every chunk resolves against the module that
+    defines it — the same file Python resolves the reference against at runtime, since a
+    function reads its globals from where it was written rather than from its class's
+    position in the MRO. Merging every file's constants into one map instead would let a
+    same-named constant in a sibling mixin win and attribute the wrong operation.
+    """
+    names: set[str] = set()
+    for source, module_name in chunks:
+        names |= set(re.findall(r'["\'](\w+)["\']', source))
+        constants = _module_string_constants(module_name)
+        if constants:
+            referenced = set(re.findall(r"\b([A-Za-z_]\w*)\b", source))
+            names |= {constants[n] for n in referenced & constants.keys()}
+    return names
+
+
 def extract_module_scopes(module_cls: type) -> list[str]:
     """Derive API scopes by finding operation names in module source and looking them up in API_SCOPE_REQUIREMENTS."""
-    parts: list[str] = []
+    chunks: list[tuple[str, str]] = []
     for klass in _own_classes(module_cls):
         try:
-            parts.append(inspect.getsource(klass))
+            chunks.append((inspect.getsource(klass), klass.__module__))
         except (TypeError, OSError):
             pass
-    source = "\n".join(parts)
 
-    all_strings = _operation_names_in(source, module_cls)
+    all_strings = _operation_names_in(chunks)
     scopes: set[str] = set()
     for op_name, op_scopes in API_SCOPE_REQUIREMENTS.items():
         if op_name in all_strings:
@@ -838,23 +847,24 @@ def extract_tool_scopes(method: Any, module_cls: type) -> list[str]:
     except (TypeError, OSError):
         return []
 
-    # Build a map of method name → source from every class this module owns, so a mixin
-    # package resolves a helper that lives on a sibling mixin. Public methods are included
-    # too: a tool that reaches the API only through another tool method needs that
+    # Build a map of method name → (source, defining module) from every class this module
+    # owns, so a mixin package resolves a helper that lives on a sibling mixin. The module
+    # is carried alongside because each file resolves its own constants. Public methods are
+    # included too: a tool that reaches the API only through another tool method needs that
     # operation's scopes as well.
-    own_method_source: dict[str, str] = {}
+    own_method_source: dict[str, tuple[str, str]] = {}
     for klass in _own_classes(module_cls):
         for attr, val in klass.__dict__.items():
             if attr not in own_method_source and callable(val):
                 try:
-                    own_method_source[attr] = inspect.getsource(val)
+                    own_method_source[attr] = (inspect.getsource(val), klass.__module__)
                 except (TypeError, OSError):
                     pass
 
     # Walk the chain breadth-first, guarding against recursion. Match bare `self.name`
     # too, not just `self.name(`, so a method passed as a callable rather than called
     # directly is still followed.
-    combined_source = method_source
+    chunks: list[tuple[str, str]] = [(method_source, getattr(method, "__module__", ""))]
     seen: set[str] = set()
     pending = re.findall(r"self\.(\w+)", method_source)
     while pending:
@@ -862,13 +872,13 @@ def extract_tool_scopes(method: Any, module_cls: type) -> list[str]:
         if helper_name in seen or helper_name not in own_method_source:
             continue
         seen.add(helper_name)
-        helper_source = own_method_source[helper_name]
-        combined_source += "\n" + helper_source
+        helper_source, helper_module = own_method_source[helper_name]
+        chunks.append((helper_source, helper_module))
         pending.extend(re.findall(r"self\.(\w+)", helper_source))
 
     # Find all string literals (and constant-referenced operation names) and look
     # them up in API_SCOPE_REQUIREMENTS
-    all_strings = _operation_names_in(combined_source, module_cls)
+    all_strings = _operation_names_in(chunks)
     scopes: set[str] = set()
     for op_name, op_scopes in API_SCOPE_REQUIREMENTS.items():
         if op_name in all_strings:

@@ -1,6 +1,10 @@
 """Tests for scripts/generate_module_docs.py."""
 
+import importlib
+import shutil
 import sys
+import tempfile
+import textwrap
 import types
 import unittest
 from pathlib import Path
@@ -519,14 +523,34 @@ class TestExtractToolScopes(unittest.TestCase):
         result = extract_tool_scopes(len, type("C", (), {}))
         self.assertEqual(result, [])
 
-    def test_traces_private_helper_on_class(self):
-        """Lines 690-695: helper defined on the class is included in scope extraction."""
+    def test_does_not_trace_basemodule_helpers(self):
+        """Helpers inherited from BaseModule contribute no scopes.
+
+        search_detections reaches the API through self._base_search_with_meta and
+        self._base_get_by_ids, both defined on BaseModule. BaseModule's source mentions
+        operation names belonging to every module, so tracing into it would attribute
+        unrelated scopes here. The assertion is exact: only the two operations named
+        inline in search_detections itself may contribute, and both map to Alerts:read.
+        """
         from falcon_mcp.modules.detections import DetectionsModule
-        # search_detections calls self._base_search_with_meta — defined on BaseModule,
-        # NOT in DetectionsModule.__dict__, so it should NOT be traced (by design).
-        # We verify the function runs without error and returns a list.
+
         result = extract_tool_scopes(DetectionsModule.search_detections, DetectionsModule)
-        self.assertIsInstance(result, list)
+        self.assertEqual(result, ["Alerts:read"])
+
+    def test_traces_helper_chain_on_own_class(self):
+        """A tool reaching the API only through a sibling method gets that method's scopes.
+
+        invoke_agentworks_agent writes, then polls get_agentworks_agent_invocation for
+        the result. Its own read scope therefore has to come from following that call,
+        whose operation name is itself held in a module-level constant.
+        """
+        from falcon_mcp.modules.agentworks import AgentworksModule
+
+        result = extract_tool_scopes(AgentworksModule.invoke_agentworks_agent, AgentworksModule)
+        self.assertEqual(
+            result,
+            ["Charlotte AI Agent Definition:read", "Charlotte AI Agent Definition:write"],
+        )
 
     def test_helper_getsource_failure_silently_skipped(self):
         """An OSError fetching a helper's source is skipped rather than raised.
@@ -552,6 +576,132 @@ class TestExtractToolScopes(unittest.TestCase):
         with patch.object(_inspect, "getsource", side_effect=fake_getsource):
             result = extract_tool_scopes(fake_method, cls)
         self.assertIsInstance(result, list)
+
+
+# ---------------------------------------------------------------------------
+# TestMixinDeclaredConstants — operation name behind a constant in a mixin file
+# ---------------------------------------------------------------------------
+
+class TestMixinDeclaredConstants(unittest.TestCase):
+    """A mixin may name its operation in a constant declared in the mixin's own file.
+
+    Scope detection has to read every file the module owns, and resolve each file's
+    constants against that file. No shipped module does this yet — the cloud mixins hold
+    only an FQL filter in a constant — so the fixtures are synthetic. They write real
+    files because inspect.getsource reads them off disk.
+    """
+
+    def _build(self, files: dict[str, str], root_module: str, class_name: str) -> type:
+        """Write files to a throwaway importable directory and return one of their classes."""
+        tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmpdir, True)
+        for filename, source in files.items():
+            Path(tmpdir, filename).write_text(textwrap.dedent(source).lstrip())
+
+        # Scope detection resolves a class's constants through sys.modules, so the fixture
+        # has to be really imported. Unimport it again so the next test starts clean.
+        preexisting = set(sys.modules)
+
+        def _restore() -> None:
+            for name in set(sys.modules) - preexisting:
+                del sys.modules[name]
+            if tmpdir in sys.path:
+                sys.path.remove(tmpdir)
+
+        self.addCleanup(_restore)
+        sys.path.insert(0, tmpdir)
+        importlib.invalidate_caches()
+
+        return getattr(importlib.import_module(root_module), class_name)
+
+    def test_constant_declared_in_mixin_file_resolves(self):
+        """The operation name lives in the mixin's file, the concrete class is elsewhere."""
+        cls = self._build(
+            {
+                "t552a_mixin.py": '''
+                    """Mixin naming its operation once, in a module-level constant."""
+
+                    _T552A_OP = "QueryRule"  # requires Cloud Security Policies:read
+
+
+                    class T552AMixin:
+                        def _do_query(self):
+                            return self.client.command(_T552A_OP)
+                ''',
+                "t552a_concrete.py": '''
+                    """Concrete module assembled from the mixin."""
+
+                    from t552a_mixin import T552AMixin
+
+
+                    class T552AModule(T552AMixin):
+                        def my_tool(self):
+                            return self._do_query()
+                ''',
+            },
+            "t552a_concrete",
+            "T552AModule",
+        )
+
+        self.assertEqual(
+            extract_tool_scopes(cls.my_tool, cls),
+            ["Cloud Security Policies:read"],
+        )
+
+    def test_collision_resolves_against_the_method_s_own_file(self):
+        """Two mixin files declare the same constant name; the method's own file wins.
+
+        The method that reads the constant lives in the file holding the *second* value,
+        while an unrelated sibling earlier in the MRO happens to reuse the name. Python
+        resolves the reference through the defining module's globals, so the operation
+        really invoked is the second one. Anything that merges both files into a single
+        map picks by MRO position instead and reports the sibling's unrelated scope.
+        """
+        cls = self._build(
+            {
+                "t552b_first.py": '''
+                    """Earlier in the MRO, reusing the name for an unrelated operation."""
+
+                    _T552B_OP = "QueryRule"  # requires Cloud Security Policies:read
+
+
+                    class T552BFirst:
+                        def _unrelated(self):
+                            return self.client.command(_T552B_OP)
+                ''',
+                "t552b_second.py": '''
+                    """Later in the MRO, and the file that actually defines _do_query."""
+
+                    _T552B_OP = "QueryDevicesByFilter"  # requires Hosts:read
+
+
+                    class T552BSecond:
+                        def _do_query(self):
+                            return self.client.command(_T552B_OP)
+                ''',
+                "t552b_concrete.py": '''
+                    """Concrete module assembled from both mixins."""
+
+                    from t552b_first import T552BFirst
+                    from t552b_second import T552BSecond
+
+
+                    class T552BModule(T552BFirst, T552BSecond):
+                        def my_tool(self):
+                            return self._do_query()
+                ''',
+            },
+            "t552b_concrete",
+            "T552BModule",
+        )
+
+        # Guard the premise: confirm which operation Python itself reaches, so this test
+        # cannot drift into asserting the generator agrees with the wrong answer.
+        instance = cls.__new__(cls)
+        instance.client = types.SimpleNamespace(command=lambda op: op)
+        self.assertEqual(instance.my_tool(), "QueryDevicesByFilter")
+
+        self.assertEqual(extract_tool_scopes(cls.my_tool, cls), ["Hosts:read"])
 
 
 # ---------------------------------------------------------------------------
