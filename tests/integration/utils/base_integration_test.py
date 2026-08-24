@@ -165,6 +165,57 @@ class BaseIntegrationTest:
                 f"Available fields: {list(first_item.keys())}"
             )
 
+    def assert_filter_matches(
+        self,
+        search: Any,
+        filter: str,
+        predicate: Optional[Any] = None,
+        predicate_desc: str = "",
+        note: str = "",
+        limit: int = 5,
+        **search_kwargs: Any,
+    ) -> Any:
+        """Assert a documented FQL filter returns rows, and that every row satisfies it.
+
+        Query APIs report an unsupported field or operator as an empty HTTP 200 as often
+        as they do a 400, so a test that tolerates zero rows cannot tell "the guide is
+        wrong" from "the tenant has no such data". Only a non-empty result proves the
+        documented construction works, and only a per-record check proves the filter
+        selected on what it claims to.
+
+        Args:
+            search: The search callable, invoked as ``search(filter=..., limit=...)``.
+            filter: The FQL filter under test.
+            predicate: Optional ``record -> bool`` applied to every returned record.
+            predicate_desc: Human-readable description of the predicate, for failures.
+            note: Extra context appended to the zero-rows failure message.
+            limit: Row limit for the query.
+            **search_kwargs: Extra keyword arguments forwarded to ``search``.
+
+        Returns:
+            The full search result (envelope or list), so callers can assert further.
+        """
+        result = self.call_method(search, filter=filter, limit=limit, **search_kwargs)
+        self.assert_no_error(result, context=f"filter {filter!r}")
+
+        records = self._unwrap_results(result)
+        assert isinstance(records, list), f"Expected a list of records for {filter!r}, got {type(records)}"
+        assert records, (
+            f"Documented filter returned zero rows: {filter}. {note} "
+            "Either the guide is wrong or the tenant has no matching data — "
+            "an unsupported field or operator can come back as an empty 200 here."
+        )
+
+        if predicate is not None:
+            failures = [record for record in records if not predicate(record)]
+            assert not failures, (
+                f"{len(failures)} of {len(records)} records returned by {filter!r} do not "
+                f"satisfy [{predicate_desc or 'the caller predicate'}]. "
+                f"Offending records: {failures[:3]}"
+            )
+
+        return result
+
     def assert_result_has_id(
         self,
         result: list[dict[str, Any]],
