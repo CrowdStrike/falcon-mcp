@@ -241,6 +241,15 @@ class BaseIntegrationTest:
             entity_id for entity_id in query_order if entity_id in returned_set
         ]
 
+        # Guard on the *intersection*, not the query count. If hydration only returned one
+        # row out of many queried, `expected_order` collapses to a single element and the
+        # comparison below is trivially true — a pass that checked nothing.
+        assert len(expected_order) > 1, (
+            f"Only {len(expected_order)} of {len(query_order)} queried IDs came back from "
+            f"hydration{ctx}, which is too few to verify ordering. The comparison would be "
+            "vacuous, so this fails rather than reporting success."
+        )
+
         assert returned_order == expected_order, (
             f"Rows came back in an order that does not match the query step{ctx}. The "
             "_reorder_by_ids call is missing, or reorders against the wrong list.\n"

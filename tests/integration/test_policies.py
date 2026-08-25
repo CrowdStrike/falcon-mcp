@@ -317,12 +317,13 @@ class TestPoliciesIntegration(BaseIntegrationTest):
 
         ascending, descending = ids_for("asc"), ids_for("desc")
 
-        if len(ascending) < 2:
-            self.skip_with_warning(
-                f"tenant has {len(ascending)} device_control policies, need 2+ to compare order",
-                "device_control sort direction",
-            )
-            return
+        # Fail rather than skip on too little data, matching assert_sort_orders_rows: with
+        # fewer than two policies `ascending == descending` is trivially true, so a skip here
+        # would quietly stop verifying both that the defect exists and that it was fixed.
+        assert len(ascending) > 1, (
+            f"Need 2+ device_control policies to compare sort order, got {len(ascending)}. "
+            "This pin cannot verify anything on a smaller dataset."
+        )
 
         assert ascending == descending, (
             "queryDeviceControlPolicies now distinguishes sort direction — the known defect "

@@ -5,23 +5,32 @@ arbitrary order, discarding the sort the query step applied. ``tests/modules/tes
 already covers the helper's own logic; what is untested is the *wiring* at each call site:
 whether a tool actually calls it, against the right ID list, with the right ``id_field``.
 
-Each case drives one tool with a stubbed query step (IDs ``a, b, c``) and a stubbed get
-step that returns the entities **reversed**, then asserts the tool's output comes back in
-``a, b, c`` order. That fails if a site drops the reorder call, passes the wrong
-``id_field``, or reorders against the wrong list.
+Each case drives one tool with a stubbed query step and a stubbed get step that returns the
+same entities in a different order, then asserts the tool's output comes back in the query
+step's order. That fails if a site drops the reorder call, passes the wrong ``id_field``, or
+reorders against the wrong list. See ``ORDERED_IDS`` for why those two specific orders — a
+naive ascending/reversed pair lets two plausible broken implementations pass.
 
-Deliberately out of scope: parameter forwarding. These tests patch the helpers that bracket
-the reorder call rather than ``client.command``, so they say nothing about which operation
-name or parameters a site sends. Per-module tests cover that.
+Deliberately out of scope: parameter forwarding. Most cases patch the helpers that bracket
+the reorder call rather than ``client.command`` (the four sites that bypass those helpers
+patch ``client.command`` directly, since that is the only seam they have), so these tests say
+nothing about which operation name or parameters a site sends. Per-module tests cover that.
 
-``test_table_covers_every_call_site`` re-derives the live call sites from the source with
-the same AST scan used to build the table, so a newly added site fails here until it gets a
-case — the same guard spirit as ``test_filter_hints_registry_covers_search_tools``.
+Three guards keep the table honest as the source changes:
+
+- ``test_table_covers_every_call_site`` re-derives the live call sites from the source with
+  an AST scan, so a newly added site fails here until it gets a case — the same guard spirit
+  as ``test_filter_hints_registry_covers_search_tools``.
+- ``test_each_site_has_exactly_one_reorder_call`` catches a second reorder call bolted onto
+  an already-covered function, which would otherwise hide behind the first.
+- ``test_reorder_is_only_ever_called_directly`` pins the convention that makes the AST scan
+  complete: aliasing the method before calling it would make a live site invisible.
 """
 
 import ast
 import inspect
 import pathlib
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -29,6 +38,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic.fields import FieldInfo
 
+import falcon_mcp
 from falcon_mcp.client import FalconClient
 from falcon_mcp.modules.agentworks import AgentworksModule
 from falcon_mcp.modules.cases import CasesModule
@@ -47,10 +57,25 @@ from falcon_mcp.modules.rtr import RTRModule
 from falcon_mcp.modules.scheduled_reports import ScheduledReportsModule
 from falcon_mcp.modules.zero_trust_assessment import ZeroTrustAssessmentModule
 
-MODULES_DIR = pathlib.Path("falcon_mcp/modules")
+# Derived from the installed package rather than the process CWD, so the guards scan the
+# real tree no matter where pytest is invoked from.
+REPO_ROOT = pathlib.Path(falcon_mcp.__file__).resolve().parent.parent
+MODULES_DIR = REPO_ROOT / "falcon_mcp" / "modules"
 
-#: The IDs the stubbed query step reports, in the order the caller asked for.
-ORDERED_IDS = ["a", "b", "c"]
+#: The IDs the stubbed query step reports, in the order the caller asked for — and therefore
+#: the order every tool's output must come back in.
+#:
+#: Deliberately NOT in sorted order, and ``HYDRATED_IDS`` below is deliberately not its
+#: reverse. With an ascending expected order and a merely-reversed get step, a reorder that
+#: ignored ``ordered_ids`` entirely and just sorted entities by ID — or just reversed
+#: whatever list it was handed — would produce the expected answer and pass every case while
+#: restoring nothing. Both of those mutations yield a wrong order against these two.
+ORDERED_IDS = ["beta", "delta", "alpha", "gamma"]
+
+#: The order the stubbed get-by-IDs step returns entities in, standing in for an endpoint
+#: that discards the query sort. Sorted, which differs from ``ORDERED_IDS``, from its
+#: reverse, and from a re-sort of itself.
+HYDRATED_IDS = sorted(ORDERED_IDS)
 
 #: A cloud asset record shaped so it survives the insight grouping/filtering in
 #: ``cloud_insights``: an asset whose ``cloud_context.insights.external`` has no
@@ -370,6 +395,13 @@ def _resolve_kwargs(method: Any, supplied: dict[str, Any]) -> dict[str, Any]:
                 f"{method.__qualname__} parameter {name!r} is required; "
                 "add it to the case's kwargs"
             )
+            # No module uses default_factory today. If one starts, `.default` is
+            # PydanticUndefined and would be passed through as a live value, so fail loudly
+            # rather than exercise the tool with a sentinel.
+            assert default.default_factory is None, (
+                f"{method.__qualname__} parameter {name!r} uses default_factory; resolve it "
+                "here the way FastMCP does instead of reading .default"
+            )
             resolved[name] = default.default
         elif default is not inspect.Parameter.empty:
             resolved[name] = default
@@ -435,18 +467,18 @@ def _drive(case: ReorderCase, entities: list[dict[str, Any]]) -> Any:
 def test_reorder_restores_query_step_order(case: ReorderCase) -> None:
     """The tool re-sorts hydrated entities back into the query step's ID order.
 
-    The stubbed get step hands back the entities reversed, mimicking a get-by-IDs endpoint
-    that ignores the requested sort. A correctly wired site undoes that.
+    The stubbed get step hands back the entities in ``HYDRATED_IDS`` order, mimicking a
+    get-by-IDs endpoint that ignores the requested sort. A correctly wired site undoes that.
     """
     entities = [
-        {case.id_field: entity_id, **case.entity_extra} for entity_id in reversed(ORDERED_IDS)
+        {case.id_field: entity_id, **case.entity_extra} for entity_id in HYDRATED_IDS
     ]
 
     rows = _extract_rows(_drive(case, entities))
 
     assert [row[case.output_key] for row in rows] == ORDERED_IDS, (
-        f"{case.tool} did not restore the query-step order; "
-        "the site is missing a _reorder_by_ids call or passes the wrong id_field"
+        f"{case.tool} did not restore the query-step order; the site is missing a "
+        "_reorder_by_ids call, passes the wrong id_field, or reorders against the wrong list"
     )
 
 
@@ -476,23 +508,43 @@ def test_policies_single_call_types_skip_reorder(policy_type: str) -> None:
     assert [row["id"] for row in _extract_rows(result)] == list(reversed(ORDERED_IDS))
 
 
-def _live_call_sites() -> set[tuple[str, str]]:
-    """Every ``(module file, enclosing method)`` that calls ``_reorder_by_ids``."""
-    sites: set[tuple[str, str]] = set()
+def _reorder_call_counts() -> dict[tuple[str, str], int]:
+    """Map every ``(module file, enclosing function)`` to its number of reorder calls.
+
+    Calls are attributed to their *nearest* enclosing function: nested functions get their
+    own entry rather than inflating the outer one, so a reorder call hidden inside a closure
+    still shows up as a site needing coverage.
+    """
+    counts: Counter[tuple[str, str]] = Counter()
+
     for path in sorted(MODULES_DIR.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
+        rel = path.relative_to(REPO_ROOT).as_posix()
+
         for node in ast.walk(tree):
             if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 continue
-            for call in ast.walk(node):
+
+            # Walk this function's body but stop at nested function definitions, which
+            # ast.walk would otherwise fold into this function's count as well.
+            found = 0
+            stack = list(ast.iter_child_nodes(node))
+            while stack:
+                child = stack.pop()
+                if isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef):
+                    continue
                 if (
-                    isinstance(call, ast.Call)
-                    and isinstance(call.func, ast.Attribute)
-                    and call.func.attr == "_reorder_by_ids"
+                    isinstance(child, ast.Call)
+                    and isinstance(child.func, ast.Attribute)
+                    and child.func.attr == "_reorder_by_ids"
                 ):
-                    sites.add((path.as_posix(), node.name))
-                    break
-    return sites
+                    found += 1
+                stack.extend(ast.iter_child_nodes(child))
+
+            if found:
+                counts[(rel, node.name)] = found
+
+    return dict(counts)
 
 
 def test_table_covers_every_call_site() -> None:
@@ -501,10 +553,65 @@ def test_table_covers_every_call_site() -> None:
     Derived from the source rather than a hardcoded count, so adding a call site without a
     case fails here and names the offender.
     """
-    live = _live_call_sites()
+    live = set(_reorder_call_counts())
     assert live, "found no _reorder_by_ids call sites — is the AST scan looking in the right place?"
 
     covered = {case.site for case in CASES}
 
     assert not live - covered, f"call sites with no wiring case: {sorted(live - covered)}"
-    assert not covered - live, f"cases pointing at call sites that no longer exist: {sorted(covered - live)}"
+    assert not covered - live, (
+        f"cases pointing at call sites that no longer exist: {sorted(covered - live)}"
+    )
+
+
+def test_each_site_has_exactly_one_reorder_call() -> None:
+    """No function calls ``_reorder_by_ids`` more than once.
+
+    The coverage guard keys on ``(file, function)``, so a second reorder call added to an
+    already-covered function would inherit the first one's case and never be exercised.
+    Rather than silently under-covering, fail and make the author split the function or
+    extend the table's shape to count calls per site.
+    """
+    multiples = {site: count for site, count in _reorder_call_counts().items() if count > 1}
+
+    assert not multiples, (
+        "these functions call _reorder_by_ids more than once, so the per-site wiring case "
+        f"only covers the first: {sorted(multiples.items())}"
+    )
+
+
+def test_reorder_is_only_ever_called_directly() -> None:
+    """``_reorder_by_ids`` is always invoked as a direct attribute call.
+
+    The coverage guard finds sites by AST-matching ``<obj>._reorder_by_ids(...)``. Binding
+    the method first (``fn = self._reorder_by_ids``) or reaching it by name
+    (``getattr(self, "_reorder_by_ids")``) would make a live call site invisible to that
+    scan, so this pins the convention that keeps the scan complete.
+    """
+    offenders: list[str] = []
+
+    for path in sorted(MODULES_DIR.rglob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        rel = path.relative_to(REPO_ROOT).as_posix()
+        tree = ast.parse(source)
+
+        in_call_position = {
+            id(node.func)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+        }
+        offenders.extend(
+            f"{rel}:{node.lineno} binds _reorder_by_ids without calling it"
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Attribute)
+            and node.attr == "_reorder_by_ids"
+            and id(node) not in in_call_position
+        )
+
+        if '"_reorder_by_ids"' in source or "'_reorder_by_ids'" in source:
+            offenders.append(f"{rel} references _reorder_by_ids by name string")
+
+    assert not offenders, (
+        "_reorder_by_ids must be called directly so the coverage guard can see the call "
+        f"site: {offenders}"
+    )
