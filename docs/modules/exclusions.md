@@ -19,6 +19,8 @@ This module provides a unified set of tools for managing CrowdStrike exclusions 
 
 ### `falcon_search_exclusions`
 
+**Required scopes:** `IOA Exclusions:read`, `Machine Learning Exclusions:read`, `Sensor Visibility Exclusions:read`
+
 Search exclusions of a given type and return full exclusion records.
 
 Use this to find IOA, machine learning, sensor visibility, or
@@ -39,6 +41,8 @@ Responses include `pagination.total` (the total number of records matching the f
 > [!NOTE]
 > This tool modifies data.
 
+**Required scopes:** `IOA Exclusions:write`, `Machine Learning Exclusions:write`, `Sensor Visibility Exclusions:write`
+
 Create an exclusion of the given type.
 
 The `exclusion_type` selects which fields are required: 'ioa' needs name,
@@ -57,6 +61,8 @@ error before any API call. Returns the created exclusion record(s).
 > [!NOTE]
 > This tool modifies data.
 
+**Required scopes:** `IOA Exclusions:write`, `Machine Learning Exclusions:write`, `Sensor Visibility Exclusions:write`
+
 Update an existing exclusion of the given type.
 
 Provide the `id` of the exclusion plus the same fields used when creating
@@ -72,6 +78,8 @@ exclusion record(s).
 
 > [!CAUTION]
 > This tool performs destructive operations.
+
+**Required scopes:** `IOA Exclusions:write`, `Machine Learning Exclusions:write`, `Sensor Visibility Exclusions:write`
 
 Delete one or more exclusions of the given type.
 

@@ -579,6 +579,96 @@ class TestExtractToolScopes(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# TestClassContainerOperations — operation names held in a class-level dict
+# ---------------------------------------------------------------------------
+
+class TestClassContainerOperations(unittest.TestCase):
+    """Modules that dispatch on a discriminator keep their operations in a class dict.
+
+    `policies.py` and `exclusions.py` both hold every operation in an `_OPERATIONS`
+    class attribute and select one with `self._OPERATIONS[type]["verb"]`. A dict is not
+    callable, so helper tracing skips it, and every one of those tools documented no
+    scopes at all. These are real modules rather than fixtures because the bug is live.
+    """
+
+    def test_policies_tools_all_document_scopes(self):
+        from falcon_mcp.modules.policies import PoliciesModule
+
+        blank = [
+            name
+            for name in extract_registered_tool_names(PoliciesModule)
+            if not extract_tool_scopes(getattr(PoliciesModule, name), PoliciesModule)
+        ]
+        self.assertEqual(blank, [], f"policies tools documenting no scopes: {blank}")
+
+    def test_exclusions_tools_all_document_scopes(self):
+        from falcon_mcp.modules.exclusions import ExclusionsModule
+
+        blank = [
+            name
+            for name in extract_registered_tool_names(ExclusionsModule)
+            if not extract_tool_scopes(getattr(ExclusionsModule, name), ExclusionsModule)
+        ]
+        self.assertEqual(blank, [], f"exclusions tools documenting no scopes: {blank}")
+
+    def test_subscript_key_selects_only_that_verb(self):
+        """A literal subscript key narrows to that verb; it must not pull in every op.
+
+        falcon_delete_policies reaches `_OPERATIONS[policy_type]["delete"]`, so it needs
+        write scopes. It must not acquire a scope that only a *different* verb's endpoint
+        would need — resolving the whole container instead of the path would do that.
+        """
+        from falcon_mcp.modules.policies import PoliciesModule
+
+        scopes = extract_tool_scopes(PoliciesModule.delete_policies, PoliciesModule)
+        self.assertTrue(scopes, "delete_policies must document scopes")
+        self.assertEqual([s for s in scopes if s.endswith(":read")], [])
+        self.assertTrue(all(s.endswith(":write") for s in scopes), scopes)
+
+    def test_variable_subscript_key_narrows_to_its_assigned_literals(self):
+        """A variable key resolves through the literals assigned to it, not by widening.
+
+        create_policy and update_policy share _build_policy_body, which selects
+        `_OPERATIONS[policy_type][op_key]` where `op_key` is `"update" if is_update else
+        "create"`. Both are writes, so neither tool may claim a read scope; widening to
+        every verb at that level would hand them the query/get endpoints' read scopes and
+        over-state what a caller has to grant.
+        """
+        from falcon_mcp.modules.policies import PoliciesModule
+
+        for name in ("create_policy", "update_policy"):
+            scopes = extract_tool_scopes(getattr(PoliciesModule, name), PoliciesModule)
+            with self.subTest(tool=name):
+                self.assertTrue(scopes)
+                self.assertEqual([s for s in scopes if s.endswith(":read")], [])
+
+    def test_read_only_dispatching_tool_gets_no_write_scope(self):
+        """The converse: a search tool over the same container stays read-only."""
+        from falcon_mcp.modules.policies import PoliciesModule
+
+        scopes = extract_tool_scopes(PoliciesModule.search_policies, PoliciesModule)
+        self.assertTrue(scopes)
+        self.assertEqual([s for s in scopes if s.endswith(":write")], [])
+
+    def test_no_tool_in_any_module_documents_zero_scopes(self):
+        """Every registered tool in every module resolves to at least one scope.
+
+        A tool that reaches the API but documents nothing is the silent failure mode this
+        whole area keeps regressing into, so assert it globally rather than per module.
+        """
+        blank: list[str] = []
+        for key, info in discover_module_classes().items():
+            module_cls = info["cls"]
+            for name, tool_name in extract_registered_tool_names(module_cls).items():
+                method = getattr(module_cls, name, None)
+                if method is None:
+                    continue
+                if not extract_tool_scopes(method, module_cls):
+                    blank.append(f"{key}/falcon_{tool_name}")
+        self.assertEqual(sorted(blank), [], f"tools documenting no scopes: {sorted(blank)}")
+
+
+# ---------------------------------------------------------------------------
 # TestMixinDeclaredConstants — operation name behind a constant in a mixin file
 # ---------------------------------------------------------------------------
 
