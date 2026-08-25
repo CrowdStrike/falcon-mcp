@@ -72,6 +72,70 @@ class TestDataProtectionIntegration(BaseIntegrationTest):
             result, min_length=0, context="search_data_protection_classifications with sort"
         )
 
+    def test_policy_precedence_sorts_ascending_but_not_descending(self):
+        """Backs the `sort` description's precedence caveat with a live check.
+
+        `precedence.asc` orders correctly (4 of 4 trials, 20 of 20 distinct values) while
+        `precedence.desc` does not (0 of 4). Both directions are pinned together so the
+        asymmetry is what fails if either half changes: if desc starts working, drop the
+        caveat from the `sort` description; if asc stops, the description is wrong the other
+        way.
+
+        Not a `_reorder_by_ids` concern — this endpoint's get step preserves the order it is
+        handed (0 of 4 trials scrambled), so the defect is in the API's own sort.
+        """
+        def precedences(direction: str) -> list:
+            result = self.call_method(
+                self.module.search_data_protection_policies,
+                platform_name="win",
+                sort=f"precedence.{direction}",
+                limit=20,
+            )
+            self.assert_no_error(result, context=f"dp policies precedence.{direction}")
+            return [p["precedence"] for p in self._unwrap_results(result)]
+
+        ascending = precedences("asc")
+        descending = precedences("desc")
+
+        assert len(ascending) > 1, (
+            f"Need 2+ win data-protection policies to compare order, got {len(ascending)}"
+        )
+        assert ascending == sorted(ascending), (
+            f"precedence.asc is no longer ascending, so the `sort` description's claim that "
+            f"ascending works is wrong: {ascending}"
+        )
+        assert descending != sorted(descending, reverse=True), (
+            "precedence.desc now returns correctly ordered results — the known defect is "
+            "fixed. Drop the caveat from the search_data_protection_policies `sort` "
+            f"description. Got: {descending}"
+        )
+
+    def test_content_pattern_name_sort_orders_neither_direction(self):
+        """Backs the `sort` description's name caveat with a live check.
+
+        `name` fails to order results in either direction (0 of 4 trials each way, with 20
+        of 20 distinct names, so this is an ordering defect rather than a tie-break). If
+        either direction starts working, drop the caveat from the `sort` description.
+
+        Not a `_reorder_by_ids` concern — this endpoint's get step preserves the order it is
+        handed (0 of 4 trials scrambled).
+        """
+        for direction in ("asc", "desc"):
+            result = self.call_method(
+                self.module.search_data_protection_content_patterns,
+                sort=f"name.{direction}",
+                limit=20,
+            )
+            self.assert_no_error(result, context=f"dp content patterns name.{direction}")
+            names = [p["name"] for p in self._unwrap_results(result)]
+
+            assert len(names) > 1, f"Need 2+ content patterns to compare order, got {len(names)}"
+            assert names != sorted(names, reverse=(direction == "desc")), (
+                f"name.{direction} now orders results correctly — the known defect is fixed. "
+                "Drop the caveat from the search_data_protection_content_patterns `sort` "
+                f"description. Got: {names}"
+            )
+
     # --- Policies ---
 
     def test_search_policies_windows(self):

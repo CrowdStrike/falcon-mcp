@@ -256,6 +256,63 @@ class TestPoliciesModule(TestModules):
         self.assertIn("error", result[0])
         self.assertEqual(self.mock_client.command.call_count, 0)
 
+    def test_search_pipe_sort_separator_rejected(self):
+        """The pipe direction separator is rejected before any API call.
+
+        All six policy query endpoints answer HTTP 400 for `field|desc` (live-validated),
+        so the guard catches it locally and the error names the dot form to use instead.
+        """
+        for policy_type in ("prevention", "device_control"):
+            with self.subTest(policy_type=policy_type):
+                self.mock_client.command.reset_mock()
+                result = self.module.search_policies(
+                    policy_type=policy_type,
+                    filter=None,
+                    limit=10,
+                    offset=0,
+                    sort="created_timestamp|desc",
+                )
+                self.assertIn("error", result[0])
+                self.assertIn("created_timestamp.desc", result[0]["error"])
+                self.assertEqual(self.mock_client.command.call_count, 0)
+
+    def test_search_device_control_rejects_actor_sort_fields(self):
+        """created_by/modified_by are rejected for device_control only.
+
+        Both return HTTP 500 on device_control (live-validated, 12 of 12 attempts) while
+        working normally on the other five types, so the guard is per-type rather than
+        removing them from the shared safe-field set.
+        """
+        for field in ("created_by", "modified_by"):
+            with self.subTest(field=field):
+                self.mock_client.command.reset_mock()
+                result = self.module.search_policies(
+                    policy_type="device_control",
+                    filter=None,
+                    limit=10,
+                    offset=0,
+                    sort=f"{field}.desc",
+                )
+                self.assertIn("error", result[0])
+                self.assertIn("device_control", result[0]["error"])
+                self.assertEqual(self.mock_client.command.call_count, 0)
+
+    def test_search_actor_sort_fields_allowed_for_other_types(self):
+        """created_by sorting still reaches the API for non-device_control types."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "pol-1"}]},
+        }
+        result = self.module.search_policies(
+            policy_type="prevention",
+            filter=None,
+            limit=10,
+            offset=0,
+            sort="created_by.desc",
+        )
+        self.assertNotIn("error", result)
+        self.assertGreater(self.mock_client.command.call_count, 0)
+
     def test_search_empty_returns_fql_guide(self):
         """Empty combined results include the FQL guide context."""
         self.mock_client.command.return_value = {

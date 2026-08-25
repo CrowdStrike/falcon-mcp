@@ -85,15 +85,14 @@ class TestReconIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_recon_notifications sort=created_date|desc")
 
     def test_notification_sort_keys_are_nested_under_notification(self):
-        """The `created_date` sort key is not a top-level response field.
+        """Both documented sort fields read back from `notification.<field>`, not the root.
 
-        `sort="created_date.desc"` is valid, but a notification record has only `id` and
-        `notification` at the root — the value lives at `notification.created_date`. A
-        consumer that sorts by a documented key and then reads that key off the record gets
-        `None`, silently.
+        `sort="created_date.desc"` is valid, but a notification record's root holds only
+        `id` and `notification`. A consumer that sorts by a documented key and then reads
+        that key off the record gets `None`, silently.
 
-        Pinned because it is a schema fact the tool's `sort` description does not mention,
-        and because it is why this tool gets no sort-order test: the obvious
+        Pinned because the mapping is a schema fact the `sort` description has to state
+        correctly, and because it is why this tool gets no sort-order test: the obvious
         `[r["created_date"] for r in rows]` raises KeyError instead of comparing anything.
         """
         result = self.call_method(
@@ -103,22 +102,24 @@ class TestReconIntegration(BaseIntegrationTest):
         records = self.skip_unless_tenant_has(
             result, "recon notifications", "notification sort key nesting"
         )
-
         first = records[0]
-        assert "created_date" not in first, (
-            "`created_date` is now a top-level notification field. The sort key and response "
-            f"key agree, so this pin is obsolete — drop it. Keys: {sorted(first.keys())}"
-        )
 
         notification = first.get("notification")
         assert isinstance(notification, dict), (
-            f"Expected a `notification` dict holding the sort key; got {type(notification)}. "
-            f"Keys: {sorted(first.keys())}"
+            f"Expected a `notification` dict to hold the sort keys; got {type(notification)}. "
+            f"Root keys: {sorted(first.keys())}"
         )
-        assert "created_date" in notification, (
-            "`created_date` is under neither the record root nor `notification`; the sort key "
-            f"has moved again. notification keys: {sorted(notification.keys())}"
-        )
+
+        for sort_field in ("created_date", "updated_date"):
+            assert sort_field not in first, (
+                f"`{sort_field}` is now a root-level field, so the sort description's "
+                f"nesting note is stale for it. Root keys: {sorted(first.keys())}"
+            )
+            assert sort_field in notification, (
+                f"Sort field `{sort_field}` is documented as reading from "
+                f"`notification.{sort_field}`, but that key is absent. notification keys: "
+                f"{sorted(notification.keys())}"
+            )
 
     def test_search_recon_notifications_with_q(self):
         """Test free-text q parameter."""

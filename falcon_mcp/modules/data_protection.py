@@ -160,7 +160,7 @@ class DataProtectionModule(BaseModule):
         ),
         sort: str | None = Field(
             default=None,
-            description="Sort order. Ex: name.asc, precedence.asc, created_at.desc",
+            description="Sort order. Ex: name.asc, precedence.asc, created_at.desc. Note: 'precedence.asc' returns correctly ordered results, but 'precedence.desc' does not — the API returns rows out of order. Sort ascending and reverse the results yourself if you need descending precedence.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for Data Protection policies in your CrowdStrike environment.
@@ -220,7 +220,7 @@ class DataProtectionModule(BaseModule):
         ),
         sort: str | None = Field(
             default=None,
-            description="Sort order. Ex: name.asc, category.asc, region.asc",
+            description="Sort order. Ex: name.asc, category.asc, region.asc. Note: 'name' does not order results correctly in either direction on this endpoint — sort on another field, or order the results yourself.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search for Data Protection content patterns in your CrowdStrike environment.

@@ -94,14 +94,27 @@ The `name` field is matched differently depending on `policy_type`:
 
 ## Sort and limit notes
 
-Safe sort fields (each accepts a `.asc` / `.desc` direction): `name`,
-`created_timestamp`, `modified_timestamp`, `enabled`, `created_by`, `modified_by`,
-`precedence`.
+Safe sort fields: `name`, `created_timestamp`, `modified_timestamp`, `enabled`,
+`created_by`, `modified_by`, `precedence`.
+
+**Use the dot direction separator only.** `created_timestamp.desc` works;
+`created_timestamp|desc` is rejected with HTTP 400 on all six policy types, so the
+tool rejects the pipe form up front.
 
 **Do NOT sort by `platform_name`.** Sorting by `platform_name` in either
 direction returns an HTTP 500 error on every policy type — it is not a valid sort
 field even though it is a valid filter field. Use one of the safe sort fields
 above instead.
+
+**`device_control` has two extra sort restrictions** (live-validated; they do not
+apply to the other five types):
+
+- `created_by` and `modified_by` return HTTP 500. The tool rejects both up front
+  for this type.
+- `created_timestamp` and `modified_timestamp` ignore the requested direction and
+  return the same ascending order for `.asc` and `.desc`. Do not rely on
+  `created_timestamp.desc` to surface the newest device_control policies — sort on
+  `precedence` or `enabled`, or order the results yourself.
 
 ## Example queries (each confirmed to return data)
 

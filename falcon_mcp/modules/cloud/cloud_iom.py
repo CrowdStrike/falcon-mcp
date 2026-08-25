@@ -85,6 +85,12 @@ class _CloudIomMixin(_CloudBase):
                 service: Cloud service name
                 status: Finding status
 
+                Sort field names do NOT match where the value lands in the response —
+                none of them are at the record root. Read them back from:
+                severity, status, first_detected, last_detected -> evaluation.<field>
+                cloud_provider -> cloud.provider
+                service -> resource.service
+
                 Examples: 'severity.desc', 'last_detected.desc', 'first_detected.asc'
             """
             ).strip(),

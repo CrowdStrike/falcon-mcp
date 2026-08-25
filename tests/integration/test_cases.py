@@ -488,9 +488,17 @@ class TestCasesIntegration(BaseIntegrationTest):
         )
 
     def test_aggregate_bad_filter_returns_fql_guide(self):
-        """Test that an unsupported filter field surfaces the FQL guide."""
-        result = self._aggregate(
-            "aggregate_case_templates", field="name", filter="not_a_real_field:'x'"
+        """Test that an unsupported filter field surfaces the FQL guide.
+
+        Retried through `retry_on_transient` because the gateway intermittently returns an
+        unparseable body, which arrives as a list-shaped error and fails the isinstance
+        check below for a reason unrelated to filter handling.
+        """
+        result = self.retry_on_transient(
+            lambda: self._aggregate(
+                "aggregate_case_templates", field="name", filter="not_a_real_field:'x'"
+            ),
+            context="aggregate bad filter",
         )
 
         assert isinstance(result, dict), "filter error should return a dict"
