@@ -57,6 +57,38 @@ class TestCloudIomIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_iom_findings with sort")
         self.assert_valid_list_response(result, min_length=0, context="search_iom_findings with sort")
 
+    def test_iom_sort_keys_are_nested_under_evaluation(self):
+        """The `severity` sort key is not a top-level response field.
+
+        `sort="severity.desc"` is valid, but the returned record has no top-level
+        `severity` — the value lives at `evaluation.severity`. A consumer that sorts by a
+        documented key and then reads that key off the record gets `None`, silently.
+
+        Pinned as a test because it is a schema fact the tool's own `sort` description does
+        not mention, and because it is the trap a sort-order test here would fall into: the
+        obvious `[r["severity"] for r in rows]` raises KeyError rather than comparing
+        anything.
+        """
+        result = self.call_method(self.module.search_iom_findings, sort="severity.desc", limit=3)
+        self.assert_no_error(result, context="search_iom_findings severity.desc")
+        findings = self.skip_unless_tenant_has(result, "IOM findings", "iom sort key nesting")
+
+        first = findings[0]
+        assert "severity" not in first, (
+            "`severity` is now a top-level IOM field. The sort key and response key agree, "
+            f"so this pin is obsolete — drop it. Keys: {sorted(first.keys())}"
+        )
+
+        evaluation = first.get("evaluation")
+        assert isinstance(evaluation, dict), (
+            f"Expected an `evaluation` dict holding the sort key; got {type(evaluation)}. "
+            f"Keys: {sorted(first.keys())}"
+        )
+        assert "severity" in evaluation, (
+            "`severity` is under neither the record root nor `evaluation`; the sort key has "
+            f"moved again. evaluation keys: {sorted(evaluation.keys())}"
+        )
+
     def test_search_iom_findings_batching(self):
         """A limit above the 100-per-request detail batch size still returns every record.
 

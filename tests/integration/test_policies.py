@@ -282,6 +282,101 @@ class TestPoliciesIntegration(BaseIntegrationTest):
             f"platform_name sort should be rejected by _validate_sort, got: {result}"
         )
 
+    def test_device_control_sort_direction_is_ignored_by_the_api(self):
+        """Pins a live API defect: queryDeviceControlPolicies ignores sort direction.
+
+        `created_timestamp.asc` and `created_timestamp.desc` return byte-identical ID lists,
+        both in ascending order, across 2 of 2 measured trials with 20 of 20 distinct
+        timestamps — so this is the direction being dropped, not a tie-break.
+
+        Isolated to the API, not to us: the query step returns the same order for both
+        directions, and the get step faithfully preserves whatever it is handed (measured:
+        0 of 4 trials scrambled). So `_reorder_by_ids` is not implicated, and
+        `search_policies` cannot be given a meaningful sort-order test — which is the
+        reason this pin exists. Without it, someone adds a monotonicity test here, it passes
+        against ascending data for either direction, and they conclude sort works.
+
+        A failure here most likely means the API was fixed. Replace this with a real
+        `assert_sort_orders_rows` test if so.
+        """
+        if not self._scopes_available("device_control"):
+            self.skip_with_warning(
+                "device_control scope unavailable", "device_control sort direction"
+            )
+            return
+
+        def ids_for(direction: str) -> list[str]:
+            result = self.call_method(
+                self.module.search_policies,
+                policy_type="device_control",
+                sort=f"created_timestamp.{direction}",
+                limit=20,
+            )
+            self.assert_no_error(result, context=f"device_control created_timestamp.{direction}")
+            return [policy["id"] for policy in self._unwrap_results(result)]
+
+        ascending, descending = ids_for("asc"), ids_for("desc")
+
+        if len(ascending) < 2:
+            self.skip_with_warning(
+                f"tenant has {len(ascending)} device_control policies, need 2+ to compare order",
+                "device_control sort direction",
+            )
+            return
+
+        assert ascending == descending, (
+            "queryDeviceControlPolicies now distinguishes sort direction — the known defect "
+            "this test pins appears to be fixed. Replace this with a real sort-order "
+            f"assertion.\n asc: {ascending}\ndesc: {descending}"
+        )
+
+    def test_device_control_rejects_pipe_sort_separator(self):
+        """Pins a gap: _validate_sort accepts `|`, but this endpoint rejects it.
+
+        `PoliciesModule._validate_sort` strips either a `.` or `|` direction suffix, so
+        `created_timestamp|desc` passes our guard and reaches the API, which answers HTTP
+        400 ("Query string parameter 'sort' is not an allowable value"). Every other policy
+        type accepts both separators.
+
+        The failure is loud rather than silent, so this is pinned rather than fixed: callers
+        get an error dict naming the problem, not wrong data. If the tool is ever changed to
+        reject `|` for device_control up front, this test should assert that instead.
+        """
+        if not self._scopes_available("device_control"):
+            self.skip_with_warning(
+                "device_control scope unavailable", "device_control pipe sort"
+            )
+            return
+
+        assert self.module._validate_sort("created_timestamp|desc") is None, (
+            "_validate_sort now rejects the pipe form up front; this test should assert "
+            "that guard instead of the API's 400."
+        )
+
+        result = self.call_method(
+            self.module.search_policies,
+            policy_type="device_control",
+            sort="created_timestamp|desc",
+            limit=5,
+        )
+
+        # A query-step 400 comes back through _format_fql_error_response, so the shape is
+        # the FQL-error envelope rather than a bare list.
+        assert isinstance(result, dict) and "fql_guide" in result, (
+            "queryDeviceControlPolicies now accepts the pipe separator — the known defect "
+            f"this test pins appears to be fixed. Got: {result}"
+        )
+
+        # Classify on the raw API message, not the composed one: handle_api_response
+        # prefixes every 400 with FQL boilerplate, so matching the composed string would
+        # match any bad request and this test would pass for the wrong reason.
+        errors = result["results"][0]["details"]["body"]["errors"]
+        raw_messages = [error.get("message", "") for error in errors]
+        assert any("sort" in message for message in raw_messages), (
+            "device_control returned a 400, but not about `sort` — this test is no longer "
+            f"pinning the pipe-separator defect. API messages: {raw_messages}"
+        )
+
     def test_members_returns_hosts(self):
         """search_policy_members returns host-shaped entities when a policy has members."""
         for policy_type in POLICY_TYPES:
