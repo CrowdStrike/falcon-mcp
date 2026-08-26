@@ -6,6 +6,9 @@
 
 Calling, listing, and observing CrowdStrike AgentWorks (agentic-studio) Charlotte AI agents and their execution traces
 
+> [!NOTE]
+> This module is not available on CrowdStrike's hosted Falcon MCP; it is only available when self-hosting this server. See [module overview](/falcon-mcp/modules/overview/#crowdstrike-hosted-mcp-differences).
+
 ## API Scopes
 
 - `Charlotte AI Agent Definition:read`

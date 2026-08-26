@@ -45,6 +45,9 @@ Responses include `pagination.total` (the total number of records matching the f
 
 ### `falcon_search_managed_assets`
 
+> [!NOTE]
+> Not available on CrowdStrike's hosted Falcon MCP. See [module overview](/falcon-mcp/modules/overview/#crowdstrike-hosted-mcp-differences).
+
 **Required scopes:** `Assets:read`
 
 Search hosts by asset and configuration posture: drive encryption status, encrypted/unencrypted drives, OS security settings (Secure Boot, Credential Guard, IOMMU), disk/memory/CPU usage, asset criticality, and internet exposure.

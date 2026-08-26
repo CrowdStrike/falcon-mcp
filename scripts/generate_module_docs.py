@@ -75,6 +75,51 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     },
 }
 
+_OVERVIEW_LINK = f"{SITE_BASE_PATH}/modules/overview/#crowdstrike-hosted-mcp-differences"
+
+# Notes on differences from CrowdStrike's hosted Falcon MCP, rendered as an
+# admonition under the module description. Keyed by module_key. See
+# generate_overview_page for the summary of these differences.
+HOSTED_MCP_MODULE_NOTES: dict[str, str] = {
+    "agentworks": (
+        "This module is not available on CrowdStrike's hosted Falcon MCP; it is only "
+        f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "fusion": (
+        "This module is not available on CrowdStrike's hosted Falcon MCP; it is only "
+        f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "zerotrustassessment": (
+        "This module is not available on CrowdStrike's hosted Falcon MCP; it is only "
+        f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "policies": (
+        "CrowdStrike's hosted Falcon MCP does not use these unified, `policy_type`-discriminated "
+        "tools. It instead exposes six policy-type-specific variants of each tool below, suffixed "
+        "by type (`_prevention`, `_sensor_update`, `_firewall`, `_device_control`, `_response`, "
+        "`_content_update`) with no `policy_type` parameter — for example `falcon_search_policies` "
+        "here corresponds to `falcon_search_policies_firewall`, `falcon_search_policies_prevention`, "
+        f"etc. on the hosted MCP. See [module overview]({_OVERVIEW_LINK})."
+    ),
+}
+
+# Notes on tools not (yet) available on CrowdStrike's hosted Falcon MCP, rendered
+# as an admonition under the tool heading. Keyed by full tool name (falcon_*).
+HOSTED_MCP_TOOL_NOTES: dict[str, str] = {
+    "falcon_search_cloud_insights": (
+        f"Not available on CrowdStrike's hosted Falcon MCP. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "falcon_get_cloud_asset_insights": (
+        f"Not available on CrowdStrike's hosted Falcon MCP. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "falcon_list_cloud_insight_definitions": (
+        f"Not available on CrowdStrike's hosted Falcon MCP. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "falcon_search_managed_assets": (
+        f"Not available on CrowdStrike's hosted Falcon MCP. See [module overview]({_OVERVIEW_LINK})."
+    ),
+}
+
 # Natural language prompt examples for each tool, shown in generated docs
 TOOL_EXAMPLES: dict[str, list[str]] = {
     # AgentWorks
@@ -1279,6 +1324,12 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
     lines.append(description)
     lines.append("")
 
+    # Note on differences from CrowdStrike's hosted Falcon MCP, if any
+    if module_key in HOSTED_MCP_MODULE_NOTES:
+        lines.append("> [!NOTE]")
+        lines.append(f"> {HOSTED_MCP_MODULE_NOTES[module_key]}")
+        lines.append("")
+
     # API Scopes
     if scopes:
         lines.append("## API Scopes")
@@ -1297,6 +1348,12 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
 
             lines.append(f"### `{tool['name']}`")
             lines.append("")
+
+            # Note on hosted-MCP availability, if any
+            if tool["name"] in HOSTED_MCP_TOOL_NOTES:
+                lines.append("> [!NOTE]")
+                lines.append(f"> {HOSTED_MCP_TOOL_NOTES[tool['name']]}")
+                lines.append("")
 
             # Admonition for mutating/destructive tools
             if destructive:
@@ -1369,6 +1426,44 @@ def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
         desc = meta.get("description", fallback_desc)
         lines.append(f"| [{title}]({SITE_BASE_PATH}/modules/{slug}/) | {scopes} | {desc} |")
 
+    lines.append("")
+    lines.append("## CrowdStrike-hosted MCP differences")
+    lines.append("")
+    lines.append("> [!NOTE]")
+    lines.append(
+        "> This section compares this self-hosted server against CrowdStrike's hosted "
+        "Falcon MCP. It does not apply if you're only running this server yourself."
+    )
+    lines.append("")
+    lines.append(
+        "The hosted Falcon MCP does not register each `falcon_*` tool directly. Instead it "
+        "exposes two tools, `search_tools` and `execute_tool`: a client calls `search_tools` "
+        "to find the right Falcon tool by name or keyword, then `execute_tool` to invoke it by "
+        "name with arguments. This server registers every `falcon_*` tool (and its `falcon://` "
+        "resources) directly, so no discovery step is needed."
+    )
+    lines.append("")
+    lines.append("Module and tool coverage also differs:")
+    lines.append("")
+    lines.append(
+        "- **AgentWorks**, **Fusion SOAR**, and **Zero Trust Assessment** are available only "
+        "on this self-hosted server; the hosted MCP has no equivalent modules."
+    )
+    lines.append(
+        f"- [Cloud Security]({SITE_BASE_PATH}/modules/cloud/): `falcon_search_cloud_insights`, "
+        "`falcon_list_cloud_insight_definitions`, and `falcon_get_cloud_asset_insights` are not "
+        "yet available on the hosted MCP."
+    )
+    lines.append(
+        f"- [Discover]({SITE_BASE_PATH}/modules/discover/): `falcon_search_managed_assets` is "
+        "not available on the hosted MCP."
+    )
+    lines.append(
+        f"- [Policies]({SITE_BASE_PATH}/modules/policies/): the hosted MCP does not use the "
+        "unified `policy_type`-discriminated tools. It instead exposes six policy-type-specific "
+        "variants of each tool (for example `falcon_search_policies_firewall`, "
+        "`falcon_create_policy_prevention`)."
+    )
     lines.append("")
     return "\n".join(lines)
 

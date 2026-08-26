@@ -35,3 +35,17 @@ The Falcon MCP Server provides the following modules. Each module requires speci
 | [Shield](/falcon-mcp/modules/shield/) | `SaaS Security:read`, `SaaS Security:write` | Shield module for CrowdStrike Falcon. |
 | [Spotlight](/falcon-mcp/modules/spotlight/) | `Vulnerabilities:read` | Accessing and managing CrowdStrike Falcon Spotlight vulnerabilities |
 | [Zero Trust Assessment](/falcon-mcp/modules/zero-trust-assessment/) | `Zero Trust Assessment:read` | Retrieving Zero Trust Assessment posture scores and sensor and OS hardening signals for hosts |
+
+## CrowdStrike-hosted MCP differences
+
+> [!NOTE]
+> This section compares this self-hosted server against CrowdStrike's hosted Falcon MCP. It does not apply if you're only running this server yourself.
+
+The hosted Falcon MCP does not register each `falcon_*` tool directly. Instead it exposes two tools, `search_tools` and `execute_tool`: a client calls `search_tools` to find the right Falcon tool by name or keyword, then `execute_tool` to invoke it by name with arguments. This server registers every `falcon_*` tool (and its `falcon://` resources) directly, so no discovery step is needed.
+
+Module and tool coverage also differs:
+
+- **AgentWorks**, **Fusion SOAR**, and **Zero Trust Assessment** are available only on this self-hosted server; the hosted MCP has no equivalent modules.
+- [Cloud Security](/falcon-mcp/modules/cloud/): `falcon_search_cloud_insights`, `falcon_list_cloud_insight_definitions`, and `falcon_get_cloud_asset_insights` are not yet available on the hosted MCP.
+- [Discover](/falcon-mcp/modules/discover/): `falcon_search_managed_assets` is not available on the hosted MCP.
+- [Policies](/falcon-mcp/modules/policies/): the hosted MCP does not use the unified `policy_type`-discriminated tools. It instead exposes six policy-type-specific variants of each tool (for example `falcon_search_policies_firewall`, `falcon_create_policy_prevention`).
