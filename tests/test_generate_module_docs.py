@@ -794,6 +794,112 @@ class TestMixinDeclaredConstants(unittest.TestCase):
         self.assertEqual(extract_tool_scopes(cls.my_tool, cls), ["Hosts:read"])
 
 
+    def test_annotated_module_constant_resolves(self):
+        """A module constant spelled with a type annotation still resolves.
+
+        `NAME: str = "op"` is an ast.AnnAssign, a different node type from `NAME = "op"`,
+        though the annotation means nothing at runtime. Both _OPERATIONS dicts in the tree
+        are written this way, so missing the node type would reopen the blank-scope hole
+        for any module that types its constant.
+        """
+        cls = self._build(
+            {
+                "t552c_mixin.py": '''
+                    """Mixin whose operation constant carries a type annotation."""
+
+                    _T552C_OP: str = "QueryRule"  # requires Cloud Security Policies:read
+
+
+                    class T552CMixin:
+                        def _do_query(self):
+                            return self.client.command(_T552C_OP)
+                ''',
+                "t552c_concrete.py": '''
+                    """Concrete module assembled from the mixin."""
+
+                    from t552c_mixin import T552CMixin
+
+
+                    class T552CModule(T552CMixin):
+                        def my_tool(self):
+                            return self._do_query()
+                ''',
+            },
+            "t552c_concrete",
+            "T552CModule",
+        )
+
+        self.assertEqual(
+            extract_tool_scopes(cls.my_tool, cls),
+            ["Cloud Security Policies:read"],
+        )
+
+    def test_module_level_function_in_the_same_file_is_followed(self):
+        """A tool that reaches the API through a plain function, not a method.
+
+        `hosts.py` and `ngsiem.py` both name an operation inside a module-level helper
+        (`_tag_error`, `_validate_repository`) rather than a method. Helper tracing keys on
+        `self.<name>`, so a bare call is invisible; today those two are correct only
+        because the calling tool repeats the literal.
+        """
+        cls = self._build(
+            {
+                "t552d_mod.py": '''
+                    """Module whose operation name lives in a free function."""
+
+
+                    def _build_error():
+                        return {"operation": "QueryRule"}
+
+
+                    class T552DModule:
+                        def my_tool(self):
+                            return _build_error()
+                ''',
+            },
+            "t552d_mod",
+            "T552DModule",
+        )
+
+        self.assertEqual(
+            extract_tool_scopes(cls.my_tool, cls),
+            ["Cloud Security Policies:read"],
+        )
+
+    def test_imported_function_is_not_followed(self):
+        """A function imported from elsewhere contributes nothing.
+
+        Shared helpers live outside the module and mention operations belonging to other
+        modules, exactly like BaseModule. Following them would attribute unrelated scopes,
+        so only functions defined in the module's own file may be traced.
+        """
+        cls = self._build(
+            {
+                "t552e_shared.py": '''
+                    """Stands in for a shared helper module naming many operations."""
+
+
+                    def shared_helper():
+                        return {"operation": "QueryDevicesByFilter"}
+                ''',
+                "t552e_mod.py": '''
+                    """Module that only calls the shared helper."""
+
+                    from t552e_shared import shared_helper
+
+
+                    class T552EModule:
+                        def my_tool(self):
+                            return shared_helper()
+                ''',
+            },
+            "t552e_mod",
+            "T552EModule",
+        )
+
+        self.assertEqual(extract_tool_scopes(cls.my_tool, cls), [])
+
+
 # ---------------------------------------------------------------------------
 # TestExtractRegisteredToolNamesCoverage — nested paren depth (line 736)
 # ---------------------------------------------------------------------------

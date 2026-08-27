@@ -961,6 +961,36 @@ def extract_module_scopes(module_cls: type) -> list[str]:
     return sorted(scopes, key=lambda s: (":write" in s, s))
 
 
+def _module_own_functions(module_name: str) -> dict[str, str]:
+    """Source of every plain function defined in one module's own file.
+
+    A tool can reach the API through a module-level function rather than a method —
+    ``hosts.py`` names ``UpdateDeviceTags`` only inside ``_tag_error``, and ``ngsiem.py``
+    names ``StartSearchV1`` inside ``_validate_repository``. Helper tracing keys on
+    ``self.<name>``, so a bare call is invisible to it.
+
+    Only functions defined in this very file are eligible. An imported one belongs to a
+    shared module that names operations from every module, so following it would attribute
+    unrelated scopes for the same reason BaseModule is excluded.
+    """
+    module = sys.modules.get(module_name)
+    if module is None:
+        return {}
+    functions: dict[str, str] = {}
+    for name, value in vars(module).items():
+        if not inspect.isfunction(value) or getattr(value, "__module__", None) != module_name:
+            continue
+        try:
+            functions[name] = inspect.getsource(value)
+        except (TypeError, OSError):
+            continue
+    return functions
+
+
+# A call to a bare name: `helper(...)`, but not `obj.helper(...)` or `def helper(...)`
+_BARE_CALL = re.compile(r"(?<![\w.])([A-Za-z_]\w*)\s*\(")
+
+
 def extract_tool_scopes(method: Any, module_cls: type) -> list[str]:
     """Derive API scopes for a single tool method by tracing its helper calls.
 
@@ -970,7 +1000,8 @@ def extract_tool_scopes(method: Any, module_cls: type) -> list[str]:
     only through another tool method needs the union of the scopes of everything it
     calls: ``agentworks.py``'s ``invoke_agentworks_agent`` polls
     ``get_agentworks_agent_invocation``, so it needs that operation's read scope on top
-    of its own write scope.
+    of its own write scope. Module-level functions defined in the same file are followed
+    too, since an operation named only inside one would otherwise be invisible.
     """
     try:
         method_source = inspect.getsource(method)
@@ -994,17 +1025,30 @@ def extract_tool_scopes(method: Any, module_cls: type) -> list[str]:
     # Walk the chain breadth-first, guarding against recursion. Match bare `self.name`
     # too, not just `self.name(`, so a method passed as a callable rather than called
     # directly is still followed.
-    chunks: list[tuple[str, str]] = [(method_source, getattr(method, "__module__", ""))]
-    seen: set[str] = set()
-    pending = re.findall(r"self\.(\w+)", method_source)
+    method_module = getattr(method, "__module__", "")
+    chunks: list[tuple[str, str]] = [(method_source, method_module)]
+    seen: set[tuple[str, str]] = set()
+    pending: list[tuple[str, str]] = [(name, method_module)
+                                      for name in re.findall(r"self\.(\w+)", method_source)]
+    pending += [(name, method_module) for name in _BARE_CALL.findall(method_source)]
     while pending:
-        helper_name = pending.pop()
-        if helper_name in seen or helper_name not in own_method_source:
+        helper_name, from_module = pending.pop()
+        if (helper_name, from_module) in seen:
             continue
-        seen.add(helper_name)
-        helper_source, helper_module = own_method_source[helper_name]
+        seen.add((helper_name, from_module))
+
+        if helper_name in own_method_source:
+            helper_source, helper_module = own_method_source[helper_name]
+        else:
+            # A plain function, resolved only against the file the caller was written in
+            helper_source = _module_own_functions(from_module).get(helper_name, "")
+            helper_module = from_module
+            if not helper_source:
+                continue
+
         chunks.append((helper_source, helper_module))
-        pending.extend(re.findall(r"self\.(\w+)", helper_source))
+        pending += [(name, helper_module) for name in re.findall(r"self\.(\w+)", helper_source)]
+        pending += [(name, helper_module) for name in _BARE_CALL.findall(helper_source)]
 
     # Find all string literals (and constant- or container-referenced operation names)
     # and look them up in API_SCOPE_REQUIREMENTS
