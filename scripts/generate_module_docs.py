@@ -75,6 +75,58 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     },
 }
 
+_OVERVIEW_LINK = f"{SITE_BASE_PATH}/modules/overview/#crowdstrike-hosted-mcp-differences"
+
+
+def _module_link(module_key: str) -> str:
+    """Site URL for a module page, honoring any slug override in MODULE_METADATA."""
+    slug = MODULE_METADATA.get(module_key, {}).get("slug", module_key)
+    return f"{SITE_BASE_PATH}/modules/{slug}/"
+
+
+# Notes on differences from CrowdStrike's hosted Falcon MCP, rendered as an
+# admonition under the module description. Keyed by module_key. See
+# generate_overview_page for the summary of these differences.
+HOSTED_MCP_MODULE_NOTES: dict[str, str] = {
+    "fusion": (
+        "This module is not available on CrowdStrike's hosted Falcon MCP; it is only "
+        f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "zerotrustassessment": (
+        "This module is not available on CrowdStrike's hosted Falcon MCP; it is only "
+        f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "rtr": (
+        "This module is not available on CrowdStrike's hosted Falcon MCP; it is only "
+        f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "policies": (
+        "CrowdStrike's hosted Falcon MCP does not use these unified, `policy_type`-discriminated "
+        "tools. It instead exposes six policy-type-specific variants of each tool below, suffixed "
+        "by type (`_prevention`, `_sensor_update`, `_firewall`, `_device_control`, `_response`, "
+        "`_content_update`) with no `policy_type` parameter — for example `falcon_search_policies` "
+        "here corresponds to `falcon_search_policies_firewall`, `falcon_search_policies_prevention`, "
+        f"etc. on the hosted MCP. See [module overview]({_OVERVIEW_LINK})."
+    ),
+}
+
+# Notes on tools not (yet) available on CrowdStrike's hosted Falcon MCP, rendered
+# as an admonition under the tool heading. Keyed by full tool name (falcon_*).
+HOSTED_MCP_TOOL_NOTES: dict[str, str] = {
+    "falcon_search_cloud_insights": (
+        f"Not available on CrowdStrike's hosted Falcon MCP. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "falcon_get_cloud_asset_insights": (
+        f"Not available on CrowdStrike's hosted Falcon MCP. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "falcon_list_cloud_insight_definitions": (
+        f"Not available on CrowdStrike's hosted Falcon MCP. See [module overview]({_OVERVIEW_LINK})."
+    ),
+    "falcon_search_managed_assets": (
+        f"Not available on CrowdStrike's hosted Falcon MCP. See [module overview]({_OVERVIEW_LINK})."
+    ),
+}
+
 # Natural language prompt examples for each tool, shown in generated docs
 TOOL_EXAMPLES: dict[str, list[str]] = {
     # AgentWorks
@@ -1279,6 +1331,12 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
     lines.append(description)
     lines.append("")
 
+    # Note on differences from CrowdStrike's hosted Falcon MCP, if any
+    if module_key in HOSTED_MCP_MODULE_NOTES:
+        lines.append("> [!NOTE]")
+        lines.append(f"> {HOSTED_MCP_MODULE_NOTES[module_key]}")
+        lines.append("")
+
     # API Scopes
     if scopes:
         lines.append("## API Scopes")
@@ -1297,6 +1355,12 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
 
             lines.append(f"### `{tool['name']}`")
             lines.append("")
+
+            # Note on hosted-MCP availability, if any
+            if tool["name"] in HOSTED_MCP_TOOL_NOTES:
+                lines.append("> [!NOTE]")
+                lines.append(f"> {HOSTED_MCP_TOOL_NOTES[tool['name']]}")
+                lines.append("")
 
             # Admonition for mutating/destructive tools
             if destructive:
@@ -1370,7 +1434,87 @@ def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
         lines.append(f"| [{title}]({SITE_BASE_PATH}/modules/{slug}/) | {scopes} | {desc} |")
 
     lines.append("")
+    lines.append("## CrowdStrike-hosted MCP differences")
+    lines.append("")
+    lines.append("> [!NOTE]")
+    lines.append(
+        "> This section compares this self-hosted server against CrowdStrike's hosted "
+        "Falcon MCP. Skip it unless you also use the hosted MCP, or are moving between the two."
+    )
+    lines.append("")
+    lines.append(
+        "The two servers differ in how a client reaches a tool. The hosted Falcon MCP works "
+        "through discovery: a client calls `search_tools` to find a Falcon tool by name or "
+        "keyword, then `execute_tool` to run it with arguments. The self-hosted falcon-mcp "
+        "server registers each `falcon_*` tool up front instead, so a client calls one by name "
+        "with no discovery round-trip."
+    )
+    lines.append("")
+    lines.append(
+        "If you self-host and want the same discovery pattern, enable "
+        f"[dynamic mode]({SITE_BASE_PATH}/usage/dynamic-mode/): it swaps the full tool surface "
+        "for `falcon_search_tools`, `falcon_execute_tool`, and an always-on "
+        "`falcon_list_enabled_tools` inventory. Mind the `falcon_` prefix — those three are "
+        "the self-hosted falcon-mcp server's tools, not the hosted MCP's."
+    )
+    lines.append("")
+    lines.append("Module and tool coverage also differs:")
+    lines.append("")
+    lines.append(
+        f"- [Fusion SOAR]({_module_link('fusion')}), "
+        f"[Zero Trust Assessment]({_module_link('zerotrustassessment')}), and "
+        f"[Real Time Response]({_module_link('rtr')}) are available only on this self-hosted "
+        "server; the hosted MCP has no equivalent modules."
+    )
+    lines.append(
+        f"- [Cloud Security]({_module_link('cloud')}): `falcon_search_cloud_insights`, "
+        "`falcon_list_cloud_insight_definitions`, and `falcon_get_cloud_asset_insights` are not "
+        "available on the hosted MCP."
+    )
+    lines.append(
+        f"- [Discover]({_module_link('discover')}): `falcon_search_managed_assets` is "
+        "not available on the hosted MCP."
+    )
+    lines.append(
+        f"- [Policies]({_module_link('policies')}): the hosted MCP does not use the "
+        "unified `policy_type`-discriminated tools. It instead exposes six policy-type-specific "
+        "variants of each tool (for example `falcon_search_policies_firewall`, "
+        "`falcon_create_policy_prevention`)."
+    )
+    lines.append("")
     return "\n".join(lines)
+
+
+def validate_hosted_mcp_notes(modules: dict[str, dict[str, Any]]) -> None:
+    """Fail loudly when a hosted-MCP note key matches no module or no registered tool.
+
+    Both note dicts are keyed by name, so a module or tool rename silently drops the
+    note: the page regenerates without it, the committed docs match, and the docs
+    freshness check passes. Raise here instead so a rename is caught at generation time.
+    """
+    stale_modules = sorted(set(HOSTED_MCP_MODULE_NOTES) - set(modules))
+
+    known_tools = {
+        f"falcon_{registered}"
+        for mod_info in modules.values()
+        for registered in extract_registered_tool_names(mod_info["cls"]).values()
+    }
+    stale_tools = sorted(set(HOSTED_MCP_TOOL_NOTES) - known_tools)
+
+    problems = []
+    if stale_modules:
+        problems.append(
+            f"HOSTED_MCP_MODULE_NOTES keys match no discovered module: {', '.join(stale_modules)}"
+        )
+    if stale_tools:
+        problems.append(
+            f"HOSTED_MCP_TOOL_NOTES keys match no registered tool: {', '.join(stale_tools)}"
+        )
+    if problems:
+        raise ValueError(
+            "Stale hosted-MCP note keys in scripts/generate_module_docs.py. "
+            "Update or remove them after a rename:\n  " + "\n  ".join(problems)
+        )
 
 
 def main() -> None:
@@ -1379,6 +1523,8 @@ def main() -> None:
 
     modules = discover_module_classes()
     print(f"Discovered {len(modules)} modules: {', '.join(sorted(modules.keys()))}")
+
+    validate_hosted_mcp_notes(modules)
 
     # Generate overview page
     overview = generate_overview_page(modules)

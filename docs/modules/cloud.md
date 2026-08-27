@@ -20,6 +20,9 @@ Accessing and analyzing CrowdStrike Falcon cloud resources like Kubernetes & Con
 
 ### `falcon_search_cloud_insights`
 
+> [!NOTE]
+> Not available on CrowdStrike's hosted Falcon MCP. See [module overview](/falcon-mcp/modules/overview/#crowdstrike-hosted-mcp-differences).
+
 **Required scopes:** `Cloud Security API Assets:read`, `Cloud Security Policies:read`
 
 Search for cloud security insights using FQL.
@@ -40,6 +43,9 @@ Responses include `pagination.total` and `pagination.next` for cursor-based pagi
 
 ### `falcon_get_cloud_asset_insights`
 
+> [!NOTE]
+> Not available on CrowdStrike's hosted Falcon MCP. See [module overview](/falcon-mcp/modules/overview/#crowdstrike-hosted-mcp-differences).
+
 **Required scopes:** `Cloud Security API Assets:read`
 
 Retrieve the full insight detail for one or more cloud ASSET IDs.
@@ -57,6 +63,9 @@ requested asset that has insight data.
 - "Why is this asset flagged — give me its full insight detail"
 
 ### `falcon_list_cloud_insight_definitions`
+
+> [!NOTE]
+> Not available on CrowdStrike's hosted Falcon MCP. See [module overview](/falcon-mcp/modules/overview/#crowdstrike-hosted-mcp-differences).
 
 **Required scopes:** `Cloud Security Policies:read`
 

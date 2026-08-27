@@ -6,6 +6,9 @@
 
 Searching Fusion SOAR workflow definitions and executions, reading what an execution produced, and running an on-demand workflow
 
+> [!NOTE]
+> This module is not available on CrowdStrike's hosted Falcon MCP; it is only available when self-hosting this server. See [module overview](/falcon-mcp/modules/overview/#crowdstrike-hosted-mcp-differences).
+
 ## API Scopes
 
 - `Workflows:read`
