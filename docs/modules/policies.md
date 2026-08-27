@@ -25,6 +25,8 @@ This module provides a unified set of tools for managing CrowdStrike host-based 
 
 ### `falcon_search_policies`
 
+**Required scopes:** `Content Update Policies:read`, `Device Control Policies:read`, `Firewall Management:read`, `Prevention Policies:read`, `Response Policies:read`, `Sensor Update Policies:read`
+
 Search host-based policies of a given type and return full policy records.
 
 Use this to find prevention, sensor update, firewall, device control,
@@ -43,6 +45,8 @@ Responses include `pagination.total` (the total number of records matching the f
 - "Find prevention policies whose name contains 'default'"
 
 ### `falcon_search_policy_members`
+
+**Required scopes:** `Content Update Policies:read`, `Device Control Policies:read`, `Firewall Management:read`, `Prevention Policies:read`, `Response Policies:read`, `Sensor Update Policies:read`
 
 Search for the host members governed by a specific policy.
 
@@ -66,6 +70,8 @@ Responses include `pagination.total` (the total number of records matching the f
 > [!NOTE]
 > This tool modifies data.
 
+**Required scopes:** `Content Update Policies:write`, `Device Control Policies:write`, `Firewall Management:write`, `Prevention Policies:write`, `Response Policies:write`, `Sensor Update Policies:write`
+
 Create a host-based policy of the given type.
 
 Provide a name and (for every type except content_update) a platform_name.
@@ -82,6 +88,8 @@ policies are created disabled. Returns the created policy record.
 
 > [!NOTE]
 > This tool modifies data.
+
+**Required scopes:** `Content Update Policies:write`, `Device Control Policies:write`, `Firewall Management:write`, `Prevention Policies:write`, `Response Policies:write`, `Sensor Update Policies:write`
 
 Update an existing host-based policy of the given type.
 
@@ -101,6 +109,8 @@ the updated policy record.
 > [!CAUTION]
 > This tool performs destructive operations.
 
+**Required scopes:** `Content Update Policies:write`, `Device Control Policies:write`, `Firewall Management:write`, `Prevention Policies:write`, `Response Policies:write`, `Sensor Update Policies:write`
+
 Delete one or more host-based policies of the given type.
 
 Provide the policy_type and a non-empty list of policy `ids`. A policy
@@ -118,6 +128,8 @@ the API response for the deletion.
 
 > [!NOTE]
 > This tool modifies data.
+
+**Required scopes:** `Content Update Policies:write`, `Device Control Policies:write`, `Firewall Management:write`, `Prevention Policies:write`, `Response Policies:write`, `Sensor Update Policies:write`
 
 Perform an action on one or more policies of the given type.
 
@@ -137,6 +149,8 @@ records.
 
 > [!NOTE]
 > This tool modifies data.
+
+**Required scopes:** `Content Update Policies:write`, `Device Control Policies:write`, `Firewall Management:write`, `Prevention Policies:write`, `Response Policies:write`, `Sensor Update Policies:write`
 
 Set the precedence (evaluation order) of policies for a platform.
 

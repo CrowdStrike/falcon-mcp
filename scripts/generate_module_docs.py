@@ -15,6 +15,7 @@ import inspect
 import pkgutil
 import re
 import sys
+import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -742,45 +743,6 @@ def discover_module_classes() -> dict[str, dict[str, Any]]:
     return result
 
 
-def _module_string_constants(module_cls: type) -> dict[str, str]:
-    """Map the module-level ``NAME = "literal"`` assignments a module class can see.
-
-    Scope detection works by spotting operation-name string literals in the source. A
-    module may instead name its operation once in a module-level constant and reference
-    it by name at every call site, as ``agentworks.py`` does with ``_GET_INVOCATION_OP``.
-    `inspect.getsource` on the class, or on one method, never sees that assignment, so
-    the literal is absent and the tool silently documents no scopes at all. Resolving
-    these constants first closes that hole for any module that factors its operation
-    name out.
-    """
-    module = sys.modules.get(module_cls.__module__)
-    if module is None:
-        return {}
-    try:
-        tree = ast.parse(inspect.getsource(module))
-    except (TypeError, OSError, SyntaxError):
-        return {}
-
-    constants: dict[str, str] = {}
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant):
-            if isinstance(node.value.value, str):
-                for target in node.targets:
-                    if isinstance(target, ast.Name):
-                        constants[target.id] = node.value.value
-    return constants
-
-
-def _operation_names_in(source: str, module_cls: type) -> set[str]:
-    """Operation names referenced by ``source``, as literals or via a constant."""
-    names = set(re.findall(r'["\'](\w+)["\']', source))
-    constants = _module_string_constants(module_cls)
-    if constants:
-        referenced = set(re.findall(r"\b([A-Za-z_]\w*)\b", source))
-        names |= {constants[n] for n in referenced & constants.keys()}
-    return names
-
-
 def _own_classes(module_cls: type) -> list[type]:
     """The MRO classes belonging to this module, stopping before BaseModule.
 
@@ -802,17 +764,194 @@ def _own_classes(module_cls: type) -> list[type]:
     return classes
 
 
-def extract_module_scopes(module_cls: type) -> list[str]:
-    """Derive API scopes by finding operation names in module source and looking them up in API_SCOPE_REQUIREMENTS."""
-    parts: list[str] = []
+def _module_string_constants(module_name: str) -> dict[str, str]:
+    """Map the module-level ``NAME = "literal"`` assignments declared in one file.
+
+    Scope detection works by spotting operation-name string literals in the source. A
+    module may instead name its operation once in a module-level constant and reference
+    it by name at every call site, as ``agentworks.py`` does with ``_GET_INVOCATION_OP``.
+    `inspect.getsource` on the class, or on one method, never sees that assignment, so
+    the literal is absent and the tool silently documents no scopes at all. Resolving
+    these constants first closes that hole for any module that factors its operation
+    name out.
+
+    Annotated assignments (``NAME: str = "literal"``) count too — the annotation is
+    invisible at runtime but changes the AST node type, and missing that would reopen
+    the same hole for a module that spells its constant with a type.
+    """
+    module = sys.modules.get(module_name)
+    if module is None:
+        return {}
+    try:
+        tree = ast.parse(inspect.getsource(module))
+    except (TypeError, OSError, SyntaxError):
+        return {}
+
+    constants: dict[str, str] = {}
+    for node in tree.body:
+        targets: list[ast.expr] = []
+        if isinstance(node, ast.Assign):
+            targets = list(node.targets)
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+        else:
+            continue
+        if not (isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)):
+            continue
+        for target in targets:
+            if isinstance(target, ast.Name):
+                constants[target.id] = node.value.value
+    return constants
+
+
+def _class_literal_containers(module_cls: type) -> dict[str, Any]:
+    """Class-level attributes whose value is a pure literal, as real Python objects.
+
+    A module that dispatches on a discriminator keeps its operation names in a class
+    attribute rather than at a call site — ``policies.py`` and ``exclusions.py`` both
+    hold every operation in an ``_OPERATIONS`` dict and select one with
+    ``self._OPERATIONS[type]["verb"]``. Helper tracing only follows callables, so a dict
+    is skipped and none of those operation names is ever seen. Unlike module globals,
+    these really are class attributes, so the earliest definition in the MRO wins,
+    exactly as attribute lookup resolves it.
+    """
+    containers: dict[str, Any] = {}
     for klass in _own_classes(module_cls):
         try:
-            parts.append(inspect.getsource(klass))
+            tree = ast.parse(textwrap.dedent(inspect.getsource(klass)))
+        except (TypeError, OSError, SyntaxError):
+            continue
+        if not (tree.body and isinstance(tree.body[0], ast.ClassDef)):
+            continue
+        for node in tree.body[0].body:
+            target: str | None = None
+            value: ast.expr | None = None
+            if isinstance(node, ast.Assign) and len(node.targets) == 1 \
+                    and isinstance(node.targets[0], ast.Name):
+                target, value = node.targets[0].id, node.value
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                target, value = node.target.id, node.value
+            if target is None or value is None or target in containers:
+                continue
+            try:
+                containers[target] = ast.literal_eval(value)
+            except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+                continue
+    return containers
+
+
+def _flatten_strings(obj: Any) -> set[str]:
+    """Every string reachable inside a nested literal container."""
+    if isinstance(obj, str):
+        return {obj}
+    if isinstance(obj, dict):
+        return set().union(*(_flatten_strings(v) for v in obj.values())) if obj else set()
+    if isinstance(obj, (list, tuple, set, frozenset)):
+        return set().union(*(_flatten_strings(v) for v in obj)) if obj else set()
+    return set()
+
+
+# self.ATTR["key"] / self.ATTR[var] / self.ATTR[a]["b"] — one group per subscript level
+_SUBSCRIPT_CHAIN = re.compile(r"self\.(\w+)((?:\[[^\[\]]*\])+)")
+_SUBSCRIPT_LEVEL = re.compile(r"\[([^\[\]]*)\]")
+_QUOTED_KEY = re.compile(r"""^\s*(?:"([^"]*)"|'([^']*)')\s*$""")
+
+
+def _local_literal_values(source: str, name: str) -> set[str]:
+    """String literals assigned to ``name`` anywhere in ``source``.
+
+    Lets a variable subscript key narrow instead of widening to every entry:
+    ``op_key = "update" if is_update else "create"`` reaches only two of the verbs, so a
+    tool selecting ``[op_key]`` should not claim the scopes of the ones it cannot reach.
+    """
+    values: set[str] = set()
+    for match in re.finditer(rf"\b{re.escape(name)}\s*=(?!=)([^\n]*)", source):
+        values |= {
+            dq if dq else sq for dq, sq in re.findall(r'"([^"]*)"|\'([^\']*)\'', match.group(1))
+        }
+    return values
+
+
+def _container_ops_in(source: str, containers: dict[str, Any]) -> set[str]:
+    """Operation names reached by subscripting a class-level literal container.
+
+    A literal key narrows to that entry. A variable key is resolved against literals
+    assigned to that name in the same source, and only widens to every entry at the level
+    when that yields nothing usable — widening is the honest answer there, because the
+    tool really can call any of them depending on its argument.
+    """
+    names: set[str] = set()
+    for attr, subscripts in _SUBSCRIPT_CHAIN.findall(source):
+        if attr not in containers:
+            continue
+        level: list[Any] = [containers[attr]]
+        for raw_key in _SUBSCRIPT_LEVEL.findall(subscripts):
+            quoted = _QUOTED_KEY.match(raw_key)
+            keys: set[str] | None = None
+            if quoted:
+                keys = {quoted.group(1) if quoted.group(1) is not None else quoted.group(2)}
+            elif re.fullmatch(r"\s*[A-Za-z_]\w*\s*", raw_key):
+                candidates = _local_literal_values(source, raw_key.strip())
+                # Only trust the narrowing if it actually names entries at this level;
+                # otherwise those literals were something else and we must widen.
+                usable = {
+                    c
+                    for c in candidates
+                    for obj in level
+                    if isinstance(obj, dict) and c in obj
+                }
+                keys = usable or None
+            nxt: list[Any] = []
+            for obj in level:
+                if not isinstance(obj, dict):
+                    continue
+                if keys is None:
+                    nxt.extend(obj.values())
+                else:
+                    nxt.extend(obj[k] for k in keys if k in obj)
+            level = nxt
+        for obj in level:
+            names |= _flatten_strings(obj)
+    return names
+
+
+def _operation_names_in(
+    chunks: list[tuple[str, str]], containers: dict[str, Any] | None = None
+) -> set[str]:
+    """Operation names referenced by each ``(source, defining module)`` chunk.
+
+    A module assembled from mixins spreads its methods over several files, and each file
+    may declare its own constants, so every chunk resolves against the module that
+    defines it — the same file Python resolves the reference against at runtime, since a
+    function reads its globals from where it was written rather than from its class's
+    position in the MRO. Merging every file's constants into one map instead would let a
+    same-named constant in a sibling mixin win and attribute the wrong operation.
+
+    ``containers`` carries the module's class-level literal containers, so an operation
+    selected out of a dict is found as well as one written inline.
+    """
+    names: set[str] = set()
+    for source, module_name in chunks:
+        names |= set(re.findall(r'["\'](\w+)["\']', source))
+        constants = _module_string_constants(module_name)
+        if constants:
+            referenced = set(re.findall(r"\b([A-Za-z_]\w*)\b", source))
+            names |= {constants[n] for n in referenced & constants.keys()}
+        if containers:
+            names |= _container_ops_in(source, containers)
+    return names
+
+
+def extract_module_scopes(module_cls: type) -> list[str]:
+    """Derive API scopes by finding operation names in module source and looking them up in API_SCOPE_REQUIREMENTS."""
+    chunks: list[tuple[str, str]] = []
+    for klass in _own_classes(module_cls):
+        try:
+            chunks.append((inspect.getsource(klass), klass.__module__))
         except (TypeError, OSError):
             pass
-    source = "\n".join(parts)
 
-    all_strings = _operation_names_in(source, module_cls)
+    all_strings = _operation_names_in(chunks, _class_literal_containers(module_cls))
     scopes: set[str] = set()
     for op_name, op_scopes in API_SCOPE_REQUIREMENTS.items():
         if op_name in all_strings:
@@ -820,6 +959,36 @@ def extract_module_scopes(module_cls: type) -> list[str]:
 
     # Sort: read scopes first, then write, alphabetically within each group
     return sorted(scopes, key=lambda s: (":write" in s, s))
+
+
+def _module_own_functions(module_name: str) -> dict[str, str]:
+    """Source of every plain function defined in one module's own file.
+
+    A tool can reach the API through a module-level function rather than a method —
+    ``hosts.py`` names ``UpdateDeviceTags`` only inside ``_tag_error``, and ``ngsiem.py``
+    names ``StartSearchV1`` inside ``_validate_repository``. Helper tracing keys on
+    ``self.<name>``, so a bare call is invisible to it.
+
+    Only functions defined in this very file are eligible. An imported one belongs to a
+    shared module that names operations from every module, so following it would attribute
+    unrelated scopes for the same reason BaseModule is excluded.
+    """
+    module = sys.modules.get(module_name)
+    if module is None:
+        return {}
+    functions: dict[str, str] = {}
+    for name, value in vars(module).items():
+        if not inspect.isfunction(value) or getattr(value, "__module__", None) != module_name:
+            continue
+        try:
+            functions[name] = inspect.getsource(value)
+        except (TypeError, OSError):
+            continue
+    return functions
+
+
+# A call to a bare name: `helper(...)`, but not `obj.helper(...)` or `def helper(...)`
+_BARE_CALL = re.compile(r"(?<![\w.])([A-Za-z_]\w*)\s*\(")
 
 
 def extract_tool_scopes(method: Any, module_cls: type) -> list[str]:
@@ -831,44 +1000,59 @@ def extract_tool_scopes(method: Any, module_cls: type) -> list[str]:
     only through another tool method needs the union of the scopes of everything it
     calls: ``agentworks.py``'s ``invoke_agentworks_agent`` polls
     ``get_agentworks_agent_invocation``, so it needs that operation's read scope on top
-    of its own write scope.
+    of its own write scope. Module-level functions defined in the same file are followed
+    too, since an operation named only inside one would otherwise be invisible.
     """
     try:
         method_source = inspect.getsource(method)
     except (TypeError, OSError):
         return []
 
-    # Build a map of method name → source from every class this module owns, so a mixin
-    # package resolves a helper that lives on a sibling mixin. Public methods are included
-    # too: a tool that reaches the API only through another tool method needs that
+    # Build a map of method name → (source, defining module) from every class this module
+    # owns, so a mixin package resolves a helper that lives on a sibling mixin. The module
+    # is carried alongside because each file resolves its own constants. Public methods are
+    # included too: a tool that reaches the API only through another tool method needs that
     # operation's scopes as well.
-    own_method_source: dict[str, str] = {}
+    own_method_source: dict[str, tuple[str, str]] = {}
     for klass in _own_classes(module_cls):
         for attr, val in klass.__dict__.items():
             if attr not in own_method_source and callable(val):
                 try:
-                    own_method_source[attr] = inspect.getsource(val)
+                    own_method_source[attr] = (inspect.getsource(val), klass.__module__)
                 except (TypeError, OSError):
                     pass
 
     # Walk the chain breadth-first, guarding against recursion. Match bare `self.name`
     # too, not just `self.name(`, so a method passed as a callable rather than called
     # directly is still followed.
-    combined_source = method_source
-    seen: set[str] = set()
-    pending = re.findall(r"self\.(\w+)", method_source)
+    method_module = getattr(method, "__module__", "")
+    chunks: list[tuple[str, str]] = [(method_source, method_module)]
+    seen: set[tuple[str, str]] = set()
+    pending: list[tuple[str, str]] = [(name, method_module)
+                                      for name in re.findall(r"self\.(\w+)", method_source)]
+    pending += [(name, method_module) for name in _BARE_CALL.findall(method_source)]
     while pending:
-        helper_name = pending.pop()
-        if helper_name in seen or helper_name not in own_method_source:
+        helper_name, from_module = pending.pop()
+        if (helper_name, from_module) in seen:
             continue
-        seen.add(helper_name)
-        helper_source = own_method_source[helper_name]
-        combined_source += "\n" + helper_source
-        pending.extend(re.findall(r"self\.(\w+)", helper_source))
+        seen.add((helper_name, from_module))
 
-    # Find all string literals (and constant-referenced operation names) and look
-    # them up in API_SCOPE_REQUIREMENTS
-    all_strings = _operation_names_in(combined_source, module_cls)
+        if helper_name in own_method_source:
+            helper_source, helper_module = own_method_source[helper_name]
+        else:
+            # A plain function, resolved only against the file the caller was written in
+            helper_source = _module_own_functions(from_module).get(helper_name, "")
+            helper_module = from_module
+            if not helper_source:
+                continue
+
+        chunks.append((helper_source, helper_module))
+        pending += [(name, helper_module) for name in re.findall(r"self\.(\w+)", helper_source)]
+        pending += [(name, helper_module) for name in _BARE_CALL.findall(helper_source)]
+
+    # Find all string literals (and constant- or container-referenced operation names)
+    # and look them up in API_SCOPE_REQUIREMENTS
+    all_strings = _operation_names_in(chunks, _class_literal_containers(module_cls))
     scopes: set[str] = set()
     for op_name, op_scopes in API_SCOPE_REQUIREMENTS.items():
         if op_name in all_strings:
