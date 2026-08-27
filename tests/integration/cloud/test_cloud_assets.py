@@ -82,22 +82,62 @@ class TestCloudAssetsIntegration(BaseIntegrationTest):
         )
 
     def test_search_cspm_assets_with_tag_filter(self):
-        result = self.call_method(
+        """`tag_key` selects assets carrying that key in their `tags` map.
+
+        The filter names a key; the response returns the whole tag map, so the check is for
+        membership rather than a value. Assets with no tags at all come back without a
+        `tags` key, which is what makes this predicate able to fail: a filter that was
+        being dropped would return untagged assets alongside the tagged ones.
+        """
+        self.assert_filter_matches(
             self.module.search_cspm_assets,
-            filter="tag_key:'Environment'",
+            "tag_key:'Environment'",
+            predicate=lambda asset: "Environment" in (asset.get("tags") or {}),
+            predicate_desc="'Environment' in asset.tags",
+            note="tag_key matches the key name only; tag_value filters the value.",
             limit=10,
         )
-        self.assert_no_error(result, context="search_cspm_assets with tag filter")
-        self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets with tag filter")
 
-    def test_search_cspm_assets_with_sort(self):
-        result = self.call_method(
-            self.module.search_cspm_assets,
-            sort="updated_at.desc",
-            limit=3,
+    def test_search_cspm_assets_sort_orders_by_resource_name(self):
+        """`resource_name` really orders the query step, in both directions.
+
+        This is the other half of `test_search_cspm_assets_returns_rows_in_query_step_order`
+        below. That one proves the hydration step preserves whatever order it was handed;
+        this one proves there was an order to preserve, which a tool that quietly stopped
+        forwarding `sort` would still pass.
+
+        `allow_ties=True` because nothing on this endpoint is tie-free — duplicate resource
+        names are common, and every other documented key ties harder. Ties are safe for what
+        is compared here (the value sequence, within a single response) and unsafe only for
+        comparing two runs row by row, which this does not do. `updated_at`, the tool's own
+        example, is monotone but ties heavily; `creation_time` is absent on many assets and
+        its descending page is not ordered at all.
+        """
+        key = "resource_name"
+        ascending = self.call_method(self.module.search_cspm_assets, sort=f"{key}.asc", limit=50)
+        descending = self.call_method(self.module.search_cspm_assets, sort=f"{key}.desc", limit=50)
+        self.assert_no_error(ascending, context=f"search_cspm_assets {key}.asc")
+        self.assert_no_error(descending, context=f"search_cspm_assets {key}.desc")
+
+        def names(result, direction):
+            assets = self.skip_unless_tenant_has(result, "CSPM assets", f"{key}.{direction}")
+            missing = [a["id"] for a in assets if not a.get(key)]
+            # Sorting on resource_name returns only assets that have one, so this is a
+            # statement about the endpoint rather than defensive noise: an unnamed asset in
+            # a name-sorted page means the sort was not applied to the query at all.
+            assert not missing, (
+                f"{len(missing)} of {len(assets)} assets in the {key}.{direction} page carry "
+                f"no {key}, so their order cannot be compared. First few: {missing[:3]}"
+            )
+            return [a[key] for a in assets]
+
+        self.assert_sort_orders_rows(
+            names(ascending, "asc"),
+            names(descending, "desc"),
+            key,
+            context="search_cspm_assets",
+            allow_ties=True,
         )
-        self.assert_no_error(result, context="search_cspm_assets with sort")
-        self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets with sort")
 
     def test_search_cspm_assets_returns_rows_in_query_step_order(self):
         """Hydrated assets come back in the order the query step reported them.
