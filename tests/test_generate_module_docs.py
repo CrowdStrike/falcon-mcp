@@ -29,6 +29,7 @@ from scripts.generate_module_docs import (  # noqa: E402
     generate_module_page,
     generate_overview_page,
     main,
+    validate_hosted_mcp_notes,
 )
 
 # ---------------------------------------------------------------------------
@@ -1081,6 +1082,86 @@ class TestMain(unittest.TestCase):
                 _gmd.OUTPUT_DIR = original_dir
 
             self.assertFalse(stale.exists(), "Stale file should have been removed by main()")
+
+
+# ---------------------------------------------------------------------------
+# TestHostedMcpNotes — note keys must track real module and tool names
+# ---------------------------------------------------------------------------
+
+class TestHostedMcpNotes(unittest.TestCase):
+    """Both hosted-MCP note dicts are keyed by name, so a rename silently drops the note.
+
+    The docs freshness check cannot catch that: regenerating after a rename removes the
+    note from the committed page too, so committed and generated agree. These tests are
+    the guard instead, mirroring the bidirectional coverage test for filter hints.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.modules = discover_module_classes()
+        cls.tool_names = {
+            f"falcon_{registered}"
+            for mod_info in cls.modules.values()
+            for registered in extract_registered_tool_names(mod_info["cls"]).values()
+        }
+
+    def test_module_note_keys_are_real_modules(self):
+        from scripts.generate_module_docs import HOSTED_MCP_MODULE_NOTES
+
+        for key in HOSTED_MCP_MODULE_NOTES:
+            self.assertIn(key, self.modules, f"HOSTED_MCP_MODULE_NOTES key {key!r} is not a module")
+
+    def test_tool_note_keys_are_registered_tools(self):
+        from scripts.generate_module_docs import HOSTED_MCP_TOOL_NOTES
+
+        for name in HOSTED_MCP_TOOL_NOTES:
+            self.assertIn(
+                name, self.tool_names, f"HOSTED_MCP_TOOL_NOTES key {name!r} is not a registered tool"
+            )
+
+    def test_live_registry_passes_validation(self):
+        validate_hosted_mcp_notes(self.modules)  # must not raise
+
+    def test_stale_module_key_raises(self):
+        import scripts.generate_module_docs as _gmd
+
+        with patch.dict(_gmd.HOSTED_MCP_MODULE_NOTES, {"zero_trust_assessment": "x"}, clear=True):
+            with self.assertRaises(ValueError) as ctx:
+                validate_hosted_mcp_notes(self.modules)
+        self.assertIn("zero_trust_assessment", str(ctx.exception))
+
+    def test_stale_tool_key_raises(self):
+        import scripts.generate_module_docs as _gmd
+
+        with patch.dict(_gmd.HOSTED_MCP_TOOL_NOTES, {"falcon_search_cloud_insight": "x"}, clear=True):
+            with self.assertRaises(ValueError) as ctx:
+                validate_hosted_mcp_notes(self.modules)
+        self.assertIn("falcon_search_cloud_insight", str(ctx.exception))
+
+    def test_overview_mentions_every_noted_module_and_tool(self):
+        """The overview summary is hand-written prose; keep it in step with the note dicts."""
+        from scripts.generate_module_docs import (
+            HOSTED_MCP_MODULE_NOTES,
+            HOSTED_MCP_TOOL_NOTES,
+            MODULE_METADATA,
+        )
+
+        page = generate_overview_page(self.modules)
+        section = page.split("## CrowdStrike-hosted MCP differences", 1)[1]
+
+        for key in HOSTED_MCP_MODULE_NOTES:
+            slug = MODULE_METADATA.get(key, {}).get("slug", key)
+            self.assertIn(
+                f"/modules/{slug}/",
+                section,
+                f"Module {key!r} has a hosted-MCP note but is not linked in the overview summary",
+            )
+        for name in HOSTED_MCP_TOOL_NOTES:
+            self.assertIn(
+                name,
+                section,
+                f"Tool {name!r} has a hosted-MCP note but is not named in the overview summary",
+            )
 
 
 if __name__ == "__main__":

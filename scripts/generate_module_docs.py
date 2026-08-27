@@ -77,14 +77,17 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
 
 _OVERVIEW_LINK = f"{SITE_BASE_PATH}/modules/overview/#crowdstrike-hosted-mcp-differences"
 
+
+def _module_link(module_key: str) -> str:
+    """Site URL for a module page, honoring any slug override in MODULE_METADATA."""
+    slug = MODULE_METADATA.get(module_key, {}).get("slug", module_key)
+    return f"{SITE_BASE_PATH}/modules/{slug}/"
+
+
 # Notes on differences from CrowdStrike's hosted Falcon MCP, rendered as an
 # admonition under the module description. Keyed by module_key. See
 # generate_overview_page for the summary of these differences.
 HOSTED_MCP_MODULE_NOTES: dict[str, str] = {
-    "agentworks": (
-        "This module is not available on CrowdStrike's hosted Falcon MCP; it is only "
-        f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
-    ),
     "fusion": (
         "This module is not available on CrowdStrike's hosted Falcon MCP; it is only "
         f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
@@ -1432,34 +1435,43 @@ def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
     lines.append("> [!NOTE]")
     lines.append(
         "> This section compares this self-hosted server against CrowdStrike's hosted "
-        "Falcon MCP. It does not apply if you're only running this server yourself."
+        "Falcon MCP. Skip it unless you also use the hosted MCP, or are moving between the two."
     )
     lines.append("")
     lines.append(
-        "The hosted Falcon MCP does not register each `falcon_*` tool directly. Instead it "
-        "exposes two tools, `search_tools` and `execute_tool`: a client calls `search_tools` "
-        "to find the right Falcon tool by name or keyword, then `execute_tool` to invoke it by "
-        "name with arguments. This server registers every `falcon_*` tool (and its `falcon://` "
-        "resources) directly, so no discovery step is needed."
+        "The two servers differ in how a client reaches a tool. The hosted Falcon MCP works "
+        "through discovery: a client calls `search_tools` to find a Falcon tool by name or "
+        "keyword, then `execute_tool` to run it with arguments. This server registers each "
+        "`falcon_*` tool up front instead, so a client calls one by name with no discovery "
+        "round-trip."
+    )
+    lines.append("")
+    lines.append(
+        "If you self-host and want the same discovery pattern, enable "
+        f"[dynamic mode]({SITE_BASE_PATH}/usage/dynamic-mode/): it swaps the full tool surface "
+        "for `falcon_search_tools`, `falcon_execute_tool`, and an always-on "
+        "`falcon_list_enabled_tools` inventory. Mind the `falcon_` prefix — those three are "
+        "this server's tools, not the hosted MCP's."
     )
     lines.append("")
     lines.append("Module and tool coverage also differs:")
     lines.append("")
     lines.append(
-        "- **AgentWorks**, **Fusion SOAR**, and **Zero Trust Assessment** are available only "
+        f"- [Fusion SOAR]({_module_link('fusion')}) and "
+        f"[Zero Trust Assessment]({_module_link('zerotrustassessment')}) are available only "
         "on this self-hosted server; the hosted MCP has no equivalent modules."
     )
     lines.append(
-        f"- [Cloud Security]({SITE_BASE_PATH}/modules/cloud/): `falcon_search_cloud_insights`, "
+        f"- [Cloud Security]({_module_link('cloud')}): `falcon_search_cloud_insights`, "
         "`falcon_list_cloud_insight_definitions`, and `falcon_get_cloud_asset_insights` are not "
-        "yet available on the hosted MCP."
+        "available on the hosted MCP."
     )
     lines.append(
-        f"- [Discover]({SITE_BASE_PATH}/modules/discover/): `falcon_search_managed_assets` is "
+        f"- [Discover]({_module_link('discover')}): `falcon_search_managed_assets` is "
         "not available on the hosted MCP."
     )
     lines.append(
-        f"- [Policies]({SITE_BASE_PATH}/modules/policies/): the hosted MCP does not use the "
+        f"- [Policies]({_module_link('policies')}): the hosted MCP does not use the "
         "unified `policy_type`-discriminated tools. It instead exposes six policy-type-specific "
         "variants of each tool (for example `falcon_search_policies_firewall`, "
         "`falcon_create_policy_prevention`)."
@@ -1468,12 +1480,46 @@ def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def validate_hosted_mcp_notes(modules: dict[str, dict[str, Any]]) -> None:
+    """Fail loudly when a hosted-MCP note key matches no module or no registered tool.
+
+    Both note dicts are keyed by name, so a module or tool rename silently drops the
+    note: the page regenerates without it, the committed docs match, and the docs
+    freshness check passes. Raise here instead so a rename is caught at generation time.
+    """
+    stale_modules = sorted(set(HOSTED_MCP_MODULE_NOTES) - set(modules))
+
+    known_tools = {
+        f"falcon_{registered}"
+        for mod_info in modules.values()
+        for registered in extract_registered_tool_names(mod_info["cls"]).values()
+    }
+    stale_tools = sorted(set(HOSTED_MCP_TOOL_NOTES) - known_tools)
+
+    problems = []
+    if stale_modules:
+        problems.append(
+            f"HOSTED_MCP_MODULE_NOTES keys match no discovered module: {', '.join(stale_modules)}"
+        )
+    if stale_tools:
+        problems.append(
+            f"HOSTED_MCP_TOOL_NOTES keys match no registered tool: {', '.join(stale_tools)}"
+        )
+    if problems:
+        raise ValueError(
+            "Stale hosted-MCP note keys in scripts/generate_module_docs.py. "
+            "Update or remove them after a rename:\n  " + "\n  ".join(problems)
+        )
+
+
 def main() -> None:
     """Generate all module documentation pages."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     modules = discover_module_classes()
     print(f"Discovered {len(modules)} modules: {', '.join(sorted(modules.keys()))}")
+
+    validate_hosted_mcp_notes(modules)
 
     # Generate overview page
     overview = generate_overview_page(modules)

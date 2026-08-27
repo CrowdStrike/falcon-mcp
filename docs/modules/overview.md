@@ -39,13 +39,15 @@ The Falcon MCP Server provides the following modules. Each module requires speci
 ## CrowdStrike-hosted MCP differences
 
 > [!NOTE]
-> This section compares this self-hosted server against CrowdStrike's hosted Falcon MCP. It does not apply if you're only running this server yourself.
+> This section compares this self-hosted server against CrowdStrike's hosted Falcon MCP. Skip it unless you also use the hosted MCP, or are moving between the two.
 
-The hosted Falcon MCP does not register each `falcon_*` tool directly. Instead it exposes two tools, `search_tools` and `execute_tool`: a client calls `search_tools` to find the right Falcon tool by name or keyword, then `execute_tool` to invoke it by name with arguments. This server registers every `falcon_*` tool (and its `falcon://` resources) directly, so no discovery step is needed.
+The two servers differ in how a client reaches a tool. The hosted Falcon MCP works through discovery: a client calls `search_tools` to find a Falcon tool by name or keyword, then `execute_tool` to run it with arguments. This server registers each `falcon_*` tool up front instead, so a client calls one by name with no discovery round-trip.
+
+If you self-host and want the same discovery pattern, enable [dynamic mode](/falcon-mcp/usage/dynamic-mode/): it swaps the full tool surface for `falcon_search_tools`, `falcon_execute_tool`, and an always-on `falcon_list_enabled_tools` inventory. Mind the `falcon_` prefix — those three are this server's tools, not the hosted MCP's.
 
 Module and tool coverage also differs:
 
-- **AgentWorks**, **Fusion SOAR**, and **Zero Trust Assessment** are available only on this self-hosted server; the hosted MCP has no equivalent modules.
-- [Cloud Security](/falcon-mcp/modules/cloud/): `falcon_search_cloud_insights`, `falcon_list_cloud_insight_definitions`, and `falcon_get_cloud_asset_insights` are not yet available on the hosted MCP.
+- [Fusion SOAR](/falcon-mcp/modules/fusion/) and [Zero Trust Assessment](/falcon-mcp/modules/zero-trust-assessment/) are available only on this self-hosted server; the hosted MCP has no equivalent modules.
+- [Cloud Security](/falcon-mcp/modules/cloud/): `falcon_search_cloud_insights`, `falcon_list_cloud_insight_definitions`, and `falcon_get_cloud_asset_insights` are not available on the hosted MCP.
 - [Discover](/falcon-mcp/modules/discover/): `falcon_search_managed_assets` is not available on the hosted MCP.
 - [Policies](/falcon-mcp/modules/policies/): the hosted MCP does not use the unified `policy_type`-discriminated tools. It instead exposes six policy-type-specific variants of each tool (for example `falcon_search_policies_firewall`, `falcon_create_policy_prevention`).
