@@ -33,8 +33,7 @@ class TestShieldIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_shield_checks, limit=5)
 
         self.assert_no_error(result, context="search_shield_checks")
-        if isinstance(result, list):
-            self.assert_valid_list_response(result, min_length=0, context="search_shield_checks")
+        self.assert_valid_list_response(result, min_length=0, context="search_shield_checks")
 
     def test_search_shield_checks_with_impact_filter(self):
         """Validate impact string normalization works against real API."""
@@ -48,13 +47,11 @@ class TestShieldIntegration(BaseIntegrationTest):
 
     def test_get_shield_check_affected_entities(self):
         """Validate GetSecurityCheckAffectedV3 with a real check ID."""
-        checks = self.call_method(self.module.search_shield_checks, limit=1)
-
-        if not isinstance(checks, list) or len(checks) == 0:
-            self.skip_with_warning(
-                "No security checks available",
-                context="get_shield_check_affected_entities",
-            )
+        checks = self.skip_unless_tenant_has(
+            self.call_method(self.module.search_shield_checks, limit=1),
+            "security checks",
+            context="get_shield_check_affected_entities",
+        )
 
         check_id = self.get_first_id(checks, id_field="id")
         if not check_id:
@@ -79,13 +76,11 @@ class TestShieldIntegration(BaseIntegrationTest):
 
     def test_get_shield_check_compliance(self):
         """Validate GetSecurityCheckComplianceV3 with a real check ID."""
-        checks = self.call_method(self.module.search_shield_checks, limit=1)
-
-        if not isinstance(checks, list) or len(checks) == 0:
-            self.skip_with_warning(
-                "No security checks available",
-                context="get_shield_check_compliance",
-            )
+        checks = self.skip_unless_tenant_has(
+            self.call_method(self.module.search_shield_checks, limit=1),
+            "security checks",
+            context="get_shield_check_compliance",
+        )
 
         check_id = self.get_first_id(checks, id_field="id")
         if not check_id:
@@ -108,18 +103,16 @@ class TestShieldIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_shield_alerts, limit=5)
 
         self.assert_no_error(result, context="search_shield_alerts")
-        if isinstance(result, list):
-            self.assert_valid_list_response(result, min_length=0, context="search_shield_alerts")
+        self.assert_valid_list_response(result, min_length=0, context="search_shield_alerts")
 
     def test_get_shield_activity_monitor(self):
         """Validate GetActivityMonitorV3 operation name and response shape."""
         result = self.call_method(self.module.get_shield_activity_monitor, limit=5)
 
         self.assert_no_error(result, context="get_shield_activity_monitor")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result, min_length=0, context="get_shield_activity_monitor"
-            )
+        self.assert_valid_list_response(
+            result, min_length=0, context="get_shield_activity_monitor"
+        )
 
     # --- Inventory tools ---
 
@@ -128,37 +121,32 @@ class TestShieldIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_shield_users, limit=5)
 
         self.assert_no_error(result, context="search_shield_users")
-        if isinstance(result, list):
-            self.assert_valid_list_response(result, min_length=0, context="search_shield_users")
+        self.assert_valid_list_response(result, min_length=0, context="search_shield_users")
 
     def test_search_shield_devices(self):
         """Validate GetDeviceInventoryV3 operation name and response shape."""
         result = self.call_method(self.module.search_shield_devices, limit=5)
 
         self.assert_no_error(result, context="search_shield_devices")
-        if isinstance(result, list):
-            self.assert_valid_list_response(result, min_length=0, context="search_shield_devices")
+        self.assert_valid_list_response(result, min_length=0, context="search_shield_devices")
 
     def test_search_shield_apps(self):
         """Validate GetAppInventory operation name and response shape."""
         result = self.call_method(self.module.search_shield_apps, limit=5)
 
         self.assert_no_error(result, context="search_shield_apps")
-        if isinstance(result, list):
-            self.assert_valid_list_response(result, min_length=0, context="search_shield_apps")
+        self.assert_valid_list_response(result, min_length=0, context="search_shield_apps")
 
     def test_get_shield_app_users(self):
         """Validate GetAppInventoryUsers with a real app ID.
 
         Requires apps to exist; skips gracefully if none configured.
         """
-        apps = self.call_method(self.module.search_shield_apps, limit=1)
-
-        if not isinstance(apps, list) or len(apps) == 0:
-            self.skip_with_warning(
-                "No apps available to test app users",
-                context="get_shield_app_users",
-            )
+        apps = self.skip_unless_tenant_has(
+            self.call_method(self.module.search_shield_apps, limit=1),
+            "apps",
+            context="get_shield_app_users",
+        )
 
         first_app = apps[0]
         if not isinstance(first_app, dict):
@@ -186,10 +174,9 @@ class TestShieldIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.search_shield_data_shares, limit=5)
 
         self.assert_no_error(result, context="search_shield_data_shares")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result, min_length=0, context="search_shield_data_shares"
-            )
+        self.assert_valid_list_response(
+            result, min_length=0, context="search_shield_data_shares"
+        )
 
     # --- Platform management tools ---
 
@@ -198,40 +185,28 @@ class TestShieldIntegration(BaseIntegrationTest):
         result = self.call_method(self.module.get_shield_integrations)
 
         self.assert_no_error(result, context="get_shield_integrations")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result, min_length=0, context="get_shield_integrations"
-            )
+        self.assert_valid_list_response(result, min_length=0, context="get_shield_integrations")
 
     def test_get_shield_system_users(self):
         """Validate GetSystemUsersV3 operation name and response shape."""
         result = self.call_method(self.module.get_shield_system_users)
 
         self.assert_no_error(result, context="get_shield_system_users")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result, min_length=0, context="get_shield_system_users"
-            )
+        self.assert_valid_list_response(result, min_length=0, context="get_shield_system_users")
 
     def test_get_shield_supported_saas(self):
         """Validate GetSupportedSaasV3 operation name and response shape."""
         result = self.call_method(self.module.get_shield_supported_saas)
 
         self.assert_no_error(result, context="get_shield_supported_saas")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result, min_length=0, context="get_shield_supported_saas"
-            )
+        self.assert_valid_list_response(result, min_length=0, context="get_shield_supported_saas")
 
     def test_get_shield_system_logs(self):
         """Validate GetSystemLogsV3 operation name and response shape."""
         result = self.call_method(self.module.get_shield_system_logs, limit=5)
 
         self.assert_no_error(result, context="get_shield_system_logs")
-        if isinstance(result, list):
-            self.assert_valid_list_response(
-                result, min_length=0, context="get_shield_system_logs"
-            )
+        self.assert_valid_list_response(result, min_length=0, context="get_shield_system_logs")
 
     # --- Cross-tool validation ---
 
@@ -292,9 +267,8 @@ class TestShieldIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="GetSystemLogsV3")
 
         # ID-dependent operations — need a real check ID from step 1
-        check_id = None
-        if isinstance(checks, list) and len(checks) > 0:
-            check_id = self.get_first_id(checks, id_field="id")
+        check_records = self.records(checks, context="GetSecurityChecksV3")
+        check_id = self.get_first_id(check_records, id_field="id") if check_records else None
 
         if check_id:
             # 13. GetSecurityCheckAffectedV3
@@ -313,8 +287,9 @@ class TestShieldIntegration(BaseIntegrationTest):
             self.assert_no_error(result, context="GetSecurityCheckComplianceV3")
 
         # ID-dependent: GetAppInventoryUsers — needs a real app item_id
-        if isinstance(apps, list) and len(apps) > 0:
-            first_app = apps[0]
+        app_records = self.records(apps, context="GetAppInventory")
+        if app_records:
+            first_app = app_records[0]
             if isinstance(first_app, dict):
                 app_item_id = first_app.get("item_id") or first_app.get("id")
                 if app_item_id:

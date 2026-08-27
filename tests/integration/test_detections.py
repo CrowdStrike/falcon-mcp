@@ -33,7 +33,8 @@ class TestDetectionsIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_detections")
         self.assert_valid_list_response(result, min_length=0, context="search_detections")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_detections")
+        if len(records) > 0:
             # Verify we get full details, not just IDs
             self.assert_search_returns_details(
                 result,
@@ -98,13 +99,11 @@ class TestDetectionsIntegration(BaseIntegrationTest):
         First searches for a detection, then gets its details.
         """
         # First, search for a detection to get a valid ID
-        search_result = self.call_method(self.module.search_detections, limit=1)
-
-        if not search_result or len(search_result) == 0:
-            self.skip_with_warning(
-                "No detections available to test get_detection_details",
-                context="test_get_detection_details_with_valid_id",
-            )
+        search_result = self.skip_unless_tenant_has(
+            self.call_method(self.module.search_detections, limit=1),
+            "detections",
+            context="test_get_detection_details_with_valid_id",
+        )
 
         detection_id = self.get_first_id(search_result, id_field="composite_id")
         if not detection_id:

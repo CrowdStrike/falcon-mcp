@@ -288,7 +288,8 @@ class TestPoliciesIntegration(BaseIntegrationTest):
             sort="platform_name.asc",
             limit=1,
         )
-        assert isinstance(result, list) and result and "error" in result[0], (
+        records = self.records(result, context="platform_name sort guard")
+        assert records and "error" in records[0], (
             f"platform_name sort should be rejected by _validate_sort, got: {result}"
         )
 

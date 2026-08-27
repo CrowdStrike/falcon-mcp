@@ -101,7 +101,8 @@ class TestIOCIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_iocs")
         self.assert_valid_list_response(result, min_length=0, context="search_iocs")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_iocs")
+        if len(records) > 0:
             self.assert_search_returns_details(
                 result,
                 expected_fields=["id", "type", "value"],
@@ -169,8 +170,9 @@ class TestIOCIntegration(BaseIntegrationTest):
         )
 
         # Verify the test IOC is in results
+        records = self.records(result, context="round-trip search")
         found_ids = [
-            item.get("id") for item in result if isinstance(item, dict)
+            item.get("id") for item in records if isinstance(item, dict)
         ]
         assert self.__class__._test_ioc_id in found_ids, (
             f"Created IOC {self.__class__._test_ioc_id} not found in search results. "

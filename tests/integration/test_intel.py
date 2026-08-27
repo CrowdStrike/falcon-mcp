@@ -31,7 +31,8 @@ class TestIntelIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="query_actor_entities")
         self.assert_valid_list_response(result, min_length=0, context="query_actor_entities")
 
-        if len(result) > 0:
+        records = self.records(result, context="query_actor_entities")
+        if len(records) > 0:
             # Verify we get full details
             self.assert_search_returns_details(
                 result,
@@ -71,7 +72,8 @@ class TestIntelIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="query_indicator_entities")
         self.assert_valid_list_response(result, min_length=0, context="query_indicator_entities")
 
-        if len(result) > 0:
+        records = self.records(result, context="query_indicator_entities")
+        if len(records) > 0:
             # Verify we get full details
             self.assert_search_returns_details(
                 result,
@@ -100,7 +102,8 @@ class TestIntelIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="query_report_entities")
         self.assert_valid_list_response(result, min_length=0, context="query_report_entities")
 
-        if len(result) > 0:
+        records = self.records(result, context="query_report_entities")
+        if len(records) > 0:
             # Verify we get full details
             self.assert_search_returns_details(
                 result,
@@ -126,13 +129,11 @@ class TestIntelIntegration(BaseIntegrationTest):
         Validates both QueryIntelActorEntities and GetMitreReport operations.
         """
         # First, search for an actor to get a valid name
-        search_result = self.call_method(self.module.query_actor_entities, limit=1)
-
-        if not search_result or len(search_result) == 0:
-            self.skip_with_warning(
-                "No actors available to test get_mitre_report",
-                context="test_get_mitre_report_with_actor_name",
-            )
+        search_result = self.skip_unless_tenant_has(
+            self.call_method(self.module.query_actor_entities, limit=1),
+            "actors",
+            context="test_get_mitre_report_with_actor_name",
+        )
 
         actor_name = search_result[0].get("name")
         if not actor_name:
@@ -174,13 +175,11 @@ class TestIntelIntegration(BaseIntegrationTest):
         Validates that CSV format is not parsed and remains a string.
         """
         # First, search for an actor to get a valid name
-        search_result = self.call_method(self.module.query_actor_entities, limit=1)
-
-        if not search_result or len(search_result) == 0:
-            self.skip_with_warning(
-                "No actors available to test get_mitre_report CSV",
-                context="test_get_mitre_report_csv_format",
-            )
+        search_result = self.skip_unless_tenant_has(
+            self.call_method(self.module.query_actor_entities, limit=1),
+            "actors",
+            context="test_get_mitre_report_csv_format",
+        )
 
         actor_name = search_result[0].get("name")
         if not actor_name:

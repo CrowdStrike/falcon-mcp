@@ -34,10 +34,7 @@ class TestCloudIomIntegration(BaseIntegrationTest):
             filter="severity:'critical'",
             limit=3,
         )
-        if isinstance(result, list):
-            self.assert_valid_list_response(result, min_length=0, context="search_iom_findings severity filter")
-        else:
-            assert isinstance(result, dict), "Expected dict or list response"
+        self.assert_valid_list_response(result, min_length=0, context="search_iom_findings severity filter")
 
     def test_search_iom_findings_with_cloud_provider_filter(self):
         result = self.call_method(

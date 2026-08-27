@@ -34,7 +34,8 @@ class TestScheduledReportsIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_scheduled_reports")
         self.assert_valid_list_response(result, min_length=0, context="search_scheduled_reports")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_scheduled_reports")
+        if len(records) > 0:
             # Verify we get full details, not just IDs
             self.assert_search_returns_details(
                 result,
@@ -87,7 +88,8 @@ class TestScheduledReportsIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_report_executions")
         self.assert_valid_list_response(result, min_length=0, context="search_report_executions")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_report_executions")
+        if len(records) > 0:
             # Verify we get full details, not just IDs
             self.assert_search_returns_details(
                 result,
@@ -124,18 +126,16 @@ class TestScheduledReportsIntegration(BaseIntegrationTest):
         Most scheduled reports use CSV format by default.
         """
         # Search for completed executions - prefer CSV format (most common)
-        search_result = self.call_method(
-            self.module.search_report_executions,
-            filter="status:'DONE'",
-            limit=20,
-            sort="created_on.desc",
+        search_result = self.skip_unless_tenant_has(
+            self.call_method(
+                self.module.search_report_executions,
+                filter="status:'DONE'",
+                limit=20,
+                sort="created_on.desc",
+            ),
+            "completed executions",
+            context="test_download_csv_format_execution",
         )
-
-        if not search_result or len(search_result) == 0:
-            self.skip_with_warning(
-                "No completed executions available",
-                context="test_download_csv_format_execution",
-            )
 
         # Find an execution with results that uses CSV format
         # Look for executions where report_params.format is 'csv' (or not json/pdf)
@@ -180,18 +180,16 @@ class TestScheduledReportsIntegration(BaseIntegrationTest):
         These are typically scheduled searches (type=event_search).
         """
         # Search for completed executions with JSON format
-        search_result = self.call_method(
-            self.module.search_report_executions,
-            filter="status:'DONE'",
-            limit=30,
-            sort="created_on.desc",
+        search_result = self.skip_unless_tenant_has(
+            self.call_method(
+                self.module.search_report_executions,
+                filter="status:'DONE'",
+                limit=30,
+                sort="created_on.desc",
+            ),
+            "completed executions",
+            context="test_download_json_format_execution",
         )
-
-        if not search_result or len(search_result) == 0:
-            self.skip_with_warning(
-                "No completed executions available",
-                context="test_download_json_format_execution",
-            )
 
         # Find an execution with results that uses JSON format
         execution_id = None
@@ -240,18 +238,16 @@ class TestScheduledReportsIntegration(BaseIntegrationTest):
         should detect PDF bytes and return an error recommending CSV/JSON format.
         """
         # Search for completed executions with PDF format
-        search_result = self.call_method(
-            self.module.search_report_executions,
-            filter="status:'DONE'",
-            limit=100,
-            sort="created_on.desc",
+        search_result = self.skip_unless_tenant_has(
+            self.call_method(
+                self.module.search_report_executions,
+                filter="status:'DONE'",
+                limit=100,
+                sort="created_on.desc",
+            ),
+            "completed executions",
+            context="test_download_pdf_format_execution_returns_error",
         )
-
-        if not search_result or len(search_result) == 0:
-            self.skip_with_warning(
-                "No completed executions available",
-                context="test_download_pdf_format_execution_returns_error",
-            )
 
         # Find an execution with results that uses PDF format
         execution_id = None

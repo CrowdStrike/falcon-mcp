@@ -85,9 +85,12 @@ class BaseIntegrationTest:
             assert "error" not in result, error_msg
             assert result.get("status_code", 200) < 400, error_msg
 
-        # Check for list containing error dict
-        if isinstance(result, list) and len(result) > 0:
-            first_item = result[0]
+        # Check for list containing error dict. Unwrap first: a search tool reports
+        # failure as an error dict inside the envelope's `results`, where neither the
+        # top-level key check above nor a bare `isinstance(result, list)` can see it.
+        records = self._unwrap_results(result)
+        if isinstance(records, list) and len(records) > 0:
+            first_item = records[0]
             if isinstance(first_item, dict):
                 assert "error" not in first_item, error_msg
 

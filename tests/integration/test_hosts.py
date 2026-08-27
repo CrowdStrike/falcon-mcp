@@ -38,7 +38,8 @@ class TestHostsIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_hosts")
         self.assert_valid_list_response(result, min_length=0, context="search_hosts")
 
-        if len(result) > 0:
+        records = self.records(result, context="search_hosts")
+        if len(records) > 0:
             # Verify we get full details, not just IDs
             self.assert_search_returns_details(
                 result,
@@ -74,13 +75,11 @@ class TestHostsIntegration(BaseIntegrationTest):
         First searches for a host, then gets its details.
         """
         # First, search for a host to get a valid ID
-        search_result = self.call_method(self.module.search_hosts, limit=1)
-
-        if not search_result or len(search_result) == 0:
-            self.skip_with_warning(
-                "No hosts available to test get_host_details",
-                context="test_get_host_details_with_valid_id",
-            )
+        search_result = self.skip_unless_tenant_has(
+            self.call_method(self.module.search_hosts, limit=1),
+            "hosts",
+            context="test_get_host_details_with_valid_id",
+        )
 
         device_id = self.get_first_id(search_result, id_field="device_id")
         if not device_id:
