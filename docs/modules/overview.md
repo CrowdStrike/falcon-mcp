@@ -41,9 +41,9 @@ The Falcon MCP Server provides the following modules. Each module requires speci
 > [!NOTE]
 > This section compares this self-hosted server against CrowdStrike's hosted Falcon MCP. Skip it unless you also use the hosted MCP, or are moving between the two.
 
-The two servers differ in how a client reaches a tool. The hosted Falcon MCP works through discovery: a client calls `search_tools` to find a Falcon tool by name or keyword, then `execute_tool` to run it with arguments. This server registers each `falcon_*` tool up front instead, so a client calls one by name with no discovery round-trip.
+The two servers differ in how a client reaches a tool. The hosted Falcon MCP works through discovery: a client calls `search_tools` to find a Falcon tool by name or keyword, then `execute_tool` to run it with arguments. The self-hosted falcon-mcp server registers each `falcon_*` tool up front instead, so a client calls one by name with no discovery round-trip.
 
-If you self-host and want the same discovery pattern, enable [dynamic mode](/falcon-mcp/usage/dynamic-mode/): it swaps the full tool surface for `falcon_search_tools`, `falcon_execute_tool`, and an always-on `falcon_list_enabled_tools` inventory. Mind the `falcon_` prefix — those three are this server's tools, not the hosted MCP's.
+If you self-host and want the same discovery pattern, enable [dynamic mode](/falcon-mcp/usage/dynamic-mode/): it swaps the full tool surface for `falcon_search_tools`, `falcon_execute_tool`, and an always-on `falcon_list_enabled_tools` inventory. Mind the `falcon_` prefix — those three are the self-hosted falcon-mcp server's tools, not the hosted MCP's.
 
 Module and tool coverage also differs:
 

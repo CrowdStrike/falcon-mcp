@@ -1445,9 +1445,9 @@ def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
     lines.append(
         "The two servers differ in how a client reaches a tool. The hosted Falcon MCP works "
         "through discovery: a client calls `search_tools` to find a Falcon tool by name or "
-        "keyword, then `execute_tool` to run it with arguments. This server registers each "
-        "`falcon_*` tool up front instead, so a client calls one by name with no discovery "
-        "round-trip."
+        "keyword, then `execute_tool` to run it with arguments. The self-hosted falcon-mcp "
+        "server registers each `falcon_*` tool up front instead, so a client calls one by name "
+        "with no discovery round-trip."
     )
     lines.append("")
     lines.append(
@@ -1455,7 +1455,7 @@ def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
         f"[dynamic mode]({SITE_BASE_PATH}/usage/dynamic-mode/): it swaps the full tool surface "
         "for `falcon_search_tools`, `falcon_execute_tool`, and an always-on "
         "`falcon_list_enabled_tools` inventory. Mind the `falcon_` prefix — those three are "
-        "this server's tools, not the hosted MCP's."
+        "the self-hosted falcon-mcp server's tools, not the hosted MCP's."
     )
     lines.append("")
     lines.append("Module and tool coverage also differs:")
