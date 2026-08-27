@@ -96,6 +96,10 @@ HOSTED_MCP_MODULE_NOTES: dict[str, str] = {
         "This module is not available on CrowdStrike's hosted Falcon MCP; it is only "
         f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
     ),
+    "rtr": (
+        "This module is not available on CrowdStrike's hosted Falcon MCP; it is only "
+        f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
+    ),
     "policies": (
         "CrowdStrike's hosted Falcon MCP does not use these unified, `policy_type`-discriminated "
         "tools. It instead exposes six policy-type-specific variants of each tool below, suffixed "
@@ -1457,9 +1461,10 @@ def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
     lines.append("Module and tool coverage also differs:")
     lines.append("")
     lines.append(
-        f"- [Fusion SOAR]({_module_link('fusion')}) and "
-        f"[Zero Trust Assessment]({_module_link('zerotrustassessment')}) are available only "
-        "on this self-hosted server; the hosted MCP has no equivalent modules."
+        f"- [Fusion SOAR]({_module_link('fusion')}), "
+        f"[Zero Trust Assessment]({_module_link('zerotrustassessment')}), and "
+        f"[Real Time Response]({_module_link('rtr')}) are available only on this self-hosted "
+        "server; the hosted MCP has no equivalent modules."
     )
     lines.append(
         f"- [Cloud Security]({_module_link('cloud')}): `falcon_search_cloud_insights`, "

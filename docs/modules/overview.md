@@ -47,7 +47,7 @@ If you self-host and want the same discovery pattern, enable [dynamic mode](/fal
 
 Module and tool coverage also differs:
 
-- [Fusion SOAR](/falcon-mcp/modules/fusion/) and [Zero Trust Assessment](/falcon-mcp/modules/zero-trust-assessment/) are available only on this self-hosted server; the hosted MCP has no equivalent modules.
+- [Fusion SOAR](/falcon-mcp/modules/fusion/), [Zero Trust Assessment](/falcon-mcp/modules/zero-trust-assessment/), and [Real Time Response](/falcon-mcp/modules/rtr/) are available only on this self-hosted server; the hosted MCP has no equivalent modules.
 - [Cloud Security](/falcon-mcp/modules/cloud/): `falcon_search_cloud_insights`, `falcon_list_cloud_insight_definitions`, and `falcon_get_cloud_asset_insights` are not available on the hosted MCP.
 - [Discover](/falcon-mcp/modules/discover/): `falcon_search_managed_assets` is not available on the hosted MCP.
 - [Policies](/falcon-mcp/modules/policies/): the hosted MCP does not use the unified `policy_type`-discriminated tools. It instead exposes six policy-type-specific variants of each tool (for example `falcon_search_policies_firewall`, `falcon_create_policy_prevention`).
