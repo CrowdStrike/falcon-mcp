@@ -63,6 +63,35 @@ class TestDetectionsIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_detections with sort")
         self.assert_valid_list_response(result, min_length=0, context="search_detections with sort")
 
+    def test_search_detections_rows_in_query_step_order(self):
+        """Hydrated detections come back in the order the query step reported them.
+
+        A reorder-contract test rather than a monotonicity one, because no sort field here
+        is dependably monotone in both directions on a live tenant:
+
+        - `created_timestamp.asc` is reliably non-monotone (0 of 8 trials), while
+          `created_timestamp.desc` is monotone whenever the tenant is quiet (5 of 5).
+        - `updated_timestamp` measured monotone both ways on an idle tenant (5 of 5 each),
+          but `.desc` collapsed to 0 of 3 while detections were actively being written.
+          `updated_timestamp` changes between the query step and hydration, so the newest
+          rows — the head of a descending page — come back carrying a timestamp newer than
+          the one they were sorted on.
+        - `severity` and `status` tie across rows.
+
+        So a value-based assertion here is a function of how busy the tenant is, which is
+        not something this test should be measuring. Comparing IDs instead sidesteps it:
+        IDs do not mutate, so the check is immune to the write race and to the API's
+        per-direction quirks while still failing if the reorder is dropped.
+        `PostEntitiesAlertsV2` scrambled the order it was handed on 6 of 6 measured trials,
+        so the contract is load-bearing.
+        """
+        self.assert_rows_in_query_step_order(
+            self.module.search_detections,
+            id_field="composite_id",
+            context="search_detections reorder contract",
+            limit=20,
+        )
+
     def test_get_detection_details_with_valid_id(self):
         """Test get_detection_details with a valid detection ID.
 

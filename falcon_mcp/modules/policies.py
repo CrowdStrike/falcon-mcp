@@ -269,6 +269,11 @@ class PoliciesModule(BaseModule):
         "precedence",
     }
 
+    # Sort fields that are safe on other types but return HTTP 500 on a specific one.
+    _UNSAFE_SORT_FIELDS_BY_TYPE = {
+        "device_control": {"created_by", "modified_by"},
+    }
+
     def register_tools(self, server: FastMCP) -> None:
         """Register tools with the MCP server.
 
@@ -376,17 +381,27 @@ class PoliciesModule(BaseModule):
             )
         return None
 
-    def _validate_sort(self, sort: str | None) -> dict[str, Any] | None:
-        """Reject platform_name sorts (HTTP 500) and unknown sort fields.
+    def _validate_sort(self, policy_type: str, sort: str | None) -> dict[str, Any] | None:
+        """Reject sort expressions the API cannot serve, before the request goes out.
 
-        Returns an error dict if the sort base is platform_name or not in the
-        allowed set, else None. Accepts an optional `.asc`/`.desc`/`|asc`/`|desc`
-        direction suffix.
+        Three cases, each verified against the live API: the pipe direction separator
+        (rejected with HTTP 400 on all six types), platform_name (HTTP 500 on all six),
+        and per-type fields that 500 only for one type. Returns an error dict, else None.
+        Accepts a `.asc`/`.desc` direction suffix.
         """
         if not sort:
             return None
 
-        base = sort.split(".")[0].split("|")[0].strip()
+        # The policy query endpoints accept only the dot separator. Every one of the six
+        # answers HTTP 400 for `field|desc`, so catch it here with a message that names the
+        # fix instead of surfacing the API's generic "not an allowable value".
+        if "|" in sort:
+            return _format_error_response(
+                f"Invalid sort separator in '{sort}'. The policy APIs accept only the dot "
+                f"form — use '{sort.replace('|', '.')}' instead.",
+            )
+
+        base = sort.split(".")[0].strip()
         if base == "platform_name":
             return _format_error_response(
                 "Sorting by 'platform_name' is not supported (the API returns "
@@ -397,6 +412,15 @@ class PoliciesModule(BaseModule):
             return _format_error_response(
                 f"Invalid sort field '{base}'. Valid sort fields are: "
                 f"{', '.join(sorted(self._SAFE_SORT_FIELDS))}.",
+            )
+        if base in self._UNSAFE_SORT_FIELDS_BY_TYPE.get(policy_type, set()):
+            allowed = sorted(
+                self._SAFE_SORT_FIELDS - self._UNSAFE_SORT_FIELDS_BY_TYPE[policy_type]
+            )
+            return _format_error_response(
+                f"Sorting by '{base}' is not supported for policy_type "
+                f"'{policy_type}' (the API returns HTTP 500), though it works for other "
+                f"types. Use one of: {', '.join(allowed)}.",
             )
         return None
 
@@ -426,7 +450,7 @@ class PoliciesModule(BaseModule):
         ),
         sort: str | None = Field(
             default=None,
-            description="Sort expression (e.g. 'modified_timestamp.desc'). See `falcon://policies/search/fql-guide`. Do NOT sort by platform_name (returns HTTP 500).",
+            description="Sort expression using the dot form only (e.g. 'modified_timestamp.desc'); the pipe form 'field|desc' is rejected. Do NOT sort by platform_name (HTTP 500 on every type), or by created_by/modified_by when policy_type is 'device_control' (HTTP 500). For device_control, created_timestamp and modified_timestamp ignore the direction and always return ascending order. See `falcon://policies/search/fql-guide`.",
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Search host-based policies of a given type and return full policy records.
@@ -444,7 +468,7 @@ class PoliciesModule(BaseModule):
         if type_error is not None:
             return [type_error]
 
-        sort_error = self._validate_sort(sort)
+        sort_error = self._validate_sort(policy_type, sort)
         if sort_error is not None:
             return [sort_error]
 

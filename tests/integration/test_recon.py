@@ -84,6 +84,43 @@ class TestReconIntegration(BaseIntegrationTest):
         )
         self.assert_no_error(result, context="search_recon_notifications sort=created_date|desc")
 
+    def test_notification_sort_keys_are_nested_under_notification(self):
+        """Both documented sort fields read back from `notification.<field>`, not the root.
+
+        `sort="created_date.desc"` is valid, but a notification record's root holds only
+        `id` and `notification`. A consumer that sorts by a documented key and then reads
+        that key off the record gets `None`, silently.
+
+        Pinned because the mapping is a schema fact the `sort` description has to state
+        correctly, and because it is why this tool gets no sort-order test: the obvious
+        `[r["created_date"] for r in rows]` raises KeyError instead of comparing anything.
+        """
+        result = self.call_method(
+            self.module.search_recon_notifications, sort="created_date.desc", limit=3
+        )
+        self.assert_no_error(result, context="search_recon_notifications created_date.desc")
+        records = self.skip_unless_tenant_has(
+            result, "recon notifications", "notification sort key nesting"
+        )
+        first = records[0]
+
+        notification = first.get("notification")
+        assert isinstance(notification, dict), (
+            f"Expected a `notification` dict to hold the sort keys; got {type(notification)}. "
+            f"Root keys: {sorted(first.keys())}"
+        )
+
+        for sort_field in ("created_date", "updated_date"):
+            assert sort_field not in first, (
+                f"`{sort_field}` is now a root-level field, so the sort description's "
+                f"nesting note is stale for it. Root keys: {sorted(first.keys())}"
+            )
+            assert sort_field in notification, (
+                f"Sort field `{sort_field}` is documented as reading from "
+                f"`notification.{sort_field}`, but that key is absent. notification keys: "
+                f"{sorted(notification.keys())}"
+            )
+
     def test_search_recon_notifications_with_q(self):
         """Test free-text q parameter."""
         result = self.call_method(
@@ -139,6 +176,33 @@ class TestReconIntegration(BaseIntegrationTest):
         )
         self.assert_no_error(result, context="search_recon_rules filter=status:'active'")
 
+    def test_search_recon_rules_sort_order_survives_hydration(self):
+        """The requested sort order survives the QueryRulesV1 -> GetRulesV1 hydration step.
+
+        `GetRulesV1` returns rules in an order unrelated to the query step's (measured: a
+        different order on 6 of 6 trials), so without this the sort could be scrambled on
+        every call and the rest of this file would still pass.
+
+        `created_timestamp` is the probe because it is strictly monotone in both directions
+        here. `priority` and `topic` — the other documented sort keys — tie across rows on
+        this tenant, and a tied key tie-breaks unstably, so they would flake. The limit is
+        deliberately 8 rather than 20: the tenant holds few rules, and asking for more than
+        exist gives no extra coverage.
+        """
+        key = "created_timestamp"
+        ascending = self.call_method(self.module.search_recon_rules, sort=f"{key}.asc", limit=8)
+        descending = self.call_method(self.module.search_recon_rules, sort=f"{key}.desc", limit=8)
+
+        self.assert_no_error(ascending, context=f"search_recon_rules {key}.asc")
+        self.assert_no_error(descending, context=f"search_recon_rules {key}.desc")
+
+        self.assert_sort_orders_rows(
+            [rule[key] for rule in self._unwrap_results(ascending)],
+            [rule[key] for rule in self._unwrap_results(descending)],
+            key,
+            context="search_recon_rules",
+        )
+
     # ------------------------------------------------------------------
     # Exposed-data records
     # ------------------------------------------------------------------
@@ -190,6 +254,26 @@ class TestReconIntegration(BaseIntegrationTest):
         )
         self.assert_no_error(
             result, context="search_recon_exposed_data_records sort=created_date|desc"
+        )
+
+    def test_search_recon_exposed_data_records_rows_in_query_step_order(self):
+        """Hydrated records come back in the order the query step reported them.
+
+        A reorder-contract test rather than a monotonicity one: this endpoint has no
+        strictly monotone sort field on this tenant. Exposed-data records are created in
+        bulk per notification, so `created_date` and `exposure_date` both repeat heavily
+        (measured: 3 distinct `created_date` values across 8 rows, and 1 distinct
+        `exposure_date`), and a tied key tie-breaks unstably. Asserting the reorder contract
+        instead keeps the guard without the flakiness.
+
+        The contract is load-bearing here: `GetNotificationsExposedDataRecordsV1` returned a
+        different order than it was handed on 5 of 6 measured trials.
+        """
+        self.assert_rows_in_query_step_order(
+            self.module.search_recon_exposed_data_records,
+            id_field="id",
+            context="search_recon_exposed_data_records reorder contract",
+            limit=8,
         )
 
     # ------------------------------------------------------------------

@@ -208,6 +208,10 @@ class ReconModule(BaseModule):
                 updated_date: When the notification was last updated
 
                 Append .asc or .desc for direction (default desc).
+
+                Both sort fields read back from `notification.<field>`, not the record
+                root — a notification record's root holds only `id` and `notification`.
+
                 Examples: 'created_date.desc', 'updated_date.asc'
             """).strip(),
             examples=["created_date.desc", "updated_date.asc"],

@@ -103,6 +103,28 @@ class TestCloudAssetsIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_cspm_assets with sort")
         self.assert_valid_list_response(result, min_length=0, context="search_cspm_assets with sort")
 
+    def test_search_cspm_assets_returns_rows_in_query_step_order(self):
+        """Hydrated assets come back in the order the query step reported them.
+
+        A reorder-contract test rather than a monotonicity one, because
+        `search_cspm_assets` has no strictly monotone sort field on this tenant — every
+        documented key (`updated_at`, `resource_type`, `region`, ...) ties across rows, so
+        an asc/desc comparison would tie-break unstably and flake.
+
+        The contract is load-bearing here: `cloud_security_assets_entities_get` returned a
+        different order than it was handed on 6 of 6 measured trials, so without the reorder
+        the tool's `sort` would be silently discarded on essentially every call.
+
+        Limit is 50 to stay under the 100-ID detail batch size, so the query step's order is
+        captured in a single request.
+        """
+        self.assert_rows_in_query_step_order(
+            self.module.search_cspm_assets,
+            id_field="id",
+            context="search_cspm_assets reorder contract",
+            limit=50,
+        )
+
     def test_search_cspm_assets_batching(self):
         """A limit above the 100-per-request detail batch size still returns every record.
 

@@ -57,6 +57,48 @@ class TestCloudIomIntegration(BaseIntegrationTest):
         self.assert_no_error(result, context="search_iom_findings with sort")
         self.assert_valid_list_response(result, min_length=0, context="search_iom_findings with sort")
 
+    def test_iom_sort_keys_are_never_at_the_record_root(self):
+        """Every documented sort field reads back from a nested key, not the root.
+
+        `sort="severity.desc"` is valid, but the returned record's root holds only
+        id/cid/cloud/cloud_groups/cloud_labels/evaluation/resource. A consumer that sorts by
+        a documented key and then reads that key off the record gets `None`, silently.
+
+        Pinned because the mapping is a schema fact the `sort` description has to state
+        correctly, and because it is the trap a sort-order test here would fall into: the
+        obvious `[r["severity"] for r in rows]` raises KeyError rather than comparing
+        anything. The expected locations below are live-validated.
+        """
+        expected_location = {
+            "severity": ("evaluation", "severity"),
+            "status": ("evaluation", "status"),
+            "first_detected": ("evaluation", "first_detected"),
+            "last_detected": ("evaluation", "last_detected"),
+            "cloud_provider": ("cloud", "provider"),
+            "service": ("resource", "service"),
+        }
+
+        result = self.call_method(self.module.search_iom_findings, sort="severity.desc", limit=3)
+        self.assert_no_error(result, context="search_iom_findings severity.desc")
+        findings = self.skip_unless_tenant_has(result, "IOM findings", "iom sort key nesting")
+        first = findings[0]
+
+        for sort_field, (parent, key) in expected_location.items():
+            assert sort_field not in first, (
+                f"`{sort_field}` is now a root-level IOM field, so the sort description's "
+                f"nesting note is stale for it. Root keys: {sorted(first.keys())}"
+            )
+            block = first.get(parent)
+            assert isinstance(block, dict), (
+                f"Expected a `{parent}` dict to hold `{sort_field}`; got {type(block)}. "
+                f"Root keys: {sorted(first.keys())}"
+            )
+            assert key in block, (
+                f"Sort field `{sort_field}` is documented as reading from "
+                f"`{parent}.{key}`, but that key is absent. {parent} keys: "
+                f"{sorted(block.keys())}"
+            )
+
     def test_search_iom_findings_batching(self):
         """A limit above the 100-per-request detail batch size still returns every record.
 

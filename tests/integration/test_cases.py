@@ -91,6 +91,33 @@ class TestCasesIntegration(BaseIntegrationTest):
             result, min_length=0, context="search_cases with sort"
         )
 
+    def test_search_cases_sort_order_survives_hydration(self):
+        """The requested sort order survives the query -> get-by-IDs hydration step.
+
+        `entities_cases_post_v2` returns cases in an order unrelated to the query step's
+        (measured: a different order on 6 of 6 trials), so this is the sort assertion with
+        real teeth — `test_search_cases_with_sort` above only checks that the parameter is
+        accepted, which stays green even if hydration scrambles every row.
+
+        `created_timestamp` is the probe because it is strictly monotone in both directions
+        on this endpoint. Reach for it rather than a plausible-looking alternative:
+        `status`, `severity` and the other low-cardinality fields tie across rows here, and
+        a tied key tie-breaks unstably, which makes for a flaky test instead of a real one.
+        """
+        key = "created_timestamp"
+        ascending = self.call_method(self.module.search_cases, sort=f"{key}.asc", limit=20)
+        descending = self.call_method(self.module.search_cases, sort=f"{key}.desc", limit=20)
+
+        self.assert_no_error(ascending, context=f"search_cases {key}.asc")
+        self.assert_no_error(descending, context=f"search_cases {key}.desc")
+
+        self.assert_sort_orders_rows(
+            [case[key] for case in self._unwrap_results(ascending)],
+            [case[key] for case in self._unwrap_results(descending)],
+            key,
+            context="search_cases",
+        )
+
     def test_search_cases_with_q(self):
         """Test search_cases with free-text search."""
         result = self.call_method(
@@ -461,9 +488,17 @@ class TestCasesIntegration(BaseIntegrationTest):
         )
 
     def test_aggregate_bad_filter_returns_fql_guide(self):
-        """Test that an unsupported filter field surfaces the FQL guide."""
-        result = self._aggregate(
-            "aggregate_case_templates", field="name", filter="not_a_real_field:'x'"
+        """Test that an unsupported filter field surfaces the FQL guide.
+
+        Retried through `retry_on_transient` because the gateway intermittently returns an
+        unparseable body, which arrives as a list-shaped error and fails the isinstance
+        check below for a reason unrelated to filter handling.
+        """
+        result = self.retry_on_transient(
+            lambda: self._aggregate(
+                "aggregate_case_templates", field="name", filter="not_a_real_field:'x'"
+            ),
+            context="aggregate bad filter",
         )
 
         assert isinstance(result, dict), "filter error should return a dict"
