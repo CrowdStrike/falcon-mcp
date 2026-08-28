@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.18.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.17.0...v0.18.0) (2026-08-28)
+
+
+### Features
+
+* **modules/cloud:** cloud insights — mixin package, filter-only search, and definitions catalog ([#535](https://github.com/CrowdStrike/falcon-mcp/issues/535)) ([5e0fb29](https://github.com/CrowdStrike/falcon-mcp/commit/5e0fb29dbabfa3410a4aee2feb76461c0c9d25b4))
+
+
+### Bug Fixes
+
+* **modules:** reject sort expressions the policy APIs cannot serve ([#556](https://github.com/CrowdStrike/falcon-mcp/issues/556)) ([d79421a](https://github.com/CrowdStrike/falcon-mcp/commit/d79421a19ecb36ce96e88442d74ef891435635dd))
+* **scripts:** resolve operation names behind constants and helper chains ([#547](https://github.com/CrowdStrike/falcon-mcp/issues/547)) ([7d81837](https://github.com/CrowdStrike/falcon-mcp/commit/7d818372d30c7f60e5431a2c42e54074585b77dd))
+* **scripts:** resolve operation names the doc scope scan could not see ([#557](https://github.com/CrowdStrike/falcon-mcp/issues/557)) ([3e3c36a](https://github.com/CrowdStrike/falcon-mcp/commit/3e3c36a73553da23583b72d75a70ac53cf96b0a5))
+* **tests:** read search results through the pagination envelope ([#555](https://github.com/CrowdStrike/falcon-mcp/issues/555)) ([a4b325c](https://github.com/CrowdStrike/falcon-mcp/commit/a4b325c7904809f6dff6ab97107aa033802989ee))
+
 ## [0.17.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.16.1...v0.17.0) (2026-08-22)
 
 
