@@ -47,6 +47,13 @@ class TestFusionIntegration(BaseIntegrationTest):
 
     # ------------------------------------------------------------------
     # Helpers
+    #
+    # Filter coverage below uses BaseIntegrationTest.assert_filter_matches, which
+    # requires a non-empty result and checks every row against a predicate. Both
+    # halves matter here: an unknown property on these endpoints is a 400 that
+    # names it, but a known property with an unsupported operator comes back as an
+    # empty 200, so only rows prove the documented construction works — and only a
+    # per-row check proves the filter selected on what it claims to.
     # ------------------------------------------------------------------
 
     def assert_envelope_ok(self, result, context=""):
@@ -96,20 +103,6 @@ class TestFusionIntegration(BaseIntegrationTest):
             )
         return records[0]
 
-    def assert_filter_matches(self, search, filter, note=""):
-        """Assert a documented filter returns at least one row.
-
-        A workflow search returns a 400 that names an unknown property, but a
-        known property with an unsupported operator returns an empty 200 instead.
-        So only a non-empty result proves the documented construction works.
-        """
-        result = search(filter=filter, limit=2)
-        assert result["results"], (
-            f"Documented filter returned zero rows: {filter}. {note} "
-            "Either the guide is wrong or the tenant has no matching data."
-        )
-        return result
-
     # ------------------------------------------------------------------
     # search_workflow_definitions
     # ------------------------------------------------------------------
@@ -156,14 +149,14 @@ class TestFusionIntegration(BaseIntegrationTest):
         definition = self.a_definition()
         workflow_name = definition["name"]
 
-        exact = self.assert_filter_matches(
+        self.assert_filter_matches(
             self.search_definitions,
             f"name.raw:'{workflow_name}'",
+            predicate=lambda record: record.get("name") == workflow_name,
+            predicate_desc=f"definition.name == {workflow_name!r}",
             note="name.raw is the unanalyzed field and the only one doing exact matching.",
+            limit=2,
         )
-        assert any(
-            record["name"] == workflow_name for record in exact["results"]
-        ), f"name.raw exact match did not return {workflow_name!r}"
 
         analyzed = self.search_definitions(filter=f"name:'{workflow_name}'", limit=2)
         assert not analyzed["results"], (
@@ -180,13 +173,24 @@ class TestFusionIntegration(BaseIntegrationTest):
         self.assert_filter_matches(
             self.search_definitions,
             f"name.raw:*'*{fragment}*'",
+            predicate=lambda record: fragment in record.get("name", ""),
+            predicate_desc=f"{fragment!r} in definition.name",
             note="Substring matching needs name.raw with the :* operator.",
+            limit=2,
         )
 
     def test_definitions_filter_name_token_match(self):
-        """The analyzed `name` field matches whole tokens with ~."""
+        """The analyzed `name` field matches whole tokens with ~.
+
+        Whitespace and hyphens are token boundaries; an underscore is not. Splitting on
+        `_` as well produces a fragment that is not a token, which matches nothing —
+        `name:~'RS'` against 'RS_Test Notify on ...' returns zero rows, and
+        `name:~'Teds'` against 'Teds_CloudRisks_Workflow' only appears to work because
+        other workflows carry 'Teds' as a real token. That made this test pass or fail on
+        which definition the fixture happened to return.
+        """
         workflow_name = self.a_definition()["name"]
-        token = re.split(r"[\s\-_]+", workflow_name.strip())[0]
+        token = re.split(r"[\s\-]+", workflow_name.strip())[0]
         if len(token) < 3:
             self.skip_with_warning(
                 f"First token of {workflow_name!r} is too short to match on",
@@ -197,39 +201,69 @@ class TestFusionIntegration(BaseIntegrationTest):
         self.assert_filter_matches(
             self.search_definitions,
             f"name:~'{token}'",
+            predicate=lambda record: token.lower() in record.get("name", "").lower(),
+            predicate_desc=f"{token.lower()!r} in definition.name.lower()",
             note="`name` matches whole tokens only, so a full token must hit.",
+            limit=2,
         )
 
     def test_definitions_filter_id(self):
         """`id` does exact matching on a definition ID."""
         definition_id = self.a_definition()["id"]
         self.assert_filter_matches(
-            self.search_definitions, f"id:'{definition_id}'"
+            self.search_definitions,
+            f"id:'{definition_id}'",
+            predicate=lambda record: record.get("id") == definition_id,
+            predicate_desc=f"definition.id == {definition_id!r}",
+            limit=2,
         )
 
     def test_definitions_filter_enabled(self):
         """`enabled` matches on the definition's own boolean value."""
         definition = self.a_definition()
-        enabled = "true" if definition.get("enabled") else "false"
-        self.assert_filter_matches(self.search_definitions, f"enabled:{enabled}")
+        expected = bool(definition.get("enabled"))
+        self.assert_filter_matches(
+            self.search_definitions,
+            f"enabled:{'true' if expected else 'false'}",
+            predicate=lambda record: bool(record.get("enabled")) is expected,
+            predicate_desc=f"definition.enabled is {expected}",
+            limit=2,
+        )
 
     def test_definitions_filter_trigger_type(self):
         """`trigger.type` matches on the definition's own trigger type."""
         trigger_type = self.a_definition()["trigger"]["type"]
         self.assert_filter_matches(
-            self.search_definitions, f"trigger.type:'{trigger_type}'"
+            self.search_definitions,
+            f"trigger.type:'{trigger_type}'",
+            predicate=lambda record: record.get("trigger", {}).get("type") == trigger_type,
+            predicate_desc=f"definition.trigger.type == {trigger_type!r}",
+            limit=2,
         )
 
     def test_definitions_filter_version(self):
         """`version` accepts numeric operators."""
-        self.assert_filter_matches(self.search_definitions, "version:>0")
+        self.assert_filter_matches(
+            self.search_definitions,
+            "version:>0",
+            predicate=lambda record: (record.get("version") or 0) > 0,
+            predicate_desc="definition.version > 0",
+            limit=2,
+        )
 
     def test_definitions_filter_last_modified_timestamp(self):
-        """`last_modified_timestamp` accepts relative dates."""
+        """`last_modified_timestamp` accepts relative dates.
+
+        No predicate: a ten-year window matches every definition that exists, so any
+        check against it would pass whatever the filter did. The row count is the
+        assertion — this pins that the field and the relative-date form are accepted,
+        and `test_definitions_unknown_filter_field_is_loud` covers the rejection side.
+        """
         self.assert_filter_matches(
             self.search_definitions,
             "last_modified_timestamp:>'now-3650d'",
             note="A ten-year window should match any definition that exists.",
+            limit=2,
         )
 
     def test_definitions_filter_description_token_match(self):
@@ -371,22 +405,35 @@ class TestFusionIntegration(BaseIntegrationTest):
     def test_executions_filter_id(self):
         """The filter field `id` matches the response's `execution_id`."""
         execution_id = self.an_execution()["execution_id"]
-        matched = self.assert_filter_matches(
+        self.assert_filter_matches(
             self.search_executions,
             f"id:'{execution_id}'",
+            predicate=lambda record: record.get("execution_id") == execution_id,
+            predicate_desc=f"execution.execution_id == {execution_id!r}",
             note="The response calls this execution_id; the filter calls it id.",
+            limit=2,
         )
-        assert matched["results"][0]["execution_id"] == execution_id
 
     def test_executions_filter_definition_id(self):
         """`definition_id` lists one workflow's run history."""
         definition_id = self.an_execution()["definition_id"]
         self.assert_filter_matches(
-            self.search_executions, f"definition_id:'{definition_id}'"
+            self.search_executions,
+            f"definition_id:'{definition_id}'",
+            predicate=lambda record: record.get("definition_id") == definition_id,
+            predicate_desc=f"execution.definition_id == {definition_id!r}",
+            limit=2,
         )
 
     def test_executions_filter_definition_name_token_match(self):
-        """`definition_name` is analyzed and matches whole tokens with ~."""
+        """`definition_name` is analyzed and matches whole tokens with ~.
+
+        Split on whitespace and hyphens only, for the reason spelled out in
+        `test_definitions_filter_name_token_match`: an underscore is not a token boundary
+        here. `definition_name:~'MainWF'` returns nothing for a run of
+        'MainWF_Mohamad_Nabulsi_SNow_Automation_CRs' — the whole underscored string is the
+        token.
+        """
         execution = self.an_execution()
         definition_name = execution.get("definition_name")
         if not definition_name:
@@ -395,7 +442,7 @@ class TestFusionIntegration(BaseIntegrationTest):
             )
             return
 
-        token = re.split(r"[\s\-_]+", definition_name.strip())[0]
+        token = re.split(r"[\s\-]+", definition_name.strip())[0]
         if len(token) < 3:
             self.skip_with_warning(
                 f"First token of {definition_name!r} is too short to match on",
@@ -404,15 +451,27 @@ class TestFusionIntegration(BaseIntegrationTest):
             return
 
         self.assert_filter_matches(
-            self.search_executions, f"definition_name:~'{token}'"
+            self.search_executions,
+            f"definition_name:~'{token}'",
+            predicate=lambda record: token.lower() in (record.get("definition_name") or "").lower(),
+            predicate_desc=f"{token.lower()!r} in execution.definition_name.lower()",
+            limit=2,
         )
 
     def test_executions_filter_started_timestamp(self):
-        """`started_timestamp` is the filter name; `start_timestamp` is response-only."""
+        """`started_timestamp` is the filter name; `start_timestamp` is response-only.
+
+        The predicate reads the response's spelling, which is the whole point of the
+        pairing: a row that came back without `start_timestamp` would mean the two names
+        are no longer the same field.
+        """
         self.assert_filter_matches(
             self.search_executions,
             "started_timestamp:>'now-3650d'",
+            predicate=lambda record: bool(record.get("start_timestamp")),
+            predicate_desc="execution.start_timestamp is populated",
             note="A ten-year window should match any execution that exists.",
+            limit=2,
         )
 
         response_named = self.call_method(
@@ -426,27 +485,56 @@ class TestFusionIntegration(BaseIntegrationTest):
         )
 
     def test_executions_filter_completed_timestamp(self):
-        """`completed_timestamp` is the filter name; `end_timestamp` is response-only."""
+        """`completed_timestamp` is the filter name; `end_timestamp` is response-only.
+
+        Filtering on it selects finished runs, and only a finished run carries an
+        `end_timestamp` — an in-progress execution has no such key at all. So the
+        predicate can actually fail, unlike a bare ten-year window.
+        """
         self.assert_filter_matches(
-            self.search_executions, "completed_timestamp:>'now-3650d'"
+            self.search_executions,
+            "completed_timestamp:>'now-3650d'",
+            predicate=lambda record: bool(record.get("end_timestamp")),
+            predicate_desc="execution.end_timestamp is populated",
+            note="A ten-year window should match any completed execution.",
+            limit=2,
         )
 
     def test_executions_filter_definition_version(self):
         """`definition_version` accepts numeric operators."""
-        self.assert_filter_matches(self.search_executions, "definition_version:>0")
+        self.assert_filter_matches(
+            self.search_executions,
+            "definition_version:>0",
+            predicate=lambda record: (record.get("definition_version") or 0) > 0,
+            predicate_desc="execution.definition_version > 0",
+            limit=2,
+        )
 
     def test_executions_filter_test_mode(self):
-        """`test_mode` matches on the execution's own boolean value."""
+        """`test_mode` matches on the execution's own boolean value.
+
+        No predicate: the response does not carry `test_mode` at all, so any check would
+        read `None` and pass regardless of what the filter did. The fixture's value is
+        still used to pick the side that must have rows.
+        """
         execution = self.an_execution()
         test_mode = "true" if execution.get("test_mode") else "false"
-        self.assert_filter_matches(self.search_executions, f"test_mode:{test_mode}")
+        self.assert_filter_matches(
+            self.search_executions,
+            f"test_mode:{test_mode}",
+            limit=2,
+        )
 
     def test_executions_filter_contains_mocks(self):
         """`contains_mocks` matches on the execution's own boolean value."""
         execution = self.an_execution()
-        contains_mocks = "true" if execution.get("contains_mocks") else "false"
+        expected = bool(execution.get("contains_mocks"))
         self.assert_filter_matches(
-            self.search_executions, f"contains_mocks:{contains_mocks}"
+            self.search_executions,
+            f"contains_mocks:{'true' if expected else 'false'}",
+            predicate=lambda record: bool(record.get("contains_mocks")) is expected,
+            predicate_desc=f"execution.contains_mocks is {expected}",
+            limit=2,
         )
 
     def test_executions_sort_requires_dot_notation(self):
@@ -613,9 +701,16 @@ class TestFusionIntegration(BaseIntegrationTest):
 
         Disabled and ineligible-trigger share status 412, so the message is the
         only thing telling them apart — this asserts the message, not the code.
+
+        `version:>0` is part of the fixture filter because a definition that was never
+        published sits at version 0, and the execute endpoint cannot resolve one: it
+        answers 404 "definition not found" instead of the 412 under test. 167 of this
+        tenant's 518 disabled on-demand definitions are in that state, so which one the
+        search happened to return decided whether the test passed. The enabled-definition
+        fixture below needs no such guard — a workflow cannot be enabled at version 0.
         """
         disabled = self.search_definitions(
-            filter="enabled:false+trigger.type:'On demand'", limit=2
+            filter="enabled:false+trigger.type:'On demand'+version:>0", limit=2
         )["results"]
         if not disabled:
             self.skip_with_warning(

@@ -200,6 +200,7 @@ class BaseIntegrationTest:
         desc: list[Any],
         key: str,
         context: str = "",
+        allow_ties: bool = False,
     ) -> None:
         """Assert an ascending/descending sort really ordered the rows.
 
@@ -208,16 +209,26 @@ class BaseIntegrationTest:
         `BaseModule._reorder_by_ids` exists to fix) still returns rows and still passes
         `assert_no_error` — only comparing the actual key sequence catches it.
 
-        Both directions must be *strictly* monotone. Ties are treated as a failure rather
-        than tolerated, because a tied key tie-breaks unstably and would make the test
-        flaky; if this starts failing on ties, the field is no longer a valid probe and
-        the test should move to a different one rather than relax the assertion.
+        Both directions must be *strictly* monotone by default. Ties are treated as a
+        failure rather than tolerated, because a tied key tie-breaks unstably and would
+        make the test flaky; if this starts failing on ties, the field is no longer a valid
+        probe and the test should move to a different one rather than relax the assertion.
+
+        `allow_ties=True` is for endpoints where no documented sort key is tie-free and the
+        strict default would mean no ordering coverage at all — a severity enum, say, where
+        a page of 50 rows holds one or two distinct values. What tie-breaks unstably is
+        *which rows* come back in a tied run, not the key sequence, and the sequence is all
+        this compares, so ties do not make these assertions flaky. The one thing they would
+        break is the `asc != desc` check, since an all-tied page looks identical in both
+        directions; that is replaced by requiring at least two distinct values across the
+        two pages and asserting the pages start at opposite ends.
 
         Args:
             asc: The sort key's value for each row, from the ascending call.
             desc: The same, from the descending call.
             key: The sort field name, for error messages.
             context: Optional context string for the error messages.
+            allow_ties: Accept repeated values, for keys with no tie-free alternative.
         """
         ctx = f" ({context})" if context else ""
 
@@ -231,19 +242,33 @@ class BaseIntegrationTest:
             f"Need more than one row to test {key} ordering{ctx}, got {len(desc)}"
         )
 
-        assert len(set(map(str, asc))) == len(asc), (
-            f"{key} has tied values{ctx}, so sort order is not deterministic and this "
-            f"test cannot distinguish a real ordering from a tie-break: {asc}"
-        )
-        assert len(set(map(str, desc))) == len(desc), (
-            f"{key} has tied values{ctx}: {desc}"
-        )
+        if not allow_ties:
+            assert len(set(map(str, asc))) == len(asc), (
+                f"{key} has tied values{ctx}, so sort order is not deterministic and this "
+                f"test cannot distinguish a real ordering from a tie-break: {asc}"
+            )
+            assert len(set(map(str, desc))) == len(desc), (
+                f"{key} has tied values{ctx}: {desc}"
+            )
 
         assert asc == sorted(asc), f"{key}.asc is not ascending{ctx}: {asc}"
         assert desc == sorted(desc, reverse=True), f"{key}.desc is not descending{ctx}: {desc}"
-        assert asc != desc, (
-            f"{key}.asc and {key}.desc returned the same order{ctx}, so the sort "
-            f"direction was ignored: {asc}"
+
+        if not allow_ties:
+            assert asc != desc, (
+                f"{key}.asc and {key}.desc returned the same order{ctx}, so the sort "
+                f"direction was ignored: {asc}"
+            )
+            return
+
+        assert len(set(map(str, asc)) | set(map(str, desc))) > 1, (
+            f"Every row in both {key} pages holds the same value{ctx}, so nothing here "
+            f"could tell an ordering from an arbitrary one: {asc}"
+        )
+        assert desc[0] > asc[0], (
+            f"{key}.asc and {key}.desc both start at {asc[0]!r}{ctx}. With more than one "
+            f"distinct value present the two directions have to land on opposite ends of "
+            f"the same ordering — this is what an ignored sort parameter looks like."
         )
 
     def assert_rows_in_query_step_order(

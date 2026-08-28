@@ -91,6 +91,9 @@ class _CloudIomMixin(_CloudBase):
                 cloud_provider -> cloud.provider
                 service -> resource.service
 
+                severity sorts by the underlying severity code, where critical is the
+                lowest value, so 'severity.asc' returns the MOST severe findings first.
+
                 Examples: 'severity.desc', 'last_detected.desc', 'first_detected.asc'
             """
             ).strip(),

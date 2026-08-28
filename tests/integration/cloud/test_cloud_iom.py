@@ -29,30 +29,128 @@ class TestCloudIomIntegration(BaseIntegrationTest):
         )
 
     def test_search_iom_findings_with_severity_filter(self):
-        result = self.call_method(
+        """`severity` filters on the value nested at `evaluation.severity`.
+
+        The filter is flat and the response is not, so a test written from the filter name
+        alone would look for a top-level `severity` that never exists.
+        """
+        self.assert_filter_matches(
             self.module.search_iom_findings,
-            filter="severity:'critical'",
-            limit=3,
+            "severity:'critical'",
+            predicate=lambda finding: finding.get("evaluation", {}).get("severity") == "critical",
+            predicate_desc="finding.evaluation.severity == 'critical'",
+            note="Every guide and example in this repo uses these lowercase severity names.",
+            limit=5,
         )
-        self.assert_valid_list_response(result, min_length=0, context="search_iom_findings severity filter")
 
     def test_search_iom_findings_with_cloud_provider_filter(self):
-        result = self.call_method(
-            self.module.search_iom_findings,
-            filter="cloud_provider:'aws'",
-            limit=3,
-        )
-        self.assert_no_error(result, context="search_iom_findings with cloud_provider filter")
-        self.assert_valid_list_response(result, min_length=0, context="search_iom_findings cloud_provider filter")
+        """`cloud_provider` filters on the value the response nests at `cloud.provider`.
 
-    def test_search_iom_findings_with_sort(self):
-        result = self.call_method(
+        Lowercase is the only spelling this operation accepts — uppercase comes back as an
+        empty HTTP 200 rather than an error, which
+        `test_cloud_provider_casing_differs_across_cloud_endpoints` pins from the other side.
+        """
+        self.assert_filter_matches(
             self.module.search_iom_findings,
-            sort="severity|desc",
-            limit=3,
+            "cloud_provider:'aws'",
+            predicate=lambda finding: finding.get("cloud", {}).get("provider") == "aws",
+            predicate_desc="finding.cloud.provider == 'aws'",
+            note="The filter is cloud_provider; the response calls it cloud.provider.",
+            limit=5,
         )
-        self.assert_no_error(result, context="search_iom_findings with sort")
-        self.assert_valid_list_response(result, min_length=0, context="search_iom_findings with sort")
+
+    def test_search_iom_findings_sort_orders_by_last_detected(self):
+        """`last_detected` orders findings, and the order survives entity hydration.
+
+        `last_detected` is the probe because it is the documented key with the most distinct
+        values per page, which is what lets this catch `_reorder_by_ids` losing the order
+        during hydration. `severity` and `status` hold a handful of values across half a
+        million findings, so a page of either is almost entirely tied; `first_detected`
+        returns a descending page that is genuinely out of order (3 of 3 trials).
+
+        Comparison is truncated to milliseconds because that is the precision the endpoint
+        actually orders on. The response carries nanoseconds, and findings written inside the
+        same millisecond come back in arbitrary sub-millisecond order — measured on 6 of 6
+        descending trials during a write burst, while every truncated comparison held. The
+        full-precision value looks tie-free and is not, which is the flake this avoids; it
+        also means the truncated values tie, hence `allow_ties`.
+
+        The window filter is not cosmetic: unfiltered, the ascending page is entirely
+        records with no `last_detected` at all, and null sort values cannot be compared.
+        Read the value from `evaluation`, not the root — see
+        `test_iom_sort_keys_are_never_at_the_record_root`.
+        """
+        key = "last_detected"
+        window = f"{key}:>'now-3650d'"
+
+        def to_millis(finding):
+            """'YYYY-MM-DDTHH:MM:SS.mmm' — everything the endpoint's ordering respects."""
+            return finding["evaluation"][key][:23]
+
+        ascending = self.call_method(
+            self.module.search_iom_findings, filter=window, sort=f"{key}.asc", limit=20
+        )
+        descending = self.call_method(
+            self.module.search_iom_findings, filter=window, sort=f"{key}.desc", limit=20
+        )
+        self.assert_no_error(ascending, context=f"search_iom_findings {key}.asc")
+        self.assert_no_error(descending, context=f"search_iom_findings {key}.desc")
+
+        desc_millis = [
+            to_millis(f) for f in self.skip_unless_tenant_has(descending, "IOM findings")
+        ]
+        self.assert_sort_orders_rows(
+            [to_millis(f) for f in self.skip_unless_tenant_has(ascending, "IOM findings")],
+            desc_millis,
+            key,
+            context="search_iom_findings",
+            allow_ties=True,
+        )
+
+        piped = self.call_method(
+            self.module.search_iom_findings, filter=window, sort=f"{key}|desc", limit=20
+        )
+        self.assert_no_error(piped, context=f"search_iom_findings {key}|desc")
+        assert [
+            to_millis(f) for f in self.skip_unless_tenant_has(piped, "IOM findings")
+        ] == desc_millis, (
+            f"'{key}|desc' and '{key}.desc' disagree. The tool documents the dot form and "
+            "the pipe form is the API's own; both have to reach the same ordering. Only the "
+            "millisecond-truncated sequence is compared: two runs seconds apart can legally "
+            "return different rows within a tied millisecond."
+        )
+
+    def test_iom_severity_sort_puts_the_most_severe_first_in_ascending_order(self):
+        """`severity.asc` returns critical findings; `severity.desc` returns informational.
+
+        The endpoint sorts the underlying severity code, and critical is its lowest value,
+        so the direction reads backwards from the word. An agent asking for the worst
+        findings needs `severity.asc`, which is why the `sort` description says so and why
+        this pins it — the failure is silent, and 'fixing' the tool to invert it would give
+        the opposite of what was asked with no error to show for it.
+        """
+        severity_code = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4}
+
+        def leading_severity(direction):
+            result = self.call_method(
+                self.module.search_iom_findings, sort=f"severity.{direction}", limit=20
+            )
+            self.assert_no_error(result, context=f"search_iom_findings severity.{direction}")
+            findings = self.skip_unless_tenant_has(result, "IOM findings", f"severity.{direction}")
+            codes = [severity_code[f["evaluation"]["severity"]] for f in findings]
+            assert codes == sorted(codes, reverse=direction == "desc"), (
+                f"severity.{direction} did not order findings by severity code: {codes}"
+            )
+            return findings[0]["evaluation"]["severity"]
+
+        assert leading_severity("asc") == "critical", (
+            "severity.asc no longer leads with critical findings. If the endpoint now sorts "
+            "severity by rank rather than by its numeric code, the note in the sort "
+            "description is backwards and has to change with it."
+        )
+        assert leading_severity("desc") == "informational", (
+            "severity.desc no longer leads with informational findings."
+        )
 
     def test_iom_sort_keys_are_never_at_the_record_root(self):
         """Every documented sort field reads back from a nested key, not the root.
