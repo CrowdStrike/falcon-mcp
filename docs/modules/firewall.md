@@ -19,7 +19,7 @@ Searching and managing firewall rules and rule groups
 
 Search firewall rules and return full rule details.
 
-Use this to find firewall rules by name, platform, or enabled state. Consult
+Use this to find firewall rules by name or enabled state. Consult
 falcon://firewall/rules/fql-guide before constructing filter expressions.
 Returns complete rule objects including conditions and actions.
 Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions. For cursor-based paging, use `pagination.next` as the `after` parameter on the next call.

@@ -198,8 +198,10 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Firewall Rules ===
     "falcon_search_firewall_rules": (
-        "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime). "
+        "Common fields: name, enabled (true|false), description, "
+        "created_on/modified_on (UTC datetime). "
+        "There is no platform field here — platform:'windows' fails as an unknown "
+        "property; filter rule groups by platform instead. "
         "name: use the contains operator name:~'value' (whole-word substring); a "
         "name:'value*' glob is treated literally and returns nothing."
     ),
@@ -210,8 +212,10 @@ FILTER_HINTS: dict[str, str] = {
         "name:'value*' glob is treated literally and returns nothing."
     ),
     "falcon_search_firewall_policy_rules": (
-        "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime). "
+        "Any filter must include rule_group.policy_ids:'<policy_id>' — without it "
+        "the request fails, even for a field that works elsewhere. There is no "
+        "platform field here. "
+        "Other fields: name, enabled (true|false), created_on (UTC datetime). "
         "name: use the contains operator name:~'value' (whole-word substring); a "
         "name:'value*' glob is treated literally and returns nothing."
     ),
