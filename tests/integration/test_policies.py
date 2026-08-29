@@ -275,6 +275,57 @@ class TestPoliciesIntegration(BaseIntegrationTest):
                 f"{result[0]}"
             )
 
+    def test_platform_name_vocabulary_per_type(self):
+        """Each policy type's own platform vocabulary, not just its first entity's.
+
+        The sweep above filters `platform_name` with whatever value the one
+        discovered entity happens to carry, so it never covered whether the other
+        values work. That matters because the hint documents Windows|Linux|Mac for
+        five types and `all` for content_update, and this endpoint answers an
+        impossible value with an empty 200 rather than an error — a wrong value
+        would look exactly like a tenant with no such policy.
+
+        Every tenant with policies has a default per platform, so a value that
+        matches nothing is the value being wrong. `all` is asserted against
+        content_update and only against content_update: it matches nothing on the
+        other five, which is the split the hint describes.
+        """
+        for policy_type in POLICY_TYPES:
+            if not self._scopes_available(policy_type):
+                continue
+            if self._first_entity(policy_type) is None:
+                self.skip_with_warning(
+                    f"No {policy_type} policy to validate platform_name against",
+                    "platform_name vocabulary",
+                )
+                continue
+
+            expected = ["all"] if policy_type == "content_update" else ["Windows", "Mac"]
+            for value in expected:
+                self.assert_filter_matches(
+                    self.module.search_policies,
+                    f"platform_name:'{value}'",
+                    predicate=lambda policy, value=value: policy["platform_name"] == value,
+                    predicate_desc=f"policy.platform_name == {value!r}",
+                    note=f"{policy_type} is documented as supporting {value!r}.",
+                    limit=3,
+                    policy_type=policy_type,
+                )
+
+            unsupported = "Windows" if policy_type == "content_update" else "all"
+            result = self.call_method(
+                self.module.search_policies,
+                policy_type=policy_type,
+                filter=f"platform_name:'{unsupported}'",
+                limit=1,
+            )
+            self.assert_envelope_ok(result, context=f"{policy_type} platform_name")
+            assert not self.records(result, f"{policy_type} {unsupported!r}"), (
+                f"{policy_type} now matches platform_name:'{unsupported}'. The hint "
+                "documents 'all' for content_update only and the three real platforms "
+                "for the rest; if that split changed, update it."
+            )
+
     def test_platform_name_sort_returns_error(self):
         """platform_name sort is rejected by our guard BEFORE hitting the API.
 

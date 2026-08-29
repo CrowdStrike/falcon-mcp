@@ -177,3 +177,76 @@ class TestDiscoverIntegration(BaseIntegrationTest):
         # Test combined_hosts (managed)
         result = self.call_method(self.module.search_managed_assets, limit=1)
         self.assert_no_error(result, context="combined_hosts managed operation name")
+
+    # ------------------------------------------------------------------
+    # The host.* application filter fields
+    # ------------------------------------------------------------------
+
+    def test_application_host_fields_filter(self):
+        """`host.hostname` and `host.platform_name` really are filter fields.
+
+        They appear in the applications filter hint and nowhere else in the repo —
+        not in the applications guide, whose table has no `host.*` entry at all,
+        and `host_info` is a facet rather than a filter field. That made them look
+        invented. They are not: both select applications.
+
+        combined_applications rejects an unknown field (see
+        test_filter_classification.py), and the bare `hostname` control below shows
+        that rejection happening, so the dotted forms coming back clean is the
+        fields existing rather than the endpoint being permissive.
+        """
+        hostname = None
+        applications = self.records(
+            self.call_method(
+                self.module.search_applications,
+                filter="name:*'*'",
+                facet="host_info",
+                limit=20,
+            ),
+            context="application host fixture",
+        )
+        for application in applications:
+            candidate = (application.get("host") or {}).get("hostname")
+            if candidate:
+                hostname = candidate
+                break
+        if not hostname:
+            self.skip_with_warning(
+                "No application carries a host.hostname",
+                context="application host fields",
+            )
+            return
+
+        self.assert_filter_matches(
+            self.module.search_applications,
+            f"host.hostname:'{hostname}'",
+            predicate=lambda app: (app.get("host") or {}).get("hostname") == hostname,
+            predicate_desc=f"application.host.hostname == {hostname!r}",
+            note="host.hostname is in the filter hint but absent from the guide.",
+            limit=3,
+            facet="host_info",
+        )
+
+        for value in ("Windows", "Linux", "Mac"):
+            self.assert_filter_matches(
+                self.module.search_applications,
+                f"host.platform_name:'{value}'",
+                predicate=lambda app, value=value: (
+                    (app.get("host") or {}).get("platform_name") == value
+                ),
+                predicate_desc=f"application.host.platform_name == {value!r}",
+                note="host.platform_name is in the filter hint but absent from the guide.",
+                limit=3,
+                facet="host_info",
+            )
+
+        # Control: the undotted field is rejected, so the clean results above are
+        # the dotted fields existing rather than this endpoint accepting anything.
+        bare = self.call_method(
+            self.module.search_applications, filter=f"hostname:'{hostname}'", limit=1
+        )
+        assert self.error_dicts(bare), (
+            "Bare `hostname` was accepted on search_applications. If unknown fields "
+            "no longer 400 here, the host.* results above prove nothing. Got: "
+            f"{bare}"
+        )
