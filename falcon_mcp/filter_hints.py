@@ -340,18 +340,21 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Recon ===
     "falcon_search_recon_notifications": (
-        "Common fields: status (new|in-progress|closed-false-positive|closed-true-positive), "
-        "rule_priority (low|medium|high), "
-        "rule_topic (SA_DOMAIN|SA_TYPOSQUATTING|SA_EMAIL|SA_IP|SA_BRAND_PRODUCT), "
+        "Common fields: status (new|in-progress|pending-review|closed-true-positive|"
+        "closed-false-positive|closed-no-action-true-positive), "
+        "rule_priority (low|medium|high|critical), "
+        "rule_topic (SA_TYPOSQUATTING|SA_THIRD_PARTY|SA_CUSTOM|SA_DOMAIN|SA_IP|"
+        "SA_BRAND_PRODUCT|SA_ALIAS|SA_VIP|SA_EMAIL|SA_CVE|SA_AUTHOR|SA_BIN), "
         "item_type (exposed_data), item_site (stealer_logs|telegram.org), "
         "created_date:>'now-7d' (relative date). "
         "NOTE: assigned_to_uuid requires a UUID, not an email. "
         "Ex: status:'new'+rule_priority:'high'"
     ),
     "falcon_search_recon_rules": (
-        "Common fields: status (active|inactive), "
-        "topic (SA_DOMAIN|SA_TYPOSQUATTING|SA_EMAIL|SA_IP|SA_BRAND_PRODUCT), "
-        "priority (low|medium|high), permissions (private|public), "
+        "Common fields: status (active|noisy|inactive), "
+        "topic (SA_TYPOSQUATTING|SA_THIRD_PARTY|SA_CUSTOM|SA_DOMAIN|SA_IP|"
+        "SA_BRAND_PRODUCT|SA_ALIAS|SA_VIP|SA_EMAIL|SA_CVE|SA_AUTHOR|SA_BIN), "
+        "priority (low|medium|high|critical), permissions (private|public), "
         "breach_monitoring_enabled (true|false), "
         "created_timestamp:>'now-30d' (relative date). "
         "Ex: status:'active'+topic:'SA_TYPOSQUATTING'"

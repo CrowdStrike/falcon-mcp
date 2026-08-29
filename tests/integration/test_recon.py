@@ -553,3 +553,163 @@ class TestReconIntegration(BaseIntegrationTest):
 
         assert isinstance(result, dict), f"Expected the FQL-error dict; got {type(result)}"
         assert "fql_guide" in result, f"Rejected filter did not return a guide: {result}"
+
+    # ------------------------------------------------------------------
+    # Notification and rule vocabularies
+    #
+    # Both recon query endpoints answer an unknown filter field with an empty HTTP
+    # 200 (see test_filter_classification.py), so nothing here is settled by a
+    # clean response — every value below is established by rows.
+    #
+    # For notifications the aggregate is the enumeration: its terms buckets are the
+    # field's own vocabulary drawn from real records, so a value present in the
+    # bucket list but empty from search would be a genuine divergence rather than a
+    # bare tenant. The rules endpoint has no aggregate, so those enumerate from the
+    # records themselves.
+    # ------------------------------------------------------------------
+
+    def _notification_buckets(self, field):
+        """Terms bucket labels for a notification field."""
+        result = self.call_method(
+            self.module.aggregate_recon_notifications,
+            field=field,
+            aggregate_type="terms",
+            name=f"by_{field}",
+            size=30,
+        )
+        self.assert_no_error(result, context=f"aggregate {field}")
+        records = self.records(result, context=f"aggregate {field}")
+        assert records, f"No aggregate result for {field}: {result}"
+        buckets = records[0].get("buckets") or []
+        assert buckets, f"No {field} buckets, so there is nothing to enumerate: {records[0]}"
+        return [bucket["label"] for bucket in buckets]
+
+    def test_notification_rule_priority_includes_critical(self):
+        """`rule_priority` has four levels, not three.
+
+        `critical` was missing from the hint and the guide while being the third
+        most common value in the tenant.
+        """
+        labels = self._notification_buckets("rule_priority")
+        assert "critical" in labels, (
+            f"No notification carries rule_priority 'critical' ({labels}), so this "
+            "tenant cannot confirm it. The value came from the aggregate's own buckets."
+        )
+
+        for value in ("low", "medium", "high", "critical"):
+            self.assert_filter_matches(
+                self.module.search_recon_notifications,
+                f"rule_priority:'{value}'",
+                note="Each documented priority must match its own notifications.",
+                limit=2,
+            )
+
+    def test_notification_rule_topic_covers_every_bucket(self):
+        """Every topic the field actually holds is filterable and documented.
+
+        The hint listed five of twelve. Anything the aggregate reports but the
+        documented set omits fails here, so the list cannot silently fall behind
+        again.
+        """
+        documented = {
+            "SA_TYPOSQUATTING", "SA_THIRD_PARTY", "SA_CUSTOM", "SA_DOMAIN", "SA_IP",
+            "SA_BRAND_PRODUCT", "SA_ALIAS", "SA_VIP", "SA_EMAIL", "SA_CVE",
+            "SA_AUTHOR", "SA_BIN",
+        }
+        labels = set(self._notification_buckets("rule_topic"))
+        assert labels <= documented, (
+            f"rule_topic holds topics the guide and hint do not list: "
+            f"{sorted(labels - documented)}. Add them."
+        )
+        assert len(labels) > 5, (
+            f"Only {len(labels)} topics present ({sorted(labels)}); the point of this "
+            "test is that the documented five were a subset."
+        )
+
+        for value in sorted(labels):
+            self.assert_filter_matches(
+                self.module.search_recon_notifications,
+                f"rule_topic:'{value}'",
+                note="Each topic the aggregate reports must also be filterable.",
+                limit=2,
+            )
+
+    def test_notification_status_covers_every_bucket(self):
+        """The status vocabulary is six values; the hint documented four.
+
+        `pending-review` and `closed-no-action-true-positive` both match records.
+        `closed-false-positive` stays documented but is not asserted: it is absent
+        from this tenant, which says nothing about whether it is a member.
+        """
+        documented = {
+            "new", "in-progress", "pending-review", "closed-true-positive",
+            "closed-false-positive", "closed-no-action-true-positive",
+        }
+        labels = set(self._notification_buckets("status"))
+        assert labels <= documented, (
+            f"status holds values the guide and hint do not list: "
+            f"{sorted(labels - documented)}. Add them."
+        )
+        assert {"pending-review", "closed-no-action-true-positive"} <= labels, (
+            f"The two values this test exists to pin are absent from the tenant "
+            f"({sorted(labels)}), so it proves nothing."
+        )
+
+        for value in sorted(labels):
+            self.assert_filter_matches(
+                self.module.search_recon_notifications,
+                f"status:'{value}'",
+                note="Each status the aggregate reports must also be filterable.",
+                limit=2,
+            )
+
+    def test_rule_topic_priority_and_status_vocabularies(self):
+        """Rule topic, priority and status, enumerated from the rules themselves.
+
+        There is no aggregate for rules, so the distinct values come from a page of
+        records and each is then filtered on. `inactive` stays documented but
+        unasserted — no rule in this tenant is paused.
+        """
+        rules = self.skip_unless_tenant_has(
+            self.call_method(self.module.search_recon_rules, limit=200),
+            "recon rules",
+            context="rule vocabularies",
+        )
+
+        documented = {
+            "topic": {
+                "SA_TYPOSQUATTING", "SA_THIRD_PARTY", "SA_CUSTOM", "SA_DOMAIN", "SA_IP",
+                "SA_BRAND_PRODUCT", "SA_ALIAS", "SA_VIP", "SA_EMAIL", "SA_CVE",
+                "SA_AUTHOR", "SA_BIN",
+            },
+            "priority": {"low", "medium", "high", "critical"},
+            "status": {"active", "noisy", "inactive"},
+            "permissions": {"private", "public"},
+        }
+
+        for field, allowed in documented.items():
+            observed = {rule[field] for rule in rules if rule.get(field)}
+            assert observed, f"No rule carries a {field}, so it cannot be checked."
+            assert observed <= allowed, (
+                f"Rules hold {field} values the guide and hint do not list: "
+                f"{sorted(observed - allowed)}. Add them."
+            )
+
+            for value in sorted(observed):
+                self.assert_filter_matches(
+                    self.module.search_recon_rules,
+                    f"{field}:'{value}'",
+                    predicate=lambda rule, field=field, value=value: rule.get(field) == value,
+                    predicate_desc=f"rule.{field} == {value!r}",
+                    note=f"Every observed {field} value must be filterable.",
+                    limit=2,
+                )
+
+        observed_priority = {rule["priority"] for rule in rules if rule.get("priority")}
+        assert "critical" in observed_priority, (
+            "No rule has priority 'critical', the value this test exists to pin."
+        )
+        observed_status = {rule["status"] for rule in rules if rule.get("status")}
+        assert "noisy" in observed_status, (
+            "No rule has status 'noisy', the value this test exists to pin."
+        )
