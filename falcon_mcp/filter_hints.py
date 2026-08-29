@@ -56,7 +56,7 @@ FILTER_HINTS: dict[str, str] = {
         "Common fields: hostname, platform_name (Windows|Linux|Mac), "
         "status (normal|contained|containment_pending|lift_containment_pending), "
         "local_ip, external_ip, os_version, last_seen, "
-        "product_type_desc (Workstation|Server|Domain Controller). "
+        "product_type_desc (Workstation|Server|Domain Controller|Mobile). "
         "Date filters: last_seen:>'now-7d' (relative). "
         "Use status:'contained' to find hosts in network containment. "
         "Ex: platform_name:'Windows'+status:'contained'"

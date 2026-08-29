@@ -191,6 +191,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         Last connection timestamp (UTC).
 
         Ex: last_seen:<'2016-07-19T11:14:15Z'
+        Ex: last_seen:>'now-7d'
         """
     ),
     (
@@ -304,7 +305,7 @@ SEARCH_HOSTS_FQL_FILTERS = [
         "String",
         "No",
         """
-        Product type: Server, Workstation
+        Product type: Workstation, Server, Domain Controller, Mobile
         """
     ),
     (
@@ -462,7 +463,7 @@ property_name:[operator]'value'
 
 **Basic Equality:**
 • platform_name:'Windows', platform_name:'Linux', platform_name:'Mac'
-• product_type_desc:'Server', product_type_desc:'Workstation'
+• product_type_desc:'Server', product_type_desc:'Workstation', product_type_desc:'Domain Controller', product_type_desc:'Mobile'
 • status:'normal', reduced_functionality_mode:'no'
 • service_provider:'AZURE', service_provider:'AWS_EC2_V2', service_provider:'GCP'
 
@@ -475,6 +476,7 @@ property_name:[operator]'value'
 • first_seen:>'2020-01-01T00:00:00Z'
 • first_seen:>='2020-01-01T00:00:00Z'
 • last_seen:<='2024-12-31T23:59:59Z'
+• last_seen:>'now-7d', last_seen:>'now-1h' (relative; lowercase 'now', quoted)
 
 **Inequality Filters:**
 • platform_name:!'Windows' (non-Windows hosts)
