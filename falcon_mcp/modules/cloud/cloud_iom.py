@@ -55,7 +55,10 @@ class _CloudIomMixin(_CloudBase):
                 "FQL filter expression."
                 " See `falcon://cloud/cspm-iom-findings/fql-guide` for syntax."
             ),
-            examples=["severity:'critical'+status:'open'", "cloud_provider:'aws'+service:'S3'"],
+            examples=[
+                "severity:'critical'+status:'non-compliant'",
+                "cloud_provider:'aws'+service:'S3'",
+            ],
         ),
         limit: int = Field(
             default=100,

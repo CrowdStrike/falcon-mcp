@@ -112,7 +112,8 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Cloud: Image Vulnerabilities ===
     "falcon_search_images_vulnerabilities": (
-        "Common fields: cve_id, severity (Low|Medium|High|Critical), "
+        "Common fields: cve_id, severity (Unknown|Low|Medium|High|Critical; matched "
+        "case-insensitively here, unlike the IOM and cloud-risk severities), "
         "cvss_score, registry, repository, tag, container_running_status (true|false)."
     ),
     # === Cloud: CSPM Assets ===
@@ -123,7 +124,7 @@ FILTER_HINTS: dict[str, str] = {
     # === Cloud: IOM Findings ===
     "falcon_search_iom_findings": (
         "Common fields: severity (critical|high|medium|low|informational), "
-        "status (open|suppressed|pass), cloud_provider (aws|azure|gcp — lowercase "
+        "status (compliant|non-compliant), cloud_provider (aws|azure|gcp — lowercase "
         "required; uppercase returns an empty result, not an error), "
         "service, region, resource_type, account_name, rule_name."
     ),
@@ -150,7 +151,8 @@ FILTER_HINTS: dict[str, str] = {
     ),
     "falcon_search_cloud_risks": (
         "Common fields: severity (Critical|High|Medium|Low|Informational), "
-        "status (Open|Resolved|Suppressed), cloud_provider (aws|azure|gcp), "
+        "status (Open|Resolved|Suppressed) — both are Title case here and lowercase "
+        "returns an empty result, not an error; cloud_provider (aws|azure|gcp), "
         "asset_name, asset_type, asset_region, account_id, account_name, "
         "rule_name, service_category, groups.environment, groups.business_unit. "
         "Date filters: use absolute ISO-8601 only, e.g. first_seen:>'2024-01-01T00:00:00Z'. "

@@ -122,3 +122,97 @@ class TestCloudRisksIntegration(BaseIntegrationTest):
         )
         self.assert_valid_list_response(result, min_length=1, context="get_cloud_groups by ID")
         assert result[0]["id"] == group_id
+
+    # ------------------------------------------------------------------
+    # Severity/status casing and the sort separator
+    #
+    # Deliberately not shared with the IOM or image-vulnerability severity tests:
+    # cloud risks take Title case only, IOM takes lower case only, and image
+    # vulnerabilities take either. Three endpoints, three behaviours.
+    # ------------------------------------------------------------------
+
+    def test_severity_and_status_are_title_case_only(self):
+        """Lower-case severity and status match nothing here.
+
+        Each lower-case assertion is paired with its Title-case counterpart in the
+        same run, so a zero is the casing being rejected rather than the tenant
+        lacking the data.
+        """
+        for title, lower in (("Critical", "critical"), ("High", "high")):
+            matched = self.call_method(
+                self.module.search_cloud_risks, filter=f"severity:'{title}'", limit=1
+            )
+            self.assert_envelope_ok(matched, context=f"risks severity:{title!r}")
+            assert matched["pagination"]["total"], (
+                f"severity:'{title}' matched nothing, so the lower-case comparison "
+                "proves nothing."
+            )
+
+            missed = self.call_method(
+                self.module.search_cloud_risks, filter=f"severity:'{lower}'", limit=1
+            )
+            self.assert_envelope_ok(missed, context=f"risks severity:{lower!r}")
+            assert not missed["pagination"]["total"], (
+                f"severity:'{lower}' now matches risks. If this endpoint became "
+                "case-insensitive, relax the note in the guide and the hint."
+            )
+
+        for title, lower in (("Open", "open"), ("Resolved", "resolved")):
+            matched = self.call_method(
+                self.module.search_cloud_risks, filter=f"status:'{title}'", limit=1
+            )
+            self.assert_envelope_ok(matched, context=f"risks status:{title!r}")
+            assert matched["pagination"]["total"], (
+                f"status:'{title}' matched nothing, so the lower-case comparison "
+                "proves nothing."
+            )
+
+            missed = self.call_method(
+                self.module.search_cloud_risks, filter=f"status:'{lower}'", limit=1
+            )
+            self.assert_envelope_ok(missed, context=f"risks status:{lower!r}")
+            assert not missed["pagination"]["total"], (
+                f"status:'{lower}' now matches risks. If this endpoint became "
+                "case-insensitive, relax the note in the guide and the hint."
+            )
+
+    def test_cloud_provider_values(self):
+        """All three cloud providers filter, which the previous test left open.
+
+        The old coverage allowed zero rows, so it passed whether or not
+        `cloud_provider` worked. The filter takes lower case while the record
+        reports `provider` upper case, so the per-record check folds case.
+        """
+        for value in ("aws", "azure", "gcp"):
+            self.assert_filter_matches(
+                self.module.search_cloud_risks,
+                f"cloud_provider:'{value}'",
+                predicate=lambda risk, value=value: (
+                    str(risk.get("provider", "")).lower() == value
+                ),
+                predicate_desc=f"risk.provider is {value!r} ignoring case",
+                note="Every provider in the guide and hint must match its own risks.",
+                limit=3,
+            )
+
+    def test_sort_accepts_both_separators(self):
+        """`first_seen.asc` and `first_seen|asc` order rows identically.
+
+        The guide showed only the pipe form while the tool parameter says to prefer
+        the dot. Separator support is per-endpoint, so both are asserted rather than
+        assumed — and both really order the rows, not merely return them.
+        """
+        def first_seen(sort):
+            result = self.call_method(self.module.search_cloud_risks, sort=sort, limit=5)
+            self.assert_envelope_ok(result, context=f"sort={sort}")
+            return [risk["first_seen"] for risk in self.records(result, f"sort={sort}")]
+
+        for asc_sort, desc_sort in (("first_seen.asc", "first_seen.desc"),
+                                    ("first_seen|asc", "first_seen|desc")):
+            self.assert_sort_orders_rows(
+                first_seen(asc_sort),
+                first_seen(desc_sort),
+                key="first_seen",
+                context=f"{asc_sort} / {desc_sort}",
+                allow_ties=True,
+            )

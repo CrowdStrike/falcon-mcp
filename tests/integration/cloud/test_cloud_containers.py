@@ -117,3 +117,57 @@ class TestCloudContainersIntegration(BaseIntegrationTest):
             note="A tenant with any assessed images has CVEs above a mid CVSS score.",
             limit=5,
         )
+
+    # ------------------------------------------------------------------
+    # Image vulnerability severity
+    #
+    # Kept separate from the IOM and cloud-risk severity tests on purpose: this
+    # endpoint matches severity case-insensitively while IOM takes lower case only
+    # and cloud risks take Title case only. Generalizing the three would hide the
+    # divergence that makes each of them worth pinning.
+    # ------------------------------------------------------------------
+
+    def test_severity_includes_unknown(self):
+        """`Unknown` is a real severity, not a value that was right to drop.
+
+        The endpoint rejects an unknown field but answers an impossible value with
+        an empty 200, so a clean response would prove nothing — this asserts rows,
+        which is the only thing that establishes membership here.
+        """
+        for value in ("Unknown", "Low", "Medium", "High", "Critical"):
+            self.assert_filter_matches(
+                self.module.search_images_vulnerabilities,
+                f"severity:'{value}'",
+                predicate=lambda vuln, value=value: (
+                    str(vuln.get("severity", "")).lower() == value.lower()
+                ),
+                predicate_desc=f"vulnerability.severity == {value!r} (any casing)",
+                note="Every documented severity must match its own vulnerabilities.",
+                limit=3,
+            )
+
+    def test_severity_is_case_insensitive_here(self):
+        """This endpoint matches severity in either casing, unlike its two siblings.
+
+        Pinned because the divergence is invisible in a response: an agent that
+        learned lower case from the IOM guide gets findings here and nothing there.
+        Compared as counts rather than exact equality — the two calls run seconds
+        apart against a live inventory.
+        """
+        title = self.call_method(
+            self.module.search_images_vulnerabilities, filter="severity:'Critical'", limit=1
+        )
+        lower = self.call_method(
+            self.module.search_images_vulnerabilities, filter="severity:'critical'", limit=1
+        )
+        self.assert_envelope_ok(title, context="images-vulns Title case")
+        self.assert_envelope_ok(lower, context="images-vulns lower case")
+
+        title_total = title["pagination"]["total"]
+        lower_total = lower["pagination"]["total"]
+        assert title_total, "severity:'Critical' matched nothing, so this proves nothing."
+        assert lower_total > title_total * 0.9, (
+            "severity:'critical' now returns a materially different count from "
+            "severity:'Critical'. If this endpoint became case-sensitive, say so in "
+            f"the guide and the hint. Title={title_total}, lower={lower_total}"
+        )
