@@ -256,24 +256,32 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Quarantine ===
     "falcon_search_quarantined_files": (
-        "Common fields: hostname, sha256, state (quarantined|released; the same "
-        "field is also queryable as status), "
-        "date_updated (UTC datetime), paths."
+        "Common fields: hostname, sha256, "
+        "state (quarantined|released|purged|cleaned|error|unknown), "
+        "date_updated (UTC datetime), paths.path, paths.state. "
+        "status is not a filter field and matches nothing; bare paths does not "
+        "filter either — use the dotted paths.path."
     ),
     "falcon_preview_quarantine_actions": (
-        "Common fields: hostname, sha256, state (quarantined|released; the same "
-        "field is also queryable as status), "
-        "date_updated (UTC datetime), paths."
+        "Common fields: hostname, sha256, "
+        "state (quarantined|released|purged|cleaned|error|unknown), "
+        "date_updated (UTC datetime), paths.path, paths.state. "
+        "status is not a filter field and matches nothing; bare paths does not "
+        "filter either — use the dotted paths.path."
     ),
     "falcon_update_quarantined_files": (
-        "Common fields: hostname, sha256, state (quarantined|released; the same "
-        "field is also queryable as status), "
-        "date_updated (UTC datetime), paths."
+        "Common fields: hostname, sha256, "
+        "state (quarantined|released|purged|cleaned|error|unknown), "
+        "date_updated (UTC datetime), paths.path, paths.state. "
+        "status is not a filter field and matches nothing; bare paths does not "
+        "filter either — use the dotted paths.path."
     ),
     "falcon_delete_quarantined_files": (
-        "Common fields: hostname, sha256, state (quarantined|released; the same "
-        "field is also queryable as status), "
-        "date_updated (UTC datetime), paths."
+        "Common fields: hostname, sha256, "
+        "state (quarantined|released|purged|cleaned|error|unknown), "
+        "date_updated (UTC datetime), paths.path, paths.state. "
+        "status is not a filter field and matches nothing; bare paths does not "
+        "filter either — use the dotted paths.path."
     ),
     # === Exclusions ===
     "falcon_search_exclusions": (

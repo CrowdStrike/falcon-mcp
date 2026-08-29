@@ -18,7 +18,20 @@ SEARCH_QUARANTINED_FILES_FQL_FILTERS = [
     (
         "state",
         "String",
-        "Quarantine state (response field). Also queryable as `status` in FQL. Example: state:'quarantined' or status:'released'",
+        "Quarantine state. One of: quarantined, released, purged, cleaned, error, "
+        "unknown. Example: state:'quarantined'",
+    ),
+    (
+        "paths.path",
+        "String",
+        "Full path of a quarantined file. Filter on the dotted subfield; bare `paths` "
+        "is not a filter field. Example: paths.path:*'*\\\\Temp\\\\*'",
+    ),
+    (
+        "paths.state",
+        "String",
+        "Per-path quarantine state, same vocabulary as `state`. "
+        "Example: paths.state:'purged'",
     ),
     (
         "sha256",
@@ -50,7 +63,7 @@ SEARCH_QUARANTINED_FILES_FQL_FILTERS = [
 SEARCH_QUARANTINED_FILES_FQL_DOCUMENTATION = f"""Quarantine Files FQL Filter Guide
 
 Use this guide when building the `filter` parameter for `falcon_search_quarantined_files`,
-`falcon_count_quarantine_actions`, `falcon_update_quarantined_files`,
+`falcon_preview_quarantine_actions`, `falcon_update_quarantined_files`,
 or `falcon_delete_quarantined_files`.
 
 === BASIC SYNTAX ===
@@ -76,7 +89,7 @@ field_name:[operator]'value'
 === NOTES ===
 
 • The response entity uses `state` for the quarantine status field.
-• Both `state` and `status` work as FQL filter fields.
+• `status` is not a filter field — it is accepted and matches nothing. Use `state`.
 
 === EXAMPLES ===
 
@@ -87,7 +100,7 @@ hostname:'BRR-WB-LIB-22'
 date_updated:>'2026-03-01T00:00:00Z'
 
 # Released files for a user
-status:'released'+behaviors.username:'alice'
+state:'released'+behaviors.username:'alice'
 
 # File hash on a specific host
 sha256:'a1b2c3*'+hostname:'DC*'
