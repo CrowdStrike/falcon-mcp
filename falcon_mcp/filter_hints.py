@@ -241,8 +241,10 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === IOC ===
     "falcon_search_iocs": (
-        "Common fields: type (domain|ipv4|ipv6|md5|sha256), "
-        "action (detect|prevent|allow), severity_number (1-5), "
+        "Common fields: type (sha256|md5|ipv4|ipv6|domain|all_subdomains), "
+        "action (detect|prevent|no_action|prevent_no_ui|allow), "
+        "severity (informational|low|medium|high|critical), "
+        "severity_number (0|10|30|50|70|90, unquoted), "
         "source, applied_globally (true|false), expired (true|false), "
         "created_on (UTC datetime)."
     ),

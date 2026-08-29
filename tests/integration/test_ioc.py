@@ -24,12 +24,18 @@ class TestIOCIntegration(BaseIntegrationTest):
         self.module = IOCModule(falcon_client)
 
     @pytest.fixture(autouse=True, scope="class")
-    def create_test_ioc(self, falcon_client):
+    @classmethod
+    def create_test_ioc(cls, falcon_client):
         """Create a test IOC for the class and clean up after all tests.
 
         Creates a domain IOC with .invalid TLD (IANA-reserved, never resolves)
         and detect-only action for safety. Tagged with a unique source for
         easy identification and filter-based searching.
+
+        Declared as a classmethod because a class-scoped fixture written as an
+        instance method raises a pytest deprecation warning, and that warning
+        subclasses UserWarning — under the `-W error::UserWarning` this suite is
+        run with, it errors out every test in the file before any of them start.
         """
         module = IOCModule(falcon_client)
 
@@ -57,8 +63,8 @@ class TestIOCIntegration(BaseIntegrationTest):
                     f"Cannot create test IOC (check IOC Management:write scope): {first}"
                 )
             if isinstance(first, dict) and "id" in first:
-                self.__class__._test_ioc = first
-                self.__class__._test_ioc_id = first["id"]
+                cls._test_ioc = first
+                cls._test_ioc_id = first["id"]
             else:
                 pytest.skip(f"Unexpected create response shape: {result}")
         else:
@@ -69,14 +75,14 @@ class TestIOCIntegration(BaseIntegrationTest):
         # Teardown: delete the test IOC
         try:
             delete_kwargs = resolve_field_defaults(module.remove_iocs, {
-                "ids": [self.__class__._test_ioc_id],
+                "ids": [cls._test_ioc_id],
                 "comment": "Integration test cleanup",
             })
             module.remove_iocs(**delete_kwargs)
         except Exception as e:
             import warnings
             warnings.warn(
-                f"Failed to clean up test IOC {self.__class__._test_ioc_id}: {e}",
+                f"Failed to clean up test IOC {cls._test_ioc_id}: {e}",
                 stacklevel=2,
             )
 
@@ -219,3 +225,117 @@ class TestIOCIntegration(BaseIntegrationTest):
         )
 
         self.assert_no_error(delete_result, context="remove_iocs by ID")
+
+    # ------------------------------------------------------------------
+    # Filter vocabularies
+    #
+    # indicator_combined_v1 answers an unknown filter field with an empty HTTP 200
+    # (see tests/integration/test_filter_classification.py), so nothing here can be
+    # settled by a clean response. Every value below is proved by rows, and the
+    # non-members by rows on a sibling that shares the query.
+    # ------------------------------------------------------------------
+
+    def test_action_vocabulary(self):
+        """Every filterable `action` value, including the two the hint used to omit.
+
+        `action_query_v1` is not the source of truth for this: it reports `none`,
+        but `action:'none'` matches nothing while `action:'no_action'` matches the
+        records whose response `action` is `no_action`. The creation vocabulary and
+        the filter vocabulary disagree on that one member, so this asserts the
+        filter side.
+        """
+        for value in ("detect", "prevent", "no_action", "prevent_no_ui", "allow"):
+            self.assert_filter_matches(
+                self.module.search_iocs,
+                f"action:'{value}'",
+                predicate=lambda ioc, value=value: ioc.get("action") == value,
+                predicate_desc=f"ioc.action == {value!r}",
+                note="Every action value in the hint and the guide must match its own records.",
+                limit=3,
+            )
+
+    def test_action_none_matches_nothing(self):
+        """`none` is what action_query_v1 reports, and it filters nothing.
+
+        Paired with the `no_action` case above, which runs against the same tenant:
+        one of the two spellings returns records and the other does not, so this is
+        a real divergence rather than an absence of data.
+        """
+        result = self.call_method(self.module.search_iocs, filter="action:'none'", limit=1)
+        self.assert_envelope_ok(result, context="action:'none'")
+        assert not self.records(result, "action:'none'"), (
+            "action:'none' now returns records. The guide and hint document "
+            "no_action because none matched nothing; if the API changed, both need "
+            "updating and so does this test."
+        )
+
+    def test_type_vocabulary(self):
+        """Every indicator type reported by ioc_type_query_v1 is filterable.
+
+        Asserted as set equality against the vocabulary endpoint so the guide
+        cannot drift in either direction — `all_subdomains` was missing from the
+        hint, and `sha1` is not a member despite looking like it belongs.
+        """
+        response = self.module.client.command("ioc_type_query_v1")
+        vocabulary = (response.get("body") or {}).get("resources")
+        assert vocabulary, f"ioc_type_query_v1 returned no vocabulary: {response}"
+        assert set(vocabulary) == {
+            "sha256",
+            "md5",
+            "ipv4",
+            "ipv6",
+            "domain",
+            "all_subdomains",
+        }, (
+            f"The indicator type vocabulary changed to {sorted(vocabulary)}. Update "
+            "the guide's `type` row and the falcon_search_iocs filter hint to match."
+        )
+
+        for value in vocabulary:
+            self.assert_filter_matches(
+                self.module.search_iocs,
+                f"type:'{value}'",
+                predicate=lambda ioc, value=value: ioc.get("type") == value,
+                predicate_desc=f"ioc.type == {value!r}",
+                note="Each type reported by ioc_type_query_v1 must be filterable.",
+                limit=3,
+            )
+
+    def test_severity_number_scale_is_not_one_to_five(self):
+        """`severity_number` runs 0/10/30/50/70/90, mirroring the severity labels.
+
+        The hint documented `1-5`. None of 1..5 matches a single record on a tenant
+        holding IOCs at every severity, and the label cross-check below is what
+        turns that absence into a mapping rather than a shrug: filtering on both
+        the label and its number returns rows, so the pair is confirmed together.
+        """
+        expected = {
+            "informational": 10,
+            "low": 30,
+            "medium": 50,
+            "high": 70,
+            "critical": 90,
+        }
+
+        for label, number in expected.items():
+            self.assert_filter_matches(
+                self.module.search_iocs,
+                f"severity:'{label}'+severity_number:{number}",
+                predicate=lambda ioc, label=label: ioc.get("severity") == label,
+                predicate_desc=f"ioc.severity == {label!r}",
+                note=f"severity {label!r} is documented as severity_number {number}.",
+                limit=3,
+            )
+
+        # The positive controls above establish the tenant holds every severity, so
+        # a 1..5 probe finding nothing is the scale being wrong rather than the
+        # tenant being bare.
+        for number in range(1, 6):
+            result = self.call_method(
+                self.module.search_iocs, filter=f"severity_number:{number}", limit=1
+            )
+            self.assert_envelope_ok(result, context=f"severity_number:{number}")
+            assert not self.records(result, f"severity_number:{number}"), (
+                f"severity_number:{number} now matches records, so the scale is no "
+                "longer 0/10/30/50/70/90. Update the guide and the filter hint."
+            )
