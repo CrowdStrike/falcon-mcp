@@ -85,7 +85,7 @@ including every parameter (type, required, description, examples) with FQL or CQ
 inlined. `query`, `module`, and `limit` are ignored. Naming two or more tools compares candidates in
 a single call.
 
-Splitting the two is what makes discovery cheap: on the full 117-tool catalog the input schema is
+Splitting the two is what makes discovery cheap: on the full 141-tool catalog the input schema is
 roughly two thirds of an entry's bytes, and at the moment of searching the agent has not chosen a
 tool to need it. A 50-result discovery response plus the schema for the one chosen tool costs
 slightly less than 20 results with schemas did.
@@ -165,17 +165,30 @@ avoid large responses.
 
 Results are ordered by relevance. A tool whose name matches the query outranks one that only
 mentions it in its description, and an exact tool name — with or without the `falcon_` prefix —
-ranks first. When two tools are otherwise tied — a bare noun like `iocs` matches `falcon_search_iocs`
-and `falcon_remove_iocs` equally — the read-only one ranks first, so the order never steers toward a
-mutator by default. Ordering is deterministic: the same query returns the same order on every server
-process. A query with no keywords (module browsing) is ordered by tool name.
+returns that tool alone, since naming a tool is a request for it rather than a keyword search. Tools
+matching every word the search narrowed on are ordered ahead of tools that matched only some, and
+within each of those groups the tool covering more of the query comes first. When two tools are
+otherwise tied — a bare noun like `iocs` matches `falcon_search_iocs` and `falcon_remove_iocs`
+equally — the read-only one ranks first, so the order never steers toward a mutator by default.
+Ordering is deterministic: the same query returns the same order on every server process. A query
+with no keywords (module browsing) is ordered by tool name.
 
-Every token in `query` is matched against the tool's name, description, module, and parameter
-names. Tools matching every token are preferred; when no tool matches all of them, the search falls
-back to tools matching at least one, so a phrase like `real-time response command` returns ranked
-candidates instead of nothing. The `hint` field says when that fallback was used. The order is a
-keyword match with no view of intent, so read each candidate's description and its `read_only` /
-`destructive` flags and pick the one that fits, rather than taking the first row on trust.
+Every word in `query` is matched against the tool's name, description, module, and parameter names.
+Generic words — `list`, `show`, `get`, `find`, `all`, and similar filler — are not used to narrow the
+candidate set, because they appear as prose in most descriptions ("returns an empty list on success")
+and so would select whichever tools happened to use the word rather than the ones the query is about.
+They still count toward ranking wherever they appear in a tool's own name, so `list case templates`
+still ranks `falcon_list_case_templates` first.
+
+On the remaining words the search prefers tools matching all of them. When too few tools do to
+choose between, it also returns tools matching at least half of those words, or carrying any one of
+them in their own name, ranked below the full matches; if that is still too thin, it widens once more
+to any tool matching a single one of those words — so a phrase like `real-time response command`
+returns ranked candidates instead of nothing. The `hint` field describes the split, saying how many
+results matched every word and how many matched only some. A query whose every word is generic has
+narrowed nothing, so all of its results are reported as loose matches. The order is a keyword match
+with no view of intent, so read each candidate's description and its `read_only` / `destructive`
+flags and pick the one that fits, rather than taking the first row on trust.
 
 `module` ignores case and separators, so `hostgroups`, `host_groups`, and `Host-Groups` all select
 the same module. `falcon_list_enabled_tools` returns a `by_module` map whose keys are the exact
@@ -187,13 +200,14 @@ returns only what the map lists.
 Every response carries `total` (the number of tools matching the query, before any limit) and
 `truncated`, so a capped result set is never mistaken for the complete set. When results are
 truncated, raise `limit` (up to 500) or narrow the query. The default is 50: lean discovery entries
-are cheap enough that a wide window costs less than a narrow one did with schemas attached, so a
-query like `host` — which matches 35 tools — is not truncated at all. In schema mode `total` counts
+are cheap enough that a wide window costs less than a narrow one did with schemas attached, and
+because generic words no longer widen the candidate set, ordinary keyword queries land well inside
+it — a query like `host` matches 40 tools and is not truncated at all. In schema mode `total` counts
 the entries returned, since no query ran for it to describe.
 
-If no tools match, no word in the query appears anywhere in the available surface. The response says
-so and points at `falcon_list_enabled_tools`. A capability absent from that full inventory is not
-available on that server — report that rather than searching again.
+If no tools match, none of the query's non-generic words appears anywhere in the available surface.
+The response says so and points at `falcon_list_enabled_tools`. A capability absent from that full
+inventory is not available on that server — report that rather than searching again.
 
 ## Tool Filtering in Dynamic Mode
 

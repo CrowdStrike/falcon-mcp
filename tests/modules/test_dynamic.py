@@ -65,17 +65,6 @@ class TestDynamicToolCatalog(unittest.TestCase):
         results = catalog.search(query="severity")
         self.assertGreater(len(results), 0)
 
-    def test_search_prefers_entries_matching_every_token(self):
-        catalog = DynamicToolCatalog(self.modules)
-        results = catalog.search(query="search detections")
-        names = [r["name"] for r in results]
-        self.assertIn("falcon_search_detections", names)
-        # Every result matches both tokens, so the fallback stayed out of it.
-        self.assertFalse(catalog.relaxed(query="search detections"))
-        for entry in (catalog.entries[n] for n in names):
-            self.assertIn("search", entry.search_corpus)
-            self.assertIn("detections", entry.search_corpus)
-
     def test_search_falls_back_to_any_token_when_no_entry_matches_all(self):
         """A phrase carrying one unknown word must not wipe out the whole result set."""
         catalog = DynamicToolCatalog(self.modules)
@@ -326,10 +315,22 @@ class TestLeanDiscoveryAndSchemaLookup(unittest.TestCase):
         )
 
     def test_count_matches_describes_discovery_not_the_requested_names(self):
-        """total must keep meaning "how many tools match", not "how many I asked for"."""
+        """total must keep meaning "how many tools match", not "how many I asked for".
+
+        Both sides calling the same code would pass under any implementation, so the
+        count is also pinned against an independently derived expectation: every tool
+        whose corpus carries the query word.
+        """
+        expected = {
+            name
+            for name, entry in self.catalog.entries.items()
+            if "detections" in entry.search_corpus
+        }
+        self.assertTrue(expected)
+        self.assertEqual(self.catalog.count_matches(query="detections"), len(expected))
         self.assertEqual(
-            self.catalog.count_matches(query="detections"),
-            len(self.catalog.search(query="detections", limit=10_000)),
+            {r["name"] for r in self.catalog.search(query="detections", limit=10_000)},
+            expected,
         )
 
     def test_tool_names_dedupes_repeated_names(self):
@@ -367,14 +368,57 @@ class TestSearchToolsTwoModeEnvelope(unittest.TestCase):
         The query is a genuine fallback case (no tool matches every word), so all three
         hint fragments — relaxed, truncated, and the schema instruction — are present at
         once, and the schema instruction must survive alongside them.
+
+        Every content word has to be one this fixture's two modules actually serve.
+        A word they do not use ('iocs') now matches nothing at all rather than riding
+        in on a stopword's prose hits, which would make this a zero-result case and
+        exercise the wrong branch.
         """
-        query = "find all the iocs added this week"
+        query = "find all the detections added this week"
         self.assertTrue(self.dynamic.catalog.relaxed(query=query))
         result = self._search(query=query, module=None, limit=1)
         self.assertTrue(result["truncated"])
         self.assertIn("match at least one", result["hint"])
         self.assertIn("Showing 1 of", result["hint"])
         self.assertIn("tool_names", result["hint"])
+
+    def test_all_generic_query_hint_does_not_claim_a_precise_match(self):
+        """A filler-only query must be told it matched loosely, not exactly.
+
+        'a' appears in every description, so the old raw-token fallback put the whole
+        catalog in the full-coverage block and emitted no caveat at all — the model
+        was handed every tool on the server as if each matched the query precisely.
+        """
+        result = self._search(query="a", module=None, limit=50)
+        self.assertTrue(result["results"])
+        self.assertIn("match at least one", result["hint"])
+        self.assertNotIn("match every word", result["hint"])
+
+    def test_mixed_page_hint_reports_the_actual_composition(self):
+        """When both blocks share a page, the hint must count them correctly."""
+        result = self._search(query="detections severity hostname", module=None, limit=50)
+        full = self.dynamic.catalog.full_coverage_count(query="detections severity hostname")
+        self.assertGreater(full, 0)
+        self.assertLess(full, len(result["results"]), "page must carry both blocks")
+        self.assertIn(f"The first {full} match every word", result["hint"])
+        self.assertIn(
+            f"remaining {len(result['results']) - full} match only some", result["hint"]
+        )
+
+    def test_page_smaller_than_the_full_block_claims_no_partial_results(self):
+        """A truncated page of only full matches must not report a partial remainder.
+
+        full_coverage_count() counts the whole match set, not the page, so a limit
+        below the size of the full-coverage block would otherwise subtract its way to
+        a negative count and announce "the remaining -30 match only some of them".
+        """
+        query = "detections"
+        full = self.dynamic.catalog.full_coverage_count(query=query)
+        self.assertGreater(full, 2, "fixture must have more full matches than the limit")
+        result = self._search(query=query, module=None, limit=2)
+        self.assertEqual(len(result["results"]), 2)
+        self.assertNotIn("match only some", result["hint"])
+        self.assertNotIn("-", result["hint"].split("Showing")[0])
 
     def test_tool_names_dedupes_and_does_not_inflate_total(self):
         """A repeated name returns one schema and total counts what came back."""
@@ -570,21 +614,61 @@ class TestSearchRanking(unittest.TestCase):
                 )
 
     def test_count_matches_equals_len_search_at_large_limit(self):
-        """search() and count_matches() must not drift: they share _matches."""
-        for query in ("host", "hosts", "detections", "vulnerabilities", "", "no_such_thing"):
+        """search() and count_matches() must not drift: they share _matches.
+
+        Sharing the code makes the equality tautological on its own, so each query
+        also carries an independent expectation for the count — otherwise a change
+        that broke both identically would still pass here.
+
+        The zero case needs a token that appears in no corpus at all. 'no_such_thing'
+        does not qualify: 'no' is a substring of plenty of real descriptions and tool
+        names, so it legitimately matches.
+        """
+        expected = {
+            "zzzqabsenttoken": 0,
+            "": len(self.catalog.entries),
+        }
+        for query in (
+            "host",
+            "hosts",
+            "detections",
+            "vulnerabilities",
+            "",
+            "zzzqabsenttoken",
+        ):
             with self.subTest(query=query):
+                total = self.catalog.count_matches(query=query)
                 self.assertEqual(
-                    self.catalog.count_matches(query=query),
-                    len(self.catalog.search(query=query, limit=10_000)),
+                    total, len(self.catalog.search(query=query, limit=10_000))
                 )
+                if query in expected:
+                    self.assertEqual(total, expected[query])
+                else:
+                    self.assertGreater(total, 0)
+                    self.assertLess(
+                        total,
+                        len(self.catalog.entries),
+                        "a keyword query matching the whole catalog is not a match",
+                    )
 
     def test_count_matches_equals_len_search_with_module_filter(self):
+        """Same drift guard for the module path, with an independent count.
+
+        A module browse must return exactly that module's tools — pinning it against
+        the catalog's own module attribution keeps this from passing vacuously.
+        """
         for module in ("hosts", "detections", "hostgroups"):
             with self.subTest(module=module):
-                self.assertEqual(
-                    self.catalog.count_matches(module=module),
-                    len(self.catalog.search(module=module, limit=10_000)),
-                )
+                total = self.catalog.count_matches(module=module)
+                results = self.catalog.search(module=module, limit=10_000)
+                self.assertEqual(total, len(results))
+                expected = {
+                    name
+                    for name, entry in self.catalog.entries.items()
+                    if entry.module_key == module.replace("_", "")
+                }
+                self.assertTrue(expected, f"no tools attributed to {module}")
+                self.assertEqual({r["name"] for r in results}, expected)
 
     def test_ranking_does_not_change_the_matched_set(self):
         """Scoring reorders; it must not add or drop a match."""
@@ -600,11 +684,17 @@ class TestSearchRanking(unittest.TestCase):
                 self.assertFalse(self.catalog.relaxed(query=query))
                 self.assertEqual(set(self._names(query, limit=10_000)), expected)
 
-    def test_fallback_only_engages_when_strict_matching_is_empty(self):
-        """Precision is preserved: a query the strict filter can serve is served by it."""
+    def test_relaxed_stays_false_when_a_query_has_full_coverage_matches(self):
+        """Precision is preserved: a query the conjunction can serve is served by it.
+
+        relaxed() now means "nothing matched every gate token" rather than "the
+        any-token fallback ran", so a query with a healthy full-coverage block must
+        still report False even though a partial block can now share the page.
+        """
         for query in ("host details", "search detections", "quarantined files"):
             with self.subTest(query=query):
                 self.assertFalse(self.catalog.relaxed(query=query))
+                self.assertGreater(self.catalog.full_coverage_count(query=query), 0)
 
     def test_fallback_rescues_a_natural_language_phrase(self):
         """The reported zero-hit cases must return a usable, ranked result set."""
@@ -633,6 +723,193 @@ class TestSearchRanking(unittest.TestCase):
                 self.assertEqual(
                     self._names(query, limit=10_000),
                     [r["name"] for r in reversed_catalog.search(query=query, limit=10_000)],
+                )
+
+    def test_full_coverage_entries_rank_ahead_of_partial_ones(self):
+        """The two blocks are ordered, not merged: a full match never sorts below.
+
+        A partial match is admitted to keep the right tool reachable, so it must be
+        visibly demoted rather than allowed to displace a tool that matched every word
+        the query narrowed on.
+
+        This query is one of the few where the blocks genuinely disagree with the
+        score: falcon_list_cloud_insight_definitions is only a partial match yet
+        outscores the full match falcon_execute_workflow, so it would overtake it if
+        the block stopped leading the sort key.
+        """
+        query = "list workflow definitions"
+        full, partial = self.catalog._match_set(query, None)
+        self.assertTrue(full, "fixture query must produce a full-coverage block")
+        self.assertTrue(partial, "fixture query must produce a partial block")
+        names = self._names(query, limit=10_000)
+        last_full = max(names.index(e.tool.name) for e in full)
+        first_partial = min(names.index(e.tool.name) for e in partial)
+        self.assertLess(last_full, first_partial)
+        self.assertEqual(self.catalog.full_coverage_count(query=query), len(full))
+
+    def test_a_thin_candidate_set_widens_instead_of_being_served_as_is(self):
+        """Too few matches to choose between must widen, not ship as a short page.
+
+        The near-miss threshold can admit a wrong tool while excluding the right one,
+        which is the conjunction's own defect one tier down. Widening whenever the
+        blocks are together too thin — the same test that decides whether the partial
+        block is needed at all — is what keeps that from happening: here
+        falcon_search_images_vulnerabilities is reachable only because the set was
+        widened past the single tool that cleared the threshold.
+        """
+        query = "docker image cves"
+        self.assertGreater(self.catalog.count_matches(query=query), 2)
+        self.assertIn("falcon_search_images_vulnerabilities", self._names(query))
+
+    def test_a_mostly_matching_description_is_admitted_without_a_name_hit(self):
+        """Covering most of the query is evidence on its own, name hit or not.
+
+        falcon_set_policy_precedence answers 'change the evaluation order of policies'
+        but shares no word with its own name — 'policy' is not 'policies', and neither
+        'order' nor 'evaluation' appears in the name. It carries three of the four gate
+        tokens in its description, which is what admits it, and it then wins the block
+        outright. Requiring a name hit or full coverage would drop it entirely.
+        """
+        query = "change the evaluation order of policies"
+        entry = self.catalog.entries["falcon_set_policy_precedence"]
+        self.assertFalse(
+            entry.names_any(["change", "evaluation", "order", "policies"]),
+            "fixture no longer isolates the description path",
+        )
+        self.assertEqual(self._names(query)[0], "falcon_set_policy_precedence")
+
+    def test_an_all_generic_query_is_never_reported_as_full_coverage(self):
+        """A query of only filler words has narrowed nothing, and must say so.
+
+        Every word being generic leaves nothing to gate on, so the raw words are used
+        to stay answerable. But 'a' is a substring of every corpus, so counting that
+        as full coverage would present the entire catalog to the model as a precise
+        match. These are partial matches by construction.
+        """
+        for query in ("a", "for", "all the", "please show me everything"):
+            with self.subTest(query=query):
+                self.assertEqual(self.catalog.full_coverage_count(query=query), 0)
+                self.assertTrue(self.catalog.relaxed(query=query))
+
+    def test_generic_words_do_not_narrow_the_candidate_set(self):
+        """A generic verb must not decide which tools are eligible.
+
+        'list' reaches 37 of the catalog's descriptions as prose ("returns an empty
+        list on success"), so conjoining on it selects whichever tools happen to use
+        the word rather than the ones the query is about — only 3 tools carry both
+        'list' and 'detections'. Dropping it from the gate must leave exactly the set
+        the entity word alone produces.
+
+        Runs against the whole catalog on purpose: on a small fixture every tool tends
+        to use 'list' somewhere, so the two sets coincide and the test proves nothing.
+        'list detections' rather than 'search detections' because the latter collapses
+        to 'searchdetections', an exact tool name reached by a different path.
+        """
+        with_verb = set(self._names("list detections", limit=10_000))
+        without = set(self._names("detections", limit=10_000))
+        self.assertTrue(with_verb)
+        self.assertEqual(with_verb, without)
+
+    def test_generic_verb_query_reaches_the_read_only_search_tool(self):
+        """'list X' must reach the tool that lists X.
+
+        'list' appears as prose in dozens of descriptions ("returns an empty list on
+        success"), so conjoining on it selected whichever tools used the word and
+        excluded the search tool the query is asking for. Because that set was
+        non-empty it also looked precise, so nothing widened it.
+        """
+        for query, intended in (
+            ("list host groups", "falcon_search_host_groups"),
+            ("list exclusions", "falcon_search_exclusions"),
+            ("list firewall rules", "falcon_search_firewall_rules"),
+            ("list quarantined files", "falcon_search_quarantined_files"),
+            ("count detections by severity", "falcon_aggregate_detections"),
+        ):
+            with self.subTest(query=query):
+                self.assertIn(intended, self._names(query))
+
+    def test_generic_verb_query_does_not_lead_with_the_destructive_sibling(self):
+        """A read query must not put a mutator first, even on coverage.
+
+        Crediting a generic word wherever it appeared let falcon_delete_host_groups
+        outscore falcon_search_host_groups on 'list host groups' — its description
+        happens to say "returns an empty list on success". Coverage is the primary
+        sort key, so the read-only tiebreak never got the chance to fire.
+        """
+        for query, read_only, destructive in (
+            ("list host groups", "falcon_search_host_groups", "falcon_delete_host_groups"),
+            ("list exclusions", "falcon_search_exclusions", "falcon_delete_exclusions"),
+            (
+                "list quarantined files",
+                "falcon_search_quarantined_files",
+                "falcon_delete_quarantined_files",
+            ),
+        ):
+            with self.subTest(query=query):
+                names = self._names(query, limit=10_000)
+                self.assertEqual(names[0], read_only)
+                self.assertLess(names.index(read_only), names.index(destructive))
+
+    def test_a_tool_named_for_a_query_word_is_not_dropped_for_a_prose_match(self):
+        """Selection must respect the name-over-prose weighting score() already uses.
+
+        Counting corpus hits without regard to where they land split two siblings for
+        the same capability: falcon_execute_rtr_read_only_command carries 'command' in
+        its own name but matched one word, while tools mentioning several query words
+        only in prose cleared the threshold. Naming a tool is stronger evidence than
+        mentioning it.
+        """
+        names = self._names("real-time response command", limit=10_000)
+        self.assertIn("falcon_execute_rtr_read_only_command", names)
+        self.assertIn("falcon_run_rtr_read_only_command_and_wait", names)
+
+    def test_exact_name_query_returns_only_that_tool(self):
+        """Naming a tool is a request for it, not a keyword search.
+
+        score() already short-circuits on an exact name, but selection did not, so an
+        exact-name query still unioned in every tool sharing a token — a page of
+        dozens of entries to answer a question with one right answer.
+        """
+        for query in ("falcon_search_hosts", "search_hosts", "searchhosts"):
+            with self.subTest(query=query):
+                self.assertEqual(self._names(query, limit=10_000), ["falcon_search_hosts"])
+
+    def test_ordering_is_identical_across_independently_built_catalogs(self):
+        """Result order must be reproducible across processes.
+
+        Catalog insertion order follows a set of module names and token order comes
+        from a frozenset, so neither is stable under hash randomization. Every new
+        token consumer has to stay order-independent and every sort key has to end in
+        the tool name. Comparing two independently built catalogs is what actually
+        checks that, rather than reading the code and trusting it.
+        """
+        from falcon_mcp.client import FalconClient
+
+        mock_client = MagicMock(spec=FalconClient)
+        available = registry.get_available_modules()
+        other = DynamicToolCatalog(
+            {name: available[name](mock_client) for name in reversed(list(available))}
+        )
+        queries = (
+            "",
+            "host",
+            "host details",
+            "list host groups",
+            "search detections",
+            "real-time response command",
+            "vulnerabilities in containers",
+            "find all the iocs added this week",
+            "falcon_search_hosts",
+        )
+        for query in queries:
+            with self.subTest(query=query):
+                self.assertEqual(
+                    self._names(query, limit=10_000),
+                    [r["name"] for r in other.search(query=query, limit=10_000)],
+                )
+                self.assertEqual(
+                    self.catalog.count_matches(query=query),
+                    other.count_matches(query=query),
                 )
 
     def test_read_only_tool_outranks_destructive_sibling_on_single_token_query(self):
@@ -986,13 +1263,21 @@ class TestExecuteFalconTool(unittest.TestCase):
         self.assertIn("falcon_list_enabled_tools", result["hint"])
 
     def test_search_tools_with_results_returns_envelope(self):
+        """An exact-name query returns that one tool, and total agrees with it.
+
+        Asserting total == len(results) alone passed only because this fixture serves
+        7 tools, comfortably under limit=50 — it would have passed for any query.
+        Naming a tool pins the count to exactly one.
+        """
         result = run_async(
             self.dynamic._search_tools(
                 query="search_detections", module=None, limit=50
             )
         )
-        self.assertGreater(len(result["results"]), 0)
-        self.assertEqual(result["total"], len(result["results"]))
+        self.assertEqual(
+            [r["name"] for r in result["results"]], ["falcon_search_detections"]
+        )
+        self.assertEqual(result["total"], 1)
         self.assertFalse(result["truncated"])
 
 

@@ -26,6 +26,36 @@ logger = get_logger(__name__)
 _TOOL_PREFIX = "falcon_"
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
+# Words that carry intent but not identity: generic verbs, determiners, and
+# conversational filler. They are stripped before the every-token conjunction and
+# score nothing outside a tool's own name, because they reach most of the corpus as
+# prose ('returns an empty list') and so decide nothing about which tool is wanted.
+#
+# Membership is a claim about how far a word reaches as prose, not about how generic
+# it feels. Words that identify an entity or an operation kind stay out — 'count',
+# 'aggregate', 'preview', 'members', 'details' and 'full' all genuinely narrow.
+# 'falcon' and 'return'/'returns' are here because they reach very nearly every
+# entry: search_corpus is built from the prefixed tool name, and almost every
+# docstring has a "Returns" line.
+_STOPWORDS = frozenset(
+    """
+    a an the of for to in on at and or from with by is are was were be been am
+    i me my we our us you your it its this that these those there
+    do does did done can could would should will shall may might must
+    what which who whom whose when where why how
+    show list get find search see look tell give fetch return returns retrieve display
+    all any some every each single both many much more most
+    please thanks thank hey hi ok okay just really actually now right currently
+    need needs want wants know knows help helps figure out way best able
+    have has had having falcon
+    """.split()
+)
+
+# How many matches make a block an answer on its own. Below this, the next-wider tier
+# is admitted to rescue a right answer the conjunction excluded; at or above it a
+# precise query never pays for the wider set.
+_TIER_RESCUE_BELOW = 3
+
 # Relative weights only: a name match must outrank any number of description
 # matches, so the gap between tiers exceeds the most tokens a query realistically
 # carries. A token matching nothing anywhere scores nothing — it is neither
@@ -81,6 +111,17 @@ class ToolEntry:
         self.module_words = _words(self.module)
         self.module_key = normalize_identifier(self.module)
 
+    def names_any(self, tokens: list[str]) -> bool:
+        """True when any token hits this tool's own name.
+
+        The same two name tiers ``score()`` rewards, asked as a yes/no. Candidate
+        selection counts corpus hits without regard to where they land, which lets a
+        tool matching several words only in prose qualify while a sibling named for
+        the query misses the count — the score already treats a name hit as worth many
+        prose hits, and this keeps selection consistent with that.
+        """
+        return any(t in self.name_words or t in self.unprefixed_name for t in tokens)
+
     def score(self, tokens: list[str], query_key: str) -> tuple[int, int]:
         """Rank this entry against a tokenized query; higher sorts earlier.
 
@@ -89,7 +130,8 @@ class ToolEntry:
         outranks one covering less regardless of where the hits land. ``strength`` is
         the weighted sum within that coverage, scoring each token once at the strongest
         field it hits, so a tool named for the query outranks one that only mentions it
-        in prose. A token matching nothing adds to neither.
+        in prose. A token matching nothing adds to neither, and a generic token
+        (``_STOPWORDS``) counts only where it hits this tool's own name.
         """
         if query_key and query_key in self.name_key:
             # Sorts above any real query: full coverage plus a strength no per-token
@@ -103,6 +145,11 @@ class ToolEntry:
                 strength += _SCORE_NAME_WORD
             elif token in self.unprefixed_name:
                 strength += _SCORE_NAME_SUBSTRING
+            elif token in _STOPWORDS:
+                # A generic word reaches most descriptions as prose, so crediting it
+                # outside a tool's own name measures docstring wording rather than
+                # relevance — enough to let a mutator outrank its read-only sibling.
+                continue
             elif token in self.module_words:
                 strength += _SCORE_MODULE_WORD
             elif token in self.module_key:
@@ -216,19 +263,41 @@ class DynamicToolCatalog:
         """
         return len(self._matches(query, module))
 
+    def full_coverage_count(self, query: str = "", module: str | None = None) -> int:
+        """How many matches cover every gate token; any others rank below them.
+
+        The composition of the result page, which is what the search hint describes:
+        generic words are excluded from the count's basis, so this is coverage of the
+        words the query actually narrowed on.
+        """
+        return len(self._match_set(query, module)[0])
+
     def relaxed(self, query: str = "", module: str | None = None) -> bool:
-        """True when the results came from the any-token fallback."""
-        return self._match_set(query, module)[1]
+        """True when nothing matched every gate token, so every result is partial.
+
+        Once a page can carry both blocks at once this no longer means "the results
+        are poor" — only that none of them covered the whole query.
+        """
+        return self.full_coverage_count(query, module) == 0
 
     def _match_set(
         self, query: str, module: str | None
-    ) -> tuple[list[ToolEntry], bool]:
-        """Select matching entries; the flag reports whether the fallback ran.
+    ) -> tuple[list[ToolEntry], list[ToolEntry]]:
+        """Split matching entries into a full-coverage block and a partial one.
 
-        Requiring every token narrows well when the query is already tool-shaped,
-        but a phrase carrying one word the catalog does not use matches nothing at
-        all. Falling back to any-token keeps such a query answerable; ranking is
-        what makes the wider set usable.
+        Requiring every token narrows well when the query is already tool-shaped, but
+        it also lets one incidental word decide eligibility: a generic verb appears as
+        prose across most descriptions, so conjoining on it can shrink the set to
+        whichever tools happen to use it in passing — excluding the right tool while
+        looking precise. Two rules keep that from happening.
+
+        Generic words (``_STOPWORDS``) are dropped before the conjunction, so they
+        cannot veto; ranking still sees every token. And when the full-coverage block
+        is too small to be a usable answer on its own, entries carrying at least half
+        the gate tokens — or any one of them in their own name — join it as a second,
+        lower-ranked block, so a near miss is demoted rather than dropped. A query
+        whose conjunction already works keeps its narrow set untouched and pays
+        nothing for the wider one.
         """
         candidates: list[ToolEntry] = list(self._entries.values())
 
@@ -237,60 +306,104 @@ class DynamicToolCatalog:
             candidates = [e for e in candidates if e.module_key == module_key]
 
         if not query:
-            return candidates, False
+            return candidates, []
 
         tokens = list(_words(query))
         query_key = normalize_identifier(query)
-        # Match every-token first for precision. Tokenizing on _NON_ALNUM (not a bare
-        # split) means 'hosts?' and 'search-hosts' reach the corpus the same way the
-        # corpus was built; the glued 'searchhosts' form has no usable token, so admit
-        # an entry whose whole name key equals the normalized query to rescue it. This
-        # mirrors score()'s exact-name short-circuit — membership, not substring, so a
-        # short query is not silently absorbed into an unrelated collapsed name.
-        def hits(entry: ToolEntry) -> bool:
-            return query_key in entry.name_key
 
-        strict = [
+        # Naming a tool is a request for that tool, not a keyword search, so every
+        # other entry sharing a token is noise. Membership, not substring, so a short
+        # query is not absorbed into an unrelated collapsed name. This mirrors
+        # score()'s exact-name short-circuit, and reaches the glued 'searchhosts' form
+        # that tokenizing alone cannot.
+        if query_key:
+            exact = [e for e in candidates if query_key in e.name_key]
+            if exact:
+                return exact, []
+
+        if not tokens:
+            # Punctuation only: nothing to match on, and an empty gate would otherwise
+            # make the conjunction vacuously true for every entry.
+            return [], []
+
+        # Falling back to the raw words when every one of them is generic keeps the
+        # query answerable, but the result is a partial match by construction: these
+        # tools carry the words incidentally, which is the whole reason the words do
+        # not gate. Reporting it as full coverage would tell the model the opposite —
+        # 'a' is a substring of every corpus, so it would present the entire catalog
+        # as a precise match.
+        gate = [t for t in tokens if t not in _STOPWORDS]
+        if not gate:
+            return [], [
+                e for e in candidates if all(t in e.search_corpus for t in tokens)
+            ]
+        # At least half the gate tokens, rounding up: enough to demote a near miss
+        # rather than drop it, without admitting every tool that shares one word.
+        threshold = (len(gate) + 1) // 2
+
+        full: list[ToolEntry] = []
+        partial: list[ToolEntry] = []
+        for entry in candidates:
+            hits = sum(1 for t in gate if t in entry.search_corpus)
+            if hits == len(gate):
+                full.append(entry)
+            elif hits >= threshold or entry.names_any(gate):
+                partial.append(entry)
+
+        if len(full) >= _TIER_RESCUE_BELOW:
+            # A full-coverage block this size is already an answer, so a precise query
+            # pays nothing for the wider set.
+            return full, []
+        if len(full) + len(partial) >= _TIER_RESCUE_BELOW:
+            return full, partial
+        # Still too thin to answer with. Drop to any single gate token, so a match the
+        # threshold excluded is demoted rather than lost — otherwise a near miss by one
+        # tool would suppress the rescue for all of them, which is the conjunction's own
+        # failure one tier down. Generic tokens stay out even here: the shortest of them
+        # ('a', 'on') are substrings of every corpus, so admitting them would return the
+        # whole catalog on the strength of a letter.
+        covered = {e.tool.name for e in full}
+        return full, [
             e
             for e in candidates
-            if (tokens and all(t in e.search_corpus for t in tokens)) or hits(e)
+            if e.tool.name not in covered and any(t in e.search_corpus for t in gate)
         ]
-        if strict:
-            return strict, False
-        return (
-            [
-                e
-                for e in candidates
-                if any(t in e.search_corpus for t in tokens) or hits(e)
-            ],
-            True,
-        )
 
     def _matches(self, query: str, module: str | None) -> list[ToolEntry]:
-        candidates, _ = self._match_set(query, module)
+        full, partial = self._match_set(query, module)
 
         if not query:
             # Browsing has no relevance signal, so order by name to stay stable
             # across processes.
-            return sorted(candidates, key=lambda e: e.tool.name)
+            return sorted(full, key=lambda e: e.tool.name)
 
         tokens = list(_words(query))
         query_key = normalize_identifier(query)
-        # Coverage first: a tool matching more of the query's words is the more
-        # relevant answer. Within equal coverage, strength orders by where the hits
-        # landed. When both still tie — a bare noun matches a read-only tool and its
-        # destructive sibling identically (search_iocs vs remove_iocs) — read-only
-        # wins, so ordering never steers an agent to the mutator first. Only then do
-        # ties break toward the least-qualified name and finally alphabetically, since
-        # catalog insertion order follows a set of module names and is not stable
-        # across processes.
-        def sort_key(e: ToolEntry) -> tuple[int, int, int, bool, str]:
+        # Full coverage first, so a tool matching every gate token always outranks one
+        # that missed a word. Within a block, coverage leads: a tool matching more of
+        # the query's words is the more relevant answer, and strength then orders by
+        # where the hits landed. When both still tie — a bare noun matches a read-only
+        # tool and its destructive sibling identically (search_iocs vs remove_iocs) —
+        # read-only wins, so ordering never steers an agent to the mutator first. Only
+        # then do ties break toward the least-qualified name and finally
+        # alphabetically, since catalog insertion order follows a set of module names
+        # and is not stable across processes.
+        full_names = {e.tool.name for e in full}
+
+        def sort_key(e: ToolEntry) -> tuple[int, int, int, int, bool, str]:
             matched, strength = e.score(tokens, query_key)
             annotations = e.tool.annotations
             read_only = annotations.readOnlyHint if annotations else True
-            return (-matched, -strength, len(e.name_words), not read_only, e.tool.name)
+            return (
+                0 if e.tool.name in full_names else 1,
+                -matched,
+                -strength,
+                len(e.name_words),
+                not read_only,
+                e.tool.name,
+            )
 
-        return sorted(candidates, key=sort_key)
+        return sorted(full + partial, key=sort_key)
 
     @staticmethod
     def _append_hint(params: dict[str, Any], key: str, text: str) -> None:
@@ -468,7 +581,7 @@ class DynamicMode:
         ready to pass to falcon_execute_tool. Naming several at once compares them.
 
         Read total and truncated to tell a capped list from a complete one, and hint
-        for whether the match had to be loosened.
+        for how much of the query each result matched.
         """
         # Naming tools is a schema lookup, not a search, so the match-set fields
         # describe what was asked for rather than a query nobody ran.
@@ -522,11 +635,21 @@ class DynamicMode:
             "truncated": truncated,
         }
         hints: list[str] = []
-        if self.catalog.relaxed(query=query, module=module):
+        full_on_page = min(
+            self.catalog.full_coverage_count(query=query, module=module), len(results)
+        )
+        partial_on_page = len(results) - full_on_page
+        if not full_on_page:
             hints.append(
                 "No tool matched every word, so these match at least one of them, "
                 "ordered by likely relevance. Read the descriptions and pick the one "
                 "that fits rather than assuming the capability is missing."
+            )
+        elif partial_on_page:
+            hints.append(
+                f"The first {full_on_page} match every word; the remaining "
+                f"{partial_on_page} match only some of them and rank below. Read the "
+                "descriptions rather than assuming the top result is the right tool."
             )
         if truncated:
             hints.append(
