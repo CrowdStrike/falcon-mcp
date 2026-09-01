@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.19.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.18.0...v0.19.0) (2026-09-01)
+
+
+### Features
+
+* **modules/guardian:** add AI agent activity module ([#566](https://github.com/CrowdStrike/falcon-mcp/issues/566)) ([f96c4d7](https://github.com/CrowdStrike/falcon-mcp/commit/f96c4d7e263da9911e95515a5ee37719f3be8aae))
+
+
+### Bug Fixes
+
+* **dynamic:** stop generic words deciding which tools are reachable ([#560](https://github.com/CrowdStrike/falcon-mcp/issues/560)) ([5e834aa](https://github.com/CrowdStrike/falcon-mcp/commit/5e834aaa6132ba68c88e6131fd80d943d699cc95))
+
 ## [0.18.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.17.0...v0.18.0) (2026-08-28)
 
 
