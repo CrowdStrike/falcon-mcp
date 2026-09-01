@@ -289,6 +289,11 @@ API_SCOPE_REQUIREMENTS = {
     "WorkflowExecutionsCombined": ["Workflows:read"],
     "WorkflowExecutionResults": ["Workflows:read"],
     "WorkflowExecute": ["Workflows:write"],
+    # Guardian operations (via /aidr/queries/*/v1, /aidr/entities/*/v1, and
+    # /aidr/aggregates/*/v1). The single operation key below covers all of them.
+    # The key and the scope keep the API-side "AIDR" spelling on purpose: the MCP
+    # tools are named "guardian", but the platform names this API surface AIDR.
+    "aidr_events_query": ["AIDR:read"],
 }
 
 
