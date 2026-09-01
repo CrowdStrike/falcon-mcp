@@ -37,6 +37,7 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | [Exclusions](https://developer.crowdstrike.com/falcon-mcp/modules/exclusions/) | Search, create, update, and delete IOA, machine learning, sensor visibility, and certificate-based exclusions |
 | [Firewall Management](https://developer.crowdstrike.com/falcon-mcp/modules/firewall/) | Search and manage firewall rules and rule groups |
 | [Fusion SOAR](https://developer.crowdstrike.com/falcon-mcp/modules/fusion/) | Search Fusion SOAR workflow definitions and executions, read execution results, and run on-demand workflows |
+| [Guardian](https://developer.crowdstrike.com/falcon-mcp/modules/guardian/) | Monitor AI agent activity, sessions, tool usage, and inventory |
 | [Host Groups](https://developer.crowdstrike.com/falcon-mcp/modules/host-groups/) | Search, create, update, and delete host groups; manage group membership |
 | [Hosts](https://developer.crowdstrike.com/falcon-mcp/modules/hosts/) | Manage and query host/device information |
 | [Identity Protection](https://developer.crowdstrike.com/falcon-mcp/modules/idp/) | Entity investigation and identity protection analysis |
@@ -55,6 +56,11 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | [Zero Trust Assessment](https://developer.crowdstrike.com/falcon-mcp/modules/zero-trust-assessment/) | Retrieve Zero Trust Assessment posture scores and sensor and OS hardening signals for hosts |
 
 See the [Module Overview](https://developer.crowdstrike.com/falcon-mcp/modules/overview/) for required API scopes, available tools, and FQL resources.
+
+> [!NOTE]
+> The Guardian module reads the `/aidr` API, whose route and parameter surface is not
+> yet uniform across Falcon deployments. Some tools return HTTP 400 or 404 where an
+> older surface is live. See the [Guardian module docs](https://developer.crowdstrike.com/falcon-mcp/modules/guardian/) for the details.
 
 ## Quick Start
 

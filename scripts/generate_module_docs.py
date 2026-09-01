@@ -679,6 +679,93 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
         "Run the 'Notify SOC Channel' workflow",
         "Start workflow 2617e3fc with the hash abc123",
     ],
+    # Guardian
+    "falcon_search_guardian_agents": [
+        "List AI agents running Claude Code in the last 7 days",
+        "Find AI agents on hostname WORKSTATION-42",
+    ],
+    "falcon_get_guardian_agent": [
+        "Show the record for that AI agent instance",
+    ],
+    "falcon_search_guardian_mcp_servers": [
+        "Which MCP servers have AI agents connected to across the fleet?",
+    ],
+    "falcon_get_guardian_agent_sessions": [
+        "Show me AI agent sessions for the CLAUDE_CODE product from the past 24 hours",
+        "How many Cursor sessions ran across the fleet this week?",
+    ],
+    "falcon_get_guardian_session_detail": [
+        "Show full details for that AI session",
+    ],
+    "falcon_get_guardian_session_activity": [
+        "Show the full activity graph for that session — tools, models, and processes",
+    ],
+    "falcon_search_guardian_tools": [
+        "List the AI tool inventory across the fleet",
+        "Which tools exist on that host?",
+    ],
+    "falcon_search_guardian_tool_usage": [
+        "Find every Bash tool invocation in the last 7 days",
+        "Show tool usage for that session",
+    ],
+    "falcon_search_guardian_executions": [
+        "Show the per-process executions for that session",
+        "How many input and output tokens did that session use?",
+        "Which models and token counts did that agent's processes use?",
+    ],
+    "falcon_search_guardian_prompts": [
+        "Show me the prompts from that session",
+    ],
+    "falcon_get_guardian_inventory": [
+        "Give me a summary of AI activity across the fleet",
+    ],
+    "falcon_search_guardian_skills": [
+        "List the AI skill frontmatters matching 'review'",
+    ],
+    "falcon_search_guardian_skill_usage": [
+        "Show every invocation of the code-review skill in the last 7 days",
+    ],
+    "falcon_get_guardian_fleet_skill_inventory": [
+        "Which skills are most used across all AI agents?",
+    ],
+    "falcon_search_guardian_os_users": [
+        "Which OS users have run AI agents on that host?",
+    ],
+    "falcon_pivot_on_guardian_attribute": [
+        "Find all agents running the CLAUDE_CODE product",
+        "Show every agent that used the git-commit skill",
+    ],
+    "falcon_get_guardian_process_tree": [
+        "Show the process tree spawned by that AI session",
+    ],
+    "falcon_get_guardian_network_events": [
+        "What outbound connections did that AI session make?",
+    ],
+    "falcon_get_guardian_file_events": [
+        "Show files written by that session's processes",
+        "Did that session touch any credential or secret files?",
+    ],
+    "falcon_get_guardian_classified_file_access": [
+        "What sensitive files did that process access?",
+        "Did that process trigger any data protection policy violations?",
+    ],
+    "falcon_generate_guardian_report": [
+        "Generate a fleet summary report for the last 7 days",
+        "Produce an agent detail report for that instance",
+    ],
+    "falcon_search_guardian_detections": [
+        "What AI-agent detections fired in the last 30 days?",
+        "Show detections involving Kiro agents",
+    ],
+    "falcon_get_guardian_detection_scores": [
+        "What's the agentic threat score for each agent?",
+    ],
+    "falcon_search_guardian_installs": [
+        "What AI agent installations are on that host?",
+    ],
+    "falcon_search_guardian_models": [
+        "List the AI models observed across the fleet",
+    ],
 }
 
 # Lines matching these patterns are stripped from docstrings
