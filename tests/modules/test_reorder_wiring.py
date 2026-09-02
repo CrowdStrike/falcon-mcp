@@ -50,6 +50,7 @@ from falcon_mcp.modules.exclusions import ExclusionsModule
 from falcon_mcp.modules.firewall import FirewallModule
 from falcon_mcp.modules.hosts import HostsModule
 from falcon_mcp.modules.ioc import IOCModule
+from falcon_mcp.modules.ods import ODSModule
 from falcon_mcp.modules.policies import PoliciesModule
 from falcon_mcp.modules.quarantine import QuarantineModule
 from falcon_mcp.modules.recon import ReconModule
@@ -157,6 +158,13 @@ CASES: list[ReorderCase] = [
         method="search_quarantined_files",
         id_field="id",
         site=("falcon_mcp/modules/quarantine.py", "search_quarantined_files"),
+    ),
+    ReorderCase(
+        tool="falcon_search_ods_scans",
+        module_cls=ODSModule,
+        method="search_ods_scans",
+        id_field="id",
+        site=("falcon_mcp/modules/ods.py", "_search_and_hydrate"),
     ),
     ReorderCase(
         tool="falcon_search_sessions",
