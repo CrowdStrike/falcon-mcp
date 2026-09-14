@@ -132,8 +132,11 @@ class TestQuarantineIntegration(BaseIntegrationTest):
         this is a divergence rather than an empty tenant.
         """
         assert self._aggregate_buckets("state"), (
-            "state returned no aggregate buckets, so this tenant has no quarantine "
-            "records to compare against and nothing here is conclusive."
+            "state returned no aggregate buckets. Either `state` stopped being a known "
+            "field — the regression this test exists to catch — or the aggregate broke, "
+            "or the tenant holds no quarantined files. Check "
+            "test_aggregate_distinguishes_known_from_unknown_fields first: if that still "
+            "passes, the oracle works and this is about `state` or the tenant."
         )
         assert self._aggregate_buckets("status") is None, (
             "status is now a known field. If it really works as an alias, restore it "
@@ -161,9 +164,14 @@ class TestQuarantineIntegration(BaseIntegrationTest):
     def test_state_vocabulary_matches_the_aggregate(self):
         """Every state the field actually holds is filterable, and the hint lists them.
 
-        The hint offered only quarantined and released. Set equality against the
-        aggregate's own bucket labels is what keeps the list from drifting in
-        either direction.
+        The hint offered only quarantined and released.
+
+        Only one direction is checkable: every state the aggregate reports must be
+        filterable. The reverse — that each of the six documented values is real —
+        cannot be established here, because this endpoint is silent, so a documented
+        value the tenant simply has no files in looks exactly like a wrong one. The
+        four values beyond quarantined and released rest on the aggregate having
+        reported them when the guide was written, not on this assertion.
         """
         buckets = self._aggregate_buckets("state")
         assert buckets, "No state buckets, so there is nothing to check."
@@ -178,6 +186,14 @@ class TestQuarantineIntegration(BaseIntegrationTest):
             self.assert_filter_matches(
                 self.module.search_quarantined_files,
                 f"state:'{value}'",
+                predicate=lambda record, value=value: (
+                    record.get("state") == value
+                    or any(
+                        path.get("state") == value
+                        for path in (record.get("paths") or [])
+                    )
+                ),
+                predicate_desc=f"record.state or one of its paths == {value!r}",
                 note="Each state the aggregate reports must also be filterable.",
                 limit=2,
             )
@@ -189,14 +205,15 @@ class TestQuarantineIntegration(BaseIntegrationTest):
         repo except the response shape. It is unknown to the aggregate, and a real
         path value that `paths.path` matches returns nothing through `paths`.
         """
-        assert self._aggregate_buckets("paths.path"), "No paths.path buckets to work from."
+        path_buckets = self._aggregate_buckets("paths.path")
+        assert path_buckets, "No paths.path buckets to work from."
         assert self._aggregate_buckets("paths.state"), "No paths.state buckets to work from."
         assert self._aggregate_buckets("paths") is None, (
             "Bare `paths` is now a known field. If it filters, put it back in the "
             "guide and the four quarantine hints."
         )
 
-        real_path = self._aggregate_buckets("paths.path")[0]["label"]
+        real_path = path_buckets[0]["label"]
 
         self.assert_filter_matches(
             self.module.search_quarantined_files,

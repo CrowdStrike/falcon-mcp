@@ -289,15 +289,24 @@ class TestPoliciesIntegration(BaseIntegrationTest):
         matches nothing is the value being wrong. `all` is asserted against
         content_update and only against content_update: it matches nothing on the
         other five, which is the split the hint describes.
+
+        A type with no policy is recorded and the sweep continues rather than
+        skipping: `skip_with_warning` raises, so skipping inside the loop would
+        abandon every type after the first bare one.
+
+        `Linux` is documented but deliberately not asserted. It returns zero rows on
+        device_control, and this endpoint answers an unsupported value the same way
+        it answers a value no policy uses, so the result cannot tell those apart —
+        asserting it would fail on a correct value list. Windows and Mac carry the
+        vocabulary check.
         """
+        unchecked: list[str] = []
         for policy_type in POLICY_TYPES:
             if not self._scopes_available(policy_type):
+                unchecked.append(f"{policy_type} (no scope)")
                 continue
             if self._first_entity(policy_type) is None:
-                self.skip_with_warning(
-                    f"No {policy_type} policy to validate platform_name against",
-                    "platform_name vocabulary",
-                )
+                unchecked.append(f"{policy_type} (no policy)")
                 continue
 
             expected = ["all"] if policy_type == "content_update" else ["Windows", "Mac"]
@@ -324,6 +333,12 @@ class TestPoliciesIntegration(BaseIntegrationTest):
                 f"{policy_type} now matches platform_name:'{unsupported}'. The hint "
                 "documents 'all' for content_update only and the three real platforms "
                 "for the rest; if that split changed, update it."
+            )
+
+        if len(unchecked) == len(POLICY_TYPES):
+            self.skip_with_warning(
+                f"No policy type could be checked: {', '.join(unchecked)}",
+                "platform_name vocabulary",
             )
 
     def test_platform_name_sort_returns_error(self):

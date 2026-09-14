@@ -308,6 +308,12 @@ class TestIOCIntegration(BaseIntegrationTest):
         holding IOCs at every severity, and the label cross-check below is what
         turns that absence into a mapping rather than a shrug: filtering on both
         the label and its number returns rows, so the pair is confirmed together.
+
+        `0` is documented but not asserted. It has no severity label to pair with,
+        and this endpoint is silent, so zero rows at 0 cannot separate "no IOC is
+        unscored" from "0 is not a member". The 1..5 sweep below does establish that
+        `severity_number` is honored at all — a dropped clause would return every
+        record rather than none.
         """
         expected = {
             "informational": 10,

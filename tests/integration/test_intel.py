@@ -1,5 +1,8 @@
 """Integration tests for the Intel module."""
 
+import time
+from datetime import datetime, timezone
+
 import pytest
 
 from falcon_mcp.modules.intel import IntelModule
@@ -326,6 +329,11 @@ class TestIntelIntegration(BaseIntegrationTest):
         The field table gave an epoch integer while the notes said the format must
         be ISO — each was right about a form the other omitted. A *quoted* epoch is
         the one shape that fails, which is why the note now says unquoted.
+
+        Each predicate checks the row against the cutoff the filter asked for, and
+        the relative form additionally has to narrow the population. Asserting only
+        that `created_date` is an integer would be satisfied by every report alive,
+        so a clause the API parsed as garbage and dropped would still pass.
         """
         reports = self.skip_unless_tenant_has(
             self.call_method(self.module.query_report_entities, limit=3),
@@ -338,19 +346,37 @@ class TestIntelIntegration(BaseIntegrationTest):
             "The field table's type needs updating."
         )
 
-        for filter in (
-            f"created_date:>{epoch - 1}",
-            "created_date:>'2020-01-01T00:00:00Z'",
-            "created_date:>'now-30d'",
+        iso_cutoff = int(
+            datetime(2020, 1, 1, tzinfo=timezone.utc).timestamp()
+        )
+        for filter, cutoff in (
+            (f"created_date:>{epoch - 1}", epoch - 1),
+            ("created_date:>'2020-01-01T00:00:00Z'", iso_cutoff),
         ):
             self.assert_filter_matches(
                 self.module.query_report_entities,
                 filter,
-                predicate=lambda report: isinstance(report.get("created_date"), int),
-                predicate_desc="report carries an epoch created_date",
+                predicate=lambda report, cutoff=cutoff: (
+                    isinstance(report.get("created_date"), int)
+                    and report["created_date"] > cutoff
+                ),
+                predicate_desc=f"report.created_date > {cutoff}",
                 note="All three date forms are documented for created_date.",
                 limit=3,
             )
+
+        relative_cutoff = int(time.time()) - 30 * 86400
+        self.assert_filter_narrows(
+            self.module.query_report_entities,
+            "created_date:>'now-30d'",
+            predicate=lambda report: (
+                isinstance(report.get("created_date"), int)
+                and report["created_date"] > relative_cutoff
+            ),
+            predicate_desc=f"report.created_date > {relative_cutoff} (now-30d)",
+            note="The relative form is the one most likely to be silently dropped.",
+            limit=3,
+        )
 
         quoted = self.call_method(
             self.module.query_report_entities,

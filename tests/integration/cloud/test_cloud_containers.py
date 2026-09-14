@@ -153,21 +153,41 @@ class TestCloudContainersIntegration(BaseIntegrationTest):
         learned lower case from the IOM guide gets findings here and nothing there.
         Compared as counts rather than exact equality — the two calls run seconds
         apart against a live inventory.
+
+        The unfiltered total is the anchor. Without it, `severity` ceasing to be a
+        filter field here would drop both clauses, leave both totals at the full
+        population, and satisfy the ratio — certifying case-insensitivity on a field
+        that no longer filters at all.
         """
+        unfiltered = self.call_method(
+            self.module.search_images_vulnerabilities, limit=1
+        )
         title = self.call_method(
             self.module.search_images_vulnerabilities, filter="severity:'Critical'", limit=1
         )
         lower = self.call_method(
             self.module.search_images_vulnerabilities, filter="severity:'critical'", limit=1
         )
+        self.assert_envelope_ok(unfiltered, context="images-vulns unfiltered")
         self.assert_envelope_ok(title, context="images-vulns Title case")
         self.assert_envelope_ok(lower, context="images-vulns lower case")
 
+        unfiltered_total = unfiltered["pagination"]["total"]
         title_total = title["pagination"]["total"]
         lower_total = lower["pagination"]["total"]
         assert title_total, "severity:'Critical' matched nothing, so this proves nothing."
+        assert unfiltered_total, (
+            "The unfiltered query reported no vulnerabilities, so there is no "
+            "population to compare the severity clauses against."
+        )
+        assert title_total < unfiltered_total, (
+            f"severity:'Critical' matched all {unfiltered_total} vulnerabilities, so the "
+            "clause excluded nothing — severity is no longer filtering here and the "
+            "casing comparison below would be vacuous."
+        )
         assert lower_total > title_total * 0.9, (
             "severity:'critical' now returns a materially different count from "
-            "severity:'Critical'. If this endpoint became case-sensitive, say so in "
-            f"the guide and the hint. Title={title_total}, lower={lower_total}"
+            "severity:'Critical'. Either this endpoint became case-sensitive — say so "
+            "in the guide and the hint — or the live inventory shifted between the two "
+            f"calls. Title={title_total}, lower={lower_total}"
         )
