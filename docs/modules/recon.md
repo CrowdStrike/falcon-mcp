@@ -43,7 +43,7 @@ Responses include `pagination.total` (the total number of records matching the f
 Search Falcon Intelligence Recon monitoring rules and return their full details.
 
 Use this to list the rules that generate your recon notifications — find rules by
-topic (domain, email, typosquatting, brand), priority, status, or whether breach
+topic, priority, status, or whether breach
 monitoring is enabled. Consult `falcon://recon/rules/search/fql-guide` before
 constructing filter expressions. These monitoring rules power the external cyber risk
 monitoring capability of CrowdStrike Counter Adversary Operations (CAO). Returns full

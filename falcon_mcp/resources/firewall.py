@@ -52,7 +52,7 @@ SEARCH_FIREWALL_RULES_FQL_SORT_FIELDS = [
         "Description",
     ),
     ("name", "Sort by name"),
-    ("platform", "Sort by platform"),
+    ("platform", "Sort by platform. Rule groups only"),
     ("created_on", "Sort by creation time"),
     ("modified_on", "Sort by last modified time"),
     ("enabled", "Sort by enabled flag"),

@@ -584,6 +584,26 @@ class TestReconIntegration(BaseIntegrationTest):
         assert buckets, f"No {field} buckets, so there is nothing to enumerate: {records[0]}"
         return [bucket["label"] for bucket in buckets]
 
+    @staticmethod
+    def _notification_value(record: dict, field: str):
+        """Read a filterable notification field off a record.
+
+        The filterable names are flat (`rule_topic`) but the record nests them under
+        a `notification` key, so the FQL field name and the response path differ.
+        Raises rather than returning None when the field is absent anywhere: these
+        searches run against a silent endpoint, so a predicate that quietly passed
+        on a missing key would make the whole vocabulary loop vacuous.
+        """
+        for container in (record, record.get("notification") or {}):
+            if field in container:
+                return container[field]
+        raise AssertionError(
+            f"No {field!r} on the record or its `notification` "
+            f"(top-level keys: {sorted(record)}, notification keys: "
+            f"{sorted(record.get('notification') or {})}). The predicate cannot check "
+            "the filter selected correctly — fix the accessor."
+        )
+
     def test_notification_rule_priority_includes_critical(self):
         """`rule_priority` has four levels, not three.
 
@@ -600,6 +620,10 @@ class TestReconIntegration(BaseIntegrationTest):
             self.assert_filter_matches(
                 self.module.search_recon_notifications,
                 f"rule_priority:'{value}'",
+                predicate=lambda record, value=value: (
+                    self._notification_value(record, "rule_priority") == value
+                ),
+                predicate_desc=f"notification.rule_priority == {value!r}",
                 note="Each documented priority must match its own notifications.",
                 limit=2,
             )
@@ -630,6 +654,10 @@ class TestReconIntegration(BaseIntegrationTest):
             self.assert_filter_matches(
                 self.module.search_recon_notifications,
                 f"rule_topic:'{value}'",
+                predicate=lambda record, value=value: (
+                    self._notification_value(record, "rule_topic") == value
+                ),
+                predicate_desc=f"notification.rule_topic == {value!r}",
                 note="Each topic the aggregate reports must also be filterable.",
                 limit=2,
             )
@@ -659,6 +687,10 @@ class TestReconIntegration(BaseIntegrationTest):
             self.assert_filter_matches(
                 self.module.search_recon_notifications,
                 f"status:'{value}'",
+                predicate=lambda record, value=value: (
+                    self._notification_value(record, "status") == value
+                ),
+                predicate_desc=f"notification.status == {value!r}",
                 note="Each status the aggregate reports must also be filterable.",
                 limit=2,
             )

@@ -113,6 +113,12 @@ class TestFirewallIntegration(BaseIntegrationTest):
         own `id`: passing a rule group ID gets "policy container not found", which
         the test then read as "no policy matches" and skipped on — so it never
         exercised the endpoint.
+
+        Every attached policy is tried until one returns rules, because a policy
+        container can legitimately hold none. Asserting rows off the first policy
+        found fails on a healthy tenant. Note the meta is not a usable signal here:
+        an empty page still reports a large `pagination.total` (the tenant-wide rule
+        count, not this policy's), so only the returned rows say anything.
         """
         groups = self.skip_unless_tenant_has(
             self.call_method(self.module.search_firewall_rule_groups, limit=20),
@@ -120,25 +126,34 @@ class TestFirewallIntegration(BaseIntegrationTest):
             context="test_search_firewall_policy_rules",
         )
 
-        policy_id = next(
-            (pid for group in groups for pid in group.get("policy_ids") or []), None
-        )
-        if not policy_id:
+        policy_ids = [pid for group in groups for pid in group.get("policy_ids") or []]
+        if not policy_ids:
             self.skip_with_warning(
                 "No rule group is attached to a policy container",
                 context="test_search_firewall_policy_rules",
             )
             return
 
-        result = self.call_method(
-            self.module.search_firewall_policy_rules,
-            policy_id=policy_id,
-            limit=3,
-        )
+        for policy_id in dict.fromkeys(policy_ids):
+            result = self.call_method(
+                self.module.search_firewall_policy_rules,
+                policy_id=policy_id,
+                limit=3,
+            )
+            self.assert_no_error(result, context=f"policy rules for {policy_id}")
+            rules = self.records(result, context=f"policy rules for {policy_id}")
+            if rules:
+                self.assert_search_returns_details(
+                    rules,
+                    expected_fields=["id", "name"],
+                    context="search_firewall_policy_rules",
+                )
+                return
 
-        self.assert_no_error(result, context="search_firewall_policy_rules")
-        self.assert_valid_list_response(
-            result, min_length=0, context="search_firewall_policy_rules"
+        self.skip_with_warning(
+            f"None of the {len(set(policy_ids))} attached policy containers holds a "
+            "rule, so the hydration path is unexercised",
+            context="test_search_firewall_policy_rules",
         )
 
 
@@ -192,6 +207,35 @@ class TestFirewallIntegration(BaseIntegrationTest):
             predicate_desc="rule.enabled is True",
             note="enabled is the control proving filters work on query_rules.",
             limit=3,
+        )
+
+    def test_platform_sort_per_tool(self):
+        """Where `platform` is accepted as a sort field, tool by tool.
+
+        Sort validity is a separate surface from filter validity — a sort field the
+        endpoint does not know may 400 or may be silently ignored, and neither can
+        be inferred from `platform` being absent as a *filter* field. The guide
+        renders one shared sort table for all three tools, so this records what each
+        one actually does with it.
+        """
+        outcomes: dict[str, str] = {}
+        probes = {
+            "rule_groups": (self.module.search_firewall_rule_groups, {}),
+            "rules": (self.module.search_firewall_rules, {}),
+        }
+        for label, (method, kwargs) in probes.items():
+            result = self.call_method(method, sort="platform|asc", limit=2, **kwargs)
+            outcomes[label] = "error" if self.error_dicts(result) else "accepted"
+
+        assert outcomes["rule_groups"] == "accepted", (
+            "platform|asc was rejected on search_firewall_rule_groups, the one tool "
+            "where platform is a real property. If sort no longer takes it, drop the "
+            f"row from the guide's sort table. Got: {outcomes}"
+        )
+        assert outcomes["rules"] == "error", (
+            "platform|asc was accepted on search_firewall_rules, where platform is not "
+            "a property. If the endpoint tolerates it, the guide's shared sort table is "
+            f"fine as-is and this assertion should be relaxed. Got: {outcomes}"
         )
 
     def test_policy_rules_filter_requires_the_policy_id_clause(self):
