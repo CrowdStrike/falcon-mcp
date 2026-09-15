@@ -15,7 +15,7 @@
 **falcon-mcp** is a Model Context Protocol (MCP) server that connects AI agents with the CrowdStrike Falcon platform, powering intelligent security analysis in your agentic workflows. It delivers programmatic access to essential security capabilities—including detections, threat intelligence, and host management—establishing the foundation for advanced security operations and automation.
 
 > [!IMPORTANT]
-> **🚧 Public Preview**: This project is currently in public preview and under active development. Features and functionality may change before the stable 1.0 release. While we encourage exploration and testing, please avoid production deployments. We welcome your feedback through [GitHub Issues](https://github.com/crowdstrike/falcon-mcp/issues) to help shape the final release.
+> **Pre-1.0 release**: falcon-mcp is under active development ahead of 1.0. Tool names, parameters, and response shapes can still change between minor releases, so pin a version and check the [changelog](CHANGELOG.md) before upgrading. The project is actively maintained by CrowdStrike and supported through [GitHub Issues](https://github.com/crowdstrike/falcon-mcp/issues); CrowdStrike customers can also raise questions through their usual Technical Support channels. See [SUPPORT.md](SUPPORT.md) for details.
 
 ## Documentation
 
