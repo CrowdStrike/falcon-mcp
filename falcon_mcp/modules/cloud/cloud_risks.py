@@ -66,8 +66,7 @@ class _CloudRisksMixin(_CloudBase):
         """Search for cloud risks in your CrowdStrike environment.
 
         Use this to find risks by severity, status, cloud provider, account, asset, rule,
-        or threat actor. Cloud risks aggregate IOM and IOA findings into per-asset risk
-        records and include threat intelligence attribution. For individual compliance rule
+        or threat actor. Cloud risks aggregate identity, network exposure, configuration issues, vulnerabilities and data findings as toxic combinations and include threat actor attribution. For individual compliance rule
         violations on specific resources, use falcon_search_iom_findings instead.
 
         For the underlying per-asset security facts that risks are computed from, use
