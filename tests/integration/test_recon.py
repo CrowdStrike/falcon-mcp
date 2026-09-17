@@ -666,8 +666,9 @@ class TestReconIntegration(BaseIntegrationTest):
         """The status vocabulary is six values; the hint documented four.
 
         `pending-review` and `closed-no-action-true-positive` both match records.
-        `closed-false-positive` stays documented but is not asserted: it is absent
-        from this tenant, which says nothing about whether it is a member.
+        `closed-false-positive` is absent from this tenant, so it is proved by the
+        API's own validator in
+        test_notification_status_vocabulary_is_validated_by_the_api instead.
         """
         documented = {
             "new", "in-progress", "pending-review", "closed-true-positive",
@@ -699,8 +700,12 @@ class TestReconIntegration(BaseIntegrationTest):
         """Rule topic, priority and status, enumerated from the rules themselves.
 
         There is no aggregate for rules, so the distinct values come from a page of
-        records and each is then filtered on. `inactive` stays documented but
-        unasserted — no rule in this tenant is paused.
+        records and each is then filtered on. `inactive` stays unproven: no rule in
+        this tenant is paused, and the validator trick used for notification status
+        does not transfer — `UpdateRulesV1` resolves the rule id before it looks at
+        `status`, so a nonexistent id returns RESOURCE_NOT_FOUND and never reports
+        whether the status was valid. Settling it needs a tenant holding a paused
+        rule, or authorization to pause a real one.
         """
         rules = self.skip_unless_tenant_has(
             self.call_method(self.module.search_recon_rules, limit=200),
@@ -744,4 +749,56 @@ class TestReconIntegration(BaseIntegrationTest):
         observed_status = {rule["status"] for rule in rules if rule.get("status")}
         assert "noisy" in observed_status, (
             "No rule has status 'noisy', the value this test exists to pin."
+        )
+
+    def test_notification_status_vocabulary_is_validated_by_the_api(self):
+        """Every documented notification status, decided by the API's own validator.
+
+        The search endpoint is silent, so a status absent from this tenant cannot be
+        told apart from a status that does not exist — which left
+        `closed-false-positive` unproven. `UpdateNotificationsV1` validates the enum
+        independently of the record and reports it per field, so it answers
+        membership with no tenant data at all.
+
+        Nothing is mutated: the id is deliberately nonexistent, and the empty
+        `assigned_to_uuid` draws its own rejection, so every request here fails as a
+        whole regardless of the status. That assignee error is the interlock — the
+        control below asserts it is present, because if the API ever started
+        accepting this body the probe would be issuing real writes.
+        """
+        bogus_id = "00000000000000000000000000000000_00000000000000000000000000000000"
+        documented = [
+            "new",
+            "in-progress",
+            "pending-review",
+            "closed-true-positive",
+            "closed-false-positive",
+            "closed-no-action-true-positive",
+        ]
+
+        def _status_rejected(status: str) -> bool:
+            """True if the API names `status` as the invalid field."""
+            response = self.module.client.command(
+                "UpdateNotificationsV1",
+                body=[{"id": bogus_id, "status": status, "assigned_to_uuid": ""}],
+            )
+            errors = (response.get("body") or {}).get("errors") or []
+            details = [d for error in errors for d in error.get("details") or []]
+            assert any(d.get("field") == "assigned_to_uuid" for d in details), (
+                "The empty assignee is no longer rejected, so this body may now "
+                f"apply a real update. Stop probing this way. Response: {response}"
+            )
+            return any(
+                d.get("message_key") == "INVALID_NOTIFICATION_STATUS" for d in details
+            )
+
+        assert _status_rejected("zzz-not-a-status"), (
+            "UpdateNotificationsV1 no longer reports an invalid status, so it cannot "
+            "decide membership and this test proves nothing."
+        )
+
+        rejected = [status for status in documented if _status_rejected(status)]
+        assert not rejected, (
+            f"The guide and hint document statuses the API rejects: {rejected}. "
+            "Remove them from resources/recon.py and filter_hints.py."
         )

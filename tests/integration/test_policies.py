@@ -294,11 +294,12 @@ class TestPoliciesIntegration(BaseIntegrationTest):
         skipping: `skip_with_warning` raises, so skipping inside the loop would
         abandon every type after the first bare one.
 
-        `Linux` is documented but deliberately not asserted. It returns zero rows on
+        `Linux` is proved separately in
+        test_linux_platform_name_across_every_policy_type rather than here. It is not
+        asserted per-type because it matches on four of the six and not on
         device_control, and this endpoint answers an unsupported value the same way
-        it answers a value no policy uses, so the result cannot tell those apart —
-        asserting it would fail on a correct value list. Windows and Mac carry the
-        vocabulary check.
+        it answers a value no policy uses — so requiring it everywhere would fail on
+        a correct value list. Windows and Mac carry the per-type check.
         """
         unchecked: list[str] = []
         for policy_type in POLICY_TYPES:
@@ -648,4 +649,50 @@ class TestPoliciesIntegration(BaseIntegrationTest):
             warnings.warn(
                 f"Failed to clean up {policy_type} policy {policy_id}: {exc}",
                 stacklevel=2,
+            )
+
+    def test_linux_platform_name_across_every_policy_type(self):
+        """Whether any policy type in this tenant holds a Linux policy.
+
+        `Linux` is documented for five of the six types but is asserted nowhere,
+        because this endpoint answers an unsupported value exactly as it answers a
+        value no policy happens to use. Membership only needs one type to carry it,
+        so this sweeps all six rather than requiring it everywhere. If no type has a
+        Linux policy the value stays unproven and that is a property of the tenant,
+        not of the vocabulary — it needs a tenant with the Linux sensor deployed.
+        """
+        matched: list[str] = []
+        unchecked: list[str] = []
+        for policy_type in POLICY_TYPES:
+            if not self._scopes_available(policy_type):
+                unchecked.append(f"{policy_type} (no scope)")
+                continue
+            result = self._unwrap_results(
+                self.call_method(
+                    self.module.search_policies,
+                    policy_type=policy_type,
+                    filter="platform_name:'Linux'",
+                    limit=3,
+                )
+            )
+            if isinstance(result, list) and result and isinstance(result[0], dict):
+                if "error" in result[0]:
+                    unchecked.append(f"{policy_type} (error)")
+                    continue
+                for policy in result:
+                    assert policy.get("platform_name") == "Linux", (
+                        f"platform_name:'Linux' returned a {policy.get('platform_name')!r} "
+                        f"policy on {policy_type}, so the filter is not being applied: {policy}"
+                    )
+                matched.append(policy_type)
+
+        print(f"\nplatform_name:'Linux' matched: {matched}")
+        print(f"unchecked: {unchecked or 'none'}")
+
+        if not matched:
+            self.skip_with_warning(
+                "No policy type in this tenant holds a Linux policy "
+                f"(unchecked: {', '.join(unchecked) or 'none'}), so Linux stays "
+                "unproven. Settling it needs a tenant with Linux policies.",
+                context="Linux platform_name vocabulary",
             )

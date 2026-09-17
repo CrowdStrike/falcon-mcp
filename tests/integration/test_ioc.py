@@ -309,11 +309,11 @@ class TestIOCIntegration(BaseIntegrationTest):
         turns that absence into a mapping rather than a shrug: filtering on both
         the label and its number returns rows, so the pair is confirmed together.
 
-        `0` is documented but not asserted. It has no severity label to pair with,
-        and this endpoint is silent, so zero rows at 0 cannot separate "no IOC is
-        unscored" from "0 is not a member". The 1..5 sweep below does establish that
-        `severity_number` is honored at all — a dropped clause would return every
-        record rather than none.
+        `0` is a real member, proved separately in
+        test_severity_number_zero_is_reachable rather than here: it has no severity
+        label to pair with, so it needs an IOC created without a severity at all.
+        The 1..5 sweep below establishes that `severity_number` is honored — a
+        dropped clause would return every record rather than none.
         """
         expected = {
             "informational": 10,
@@ -345,3 +345,101 @@ class TestIOCIntegration(BaseIntegrationTest):
                 f"severity_number:{number} now matches records, so the scale is no "
                 "longer 0/10/30/50/70/90. Update the guide and the filter hint."
             )
+
+    def test_severity_number_zero_is_reachable(self):
+        """Whether `severity_number:0` describes anything an IOC can actually be.
+
+        0 sits outside the 10/30/50/70/90 label scale, so it can only mean "no
+        severity". Nothing read-only settles that: this endpoint is silent, so zero
+        rows at 0 cannot separate "no IOC is unscored" from "0 is not a member".
+        `severity` is optional on the create call, so the decisive form is to create
+        an IOC that omits it and read back what the API assigns.
+
+        Swept across every action, because the API's rejection is conditional: it
+        says severity "cannot be empty for this 'action' and 'mobile_action'
+        combination", so one action refusing a severity-less IOC says nothing about
+        the others. `allow` and `no_action` have no detection to rank.
+        """
+        outcomes: dict[str, str] = {}
+        assigned: dict[str, object] = {}
+        created_ids: list[str] = []
+
+        try:
+            for index, action in enumerate(
+                ("detect", "prevent", "no_action", "prevent_no_ui", "allow")
+            ):
+                created = self.call_method(
+                    self.module.add_ioc,
+                    type="domain",
+                    value=f"falcon-mcp-severityless-{index}.invalid",
+                    action=action,
+                    source="falcon-mcp-integration-test",
+                    description="Severity-less IOC probe - safe to delete",
+                    platforms=["linux"],
+                    applied_globally=True,
+                    ignore_warnings=True,
+                )
+                rejected = self.error_dicts(created)
+                if rejected:
+                    outcomes[action] = "rejected"
+                    continue
+
+                outcomes[action] = "accepted"
+                records = self.records(created, context=f"severity-less {action}")
+                if records:
+                    assigned[action] = records[0].get("severity_number")
+                    probe_id = records[0].get("id")
+                    if probe_id:
+                        created_ids.append(probe_id)
+
+            print(f"\nseverity-less create by action: {outcomes}")
+            print(f"severity_number on create response: {assigned}")
+
+            if not assigned:
+                self.skip_with_warning(
+                    "No action accepts an IOC without a severity "
+                    f"({outcomes}), so severity_number 0 is unreachable through "
+                    "creation and stays unproven.",
+                    context="severity_number 0",
+                )
+
+            # The create response omits severity fields, so read the stored record
+            # back through search — that is the shape a filter actually sees.
+            stored = self.call_method(
+                self.module.search_iocs,
+                filter=f"id:'{created_ids[0]}'",
+                limit=1,
+            )
+            records = self.records(stored, context="stored severity-less IOC")
+            assert records, (
+                f"The severity-less IOC {created_ids[0]} is not findable by id, so "
+                f"nothing can be read back off it: {stored}"
+            )
+            print(f"stored severity={records[0].get('severity')!r} "
+                  f"severity_number={records[0].get('severity_number')!r}")
+
+            stored_number = records[0].get("severity_number")
+            probe = self.call_method(
+                self.module.search_iocs,
+                filter=f"id:'{created_ids[0]}'+severity_number:0",
+                limit=1,
+            )
+            self.assert_envelope_ok(probe, context="severity_number:0 on an unscored IOC")
+            matched = bool(self.records(probe, "severity_number:0 on an unscored IOC"))
+            print(f"severity_number:0 matches the unscored IOC: {matched}")
+
+            assert matched, (
+                "An IOC created without a severity stores severity="
+                f"{records[0].get('severity')!r} with severity_number "
+                f"{stored_number!r}, and `severity_number:0` does not match it. "
+                "Nothing an IOC can be is severity_number 0, so it belongs out of "
+                f"the guide and hint. Record: {records[0]}"
+            )
+        finally:
+            if created_ids:
+                self.call_method(
+                    self.module.remove_iocs,
+                    ids=created_ids,
+                    comment="Severity-less probe cleanup",
+                )
+
