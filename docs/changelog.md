@@ -3,6 +3,13 @@
 
 # Changelog
 
+## [0.19.1](https://github.com/CrowdStrike/falcon-mcp/compare/v0.19.0...v0.19.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* **dynamic:** live-validate the residual FQL filter-hint findings ([#574](https://github.com/CrowdStrike/falcon-mcp/issues/574)) ([9bc0efe](https://github.com/CrowdStrike/falcon-mcp/commit/9bc0efeb92e38ca0667e5a18847a7cbf09dcd206))
+
 ## [0.19.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.18.0...v0.19.0) (2026-09-01)
 
 
