@@ -18,7 +18,10 @@ SEARCH_FIREWALL_RULES_FQL_FILTERS = [
     (
         "platform",
         "String",
-        "Filter by platform. Example: platform:'windows'",
+        "Filter by platform: windows, mac, linux. Rule groups only — on "
+        "`falcon_search_firewall_rules` and `falcon_search_firewall_policy_rules` "
+        "this is an unknown property and the request fails. "
+        "Example: platform:'windows'",
     ),
     (
         "name",
@@ -49,7 +52,7 @@ SEARCH_FIREWALL_RULES_FQL_SORT_FIELDS = [
         "Description",
     ),
     ("name", "Sort by name"),
-    ("platform", "Sort by platform"),
+    ("platform", "Sort by platform. Rule groups only"),
     ("created_on", "Sort by creation time"),
     ("modified_on", "Sort by last modified time"),
     ("enabled", "Sort by enabled flag"),
@@ -62,6 +65,7 @@ Use this guide to build the `filter` parameter for:
 
 - `falcon_search_firewall_rules`
 - `falcon_search_firewall_rule_groups`
+- `falcon_search_firewall_policy_rules`
 
 ## Filter Fields
 
@@ -77,7 +81,7 @@ Use either `field.asc` / `field.desc` or `field|asc` / `field|desc`.
 
 - Enabled rules:
   - `filter="enabled:true"`
-- Windows rule groups:
+- Windows rule groups (`platform` works on rule groups only):
   - `filter="platform:'windows'"`
 - Rules whose name contains a word:
   - `filter="name:~'Block'"`
@@ -91,7 +95,9 @@ Use either `field.asc` / `field.desc` or `field|asc` / `field|desc`.
   literal character, so the query silently returns nothing. For an arbitrary
   substring (not a whole word), use the wildcard form `name:*'*value*'`. A plain
   `name:'value'` exact match also works when you know the full name.
-- For policy-specific searches, use `falcon_search_firewall_policy_rules` with `policy_id`.
+- `falcon_search_firewall_policy_rules` requires `rule_group.policy_ids` in the
+  filter itself; any other filter without it fails. Pass the same value as
+  `policy_id`.
 - Start broad, then refine your filter if results are empty.
 """
 

@@ -46,8 +46,10 @@ SEARCH_RECON_NOTIFICATIONS_FQL_FILTERS = [
         Notification review status. Confirmed values:
         - new: Newly triggered, not yet reviewed
         - in-progress: Under investigation
+        - pending-review: Awaiting review
         - closed-false-positive: Reviewed, not a real threat
         - closed-true-positive: Reviewed, confirmed threat
+        - closed-no-action-true-positive: Confirmed threat, closed without action
         Ex: new
         """,
     ),
@@ -77,6 +79,13 @@ SEARCH_RECON_NOTIFICATIONS_FQL_FILTERS = [
         - SA_EMAIL: Email address monitoring
         - SA_IP: IP address monitoring
         - SA_BRAND_PRODUCT: Brand and product mentions
+        - SA_THIRD_PARTY: Third-party exposure
+        - SA_CUSTOM: Custom rule
+        - SA_ALIAS: Alias monitoring
+        - SA_VIP: VIP monitoring
+        - SA_AUTHOR: Author monitoring
+        - SA_BIN: BIN monitoring
+        - SA_CVE: CVE monitoring
         Ex: SA_DOMAIN
         """,
     ),
@@ -85,7 +94,7 @@ SEARCH_RECON_NOTIFICATIONS_FQL_FILTERS = [
         "String",
         """
         Priority of the monitoring rule. Confirmed values:
-        - low, medium, high
+        - low, medium, high, critical
         Ex: medium
         """,
     ),
@@ -401,6 +410,13 @@ SEARCH_RECON_RULES_FQL_FILTERS = [
         - SA_EMAIL: Email address monitoring
         - SA_IP: IP address monitoring
         - SA_BRAND_PRODUCT: Brand and product mentions
+        - SA_THIRD_PARTY: Third-party exposure
+        - SA_CUSTOM: Custom rule
+        - SA_ALIAS: Alias monitoring
+        - SA_VIP: VIP monitoring
+        - SA_AUTHOR: Author monitoring
+        - SA_BIN: BIN monitoring
+        - SA_CVE: CVE monitoring
         Ex: SA_DOMAIN
         """,
     ),
@@ -409,7 +425,7 @@ SEARCH_RECON_RULES_FQL_FILTERS = [
         "String",
         """
         Rule priority level. Confirmed values:
-        - low, medium, high
+        - low, medium, high, critical
         Ex: medium
         """,
     ),
@@ -429,6 +445,7 @@ SEARCH_RECON_RULES_FQL_FILTERS = [
         """
         Rule operational status. Confirmed values:
         - active: Rule is actively monitoring
+        - noisy: Rule is matching too broadly
         - inactive: Rule is paused (valid syntax; unconfirmed in live test)
         Ex: active
         """,

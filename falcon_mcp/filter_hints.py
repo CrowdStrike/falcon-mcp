@@ -23,7 +23,8 @@ FILTER_HINTS: dict[str, str] = {
     ),
     "falcon_search_agentworks_spans": (
         "ALWAYS filter, usually by trace_id (pass an invocation's ai_trace_id). "
-        "Common fields: trace_id, span_type (llm|aw_agent|aiplatform_agent|...), "
+        "Common fields: trace_id, span_type (llm|aw_agent|aiplatform_agent|"
+        "aw_agent_response|aiplatform_agent_response|charlotteai_reply|charlotteai_agent), "
         "status (unset|ok|error), name, duration_ms, "
         "start_time (last 90 days only, e.g. start_time:>'now-7d'). "
         "Sort by start_time. "
@@ -32,7 +33,8 @@ FILTER_HINTS: dict[str, str] = {
     # === Detections ===
     "falcon_search_detections": (
         "Common fields: severity_name (Critical|High|Medium|Low|Informational), "
-        "status (new|in_progress|closed|reopened), product (epp|idp|xdr|overwatch), "
+        "status (new|in_progress|closed|reopened), "
+        "product (epp|idp|mobile|xdr|overwatch|cwpp|ngsiem|thirdparty|data-protection), "
         "device.hostname, tactic, technique_id, "
         "assigned_to_name, filename, cmdline. "
         "Date filters: timestamp:>'now-24h' (relative) or timestamp:>'2026-01-01T00:00:00Z' (absolute). "
@@ -41,7 +43,8 @@ FILTER_HINTS: dict[str, str] = {
     ),
     "falcon_aggregate_detections": (
         "Common fields: severity_name (Critical|High|Medium|Low|Informational), "
-        "status (new|in_progress|closed|reopened), product (epp|idp|xdr|overwatch), "
+        "status (new|in_progress|closed|reopened), "
+        "product (epp|idp|mobile|xdr|overwatch|cwpp|ngsiem|thirdparty|data-protection), "
         "device.hostname, tactic, technique_id, assigned_to_name, filename. "
         "The filter narrows which alerts are counted; the aggregated field is set "
         "separately by the field param. "
@@ -53,7 +56,7 @@ FILTER_HINTS: dict[str, str] = {
         "Common fields: hostname, platform_name (Windows|Linux|Mac), "
         "status (normal|contained|containment_pending|lift_containment_pending), "
         "local_ip, external_ip, os_version, last_seen, "
-        "product_type_desc (Workstation|Server|Domain Controller). "
+        "product_type_desc (Workstation|Server|Domain Controller|Mobile). "
         "Date filters: last_seen:>'now-7d' (relative). "
         "Use status:'contained' to find hosts in network containment. "
         "Ex: platform_name:'Windows'+status:'contained'"
@@ -109,8 +112,9 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Cloud: Image Vulnerabilities ===
     "falcon_search_images_vulnerabilities": (
-        "Common fields: cve_id, severity (Critical|High|Medium|Low|Unknown), "
-        "cvss_score, registry, repository, tag, container_running_status (running|stopped)."
+        "Common fields: cve_id, severity (Unknown|Low|Medium|High|Critical; matched "
+        "case-insensitively here, unlike the IOM and cloud-risk severities), "
+        "cvss_score, registry, repository, tag, container_running_status (true|false)."
     ),
     # === Cloud: CSPM Assets ===
     "falcon_search_cspm_assets": (
@@ -119,15 +123,16 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Cloud: IOM Findings ===
     "falcon_search_iom_findings": (
-        "Common fields: severity (Critical|High|Medium|Low|Informational), "
-        "status (open|suppressed|pass), cloud_provider (aws|azure|gcp — lowercase "
+        "Common fields: severity (critical|high|medium|low|informational), "
+        "status (compliant|non-compliant), cloud_provider (aws|azure|gcp — lowercase "
         "required; uppercase returns an empty result, not an error), "
         "service, region, resource_type, account_name, rule_name."
     ),
     # === Cloud: Cloud Insights ===
     "falcon_search_cloud_insights": (
         "Filter on insights.id (insight ID), insights.boolean_value (true|false), "
-        "insights.string_value (string; substring match needs :*'*val*' — 'val*' and ~ return nothing), "
+        "insights.string_value (string; substring match needs :*'*val*' — a trailing-only "
+        "'val*' returns nothing and ~ is rejected outright), "
         "insights.integer_value (integer, supports range ops e.g. :>0), "
         "insights.date_value (ISO-8601 timestamp, e.g. :<'2025-01-01T00:00:00Z'), "
         "insights.string_list_value (list member match). "
@@ -139,12 +144,15 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Cloud: Cloud Risks ===
     "falcon_search_cloud_groups": (
-        "Common fields: name, created_at (UTC datetime), updated_at (UTC datetime). "
+        "Common fields: name, description, created_at (UTC datetime), "
+        "updated_at (UTC datetime). "
+        "Selector fields: cloud_provider, account_id, region. "
         "Group tag fields: environment, business_unit, business_impact."
     ),
     "falcon_search_cloud_risks": (
         "Common fields: severity (Critical|High|Medium|Low|Informational), "
-        "status (Open|Resolved|Suppressed), cloud_provider (aws|azure|gcp), "
+        "status (Open|Resolved|Suppressed) — both are Title case here and lowercase "
+        "returns an empty result, not an error; cloud_provider (aws|azure|gcp), "
         "asset_name, asset_type, asset_region, account_id, account_name, "
         "rule_name, service_category, groups.environment, groups.business_unit. "
         "Date filters: use absolute ISO-8601 only, e.g. first_seen:>'2024-01-01T00:00:00Z'. "
@@ -186,14 +194,16 @@ FILTER_HINTS: dict[str, str] = {
         "os_security.credential_guard_status / os_security.secure_boot_enabled_status / "
         "os_security.iommu_protection_status (booleans, use true|false - NOT 'Enabled'), "
         "used_disk_space/total_memory/average_processor_usage (numbers, use :>0), "
-        "platform_name (Windows|Linux|Mac), criticality, internet_exposure (Yes|No), "
+        "platform_name (Windows|Linux|Mac), criticality, internet_exposure (Yes|No|Pending), "
         "last_seen_timestamp:>'now-24h' (relative date). "
         "Ex: encryption_status:'Unencrypted'+platform_name:'Windows'"
     ),
     # === Firewall Rules ===
     "falcon_search_firewall_rules": (
-        "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime). "
+        "Common fields: name, enabled (true|false), description, "
+        "created_on/modified_on (UTC datetime). "
+        "There is no platform field here — platform:'windows' fails as an unknown "
+        "property; filter rule groups by platform instead. "
         "name: use the contains operator name:~'value' (whole-word substring); a "
         "name:'value*' glob is treated literally and returns nothing."
     ),
@@ -204,22 +214,27 @@ FILTER_HINTS: dict[str, str] = {
         "name:'value*' glob is treated literally and returns nothing."
     ),
     "falcon_search_firewall_policy_rules": (
-        "Common fields: platform (windows|mac|linux), name, "
-        "enabled (true|false), created_on (UTC datetime). "
+        "Any filter must include rule_group.policy_ids:'<policy_id>' — without it "
+        "the request fails, even for a field that works elsewhere. There is no "
+        "platform field here. "
+        "Other fields: name, enabled (true|false), created_on (UTC datetime). "
         "name: use the contains operator name:~'value' (whole-word substring); a "
         "name:'value*' glob is treated literally and returns nothing."
     ),
     # === Intel: Actors ===
     "falcon_search_actors": (
         "Common fields: name, actor_type, known_as, "
-        "motivations.value (Criminal|Destruction|Espionage|Hacktivism), "
+        "motivations.value (e.g. 'State-Sponsored'), "
         "target_countries, target_industries.value (e.g. 'Financial Services'|'Government'|'Technology'|'Healthcare'|'Energy'), "
         "last_activity_date. Date filters: last_activity_date:>'now-90d' (relative). "
         "Use q parameter for free-text keyword search across all fields."
     ),
     # === Intel: Indicators ===
     "falcon_search_indicators": (
-        "Common fields: type (hash_md5|hash_sha256|domain|ip_address|url|email_address), "
+        "Common fields: type (28 types documented; common ones are "
+        "hash_md5|hash_sha256|domain|ip_address|ip_address_block|url|email_address|"
+        "file_name|file_path|registry|username|user_agent|port — see the fql-guide "
+        "for the full list), "
         "malicious_confidence (high|medium|low|unverified), "
         "malware_families, threat_types, kill_chains, "
         "published_date. Date filters: published_date:>'now-7d' (relative)."
@@ -232,8 +247,10 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === IOC ===
     "falcon_search_iocs": (
-        "Common fields: type (domain|ipv4|ipv6|md5|sha256), "
-        "action (detect|prevent|allow), severity_number (1-5), "
+        "Common fields: type (sha256|md5|ipv4|ipv6|domain|all_subdomains), "
+        "action (detect|prevent|no_action|prevent_no_ui|allow), "
+        "severity (informational|low|medium|high|critical), "
+        "severity_number (0|10|30|50|70|90, unquoted), "
         "source, applied_globally (true|false), expired (true|false), "
         "created_on (UTC datetime)."
     ),
@@ -241,24 +258,36 @@ FILTER_HINTS: dict[str, str] = {
     "falcon_search_rtr_sessions": (
         "Common fields: hostname, user_id, origin, "
         "created_at (UTC datetime), offline_queued (true|false), "
-        "base_command."
+        "base_command (ls|ps|cat|filehash|reg|netstat|ifconfig|mount|users)."
     ),
     # === Quarantine ===
     "falcon_search_quarantined_files": (
-        "Common fields: hostname, sha256, state (quarantined|released), "
-        "date_updated (UTC datetime), paths."
+        "Common fields: hostname, sha256, "
+        "state (quarantined|released|purged|cleaned|error|unknown), "
+        "date_updated (UTC datetime), paths.path, paths.state. "
+        "status is not a filter field and matches nothing; bare paths does not "
+        "filter either — use the dotted paths.path."
     ),
     "falcon_preview_quarantine_actions": (
-        "Common fields: hostname, sha256, state (quarantined|released), "
-        "date_updated (UTC datetime), paths."
+        "Common fields: hostname, sha256, "
+        "state (quarantined|released|purged|cleaned|error|unknown), "
+        "date_updated (UTC datetime), paths.path, paths.state. "
+        "status is not a filter field and matches nothing; bare paths does not "
+        "filter either — use the dotted paths.path."
     ),
     "falcon_update_quarantined_files": (
-        "Common fields: hostname, sha256, state (quarantined|released), "
-        "date_updated (UTC datetime), paths."
+        "Common fields: hostname, sha256, "
+        "state (quarantined|released|purged|cleaned|error|unknown), "
+        "date_updated (UTC datetime), paths.path, paths.state. "
+        "status is not a filter field and matches nothing; bare paths does not "
+        "filter either — use the dotted paths.path."
     ),
     "falcon_delete_quarantined_files": (
-        "Common fields: hostname, sha256, state (quarantined|released), "
-        "date_updated (UTC datetime), paths."
+        "Common fields: hostname, sha256, "
+        "state (quarantined|released|purged|cleaned|error|unknown), "
+        "date_updated (UTC datetime), paths.path, paths.state. "
+        "status is not a filter field and matches nothing; bare paths does not "
+        "filter either — use the dotted paths.path."
     ),
     # === Exclusions ===
     "falcon_search_exclusions": (
@@ -277,12 +306,12 @@ FILTER_HINTS: dict[str, str] = {
     ),
     "falcon_search_host_group_members": (
         "Filters on HOST (device) attributes: hostname, platform_name (Windows|Linux|Mac), "
-        "status (normal|contained), local_ip, external_ip, os_version, last_seen, "
+        "status (normal|contained|containment_pending|lift_containment_pending), local_ip, external_ip, os_version, last_seen, "
         "product_type_desc (Workstation|Server|Domain Controller)."
     ),
     "falcon_perform_host_group_action": (
         "Filters on HOST (device) attributes to select members for the action: "
-        "hostname, platform_name (Windows|Linux|Mac), status (normal|contained), "
+        "hostname, platform_name (Windows|Linux|Mac), status (normal|contained|containment_pending|lift_containment_pending), "
         "local_ip, external_ip, os_version, product_type_desc (Workstation|Server|Domain Controller)."
     ),
     # === Policies ===
@@ -296,7 +325,7 @@ FILTER_HINTS: dict[str, str] = {
     ),
     "falcon_search_policy_members": (
         "Filters on HOST (device) attributes: hostname, platform_name (Windows|Linux|Mac), "
-        "status (normal|contained), local_ip, external_ip, os_version, last_seen, "
+        "status (normal|contained|containment_pending|lift_containment_pending), local_ip, external_ip, os_version, last_seen, "
         "product_type_desc (Workstation|Server|Domain Controller)."
     ),
     # === Data Protection ===
@@ -313,18 +342,21 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Recon ===
     "falcon_search_recon_notifications": (
-        "Common fields: status (new|in-progress|closed-false-positive|closed-true-positive), "
-        "rule_priority (low|medium|high), "
-        "rule_topic (SA_DOMAIN|SA_TYPOSQUATTING|SA_EMAIL|SA_IP|SA_BRAND_PRODUCT), "
-        "item_type (exposed_data), item_site (stealer_logs|...), "
+        "Common fields: status (new|in-progress|pending-review|closed-true-positive|"
+        "closed-false-positive|closed-no-action-true-positive), "
+        "rule_priority (low|medium|high|critical), "
+        "rule_topic (SA_TYPOSQUATTING|SA_THIRD_PARTY|SA_CUSTOM|SA_DOMAIN|SA_IP|"
+        "SA_BRAND_PRODUCT|SA_ALIAS|SA_VIP|SA_EMAIL|SA_CVE|SA_AUTHOR|SA_BIN), "
+        "item_type (exposed_data), item_site (stealer_logs|telegram.org), "
         "created_date:>'now-7d' (relative date). "
         "NOTE: assigned_to_uuid requires a UUID, not an email. "
         "Ex: status:'new'+rule_priority:'high'"
     ),
     "falcon_search_recon_rules": (
-        "Common fields: status (active), "
-        "topic (SA_DOMAIN|SA_TYPOSQUATTING|SA_EMAIL|SA_IP|SA_BRAND_PRODUCT), "
-        "priority (low|medium|high), permissions (private|public), "
+        "Common fields: status (active|noisy|inactive), "
+        "topic (SA_TYPOSQUATTING|SA_THIRD_PARTY|SA_CUSTOM|SA_DOMAIN|SA_IP|"
+        "SA_BRAND_PRODUCT|SA_ALIAS|SA_VIP|SA_EMAIL|SA_CVE|SA_AUTHOR|SA_BIN), "
+        "priority (low|medium|high|critical), permissions (private|public), "
         "breach_monitoring_enabled (true|false), "
         "created_timestamp:>'now-30d' (relative date). "
         "Ex: status:'active'+topic:'SA_TYPOSQUATTING'"
@@ -333,15 +365,17 @@ FILTER_HINTS: dict[str, str] = {
         "Common fields: domain, email, "
         "credential_status (newly_reported|confirmed_active|previously_reported), "
         "site, source_category, notification_id, "
-        "rule.topic (SA_DOMAIN|...), "
+        "rule.topic (SA_BRAND_PRODUCT|SA_DOMAIN|SA_EMAIL|SA_IP|SA_TYPOSQUATTING), "
         "created_date:>'now-7d' (relative date). "
         "Ex: domain:'example.com'+credential_status:'newly_reported'"
     ),
     "falcon_aggregate_recon_notifications": (
         "Filters which notifications are counted. Common fields: "
-        "status (new|in-progress|pending-review|closed-true-positive|closed-false-positive), "
+        "status (new|in-progress|pending-review|closed-true-positive|"
+        "closed-false-positive|closed-no-action-true-positive), "
         "rule_priority (low|medium|high|critical), "
-        "rule_topic (SA_TYPOSQUATTING|SA_THIRD_PARTY|SA_CUSTOM|SA_DOMAIN|SA_IP|SA_BRAND_PRODUCT), "
+        "rule_topic (SA_TYPOSQUATTING|SA_THIRD_PARTY|SA_CUSTOM|SA_DOMAIN|SA_IP|"
+        "SA_BRAND_PRODUCT|SA_ALIAS|SA_VIP|SA_EMAIL|SA_CVE|SA_AUTHOR|SA_BIN), "
         "rule_id, item_type, item_site, source_category, "
         "created_date:>'now-30d' (relative date). "
         "Ex: rule_topic:'SA_TYPOSQUATTING'+created_date:>'now-30d'"
@@ -357,13 +391,17 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Scheduled Reports ===
     "falcon_search_scheduled_reports": (
-        "Common fields: name, type, status (Active|Inactive|Expired), "
-        "last_execution.status (Success|Failed|Pending), "
-        "created_on (UTC datetime), next_execution_on (UTC datetime)."
+        "Common fields: name, type, status (ACTIVE|PENDING|STOPPED|UPDATING), "
+        "last_execution.status "
+        "(PENDING|PROCESSING|DONE|FAILED|FAILED_NOTIFICATION|NO_DATA), "
+        "created_on (UTC datetime), next_execution_on (UTC datetime). "
+        "Status values must be upper case."
     ),
     "falcon_search_report_executions": (
-        "Common fields: scheduled_report_id, status (Success|Failed|Pending|Running), "
-        "type, created_on (UTC datetime)."
+        "Common fields: scheduled_report_id, "
+        "status (PENDING|PROCESSING|DONE|FAILED|FAILED_NOTIFICATION|NO_DATA), "
+        "type, created_on (UTC datetime). "
+        "Status values must be upper case; a finished run is DONE, not 'Success'."
     ),
     # === Sensor Usage ===
     "falcon_search_sensor_usage": (
@@ -372,16 +410,21 @@ FILTER_HINTS: dict[str, str] = {
     ),
     # === Serverless Vulnerabilities ===
     "falcon_search_serverless_vulnerabilities": (
-        "Common fields: cve_id, severity (Critical|High|Medium|Low|Unknown), "
+        "Common fields: cve_id, severity (UNKNOWN|LOW|MEDIUM|HIGH|CRITICAL), "
         "cloud_provider (aws|azure|gcp), function_name, "
-        "application_name, runtime, cvss_base_score."
+        "application_name, runtime, cvss_base_score. "
+        "Severity values must be upper case."
     ),
     # === Spotlight Vulnerabilities ===
     "falcon_search_vulnerabilities": (
-        "Common fields: cve.id, cve.severity (Critical|High|Medium|Low), "
-        "cve.exprt_rating (Critical|High|Medium|Low), "
-        "status (open|closed|reopen), host_info.hostname, "
-        "cve.exploit_status, created_timestamp (UTC datetime)."
+        "Common fields: cve.id, "
+        "cve.severity (UNKNOWN|NONE|LOW|MEDIUM|HIGH|CRITICAL), "
+        "cve.exprt_rating (UNKNOWN|LOW|MEDIUM|HIGH|CRITICAL), "
+        "status (open|closed|reopen|expired), host_info.hostname, "
+        "cve.exploit_status (0=Unproven|30=Available|60=Easily accessible|"
+        "90=Actively used, quoted e.g. cve.exploit_status:'60'), "
+        "created_timestamp (UTC datetime). "
+        "cve.* rating values must be upper case; status must be lower case."
     ),
     # === Fusion SOAR ===
     "falcon_search_workflow_definitions": (

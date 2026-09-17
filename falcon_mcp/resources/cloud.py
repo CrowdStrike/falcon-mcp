@@ -497,7 +497,8 @@ IMAGES_VULNERABILITIES_FQL_FILTERS = [
         "String",
         """
         The severity of the vulnerability.
-        Available values: Low, Medium, High, Critical.
+        Available values: Unknown, Low, Medium, High, Critical.
+        Matched case-insensitively here, unlike the IOM and cloud-risk severities.
 
         Ex: severity:'High'
         """,
@@ -843,9 +844,9 @@ CSPM_IOM_FINDINGS_FQL_FILTERS = [
         "String",
         """
         The status of the finding.
-        Values: open, suppressed, pass.
+        Values: compliant, non-compliant. Lower case only.
 
-        Ex: status:'open'
+        Ex: status:'non-compliant'
         """,
     ),
     (
@@ -1065,35 +1066,35 @@ CSPM_IOM_FINDINGS_FQL_DOCUMENTATION = (
 
 === falcon_search_iom_findings FQL filter examples ===
 
-# Find critical and high severity open findings
-severity:['critical', 'high']+status:'open'
+# Find critical and high severity non-compliant findings
+severity:['critical', 'high']+status:'non-compliant'
 
-# Find open findings in AWS for a specific service
-cloud_provider:'aws'+service:'S3'+status:'open'
+# Find non-compliant findings in AWS for a specific service
+cloud_provider:'aws'+service:'S3'+status:'non-compliant'
 
 # Find findings detected in the last 7 days
-first_detected:>'2025-05-05T00:00:00Z'+status:'open'
+first_detected:>'2025-05-05T00:00:00Z'+status:'non-compliant'
 
 # Find IAM-related misconfigurations across all clouds
 service_category:'Identity'+severity:['critical', 'high']
 
 # Find findings for a specific rule by name
-rule_name:*'*encryption*'+status:'open'
+rule_name:*'*encryption*'+status:'non-compliant'
 
 # Find suppressed findings with a specific reason
-status:'suppressed'+suppression_reason:'accept-risk'
+suppression_reason:'accept-risk'
 
 # Find findings mapped to CIS benchmark
 benchmark_name:*'*CIS*'+severity:'critical'
 
 # Find findings for specific cloud accounts
-account_id:['123456789012', '987654321098']+status:'open'
+account_id:['123456789012', '987654321098']+status:'non-compliant'
 
 # Find findings by MITRE ATT&CK tactic
 tactic_name:'Credential Access'+severity:['critical', 'high']
 
 # Find findings in specific regions
-region:['us-east-1', 'eu-west-1']+cloud_provider:'aws'+status:'open'
+region:['us-east-1', 'eu-west-1']+cloud_provider:'aws'+status:'non-compliant'
 
 # Find findings by resource tag
 tag_key:'Environment'+tag_value:'Production'+severity:'critical'
@@ -1343,7 +1344,7 @@ CLOUD_RISKS_FQL_DOCUMENTATION = (
 
 === falcon_search_cloud_risks FQL filter sort fields ===
 
-Use `field|asc` or `field|desc` suffix:
+Use `field.asc` / `field.desc`, or the equivalent `field|asc` / `field|desc`:
 
 `account_id`, `account_name`, `asset_id`, `asset_name`, `asset_region`, `asset_type`,
 `cloud_provider`, `first_seen`, `last_seen`, `resolved_at`, `rule_name`,

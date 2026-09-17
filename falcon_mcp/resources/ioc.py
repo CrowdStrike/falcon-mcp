@@ -13,7 +13,8 @@ SEARCH_IOCS_FQL_FILTERS = [
     (
         "action",
         "String",
-        "IOC action. Example: action:'detect'",
+        "IOC action. One of: detect, prevent, no_action, prevent_no_ui, allow. "
+        "Example: action:'detect'",
     ),
     (
         "applied_globally",
@@ -56,9 +57,16 @@ SEARCH_IOCS_FQL_FILTERS = [
         "IOC last modified timestamp.",
     ),
     (
+        "severity",
+        "String",
+        "Severity label. One of: informational, low, medium, high, critical. "
+        "Example: severity:'critical'",
+    ),
+    (
         "severity_number",
         "Number",
-        "Numeric severity value.",
+        "Numeric severity: 0 (none), 10 (informational), 30 (low), 50 (medium), "
+        "70 (high), 90 (critical). Unquoted. Example: severity_number:>50",
     ),
     (
         "source",
@@ -68,7 +76,7 @@ SEARCH_IOCS_FQL_FILTERS = [
     (
         "type",
         "String",
-        "Indicator type. Examples: domain, ipv4, ipv6, md5, sha256",
+        "Indicator type. One of: sha256, md5, ipv4, ipv6, domain, all_subdomains.",
     ),
     (
         "value",

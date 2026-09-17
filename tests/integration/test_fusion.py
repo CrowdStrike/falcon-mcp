@@ -56,20 +56,6 @@ class TestFusionIntegration(BaseIntegrationTest):
     # per-row check proves the filter selected on what it claims to.
     # ------------------------------------------------------------------
 
-    def assert_envelope_ok(self, result, context=""):
-        """Assert a search envelope carries neither a top-level nor an embedded error.
-
-        `assert_no_error` only inspects the top level, so an FQL error nested
-        inside `results` passes it silently. Both shapes are checked here.
-        """
-        self.assert_no_error(result, context=context)
-        assert isinstance(result, dict), f"Expected an envelope dict ({context}): {result}"
-        assert "fql_guide" not in result, (
-            f"Filter was rejected as invalid FQL ({context}): {result.get('results')}"
-        )
-        for record in result.get("results", []):
-            assert "error" not in record, f"Embedded error ({context}): {record}"
-
     def search_definitions(self, **kwargs):
         """Search definitions and assert the envelope is clean."""
         kwargs.setdefault("limit", 2)

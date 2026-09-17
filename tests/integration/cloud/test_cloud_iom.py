@@ -266,3 +266,84 @@ class TestCloudIomIntegration(BaseIntegrationTest):
             print(f"✅ Deleted suppression rule: {rule_id}")
         else:
             print("⚠️  Could not extract rule ID from create response, skipping delete")
+
+    # ------------------------------------------------------------------
+    # severity and status
+    #
+    # cspm_evaluations_iom_queries rejects an unknown field but answers an
+    # impossible value with an empty HTTP 200 (see test_filter_classification.py),
+    # so each value below is established by rows. The casing assertions are
+    # deliberately not shared with the other two cloud severity tests: the three
+    # endpoints disagree, and that disagreement is the finding.
+    # ------------------------------------------------------------------
+
+    def test_severity_is_lowercase_only(self):
+        """`severity` matches lower case here and nothing in Title case.
+
+        The Title-case half needs the lowercase half to be non-zero or it proves
+        nothing, so both run against the same tenant in the same test.
+        """
+        lower = self.call_method(
+            self.module.search_iom_findings, filter="severity:'critical'", limit=1
+        )
+        self.assert_envelope_ok(lower, context="iom severity lowercase")
+        assert lower["pagination"]["total"], (
+            "severity:'critical' matched no findings, so the Title-case comparison "
+            "below proves nothing."
+        )
+
+        upper = self.call_method(
+            self.module.search_iom_findings, filter="severity:'Critical'", limit=1
+        )
+        self.assert_envelope_ok(upper, context="iom severity Title case")
+        assert not upper["pagination"]["total"], (
+            "severity:'Critical' now matches findings. If this endpoint became "
+            "case-insensitive, the lowercase-only note in the IOM guide and hint can "
+            f"be relaxed. Title-case total={upper['pagination']['total']}"
+        )
+
+    def test_status_vocabulary_is_compliant_and_non_compliant(self):
+        """`status` is compliant|non-compliant, not open|suppressed|pass.
+
+        All three previously documented values matched nothing while `severity`
+        filtered normally, so the field was known and its vocabulary was wrong.
+        The two real values are read off the records' own `evaluation.status` and
+        then filtered on, which is what makes this a mapping rather than a guess.
+        """
+        findings = self.skip_unless_tenant_has(
+            self.call_method(self.module.search_iom_findings, limit=200),
+            "IOM findings",
+            context="iom status vocabulary",
+        )
+        observed = {
+            (finding.get("evaluation") or {}).get("status")
+            for finding in findings
+            if (finding.get("evaluation") or {}).get("status")
+        }
+        assert observed <= {"compliant", "non-compliant"}, (
+            f"Findings report statuses the guide and hint do not list: "
+            f"{sorted(observed - {'compliant', 'non-compliant'})}. Add them."
+        )
+        assert observed, "No finding carries an evaluation.status to work from."
+
+        for value in sorted(observed):
+            self.assert_filter_matches(
+                self.module.search_iom_findings,
+                f"status:'{value}'",
+                predicate=lambda finding, value=value: (
+                    (finding.get("evaluation") or {}).get("status") == value
+                ),
+                predicate_desc=f"finding.evaluation.status == {value!r}",
+                note="The status filter selects on the response's evaluation.status.",
+                limit=3,
+            )
+
+        for value in ("open", "suppressed", "pass"):
+            result = self.call_method(
+                self.module.search_iom_findings, filter=f"status:'{value}'", limit=1
+            )
+            self.assert_envelope_ok(result, context=f"iom status:{value!r}")
+            assert not self.records(result, f"status:{value!r}"), (
+                f"status:'{value}' now matches findings. It was documented for years "
+                "and matched nothing; if the API added it, update the guide and hint."
+            )

@@ -522,3 +522,87 @@ class TestExclusionsIntegration(BaseIntegrationTest):
             assert "error" not in result[0], (
                 f"get_certificate_details error: {result[0]}"
             )
+
+    def test_contains_operator_does_not_substring_match_value(self):
+        """`~` does not do substring matching on ml/sensor_visibility `value`.
+
+        The guide steers to `value:*'*substr*'` and says `~` is unsupported. Both
+        halves are asserted on the same entity and the same substring: the wildcard
+        form returns it and the `~` form returns nothing, so this is the operator
+        failing rather than the substring being absent.
+
+        certificate `name` is exercised too and behaves differently — `~` works
+        there — which is why this is asserted per exclusion type rather than once.
+        """
+        import re
+
+        expectations = {
+            "ml": ("value", False),
+            "sensor_visibility": ("value", False),
+            "certificate": ("name", True),
+        }
+        checked = 0
+        for exclusion_type, (field, tilde_works) in expectations.items():
+            if not self._scopes_available(exclusion_type):
+                continue
+            entities = self._unwrap_results(
+                self.call_method(
+                    self.module.search_exclusions, exclusion_type=exclusion_type, limit=50
+                )
+            )
+            if not entities or isinstance(entities, dict):
+                continue
+
+            substr = None
+            for entity in entities:
+                raw = entity.get(field)
+                if not isinstance(raw, str):
+                    continue
+                runs = re.findall(r"[A-Za-z0-9]{5,}", raw)
+                if runs:
+                    substr = runs[0]
+                    break
+            if not substr:
+                continue
+
+            wildcard = self._unwrap_results(
+                self.call_method(
+                    self.module.search_exclusions,
+                    exclusion_type=exclusion_type,
+                    filter=f"{field}:*'*{substr}*'",
+                    limit=2,
+                )
+            )
+            assert wildcard and not isinstance(wildcard, dict), (
+                f"The `:*` control returned nothing for {exclusion_type} "
+                f"{field}:*'*{substr}*', so the `~` comparison proves nothing."
+            )
+
+            tilde = self._unwrap_results(
+                self.call_method(
+                    self.module.search_exclusions,
+                    exclusion_type=exclusion_type,
+                    filter=f"{field}:~'{substr}'",
+                    limit=2,
+                )
+            )
+            matched = bool(tilde) and not isinstance(tilde, dict)
+            if tilde_works:
+                assert matched, (
+                    f"{field}:~'{substr}' returned nothing for {exclusion_type}, "
+                    "though `~` works on this type. If it stopped working, say so in "
+                    "the guide."
+                )
+            else:
+                assert not matched, (
+                    f"{field}:~'{substr}' returned rows for {exclusion_type}, but the "
+                    "guide documents `~` as not substring-matching here. If the API "
+                    "changed, the guide and the exclusions hint need updating."
+                )
+            checked += 1
+
+        if not checked:
+            self.skip_with_warning(
+                "No exclusion type had a usable substring to compare operators with",
+                "contains operator",
+            )

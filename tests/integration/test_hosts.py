@@ -232,3 +232,62 @@ class TestHostsIntegration(BaseIntegrationTest):
         """
         result = self.call_method(self.module.search_hosts, limit=1)
         self.assert_no_error(result, context="operation name validation")
+
+    # ------------------------------------------------------------------
+    # Filter vocabularies
+    #
+    # QueryDevicesByFilter rejects an unknown field but answers an impossible
+    # *value* with an empty HTTP 200 (see test_filter_classification.py), so each
+    # value below is established by rows rather than by a clean response.
+    # ------------------------------------------------------------------
+
+    def test_product_type_desc_vocabulary(self):
+        """Every product type the guide and hint list matches its own hosts.
+
+        Mobile is included: it is a fourth value the tenant holds, and the closed
+        three-value list read as the whole vocabulary, so a search for mobile
+        devices had no spelling that worked.
+        """
+        for value in ("Workstation", "Server", "Domain Controller", "Mobile"):
+            self.assert_filter_matches(
+                self.module.search_hosts,
+                f"product_type_desc:'{value}'",
+                predicate=lambda host, value=value: host.get("product_type_desc") == value,
+                predicate_desc=f"host.product_type_desc == {value!r}",
+                note="Each product type in the guide must match its own hosts.",
+                limit=3,
+            )
+
+    def test_last_seen_accepts_relative_dates(self):
+        """`last_seen:>'now-7d'` is honored, not parsed as garbage and dropped.
+
+        The hint has always used this form while the guide never mentioned it. A
+        dropped clause would still return hosts that all carry a `last_seen`, so
+        the predicate alone cannot tell the two apart — `assert_filter_narrows`
+        additionally requires the filtered total to come in under the unfiltered
+        one, which is what a clause the API ignored cannot do.
+        """
+        self.assert_filter_narrows(
+            self.module.search_hosts,
+            "last_seen:>'now-7d'",
+            predicate=lambda host: bool(host.get("last_seen")),
+            predicate_desc="host carries a last_seen timestamp",
+            note="Relative dates are documented for last_seen in the guide and the hint.",
+            limit=5,
+        )
+
+    def test_relative_date_garbage_is_rejected(self):
+        """A malformed relative expression 400s rather than being silently dropped.
+
+        This is what licenses reading the narrowing above as the API honoring the
+        expression: the parser is strict about this operand, so `now-7d` reaching
+        it and returning a smaller set is the expression being understood.
+        """
+        result = self.call_method(
+            self.module.search_hosts, filter="last_seen:>'zzz-garbage'", limit=1
+        )
+        assert self.error_dicts(result), (
+            "last_seen:>'zzz-garbage' was accepted. If unparseable date operands are "
+            "now silently ignored, the relative-date test above no longer proves the "
+            f"expression was honored. Got: {result}"
+        )

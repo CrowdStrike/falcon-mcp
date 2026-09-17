@@ -275,6 +275,73 @@ class TestPoliciesIntegration(BaseIntegrationTest):
                 f"{result[0]}"
             )
 
+    def test_platform_name_vocabulary_per_type(self):
+        """Each policy type's own platform vocabulary, not just its first entity's.
+
+        The sweep above filters `platform_name` with whatever value the one
+        discovered entity happens to carry, so it never covered whether the other
+        values work. That matters because the hint documents Windows|Linux|Mac for
+        five types and `all` for content_update, and this endpoint answers an
+        impossible value with an empty 200 rather than an error — a wrong value
+        would look exactly like a tenant with no such policy.
+
+        Every tenant with policies has a default per platform, so a value that
+        matches nothing is the value being wrong. `all` is asserted against
+        content_update and only against content_update: it matches nothing on the
+        other five, which is the split the hint describes.
+
+        A type with no policy is recorded and the sweep continues rather than
+        skipping: `skip_with_warning` raises, so skipping inside the loop would
+        abandon every type after the first bare one.
+
+        `Linux` is proved separately in
+        test_linux_platform_name_across_every_policy_type rather than here. It is not
+        asserted per-type because it matches on four of the six and not on
+        device_control, and this endpoint answers an unsupported value the same way
+        it answers a value no policy uses — so requiring it everywhere would fail on
+        a correct value list. Windows and Mac carry the per-type check.
+        """
+        unchecked: list[str] = []
+        for policy_type in POLICY_TYPES:
+            if not self._scopes_available(policy_type):
+                unchecked.append(f"{policy_type} (no scope)")
+                continue
+            if self._first_entity(policy_type) is None:
+                unchecked.append(f"{policy_type} (no policy)")
+                continue
+
+            expected = ["all"] if policy_type == "content_update" else ["Windows", "Mac"]
+            for value in expected:
+                self.assert_filter_matches(
+                    self.module.search_policies,
+                    f"platform_name:'{value}'",
+                    predicate=lambda policy, value=value: policy["platform_name"] == value,
+                    predicate_desc=f"policy.platform_name == {value!r}",
+                    note=f"{policy_type} is documented as supporting {value!r}.",
+                    limit=3,
+                    policy_type=policy_type,
+                )
+
+            unsupported = "Windows" if policy_type == "content_update" else "all"
+            result = self.call_method(
+                self.module.search_policies,
+                policy_type=policy_type,
+                filter=f"platform_name:'{unsupported}'",
+                limit=1,
+            )
+            self.assert_envelope_ok(result, context=f"{policy_type} platform_name")
+            assert not self.records(result, f"{policy_type} {unsupported!r}"), (
+                f"{policy_type} now matches platform_name:'{unsupported}'. The hint "
+                "documents 'all' for content_update only and the three real platforms "
+                "for the rest; if that split changed, update it."
+            )
+
+        if len(unchecked) == len(POLICY_TYPES):
+            self.skip_with_warning(
+                f"No policy type could be checked: {', '.join(unchecked)}",
+                "platform_name vocabulary",
+            )
+
     def test_platform_name_sort_returns_error(self):
         """platform_name sort is rejected by our guard BEFORE hitting the API.
 
@@ -582,4 +649,50 @@ class TestPoliciesIntegration(BaseIntegrationTest):
             warnings.warn(
                 f"Failed to clean up {policy_type} policy {policy_id}: {exc}",
                 stacklevel=2,
+            )
+
+    def test_linux_platform_name_across_every_policy_type(self):
+        """Whether any policy type in this tenant holds a Linux policy.
+
+        `Linux` is documented for five of the six types but is asserted nowhere,
+        because this endpoint answers an unsupported value exactly as it answers a
+        value no policy happens to use. Membership only needs one type to carry it,
+        so this sweeps all six rather than requiring it everywhere. If no type has a
+        Linux policy the value stays unproven and that is a property of the tenant,
+        not of the vocabulary — it needs a tenant with the Linux sensor deployed.
+        """
+        matched: list[str] = []
+        unchecked: list[str] = []
+        for policy_type in POLICY_TYPES:
+            if not self._scopes_available(policy_type):
+                unchecked.append(f"{policy_type} (no scope)")
+                continue
+            result = self._unwrap_results(
+                self.call_method(
+                    self.module.search_policies,
+                    policy_type=policy_type,
+                    filter="platform_name:'Linux'",
+                    limit=3,
+                )
+            )
+            if isinstance(result, list) and result and isinstance(result[0], dict):
+                if "error" in result[0]:
+                    unchecked.append(f"{policy_type} (error)")
+                    continue
+                for policy in result:
+                    assert policy.get("platform_name") == "Linux", (
+                        f"platform_name:'Linux' returned a {policy.get('platform_name')!r} "
+                        f"policy on {policy_type}, so the filter is not being applied: {policy}"
+                    )
+                matched.append(policy_type)
+
+        print(f"\nplatform_name:'Linux' matched: {matched}")
+        print(f"unchecked: {unchecked or 'none'}")
+
+        if not matched:
+            self.skip_with_warning(
+                "No policy type in this tenant holds a Linux policy "
+                f"(unchecked: {', '.join(unchecked) or 'none'}), so Linux stays "
+                "unproven. Settling it needs a tenant with Linux policies.",
+                context="Linux platform_name vocabulary",
             )

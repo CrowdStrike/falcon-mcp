@@ -126,6 +126,7 @@ QUERY_ACTOR_ENTITIES_FQL_FILTERS = [
         Last activity date.
 
         Ex: 1749427200
+        Ex: last_activity_date:>'now-90d'
         """
     ),
     (
@@ -287,11 +288,13 @@ QUERY_ACTOR_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel 
 • animal_classifier:'BEAR'
 • name:'FANCY BEAR'
 • animal_classifier:'BEAR',animal_classifier:'SPIDER'
+• last_activity_date:>'now-90d'
 
 === IMPORTANT NOTES ===
 • Use single quotes around string values: 'value'
 • Use square brackets for exact matches: ['exact_value']
-• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
+• Date fields accept relative syntax ('now-Nd', 'now-Nh', quoted) or an unquoted
+  Unix epoch integer. An ISO-8601 string also works: 'YYYY-MM-DDTHH:MM:SSZ'
 """
 
 QUERY_INDICATOR_ENTITIES_FQL_FILTERS = [
@@ -695,10 +698,14 @@ QUERY_REPORT_ENTITIES_FQL_DOCUMENTATION = """Falcon Query Language (FQL) - Intel
 • report_type:'malware'
 • name:'*ransomware*'
 • created_date:>'2023-01-01T00:00:00Z'
+• created_date:>1754075803
+• created_date:>'now-30d'
 • target_industries:'healthcare'
 
 === IMPORTANT NOTES ===
 • Use single quotes around string values: 'value'
 • Use square brackets for exact matches: ['exact_value']
-• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
+• Date fields accept an ISO-8601 UTC string ('YYYY-MM-DDTHH:MM:SSZ'), a relative
+  expression ('now-30d', quoted), or an unquoted Unix epoch integer. A quoted
+  epoch is rejected
 """

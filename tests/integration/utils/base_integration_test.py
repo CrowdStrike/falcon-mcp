@@ -55,6 +55,28 @@ TRANSIENT_API_ERROR_MARKERS = (
     "Connection reset by peer",
 )
 
+#: The four outcomes a probe filter can produce, as reported by `classify_filter`.
+#: FORBIDDEN is deliberately separate from FQL_REJECTED: both arrive as an error dict, but
+#: a missing API scope says nothing about whether the filter was valid, and collapsing the
+#: two would let an ungranted scope read as "the API rejected this value".
+FILTER_ROWS = "ROWS"
+FILTER_EMPTY = "EMPTY"
+FILTER_FQL_REJECTED = "FQL_REJECTED"
+FILTER_FORBIDDEN = "FORBIDDEN"
+
+#: What a query endpoint validates, as reported by `classify_endpoint`. This determines what
+#: an empty result is allowed to prove. On a value-validating endpoint an unknown enum member
+#: is a 400, so a clean 200 establishes membership with no tenant data at all. On a
+#: field-validating endpoint only the field name is checked, so a bad value is indistinguishable
+#: from a value nothing matches. On a silent endpoint an empty 200 proves nothing, ever.
+#: Must be determined per operation — a sibling in the same module tells you nothing.
+ENDPOINT_VALUE_VALIDATING = "value-validating"
+ENDPOINT_FIELD_VALIDATING = "field-validating"
+ENDPOINT_SILENT = "silent"
+
+#: Substrings that mark an error dict as a permission failure rather than a bad filter.
+_FORBIDDEN_MARKERS = ("403", "access denied", "forbidden", "scope not permitted")
+
 
 class BaseIntegrationTest:
     """Base class providing common assertions for integration tests.
@@ -472,6 +494,240 @@ class BaseIntegrationTest:
                 f"Offending records: {failures[:3]}"
             )
 
+        return result
+
+    # ------------------------------------------------------------------
+    # Filter probing
+    #
+    # These exist for questions of the form "is this value real?". Answering that from a
+    # search call means separating four outcomes that all look similar from the outside —
+    # rows, an empty 200, a rejected filter, and a missing scope — and knowing which of
+    # them the endpoint under test is even capable of reporting.
+    # ------------------------------------------------------------------
+
+    def error_dicts(self, result: Any) -> list[dict[str, Any]]:
+        """Every error dict reachable in a tool result, across all the shapes they take.
+
+        A rejected filter surfaces in three different shapes depending on the tool:
+        `_format_fql_error_response` nests the error inside `results` alongside a
+        `fql_guide` key; `combined_cloud_risks` and `search_images_vulnerabilities`
+        return a bare `[error_dict]` with no guide at all; and a non-search tool returns
+        the error dict itself. A helper that keys off `fql_guide` passes vacuously on the
+        two bare-list endpoints, so match on the error dicts instead of on the wrapper.
+        """
+        candidates: list[Any]
+        if isinstance(result, dict):
+            candidates = [result]
+            if isinstance(result.get("results"), list):
+                candidates += result["results"]
+        elif isinstance(result, list):
+            candidates = list(result)
+        else:
+            return []
+        return [item for item in candidates if isinstance(item, dict) and "error" in item]
+
+    def classify_filter(
+        self,
+        search: Callable[..., Any],
+        filter: str,
+        limit: int = 1,
+        **search_kwargs: Any,
+    ) -> str:
+        """Run one filter and report which of the four outcomes it produced.
+
+        Returns one of `FILTER_ROWS`, `FILTER_EMPTY`, `FILTER_FQL_REJECTED`, or
+        `FILTER_FORBIDDEN`. Retries transient gateway failures rather than reporting one
+        as a rejection.
+        """
+        result = self.retry_on_transient(
+            lambda: self.call_method(search, filter=filter, limit=limit, **search_kwargs),
+            context=f"classify {filter!r}",
+        )
+
+        errors = self.error_dicts(result)
+        if errors:
+            blob = str(errors).lower()
+            status_codes = {
+                (error.get("details") or {}).get("status_code") for error in errors
+            }
+            if 403 in status_codes or any(marker in blob for marker in _FORBIDDEN_MARKERS):
+                return FILTER_FORBIDDEN
+            return FILTER_FQL_REJECTED
+
+        return FILTER_ROWS if self._unwrap_results(result) else FILTER_EMPTY
+
+    def classify_endpoint(
+        self,
+        search: Callable[..., Any],
+        bogus_field_filter: str,
+        bogus_value_filter: str,
+        context: str = "",
+        **search_kwargs: Any,
+    ) -> str:
+        """Report what a query endpoint validates, so callers know what empty can prove.
+
+        Returns `ENDPOINT_VALUE_VALIDATING`, `ENDPOINT_FIELD_VALIDATING`, or
+        `ENDPOINT_SILENT`. Only the first licenses "a clean 200 means this value exists";
+        on the other two, membership needs rows.
+
+        Args:
+            search: The search callable under test.
+            bogus_field_filter: A filter naming a field that cannot exist.
+            bogus_value_filter: A filter naming a real field with an impossible value.
+            context: Optional context string for the failure message.
+            **search_kwargs: Extra keyword arguments forwarded to ``search``.
+        """
+        ctx = f" ({context})" if context else ""
+        field_class = self.classify_filter(search, bogus_field_filter, **search_kwargs)
+        value_class = self.classify_filter(search, bogus_value_filter, **search_kwargs)
+
+        for probe, outcome in (
+            (bogus_field_filter, field_class),
+            (bogus_value_filter, value_class),
+        ):
+            assert outcome != FILTER_FORBIDDEN, (
+                f"Classifying {probe!r} hit a permission error{ctx}, so nothing was "
+                "learned about the endpoint. Grant the scope rather than reading this "
+                "as a rejection."
+            )
+            assert outcome != FILTER_ROWS, (
+                f"The probe {probe!r} returned rows{ctx}, so it is not actually bogus "
+                "and cannot classify anything. Pick a field or value that cannot match."
+            )
+
+        if field_class == FILTER_FQL_REJECTED and value_class == FILTER_FQL_REJECTED:
+            return ENDPOINT_VALUE_VALIDATING
+        if field_class == FILTER_FQL_REJECTED:
+            return ENDPOINT_FIELD_VALIDATING
+        return ENDPOINT_SILENT
+
+    def assert_envelope_ok(self, result: Any, context: str = "") -> None:
+        """Assert a search envelope carries neither a top-level nor an embedded error.
+
+        `assert_no_error` cannot see a rejected filter: `_format_fql_error_response`
+        moves the error into `results`, leaving no top-level `error` key to trip on.
+        Both shapes are checked here.
+        """
+        self.assert_no_error(result, context=context)
+        assert isinstance(result, dict), f"Expected an envelope dict ({context}): {result}"
+        assert "fql_guide" not in result, (
+            f"Filter was rejected as invalid FQL ({context}): {result.get('results')}"
+        )
+        for record in result.get("results", []):
+            assert "error" not in record, f"Embedded error ({context}): {record}"
+
+    def assert_every_value_accepted(
+        self,
+        search: Callable[..., Any],
+        field: str,
+        values: Any,
+        context: str = "",
+        **search_kwargs: Any,
+    ) -> dict[str, str]:
+        """Assert every value is a filterable member of `field`'s vocabulary.
+
+        Non-empty is not required: whether a tenant currently holds a record in some state
+        is not a property of the vocabulary. What this pins is that none of the values is
+        rejected — which only carries weight on a value-validating endpoint, so classify
+        the endpoint first (`classify_endpoint`) before reading a pass here as membership.
+
+        Returns the per-value classification, so a caller can additionally assert which
+        values produced rows.
+        """
+        ctx = f" ({context})" if context else ""
+        outcomes: dict[str, str] = {}
+        for value in values:
+            filter = f"{field}:'{value}'"
+            outcome = self.classify_filter(search, filter, **search_kwargs)
+            assert outcome != FILTER_FORBIDDEN, (
+                f"{filter} hit a permission error{ctx}; grant the scope rather than "
+                "treating this as a rejected value."
+            )
+            assert outcome != FILTER_FQL_REJECTED, (
+                f"{filter} was rejected{ctx}, so {value!r} is not a member of the "
+                f"{field} vocabulary. Correct the guide, the tool description and the "
+                "filter hint."
+            )
+            outcomes[value] = outcome
+        return outcomes
+
+    def assert_value_rejected(
+        self,
+        search: Callable[..., Any],
+        filter: str,
+        note: str = "",
+        **search_kwargs: Any,
+    ) -> str:
+        """Assert a filter returns no rows, and report whether it was rejected or merely empty.
+
+        Used to pin the negative half of a divergence — a value that a sibling endpoint
+        accepts but this one does not, or a spelling the guide warns against. Returning
+        rows is the failure: it means the thing being documented as unusable works.
+        """
+        outcome = self.classify_filter(search, filter, **search_kwargs)
+        assert outcome != FILTER_FORBIDDEN, (
+            f"{filter} hit a permission error, so nothing was verified. {note}"
+        )
+        assert outcome != FILTER_ROWS, (
+            f"{filter} returned rows, but it is documented as unusable here. {note}"
+        )
+        return outcome
+
+    def assert_filter_narrows(
+        self,
+        search: Callable[..., Any],
+        filter: str,
+        predicate: Optional[Any] = None,
+        predicate_desc: str = "",
+        note: str = "",
+        limit: int = 5,
+        **search_kwargs: Any,
+    ) -> Any:
+        """Assert a filter both matched rows and excluded some, by comparing totals.
+
+        This is the guard for a clause the API might be parsing as garbage and dropping —
+        a relative date expression, most of all. A dropped clause still returns rows, and
+        every row still satisfies a predicate that the whole unfiltered population happens
+        to satisfy too, so `assert_filter_matches` alone can confirm a construction the API
+        never honored. Requiring the filtered `pagination.total` to be *strictly smaller*
+        than the unfiltered one is what makes a dropped clause visible.
+
+        Fails rather than skips when the unfiltered population is already fully inside the
+        filter (nothing older than the cutoff, say): the comparison would be vacuous, and
+        reporting that as a confirmation is the exact false YES this helper exists to stop.
+        """
+        note_suffix = f" {note}" if note else ""
+        baseline = self.retry_on_transient(
+            lambda: self.call_method(search, limit=1, **search_kwargs),
+            context="unfiltered baseline",
+        )
+        self.assert_no_error(baseline, context="unfiltered baseline")
+        baseline_total = (baseline.get("pagination") or {}).get("total")
+        assert baseline_total, (
+            f"The unfiltered query reported total={baseline_total}, so there is no "
+            f"population to narrow and {filter!r} cannot be verified.{note_suffix}"
+        )
+
+        result = self.assert_filter_matches(
+            search,
+            filter,
+            predicate=predicate,
+            predicate_desc=predicate_desc,
+            note=note,
+            limit=limit,
+            **search_kwargs,
+        )
+        filtered_total = (result.get("pagination") or {}).get("total")
+        assert filtered_total, (
+            f"{filter!r} returned rows but pagination.total is {filtered_total}, so the "
+            f"totals cannot be compared and a dropped clause would go unnoticed.{note_suffix}"
+        )
+        assert filtered_total < baseline_total, (
+            f"{filter!r} matched all {baseline_total} records, so the clause excluded "
+            f"nothing. Either the API parsed it as garbage and dropped it, or the whole "
+            f"population happens to satisfy it — neither confirms the construction. "
+            f"filtered total={filtered_total}.{note_suffix}"
+        )
         return result
 
     def assert_result_has_id(
