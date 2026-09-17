@@ -700,12 +700,13 @@ class TestReconIntegration(BaseIntegrationTest):
         """Rule topic, priority and status, enumerated from the rules themselves.
 
         There is no aggregate for rules, so the distinct values come from a page of
-        records and each is then filtered on. `inactive` stays unproven: no rule in
-        this tenant is paused, and the validator trick used for notification status
-        does not transfer — `UpdateRulesV1` resolves the rule id before it looks at
-        `status`, so a nonexistent id returns RESOURCE_NOT_FOUND and never reports
-        whether the status was valid. Settling it needs a tenant holding a paused
-        rule, or authorization to pause a real one.
+        records and each is then filtered on. `inactive` stays unproven, and cannot
+        be settled from this API at all: `status` is not a field on either
+        `CreateRulesV1` or `UpdateRulesV1`, so no call can produce a paused rule.
+        Sent anyway as an unknown key, `UpdateRulesV1` answers 200 and ignores it
+        rather than rejecting it, so it cannot report membership either — the
+        validator trick that decides notification status has nothing to work with
+        here. Observing `inactive` needs a tenant where a rule was paused in the UI.
         """
         rules = self.skip_unless_tenant_has(
             self.call_method(self.module.search_recon_rules, limit=200),
