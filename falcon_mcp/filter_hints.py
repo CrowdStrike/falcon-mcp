@@ -7,6 +7,24 @@ without needing to read the full FQL resource.
 """
 
 FILTER_HINTS: dict[str, str] = {
+    # === On-Demand Scan ===
+    "falcon_search_ods_scans": (
+        "Common fields: id, description, initiated_from, status, severity, "
+        "filecount.scanned, filecount.malicious, scan_started_on, scan_completed_on, created_on. "
+        "Ex: status:'completed'+filecount.malicious:>0"
+    ),
+    "falcon_search_ods_scan_hosts": (
+        "Common fields: id, scan_id, host_id, status, severity, filecount.malicious, "
+        "started_on, completed_on, last_updated. Ex: scan_id:'<scan-id>'+filecount.malicious:>0"
+    ),
+    "falcon_search_ods_malicious_files": (
+        "Common fields: id, scan_id, host_id, filepath, filename, hash, severity, quarantined, "
+        "last_updated. Ex: scan_id:'<scan-id>'+quarantined:true"
+    ),
+    "falcon_search_ods_scheduled_scans": (
+        "Common fields: id, description, status, schedule.start_timestamp, schedule.interval, "
+        "created_on, last_updated, deleted. Ex: status:'active'+deleted:false"
+    ),
     # === AgentWorks ===
     "falcon_search_agentworks_agents": (
         "Common fields: template_id, active_version.model "

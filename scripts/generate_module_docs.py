@@ -57,6 +57,12 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     "idp": {
         "title": "Identity Protection",
     },
+    "ods": {
+        "title": "On-Demand Scan",
+        "description": (
+            "Search ODS results, launch and cancel scans, and manage scheduled scans."
+        ),
+    },
     "scheduledreports": {
         "slug": "scheduled-reports",
     },
@@ -129,6 +135,15 @@ HOSTED_MCP_TOOL_NOTES: dict[str, str] = {
 
 # Natural language prompt examples for each tool, shown in generated docs
 TOOL_EXAMPLES: dict[str, list[str]] = {
+    # On-Demand Scan
+    "falcon_search_ods_scans": ["Show completed ODS scans that found malicious files"],
+    "falcon_search_ods_scan_hosts": ["Which hosts in scan scan-123 found malicious files?"],
+    "falcon_search_ods_malicious_files": ["List quarantined files found by scan scan-123"],
+    "falcon_search_ods_scheduled_scans": ["Show active scheduled ODS scans"],
+    "falcon_launch_ods_scan": ["Scan C:\\Temp on host aid-123 without quarantining files"],
+    "falcon_cancel_ods_scans": ["Cancel ODS scan scan-123"],
+    "falcon_schedule_ods_scan": ["Schedule a daily scan of /tmp on this Linux host"],
+    "falcon_delete_ods_scheduled_scans": ["Delete scheduled ODS scan schedule-123"],
     # AgentWorks
     "falcon_search_agentworks_agents": [
         "List my AgentWorks agents",

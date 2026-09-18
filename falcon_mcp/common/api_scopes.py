@@ -294,6 +294,19 @@ API_SCOPE_REQUIREMENTS = {
     # The key and the scope keep the API-side "AIDR" spelling on purpose: the MCP
     # tools are named "guardian", but the platform names this API surface AIDR.
     "aidr_events_query": ["AIDR:read"],
+    # On-Demand Scan operations
+    "query_scans": ["On-demand scans (ODS):read"],
+    "get_scans_by_scan_ids_v2": ["On-demand scans (ODS):read"],
+    "query_scan_host_metadata": ["On-demand scans (ODS):read"],
+    "get_scan_host_metadata_by_ids": ["On-demand scans (ODS):read"],
+    "query_malicious_files": ["On-demand scans (ODS):read"],
+    "get_malicious_files_by_ids": ["On-demand scans (ODS):read"],
+    "query_scheduled_scans": ["On-demand scans (ODS):read"],
+    "get_scheduled_scans_by_scan_ids": ["On-demand scans (ODS):read"],
+    "create_scan": ["On-demand scans (ODS):write"],
+    "cancel_scans": ["On-demand scans (ODS):write"],
+    "schedule_scan": ["On-demand scans (ODS):write"],
+    "delete_scheduled_scans": ["On-demand scans (ODS):write"],
 }
 
 

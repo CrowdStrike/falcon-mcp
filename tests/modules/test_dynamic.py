@@ -470,7 +470,7 @@ class TestSearchToolsTwoModeEnvelope(unittest.TestCase):
             DynamicToolCatalog.search
         ).parameters["limit"].default
         self.assertEqual(declared, catalog_default)
-        self.assertEqual(declared, 50)
+        self.assertEqual(declared, 75)
 
 
 class TestWithheldToolsAreAbsentFromBothModes(unittest.TestCase):
@@ -575,17 +575,17 @@ class TestSearchRanking(unittest.TestCase):
     def test_lean_discovery_at_the_new_default_costs_less_than_full_entries_at_20(self):
         """The wider window is only affordable because entries dropped their schema.
 
-        Compares serialized payloads on the real catalog: a full 50 lean results
+        Compares serialized payloads on the real catalog: a full 75 lean results
         against the 20 full ones the previous default returned. If this inverts, the
         default limit is no longer paid for.
         """
-        lean_50 = self.catalog.search(query="")
-        self.assertEqual(len(lean_50), 50, "expected the default to fill the window")
+        lean_75 = self.catalog.search(query="")
+        self.assertEqual(len(lean_75), 75, "expected the default to fill the window")
         full_20 = [
             self.catalog._format_entry(e)
             for e in self.catalog._matches("", None)[:20]
         ]
-        self.assertLess(len(json.dumps(lean_50)), len(json.dumps(full_20)))
+        self.assertLess(len(json.dumps(lean_75)), len(json.dumps(full_20)))
 
     def test_exact_tool_name_ranks_first_with_and_without_prefix(self):
         for query in ("falcon_search_detections", "search_detections"):
