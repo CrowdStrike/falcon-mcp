@@ -328,17 +328,25 @@ FILTER_HINTS: dict[str, str] = {
         "status (normal|contained|containment_pending|lift_containment_pending), local_ip, external_ip, os_version, last_seen, "
         "product_type_desc (Workstation|Server|Domain Controller)."
     ),
-    # === Data Protection ===
-    "falcon_search_data_protection_classifications": (
-        "Common fields: name, created_by, created_at (UTC datetime), "
-        "modified_by, modified_at (UTC datetime)."
-    ),
-    "falcon_search_data_protection_policies": (
-        "Common fields: name, description, is_enabled (true|false), "
-        "is_default (true|false), precedence, created_at (UTC datetime), modified_by."
-    ),
-    "falcon_search_data_protection_content_patterns": (
-        "Common fields: name, category, type, region, example, deleted (true|false)."
+    # === Data Security ===
+    "falcon_search_data_security_entities": (
+        "Fields vary by entity_type — consult the entity's FQL guide "
+        "(falcon://data-security/<entity>/fql-guide). Common fields by type: "
+        "classification → name, created_by, created_at, modified_by, modified_at; "
+        "policy → name, description, is_enabled (true|false), is_default (true|false), "
+        "precedence, created_at, modified_by (requires platform_name); "
+        "content_pattern → name, category, type, region, example, deleted (true|false); "
+        "cloud_application → name, type (integrated|predefined|custom), deleted, "
+        "supports_network_inspection (true|false), application_group_id; "
+        "enterprise_account → name, application_group_id (google|microsoft|box), deleted, "
+        "created, last_updated; "
+        "web_location → name, type (predefined|custom), deleted, application_id, "
+        "provider_location_id, enterprise_account_id (sort not supported); "
+        "local_application → name, executable_name, deleted, created, last_updated "
+        "(sort not supported); "
+        "local_application_group → name, deleted, created, last_updated (sort not supported); "
+        "sensitivity_label → name, display_name, external_id, deleted, created, last_updated; "
+        "file_type → name, created, last_updated (read-only/predefined)."
     ),
     # === Recon ===
     "falcon_search_recon_notifications": (

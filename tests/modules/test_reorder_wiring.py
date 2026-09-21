@@ -44,7 +44,7 @@ from falcon_mcp.modules.agentworks import AgentworksModule
 from falcon_mcp.modules.cases import CasesModule
 from falcon_mcp.modules.cloud.cloud import CloudModule
 from falcon_mcp.modules.custom_ioa import CustomIOAModule
-from falcon_mcp.modules.data_protection import DataProtectionModule
+from falcon_mcp.modules.data_security import DataSecurityModule
 from falcon_mcp.modules.detections import DetectionsModule
 from falcon_mcp.modules.exclusions import ExclusionsModule
 from falcon_mcp.modules.firewall import FirewallModule
@@ -196,34 +196,24 @@ CASES: list[ReorderCase] = [
         kwargs={"policy_id": "policy-1"},
         site=("falcon_mcp/modules/firewall.py", "search_firewall_policy_rules"),
     ),
-    ReorderCase(
-        tool="falcon_search_data_protection_classifications",
-        module_cls=DataProtectionModule,
-        method="search_data_protection_classifications",
-        id_field="id",
-        site=(
-            "falcon_mcp/modules/data_protection.py",
-            "search_data_protection_classifications",
-        ),
-    ),
-    ReorderCase(
-        tool="falcon_search_data_protection_policies",
-        module_cls=DataProtectionModule,
-        method="search_data_protection_policies",
-        id_field="id",
-        kwargs={"platform_name": "win"},
-        site=("falcon_mcp/modules/data_protection.py", "search_data_protection_policies"),
-    ),
-    ReorderCase(
-        tool="falcon_search_data_protection_content_patterns",
-        module_cls=DataProtectionModule,
-        method="search_data_protection_content_patterns",
-        id_field="id",
-        site=(
-            "falcon_mcp/modules/data_protection.py",
-            "search_data_protection_content_patterns",
-        ),
-    ),
+    # --- Discriminated site: one reorder call in the shared _search_entity helper
+    # serves every data-security entity_type. Each entity type is driven through the
+    # single generic search tool so a wrapper cannot bypass the reorder. ---
+    *[
+        ReorderCase(
+            tool="falcon_search_data_security_entities",
+            module_cls=DataSecurityModule,
+            method="search_data_security_entities",
+            id_field="id",
+            kwargs=kwargs,
+            site=("falcon_mcp/modules/data_security.py", "_search_entity"),
+        )
+        for kwargs in (
+            {"entity_type": "classification"},
+            {"entity_type": "policy", "platform_name": "win"},
+            {"entity_type": "content_pattern"},
+        )
+    ],
     ReorderCase(
         tool="falcon_search_scheduled_reports",
         module_cls=ScheduledReportsModule,
@@ -435,7 +425,9 @@ def _drive(case: ReorderCase, entities: list[dict[str, Any]]) -> Any:
     """Call the tool with its query step stubbed to ORDERED_IDS and its get step to
     ``entities``, and return the raw tool result."""
     module = case.module_cls(MagicMock(spec=FalconClient))
-    resources: list[Any] = case.query_resources if case.query_resources is not None else list(ORDERED_IDS)
+    resources: list[Any] = (
+        case.query_resources if case.query_resources is not None else list(ORDERED_IDS)
+    )
 
     for name, value in case.extra_patches.items():
         setattr(module, name, value)
@@ -470,9 +462,7 @@ def test_reorder_restores_query_step_order(case: ReorderCase) -> None:
     The stubbed get step hands back the entities in ``HYDRATED_IDS`` order, mimicking a
     get-by-IDs endpoint that ignores the requested sort. A correctly wired site undoes that.
     """
-    entities = [
-        {case.id_field: entity_id, **case.entity_extra} for entity_id in HYDRATED_IDS
-    ]
+    entities = [{case.id_field: entity_id, **case.entity_extra} for entity_id in HYDRATED_IDS]
 
     rows = _extract_rows(_drive(case, entities))
 
@@ -559,9 +549,9 @@ def test_table_covers_every_call_site() -> None:
     covered = {case.site for case in CASES}
 
     assert not live - covered, f"call sites with no wiring case: {sorted(live - covered)}"
-    assert not covered - live, (
-        f"cases pointing at call sites that no longer exist: {sorted(covered - live)}"
-    )
+    assert (
+        not covered - live
+    ), f"cases pointing at call sites that no longer exist: {sorted(covered - live)}"
 
 
 def test_each_site_has_exactly_one_reorder_call() -> None:

@@ -45,8 +45,8 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     "customioa": {
         "slug": "custom-ioa",
     },
-    "dataprotection": {
-        "slug": "data-protection",
+    "datasecurity": {
+        "slug": "data-security",
     },
     "fusion": {
         "title": "Fusion SOAR",
@@ -125,6 +125,17 @@ HOSTED_MCP_TOOL_NOTES: dict[str, str] = {
     "falcon_search_managed_assets": (
         f"Not available on CrowdStrike's hosted Falcon MCP. See [module overview]({_OVERVIEW_LINK})."
     ),
+}
+
+# Per-tool scope overrides. The automatic scope extractor widens to every
+# operation in a class-level dispatch table when the subscript key is a runtime
+# parameter (e.g. ``self._OPERATIONS[entity_type]``). Override here to publish
+# the correct, narrower scope list for those tools.
+TOOL_SCOPE_OVERRIDES: dict[str, list[str]] = {
+    "falcon_search_data_security_entities": ["Data Protection:read"],
+    "falcon_get_data_security_entities": ["Data Protection:read"],
+    "falcon_create_data_security_entity": ["Data Protection:read", "Data Protection:write"],
+    "falcon_update_data_security_entity": ["Data Protection:read", "Data Protection:write"],
 }
 
 # Natural language prompt examples for each tool, shown in generated docs
@@ -303,18 +314,23 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_delete_ioa_rules": [
         "Delete rules from IOA group abc123",
     ],
-    # Data Protection
-    "falcon_search_data_protection_classifications": [
-        "What Data Protection classifications are configured in my environment?",
-        "Show me the classification rules that detect credit card data",
+    # Data Security
+    "falcon_search_data_security_entities": [
+        "What Data Security classifications are configured in my environment?",
+        "List all enabled Windows Data Security policies",
+        "Show me custom Data Security regex patterns in the Financial category",
     ],
-    "falcon_search_data_protection_policies": [
-        "List all enabled Windows Data Protection policies",
-        "Show me the Mac Data Protection policies and their precedence order",
+    "falcon_get_data_security_entities": [
+        "Show me the full details of that classification",
+        "Get the Data Security policy by ID so I can see its current config",
     ],
-    "falcon_search_data_protection_content_patterns": [
-        "What predefined content patterns are available for Data Protection?",
-        "Show me custom Data Protection regex patterns in the Financial category",
+    "falcon_create_data_security_entity": [
+        "Create a new Data Security classification called 'PCI Card Numbers'",
+        "Add a custom content pattern that detects internal project codes",
+    ],
+    "falcon_update_data_security_entity": [
+        "Enable that Data Security policy",
+        "Change the classification's protection mode to enforce",
     ],
     # Detections
     "falcon_search_detections": [
@@ -807,9 +823,7 @@ def _extract_module_meta(mod: Any) -> tuple[str, str]:
     # Extract title from first line:
     # "Real Time Response module for Falcon MCP Server." → "Real Time Response"
     first_line = doc_lines[0].strip() if doc_lines else ""
-    auto_title = re.sub(
-        r"\s+module for Falcon MCP Server\.?$", "", first_line, flags=re.IGNORECASE
-    )
+    auto_title = re.sub(r"\s+module for Falcon MCP Server\.?$", "", first_line, flags=re.IGNORECASE)
 
     # Extract description from the second paragraph (first non-blank line after title)
     # Stops at the next blank line so numbered lists / extra sections aren't included.
@@ -965,8 +979,11 @@ def _class_literal_containers(module_cls: type) -> dict[str, Any]:
         for node in tree.body[0].body:
             target: str | None = None
             value: ast.expr | None = None
-            if isinstance(node, ast.Assign) and len(node.targets) == 1 \
-                    and isinstance(node.targets[0], ast.Name):
+            if (
+                isinstance(node, ast.Assign)
+                and len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name)
+            ):
                 target, value = node.targets[0].id, node.value
             elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
                 target, value = node.target.id, node.value
@@ -1034,10 +1051,7 @@ def _container_ops_in(source: str, containers: dict[str, Any]) -> set[str]:
                 # Only trust the narrowing if it actually names entries at this level;
                 # otherwise those literals were something else and we must widen.
                 usable = {
-                    c
-                    for c in candidates
-                    for obj in level
-                    if isinstance(obj, dict) and c in obj
+                    c for c in candidates for obj in level if isinstance(obj, dict) and c in obj
                 }
                 keys = usable or None
             nxt: list[Any] = []
@@ -1167,8 +1181,9 @@ def extract_tool_scopes(method: Any, module_cls: type) -> list[str]:
     method_module = getattr(method, "__module__", "")
     chunks: list[tuple[str, str]] = [(method_source, method_module)]
     seen: set[tuple[str, str]] = set()
-    pending: list[tuple[str, str]] = [(name, method_module)
-                                      for name in re.findall(r"self\.(\w+)", method_source)]
+    pending: list[tuple[str, str]] = [
+        (name, method_module) for name in re.findall(r"self\.(\w+)", method_source)
+    ]
     pending += [(name, method_module) for name in _BARE_CALL.findall(method_source)]
     while pending:
         helper_name, from_module = pending.pop()
@@ -1364,7 +1379,9 @@ def extract_tool_annotations(module_cls: type) -> dict[str, dict[str, bool]]:
     return annotations
 
 
-def generate_module_page(module_key: str, module_cls: type, auto_title: str, auto_description: str) -> str:
+def generate_module_page(
+    module_key: str, module_cls: type, auto_title: str, auto_description: str
+) -> str:
     """Generate a complete markdown page for a module."""
     meta = MODULE_METADATA.get(module_key, {})
     title = meta.get("title", auto_title)
@@ -1396,8 +1413,11 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
                 "idempotentHint": True,
             }
 
-        # Get per-tool scopes
-        info["scopes"] = extract_tool_scopes(method, module_cls)
+        # Get per-tool scopes (override takes precedence over auto-extraction)
+        if info["name"] in TOOL_SCOPE_OVERRIDES:
+            info["scopes"] = TOOL_SCOPE_OVERRIDES[info["name"]]
+        else:
+            info["scopes"] = extract_tool_scopes(method, module_cls)
 
         # Example prompts (from static TOOL_EXAMPLES dict)
         info["examples"] = TOOL_EXAMPLES.get(info["name"], [])
@@ -1516,7 +1536,9 @@ def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
         module_cls = modules[key]["cls"]
         scopes_list = extract_module_scopes(module_cls)
         scopes = ", ".join(f"`{s}`" for s in scopes_list)
-        fallback_desc = modules[key]["auto_description"] or f"{title} module for CrowdStrike Falcon."
+        fallback_desc = (
+            modules[key]["auto_description"] or f"{title} module for CrowdStrike Falcon."
+        )
         desc = meta.get("description", fallback_desc)
         lines.append(f"| [{title}]({SITE_BASE_PATH}/modules/{slug}/) | {scopes} | {desc} |")
 
@@ -1626,7 +1648,9 @@ def main() -> None:
         filename = f"{slug}.md"
         expected_files.add(filename)
 
-        page = generate_module_page(key, mod_info["cls"], mod_info["auto_title"], mod_info["auto_description"])
+        page = generate_module_page(
+            key, mod_info["cls"], mod_info["auto_title"], mod_info["auto_description"]
+        )
         (OUTPUT_DIR / filename).write_text(page)
         print(f"  Generated: modules/{filename}")
 
