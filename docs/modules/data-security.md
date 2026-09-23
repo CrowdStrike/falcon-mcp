@@ -31,6 +31,7 @@ Read falcon://data-security/agent/behavioral-guide for behavioral rules
 and falcon://data-security/entities/model-guide for entity relationships.
 
 Formatting rules (apply to all Data Security output):
+
 - Protection mode emoji: blue circle = Enforce, yellow = Simulate, green = Monitor.
 - Use "Off" for disabled/unset settings — never a red X emoji.
 - Show entity NAMES, not raw UUIDs. If you only have IDs, say
@@ -61,6 +62,7 @@ which may be stale. See falcon://data-security/entities/model-guide for
 entity relationships.
 
 Formatting rules (apply to all Data Security output):
+
 - Protection mode emoji: blue circle = Enforce, yellow = Simulate, green = Monitor.
 - Use "Off" for disabled/unset settings — never a red X emoji.
 - Show entity NAMES, not raw UUIDs. If you only have IDs, say

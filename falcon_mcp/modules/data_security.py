@@ -478,6 +478,7 @@ class DataSecurityModule(BaseModule):
         and falcon://data-security/entities/model-guide for entity relationships.
 
         Formatting rules (apply to all Data Security output):
+
         - Protection mode emoji: blue circle = Enforce, yellow = Simulate, green = Monitor.
         - Use "Off" for disabled/unset settings — never a red X emoji.
         - Show entity NAMES, not raw UUIDs. If you only have IDs, say
@@ -536,6 +537,7 @@ class DataSecurityModule(BaseModule):
         entity relationships.
 
         Formatting rules (apply to all Data Security output):
+
         - Protection mode emoji: blue circle = Enforce, yellow = Simulate, green = Monitor.
         - Use "Off" for disabled/unset settings — never a red X emoji.
         - Show entity NAMES, not raw UUIDs. If you only have IDs, say
