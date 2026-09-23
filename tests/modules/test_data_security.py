@@ -74,26 +74,30 @@ class TestDataSecurityModule(TestModules):
         result = self.module.search_data_security_entities(
             entity_type="bogus", filter=None, limit=100, offset=0, sort=None
         )
-        self.assertIn("error", result)
-        self.assertIn("Invalid entity_type", result["error"])
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertIn("Invalid entity_type", result[0]["error"])
         self.mock_client.command.assert_not_called()
 
     def test_get_invalid_entity_type_returns_error(self):
         """get rejects an unknown entity_type before any API call."""
         result = self.module.get_data_security_entities(entity_type="bogus", ids=["x"])
-        self.assertIn("error", result)
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
         self.mock_client.command.assert_not_called()
 
     def test_create_invalid_entity_type_returns_error(self):
         """create rejects an unknown entity_type before any API call."""
         result = self.module.create_data_security_entity(entity_type="bogus", body={})
-        self.assertIn("error", result)
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
         self.mock_client.command.assert_not_called()
 
     def test_update_invalid_entity_type_returns_error(self):
         """update rejects an unknown entity_type before any API call."""
         result = self.module.update_data_security_entity(entity_type="bogus", body={})
-        self.assertIn("error", result)
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
         self.mock_client.command.assert_not_called()
 
     # --- Search: two-step / reorder / empty / error (classification) ---
@@ -209,6 +213,30 @@ class TestDataSecurityModule(TestModules):
         self.assertIn("fql_guide", result)
         self.assertIn("Filter error occurred", result["hint"])
 
+    def test_search_classifications_hydration_failure(self):
+        """When the query step succeeds but the get (hydration) step fails,
+        the error is returned wrapped in a list."""
+        query_response = {
+            "status_code": 200,
+            "body": {"resources": ["cls-id-1"]},
+        }
+        get_response = {
+            "status_code": 500,
+            "body": {
+                "resources": [],
+                "errors": [{"code": 500, "message": "internal server error"}],
+            },
+        }
+        self.mock_client.command.side_effect = [query_response, get_response]
+
+        result = self.module.search_data_security_entities(
+            entity_type="classification", filter=None, limit=100, offset=0, sort=None
+        )
+
+        self.assertEqual(self.mock_client.command.call_count, 2)
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+
     # --- Search: policy platform_name handling ---
 
     def test_search_policies_success(self):
@@ -266,8 +294,9 @@ class TestDataSecurityModule(TestModules):
         result = self.module.search_data_security_entities(
             entity_type="policy", platform_name=None, filter=None, limit=100, offset=0, sort=None
         )
-        self.assertIn("error", result)
-        self.assertIn("platform_name", result["error"])
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertIn("platform_name", result[0]["error"])
         self.mock_client.command.assert_not_called()
 
     # --- Search: representative op-id dispatch + sort gating ---
@@ -394,15 +423,17 @@ class TestDataSecurityModule(TestModules):
         result = self.module.create_data_security_entity(
             entity_type="policy", platform_name=None, body={"name": "P"}
         )
-        self.assertIn("error", result)
-        self.assertIn("platform_name", result["error"])
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertIn("platform_name", result[0]["error"])
         self.mock_client.command.assert_not_called()
 
     def test_create_file_type_is_read_only(self):
         """file_type does not support create; a guiding error is returned."""
         result = self.module.create_data_security_entity(entity_type="file_type", body={})
-        self.assertIn("error", result)
-        self.assertIn("read-only", result["error"])
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertIn("read-only", result[0]["error"])
         self.mock_client.command.assert_not_called()
 
     def test_create_error_returns_wrapped_error(self):
@@ -446,8 +477,9 @@ class TestDataSecurityModule(TestModules):
         result = self.module.update_data_security_entity(
             entity_type="content_pattern", body={"name": "new name"}
         )
-        self.assertIn("error", result)
-        self.assertIn("id", result["error"])
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertIn("id", result[0]["error"])
         self.mock_client.command.assert_not_called()
 
     def test_update_policy_sends_platform_name_and_resources(self):
@@ -484,8 +516,9 @@ class TestDataSecurityModule(TestModules):
         result = self.module.update_data_security_entity(
             entity_type="classification", body={"name": "renamed"}
         )
-        self.assertIn("error", result)
-        self.assertIn("id", result["error"])
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertIn("id", result[0]["error"])
         self.mock_client.command.assert_not_called()
 
     def test_update_web_location_wraps_and_sends_id(self):
@@ -507,8 +540,9 @@ class TestDataSecurityModule(TestModules):
         result = self.module.update_data_security_entity(
             entity_type="sensitivity_label", body={"id": "sl-1"}
         )
-        self.assertIn("error", result)
-        self.assertIn("does not support update", result["error"])
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+        self.assertIn("does not support update", result[0]["error"])
         self.mock_client.command.assert_not_called()
 
 

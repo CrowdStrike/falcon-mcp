@@ -492,13 +492,13 @@ class DataSecurityModule(BaseModule):
         """
         error = self._validate_entity_type(entity_type)
         if error:
-            return error
+            return [error]
 
         ops = self._OPERATIONS[entity_type]
         if ops["platform"] and not platform_name:
-            return _format_error_response(
+            return [_format_error_response(
                 f"platform_name is required for entity_type='{entity_type}' ('win' or 'mac')."
-            )
+            )]
 
         search_params: dict[str, Any] = {"filter": filter, "limit": limit, "offset": offset}
         if ops["sort"]:
@@ -549,7 +549,7 @@ class DataSecurityModule(BaseModule):
         """
         error = self._validate_entity_type(entity_type)
         if error:
-            return error
+            return [error]
 
         ops = self._OPERATIONS[entity_type]
         return self._base_get_by_ids(ops["get"], ids, use_params=True)
@@ -589,18 +589,18 @@ class DataSecurityModule(BaseModule):
         """
         error = self._validate_entity_type(entity_type)
         if error:
-            return error
+            return [error]
 
         ops = self._OPERATIONS[entity_type]
         create_op = ops["create"]
         if create_op is None:
-            return _format_error_response(
+            return [_format_error_response(
                 f"entity_type='{entity_type}' is read-only and does not support create."
-            )
+            )]
         if ops["platform"] and not platform_name:
-            return _format_error_response(
+            return [_format_error_response(
                 f"platform_name is required for entity_type='{entity_type}' ('win' or 'mac')."
-            )
+            )]
 
         query_params = {"platform_name": platform_name} if ops["platform"] else None
         return self._write_entity(
@@ -634,32 +634,34 @@ class DataSecurityModule(BaseModule):
         """
         error = self._validate_entity_type(entity_type)
         if error:
-            return error
+            return [error]
 
         ops = self._OPERATIONS[entity_type]
         update_op = ops["update"]
         if update_op is None:
-            return _format_error_response(f"entity_type='{entity_type}' does not support update.")
+            return [_format_error_response(
+                f"entity_type='{entity_type}' does not support update."
+            )]
         if ops["platform"] and not platform_name:
-            return _format_error_response(
+            return [_format_error_response(
                 f"platform_name is required for entity_type='{entity_type}' ('win' or 'mac')."
-            )
+            )]
 
         query_params = None
         body_for_wrap = body
         if ops["update_id_query"]:
             entity_id = body.get("id")
             if not entity_id:
-                return _format_error_response(
+                return [_format_error_response(
                     f"body must include an 'id' field to update entity_type='{entity_type}'."
-                )
+                )]
             body_for_wrap = {k: v for k, v in body.items() if k != "id"}
             query_params = {"id": entity_id}
         else:
             if not body.get("id"):
-                return _format_error_response(
+                return [_format_error_response(
                     f"body must include an 'id' field to update entity_type='{entity_type}'."
-                )
+                )]
             if ops["platform"]:
                 query_params = {"platform_name": platform_name}
 
