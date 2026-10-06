@@ -1,5 +1,7 @@
 """Integration tests for the Data Security module."""
 
+import time
+
 import pytest
 
 from falcon_mcp.modules.data_security import DataSecurityModule
@@ -307,3 +309,202 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
             )
             self.assert_no_error(result, context=f"{entity_type} operation names")
             self.assert_valid_list_response(result, min_length=0, context=f"{entity_type} response")
+
+    # --- Write roundtrips ---
+    #
+    # Each test creates uniquely named entities, updates them through the tool, re-reads
+    # them, and deletes everything it created in a finally block. The module has no delete
+    # tool, so cleanup calls the delete operations directly.
+
+    _DELETE_OPS = {
+        "content_pattern": "entities_content_pattern_delete",
+        "cloud_application": "entities_cloud_application_delete",
+        "web_location": "entities_web_location_delete_v2",
+        "local_application": "entities_local_application_delete",
+        "local_application_group": "entities_local_application_group_delete",
+        "classification": "entities_classification_delete_v2",
+        "policy": "entities_policy_delete_v2",
+    }
+
+    @pytest.fixture
+    def created(self, falcon_client):
+        """Collect (entity_type, id, extra_params) and delete them in reverse order."""
+        entities: list[tuple[str, str, dict]] = []
+        yield entities
+        for entity_type, entity_id, extra in reversed(entities):
+            falcon_client.command(
+                self._DELETE_OPS[entity_type], parameters={"ids": [entity_id], **extra}
+            )
+
+    def _create(self, created, entity_type: str, body: dict, platform_name=None) -> dict:
+        result = self.call_method(
+            self.module.create_data_security_entity,
+            entity_type=entity_type,
+            body=body,
+            platform_name=platform_name,
+        )
+        self.assert_no_error(result, context=f"create {entity_type}")
+        assert isinstance(result, list) and result and result[0].get("id"), (
+            f"create {entity_type} returned no entity: {result}"
+        )
+        extra = {"platform_name": platform_name} if platform_name else {}
+        created.append((entity_type, result[0]["id"], extra))
+        return result[0]
+
+    def _update(self, entity_type: str, body: dict, platform_name=None) -> None:
+        result = self.call_method(
+            self.module.update_data_security_entity,
+            entity_type=entity_type,
+            body=body,
+            platform_name=platform_name,
+        )
+        self.assert_no_error(result, context=f"update {entity_type}")
+
+    def _get(self, entity_type: str, entity_id: str) -> dict:
+        result = self.call_method(
+            self.module.get_data_security_entities, entity_type=entity_type, ids=[entity_id]
+        )
+        self.assert_no_error(result, context=f"get {entity_type}")
+        assert isinstance(result, list) and len(result) == 1, f"get {entity_type}: {result}"
+        return result[0]
+
+    @staticmethod
+    def _name(kind: str) -> str:
+        return f"fmcp-it-{kind}-{int(time.time() * 1000)}"
+
+    def test_content_pattern_partial_update_roundtrip(self, created):
+        """A partial content pattern update changes only the supplied field."""
+        cp = self._create(
+            created,
+            "content_pattern",
+            {
+                "name": self._name("cp"),
+                "category": "Custom",
+                "description": "before",
+                "regexes": ["FMCPIT[0-9]{6}"],
+                "min_match_threshold": 1,
+                "region": "ALL",
+            },
+        )
+        self._update("content_pattern", {"id": cp["id"], "description": "after"})
+
+        after = self._get("content_pattern", cp["id"])
+        assert after["description"] == "after"
+        assert after["name"] == cp["name"]
+        assert after["regexes"] == cp["regexes"]
+
+    def test_web_location_update_roundtrip(self, created):
+        """A web location created under a cloud application can be renamed."""
+        app = self._create(
+            created,
+            "cloud_application",
+            {"name": self._name("app"), "urls": [{"fqdn": f"{self._name('fqdn')}.example.com", "path": ""}]},
+        )
+        wl = self._create(
+            created,
+            "web_location",
+            {"name": self._name("wl"), "application_id": app["id"], "type": "custom"},
+        )
+        new_name = f"{wl['name']}-renamed"
+        self._update("web_location", {"id": wl["id"], "name": new_name})
+
+        after = self._get("web_location", wl["id"])
+        assert after["name"] == new_name
+        assert after["application_id"] == app["id"]
+
+    def test_local_application_partial_update_keeps_other_fields(self, created):
+        """Partial updates to a local application and its group leave unsupplied fields intact."""
+        group = self._create(
+            created,
+            "local_application_group",
+            {"name": self._name("grp"), "description": "before"},
+        )
+        app = self._create(
+            created,
+            "local_application",
+            {
+                "name": self._name("la"),
+                "executable_name": f"fmcpit{int(time.time())}.exe",
+                "group_ids": [group["id"]],
+                "apply_rules_for_children_processes": True,
+            },
+        )
+
+        self._update("local_application", {"id": app["id"], "enable_rename_detection": True})
+        app_after = self._get("local_application", app["id"])
+        assert app_after["enable_rename_detection"] is True
+        assert app_after["group_ids"] == [group["id"]], app_after
+        assert app_after["apply_rules_for_children_processes"] is True, app_after
+        assert app_after["executable_name"] == app["executable_name"]
+
+        self._update("local_application_group", {"id": group["id"], "description": "after"})
+        group_after = self._get("local_application_group", group["id"])
+        assert group_after["description"] == "after"
+        assert group_after["name"] == group["name"]
+        assert group_after["local_application_ids"] == [app["id"]], group_after
+
+    def test_classification_partial_update_keeps_rules(self, created):
+        """Updating only the protection mode keeps the classification's rules and patterns."""
+        cp = self._create(
+            created,
+            "content_pattern",
+            {
+                "name": self._name("cp"),
+                "category": "Custom",
+                "regexes": ["FMCPIT[0-9]{6}"],
+                "min_match_threshold": 1,
+                "region": "ALL",
+            },
+        )
+        cls = self._create(
+            created,
+            "classification",
+            {
+                "name": self._name("cls"),
+                "classification_properties": {
+                    "content_patterns": [cp["id"]],
+                    "content_patterns_operator": "or",
+                    "protection_mode": "monitor",
+                    "rules": [
+                        {
+                            "user_scope": "all",
+                            "detection_severity": "low",
+                            "response_action": "allow",
+                            "trigger_detection": False,
+                            "notify_end_user": False,
+                            "enable_usb_devices": True,
+                            "enable_printer_egress": False,
+                            "enable_web_locations": False,
+                            "web_locations_scope": "all",
+                            "enable_local_application_groups": False,
+                        }
+                    ],
+                },
+            },
+        )
+        self._update(
+            "classification",
+            {"id": cls["id"], "classification_properties": {"protection_mode": "simulate"}},
+        )
+
+        props = self._get("classification", cls["id"])["classification_properties"]
+        assert props["protection_mode"] == "simulate"
+        assert props["content_patterns"] == [cp["id"]]
+        assert len(props["rules"]) == 1
+
+    def test_policy_partial_update_roundtrip(self, created):
+        """A disabled policy with no host groups can be created and partially updated."""
+        policy = self._create(
+            created,
+            "policy",
+            {"name": self._name("pol"), "description": "before", "is_enabled": False},
+            platform_name="win",
+        )
+        self._update(
+            "policy", {"id": policy["id"], "description": "after"}, platform_name="win"
+        )
+
+        after = self._get("policy", policy["id"])
+        assert after["description"] == "after"
+        assert after["is_enabled"] is False
+        assert after["name"] == policy["name"]
