@@ -521,8 +521,9 @@ class TestDataSecurityModule(TestModules):
         self.assertIn("id", result[0]["error"])
         self.mock_client.command.assert_not_called()
 
-    def test_update_web_location_wraps_and_sends_id(self):
-        """Web location update wraps under 'web_locations' and sends id query param."""
+    def test_update_web_location_sends_flat_body_and_id(self):
+        """Web location update sends a flat body (create's 'web_locations' wrapper is
+        rejected by PATCH) with the id as a query param."""
         self.mock_client.command.side_effect = [
             {"status_code": 200, "body": {"resources": [{"id": "wl-1"}]}}
         ]
@@ -532,8 +533,7 @@ class TestDataSecurityModule(TestModules):
         call = self.mock_client.command.call_args
         self.assertEqual(call.args[0], "entities_web_location_patch_v2")
         self.assertEqual(call.kwargs["parameters"]["id"], "wl-1")
-        self.assertEqual(call.kwargs["body"]["web_locations"][0]["name"], "renamed")
-        self.assertNotIn("id", call.kwargs["body"]["web_locations"][0])
+        self.assertEqual(call.kwargs["body"], {"name": "renamed"})
 
     def test_update_sensitivity_label_unsupported(self):
         """sensitivity_label does not support update; a guiding error is returned."""

@@ -97,7 +97,7 @@ class DataSecurityModule(BaseModule):
     # Per-entity dispatch table. FalconPy operation IDs are recorded verbatim
     # (note the inconsistent _v2 suffixes). Unsupported operations are None.
     #   query / get / create / update: FalconPy operation IDs
-    #   body_wrapper: how the write body is wrapped for the API
+    #   create_wrapper / update_wrapper: how the create / update body is wrapped
     #                 ("resources", "web_locations", or None for a direct body)
     #   update_id_query: True when update passes the id as a query param (flat entities)
     #   platform: True when the entity requires platform_name
@@ -108,7 +108,8 @@ class DataSecurityModule(BaseModule):
             "get": "entities_classification_get_v2",
             "create": "entities_classification_post_v2",
             "update": "entities_classification_patch_v2",
-            "body_wrapper": "resources",
+            "create_wrapper": "resources",
+            "update_wrapper": "resources",
             "update_id_query": False,
             "platform": False,
             "sort": True,
@@ -118,7 +119,8 @@ class DataSecurityModule(BaseModule):
             "get": "entities_policy_get_v2",
             "create": "entities_policy_post_v2",
             "update": "entities_policy_patch_v2",
-            "body_wrapper": "resources",
+            "create_wrapper": "resources",
+            "update_wrapper": "resources",
             "update_id_query": False,
             "platform": True,
             "sort": True,
@@ -128,7 +130,8 @@ class DataSecurityModule(BaseModule):
             "get": "entities_content_pattern_get",
             "create": "entities_content_pattern_create",
             "update": "entities_content_pattern_patch",
-            "body_wrapper": None,
+            "create_wrapper": None,
+            "update_wrapper": None,
             "update_id_query": True,
             "platform": False,
             "sort": True,
@@ -138,7 +141,8 @@ class DataSecurityModule(BaseModule):
             "get": "entities_cloud_application_get",
             "create": "entities_cloud_application_create",
             "update": "entities_cloud_application_patch",
-            "body_wrapper": None,
+            "create_wrapper": None,
+            "update_wrapper": None,
             "update_id_query": True,
             "platform": False,
             "sort": True,
@@ -148,7 +152,8 @@ class DataSecurityModule(BaseModule):
             "get": "entities_enterprise_account_get",
             "create": "entities_enterprise_account_create",
             "update": "entities_enterprise_account_patch",
-            "body_wrapper": None,
+            "create_wrapper": None,
+            "update_wrapper": None,
             "update_id_query": True,
             "platform": False,
             "sort": True,
@@ -158,7 +163,8 @@ class DataSecurityModule(BaseModule):
             "get": "entities_web_location_get_v2",
             "create": "entities_web_location_create_v2",
             "update": "entities_web_location_patch_v2",
-            "body_wrapper": "web_locations",
+            "create_wrapper": "web_locations",
+            "update_wrapper": None,
             "update_id_query": True,
             "platform": False,
             "sort": False,
@@ -168,7 +174,8 @@ class DataSecurityModule(BaseModule):
             "get": "entities_local_application_get",
             "create": "entities_local_application_create",
             "update": "entities_local_application_patch",
-            "body_wrapper": None,
+            "create_wrapper": None,
+            "update_wrapper": None,
             "update_id_query": True,
             "platform": False,
             "sort": False,
@@ -178,7 +185,8 @@ class DataSecurityModule(BaseModule):
             "get": "entities_local_application_group_get",
             "create": "entities_local_application_group_create",
             "update": "entities_local_application_group_patch",
-            "body_wrapper": None,
+            "create_wrapper": None,
+            "update_wrapper": None,
             "update_id_query": True,
             "platform": False,
             "sort": False,
@@ -188,7 +196,8 @@ class DataSecurityModule(BaseModule):
             "get": "entities_sensitivity_label_get_v2",
             "create": "entities_sensitivity_label_create_v2",
             "update": None,
-            "body_wrapper": None,
+            "create_wrapper": None,
+            "update_wrapper": None,
             "update_id_query": True,
             "platform": False,
             "sort": True,
@@ -198,7 +207,8 @@ class DataSecurityModule(BaseModule):
             "get": "entities_file_type_get",
             "create": None,
             "update": None,
-            "body_wrapper": None,
+            "create_wrapper": None,
+            "update_wrapper": None,
             "update_id_query": True,
             "platform": False,
             "sort": True,
@@ -217,6 +227,7 @@ class DataSecurityModule(BaseModule):
         "sensitivity_label": SEARCH_SENSITIVITY_LABELS_FQL_DOCUMENTATION,
         "file_type": SEARCH_FILE_TYPES_FQL_DOCUMENTATION,
     }
+
 
     def _validate_entity_type(self, entity_type):
         """Validate the entity_type discriminator.
@@ -607,7 +618,7 @@ class DataSecurityModule(BaseModule):
         query_params = {"platform_name": platform_name} if ops["platform"] else None
         return self._write_entity(
             create_op,
-            self._wrap_body(ops["body_wrapper"], body),
+            self._wrap_body(ops["create_wrapper"], body),
             query_params=query_params,
         )
 
@@ -669,6 +680,6 @@ class DataSecurityModule(BaseModule):
 
         return self._write_entity(
             update_op,
-            self._wrap_body(ops["body_wrapper"], body_for_wrap),
+            self._wrap_body(ops["update_wrapper"], body_for_wrap),
             query_params=query_params,
         )
