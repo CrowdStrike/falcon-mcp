@@ -58,7 +58,7 @@ class DetectionsModule(BaseModule):
             name="update_detections",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),

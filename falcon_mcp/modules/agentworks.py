@@ -103,7 +103,7 @@ class AgentworksModule(BaseModule):
             name="invoke_agentworks_agent",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),

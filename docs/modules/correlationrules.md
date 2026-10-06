@@ -49,8 +49,8 @@ Returns the created rule record on success.
 
 ### `falcon_update_correlation_rule`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Correlation Rules:write`
 

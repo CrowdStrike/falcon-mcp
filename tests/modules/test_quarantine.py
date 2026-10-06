@@ -45,7 +45,7 @@ class TestQuarantineModule(TestModules):
             "falcon_update_quarantined_files",
             ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),

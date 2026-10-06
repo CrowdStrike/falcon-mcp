@@ -31,8 +31,8 @@ Responses include `pagination.total` (the total number of records matching the f
 
 ### `falcon_add_ioc`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `IOC Management:write`
 

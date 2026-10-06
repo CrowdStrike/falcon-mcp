@@ -682,7 +682,7 @@ class TestDetectionsModule(TestModules):
             "falcon_update_detections",
             ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),

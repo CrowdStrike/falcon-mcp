@@ -68,8 +68,8 @@ falcon_perform_host_group_action. Returns the created host group record on succe
 
 ### `falcon_update_host_group`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Host Groups:write`
 
@@ -102,8 +102,8 @@ Returns an empty list on success.
 
 ### `falcon_perform_host_group_action`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Host Groups:write`
 

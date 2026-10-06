@@ -310,7 +310,7 @@ class PoliciesModule(BaseModule):
             name="update_policy",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),
@@ -334,7 +334,7 @@ class PoliciesModule(BaseModule):
             name="perform_policy_action",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),
@@ -346,7 +346,7 @@ class PoliciesModule(BaseModule):
             name="set_policy_precedence",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),

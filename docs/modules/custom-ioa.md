@@ -74,8 +74,8 @@ group, use falcon_create_ioa_rule to add detection rules to it.
 
 ### `falcon_update_ioa_rule_group`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Custom IOA Rules:write`
 
@@ -123,8 +123,8 @@ criteria the rule matches against (process names, file paths, command line regex
 
 ### `falcon_update_ioa_rule`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Custom IOA Rules:write`
 

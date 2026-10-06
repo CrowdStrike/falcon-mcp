@@ -47,7 +47,8 @@ BASE_INSTRUCTIONS = (
     "empty result rather than an error, which is indistinguishable from a genuine "
     "no-match.\n\n"
     "Changing state: readOnlyHint=false marks a tool that changes tenant state, and "
-    "destructiveHint=true marks one whose effect cannot be undone. Confirm the user's "
+    "destructiveHint=true marks one that can remove, overwrite, or disable existing "
+    "state rather than only adding to it. Confirm the user's "
     "intent before calling either."
 )
 

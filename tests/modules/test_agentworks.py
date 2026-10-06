@@ -13,10 +13,11 @@ from falcon_mcp.modules import agentworks
 from falcon_mcp.modules.agentworks import AgentworksModule
 from tests.modules.utils.test_modules import TestModules
 
-# Mutating annotation for the invoke tool.
+# Mutating annotation for the invoke tool. Destructive because the agent's tools
+# decide the reachable effect, not this server.
 _MUTATING_ANNOTATIONS = ToolAnnotations(
     readOnlyHint=False,
-    destructiveHint=False,
+    destructiveHint=True,
     idempotentHint=False,
     openWorldHint=True,
 )

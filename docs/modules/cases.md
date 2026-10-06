@@ -69,8 +69,8 @@ created case record.
 
 ### `falcon_update_case`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Cases:write`
 
@@ -122,8 +122,8 @@ Returns the updated case record.
 
 ### `falcon_manage_case_tags`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Cases:write`
 

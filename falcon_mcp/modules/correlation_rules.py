@@ -43,7 +43,7 @@ class CorrelationRulesModule(BaseModule):
             name="update_correlation_rule",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=True,
                 openWorldHint=True,
             ),

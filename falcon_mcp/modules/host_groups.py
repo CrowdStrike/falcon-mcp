@@ -60,7 +60,7 @@ class HostGroupsModule(BaseModule):
             name="update_host_group",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),
@@ -84,7 +84,7 @@ class HostGroupsModule(BaseModule):
             name="perform_host_group_action",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),

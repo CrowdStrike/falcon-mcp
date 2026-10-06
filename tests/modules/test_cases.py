@@ -55,7 +55,7 @@ class TestCasesModule(TestModules):
     # -------------------------------------------------------------------------
 
     def test_mutating_tools_have_correct_annotations(self):
-        """Test that write tools have readOnlyHint=False, non-destructive annotations."""
+        """Test that write tools have readOnlyHint=False and the right destructiveHint."""
         self.module.register_tools(self.mock_server)
 
         mutating_annotations = ToolAnnotations(
@@ -67,12 +67,21 @@ class TestCasesModule(TestModules):
 
         for tool_name in [
             "falcon_create_case",
-            "falcon_update_case",
             "falcon_add_case_alert_evidence",
             "falcon_add_case_event_evidence",
-            "falcon_manage_case_tags",
         ]:
             self.assert_tool_annotations(tool_name, mutating_annotations)
+
+        # update_case can close or unassign a case and manage_case_tags can remove
+        # tags, so both overwrite existing state rather than only adding to it.
+        destructive_annotations = ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=False,
+            openWorldHint=True,
+        )
+        for tool_name in ["falcon_update_case", "falcon_manage_case_tags"]:
+            self.assert_tool_annotations(tool_name, destructive_annotations)
 
     def test_read_only_tools_have_default_annotations(self):
         """Test that search/get/list tools have read-only annotations."""

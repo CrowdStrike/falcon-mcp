@@ -42,7 +42,7 @@ class IOCModule(BaseModule):
             name="add_ioc",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),
