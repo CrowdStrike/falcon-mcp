@@ -279,7 +279,7 @@ class DataSecurityModule(BaseModule):
             name="create_data_security_entity",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),
@@ -290,7 +290,7 @@ class DataSecurityModule(BaseModule):
             name="update_data_security_entity",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=True,
                 openWorldHint=True,
             ),

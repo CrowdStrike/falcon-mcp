@@ -81,8 +81,8 @@ Formatting rules (apply to all Data Security output):
 
 ### `falcon_create_data_security_entity`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Data Protection:read`, `Data Protection:write`
 
@@ -101,8 +101,8 @@ platform_name. See falcon://data-security/entities/model-guide.
 
 ### `falcon_update_data_security_entity`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Data Protection:read`, `Data Protection:write`
 

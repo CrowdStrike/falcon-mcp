@@ -60,9 +60,11 @@ class TestDataSecurityModule(TestModules):
                 self.assertEqual(annotations, READ_ONLY_ANNOTATIONS, f"{name} should be read-only")
             elif name.startswith("falcon_create_"):
                 self.assertFalse(annotations.readOnlyHint, f"{name} must not be read-only")
+                self.assertTrue(annotations.destructiveHint, f"{name} must be destructive")
                 self.assertFalse(annotations.idempotentHint, f"{name} create is not idempotent")
             elif name.startswith("falcon_update_"):
                 self.assertFalse(annotations.readOnlyHint, f"{name} must not be read-only")
+                self.assertTrue(annotations.destructiveHint, f"{name} must be destructive")
                 self.assertTrue(annotations.idempotentHint, f"{name} update is idempotent")
             else:
                 self.fail(f"Unexpected tool name: {name}")
