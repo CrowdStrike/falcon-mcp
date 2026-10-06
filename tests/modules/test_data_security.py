@@ -535,6 +535,118 @@ class TestDataSecurityModule(TestModules):
         self.assertEqual(call.kwargs["parameters"]["id"], "wl-1")
         self.assertEqual(call.kwargs["body"], {"name": "renamed"})
 
+    # --- update_merge: whole-entity replace types ---
+
+    _LOCAL_APP = {
+        "id": "la-1",
+        "cid": "cid-1",
+        "name": "Excel",
+        "executable_name": "excel.exe",
+        "group_ids": ["grp-1"],
+        "apply_rules_for_children_processes": True,
+        "enable_rename_detection": False,
+        "emit_rule_matched_events_only": False,
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z",
+        "deleted": False,
+        "deleted_at": "0001-01-01T00:00:00Z",
+    }
+
+    def test_update_local_application_merges_onto_current_entity(self):
+        """A partial local_application update fetches the entity first and sends the
+        full object, so fields the caller omitted are not wiped."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [dict(self._LOCAL_APP)]}},
+            {"status_code": 200, "body": {"resources": [{"id": "la-1"}]}},
+        ]
+        self.module.update_data_security_entity(
+            entity_type="local_application",
+            body={"id": "la-1", "enable_rename_detection": True},
+        )
+        get_call, patch_call = self.mock_client.command.call_args_list
+        self.assertEqual(get_call.args[0], "entities_local_application_get")
+        self.assertEqual(get_call.kwargs["parameters"]["ids"], ["la-1"])
+        self.assertEqual(patch_call.args[0], "entities_local_application_patch")
+        self.assertEqual(patch_call.kwargs["parameters"], {"id": "la-1"})
+        self.assertEqual(
+            patch_call.kwargs["body"],
+            {
+                "name": "Excel",
+                "executable_name": "excel.exe",
+                "group_ids": ["grp-1"],
+                "apply_rules_for_children_processes": True,
+                "enable_rename_detection": True,
+                "emit_rule_matched_events_only": False,
+            },
+        )
+
+    def test_update_local_application_group_caller_values_win(self):
+        """Caller-supplied fields override the fetched values; untouched ones survive."""
+        current = {
+            "id": "grp-1",
+            "cid": "cid-1",
+            "name": "Office",
+            "description": "orig",
+            "local_application_ids": ["la-1", "la-2"],
+            "created_at": "x",
+            "updated_at": "x",
+            "deleted": False,
+            "deleted_at": "x",
+        }
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [current]}},
+            {"status_code": 200, "body": {"resources": [{"id": "grp-1"}]}},
+        ]
+        self.module.update_data_security_entity(
+            entity_type="local_application_group",
+            body={"id": "grp-1", "local_application_ids": ["la-3"]},
+        )
+        patch_call = self.mock_client.command.call_args_list[1]
+        self.assertEqual(
+            patch_call.kwargs["body"],
+            {"name": "Office", "description": "orig", "local_application_ids": ["la-3"]},
+        )
+
+    def test_update_merge_not_found_does_not_patch(self):
+        """When the entity to merge onto does not exist, no PATCH is sent."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": []}},
+        ]
+        result = self.module.update_data_security_entity(
+            entity_type="local_application", body={"id": "missing", "name": "x"}
+        )
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        self.assertIn("error", result[0])
+        self.assertIn("missing", result[0]["error"])
+
+    def test_update_merge_get_error_does_not_patch(self):
+        """A failed fetch is returned as an error and no PATCH is sent."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 403, "body": {"errors": [{"message": "access denied"}]}},
+        ]
+        result = self.module.update_data_security_entity(
+            entity_type="local_application_group", body={"id": "grp-1", "name": "x"}
+        )
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        self.assertEqual(
+            self.mock_client.command.call_args.args[0], "entities_local_application_group_get"
+        )
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+
+    def test_update_partial_merge_types_do_not_fetch(self):
+        """Types whose PATCH merges server-side send only the caller's fields."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [{"id": "app-1"}]}}
+        ]
+        self.module.update_data_security_entity(
+            entity_type="cloud_application", body={"id": "app-1", "description": "d"}
+        )
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        call = self.mock_client.command.call_args
+        self.assertEqual(call.args[0], "entities_cloud_application_patch")
+        self.assertEqual(call.kwargs["body"], {"description": "d"})
+
     def test_update_sensitivity_label_unsupported(self):
         """sensitivity_label does not support update; a guiding error is returned."""
         result = self.module.update_data_security_entity(

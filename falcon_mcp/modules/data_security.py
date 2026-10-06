@@ -100,6 +100,8 @@ class DataSecurityModule(BaseModule):
     #   create_wrapper / update_wrapper: how the create / update body is wrapped
     #                 ("resources", "web_locations", or None for a direct body)
     #   update_id_query: True when update passes the id as a query param (flat entities)
+    #   update_merge: True when update replaces the whole entity, so the current
+    #                 entity is fetched and the caller's fields overlaid onto it
     #   platform: True when the entity requires platform_name
     #   sort: True when search supports a sort parameter
     _OPERATIONS: dict[str, dict[str, Any]] = {
@@ -111,6 +113,7 @@ class DataSecurityModule(BaseModule):
             "create_wrapper": "resources",
             "update_wrapper": "resources",
             "update_id_query": False,
+            "update_merge": False,
             "platform": False,
             "sort": True,
         },
@@ -122,6 +125,7 @@ class DataSecurityModule(BaseModule):
             "create_wrapper": "resources",
             "update_wrapper": "resources",
             "update_id_query": False,
+            "update_merge": False,
             "platform": True,
             "sort": True,
         },
@@ -133,6 +137,7 @@ class DataSecurityModule(BaseModule):
             "create_wrapper": None,
             "update_wrapper": None,
             "update_id_query": True,
+            "update_merge": False,
             "platform": False,
             "sort": True,
         },
@@ -144,6 +149,7 @@ class DataSecurityModule(BaseModule):
             "create_wrapper": None,
             "update_wrapper": None,
             "update_id_query": True,
+            "update_merge": False,
             "platform": False,
             "sort": True,
         },
@@ -155,6 +161,7 @@ class DataSecurityModule(BaseModule):
             "create_wrapper": None,
             "update_wrapper": None,
             "update_id_query": True,
+            "update_merge": False,
             "platform": False,
             "sort": True,
         },
@@ -166,6 +173,7 @@ class DataSecurityModule(BaseModule):
             "create_wrapper": "web_locations",
             "update_wrapper": None,
             "update_id_query": True,
+            "update_merge": False,
             "platform": False,
             "sort": False,
         },
@@ -177,6 +185,7 @@ class DataSecurityModule(BaseModule):
             "create_wrapper": None,
             "update_wrapper": None,
             "update_id_query": True,
+            "update_merge": True,
             "platform": False,
             "sort": False,
         },
@@ -188,6 +197,7 @@ class DataSecurityModule(BaseModule):
             "create_wrapper": None,
             "update_wrapper": None,
             "update_id_query": True,
+            "update_merge": True,
             "platform": False,
             "sort": False,
         },
@@ -199,6 +209,7 @@ class DataSecurityModule(BaseModule):
             "create_wrapper": None,
             "update_wrapper": None,
             "update_id_query": True,
+            "update_merge": False,
             "platform": False,
             "sort": True,
         },
@@ -210,6 +221,7 @@ class DataSecurityModule(BaseModule):
             "create_wrapper": None,
             "update_wrapper": None,
             "update_id_query": True,
+            "update_merge": False,
             "platform": False,
             "sort": True,
         },
@@ -228,6 +240,11 @@ class DataSecurityModule(BaseModule):
         "file_type": SEARCH_FILE_TYPES_FQL_DOCUMENTATION,
     }
 
+    # Server-managed fields dropped from a fetched entity before it is sent back
+    # as an update_merge body.
+    _SERVER_MANAGED_FIELDS = frozenset(
+        {"id", "cid", "created_at", "updated_at", "deleted", "deleted_at"}
+    )
 
     def _validate_entity_type(self, entity_type):
         """Validate the entity_type discriminator.
@@ -670,6 +687,19 @@ class DataSecurityModule(BaseModule):
                 )]
             body_for_wrap = {k: v for k, v in body.items() if k != "id"}
             query_params = {"id": entity_id}
+            if ops["update_merge"]:
+                current = self._base_get_by_ids(ops["get"], [entity_id], use_params=True)
+                if self._is_error(current):
+                    return [current]
+                if not isinstance(current, list) or not current:
+                    return [_format_error_response(
+                        f"No {entity_type} found with id '{entity_id}'. "
+                        "Use falcon_search_data_security_entities to find a valid id."
+                    )]
+                existing = {
+                    k: v for k, v in current[0].items() if k not in self._SERVER_MANAGED_FIELDS
+                }
+                body_for_wrap = {**existing, **body_for_wrap}
         else:
             if not body.get("id"):
                 return [_format_error_response(
