@@ -425,9 +425,7 @@ def _drive(case: ReorderCase, entities: list[dict[str, Any]]) -> Any:
     """Call the tool with its query step stubbed to ORDERED_IDS and its get step to
     ``entities``, and return the raw tool result."""
     module = case.module_cls(MagicMock(spec=FalconClient))
-    resources: list[Any] = (
-        case.query_resources if case.query_resources is not None else list(ORDERED_IDS)
-    )
+    resources: list[Any] = case.query_resources if case.query_resources is not None else list(ORDERED_IDS)
 
     for name, value in case.extra_patches.items():
         setattr(module, name, value)
@@ -462,7 +460,9 @@ def test_reorder_restores_query_step_order(case: ReorderCase) -> None:
     The stubbed get step hands back the entities in ``HYDRATED_IDS`` order, mimicking a
     get-by-IDs endpoint that ignores the requested sort. A correctly wired site undoes that.
     """
-    entities = [{case.id_field: entity_id, **case.entity_extra} for entity_id in HYDRATED_IDS]
+    entities = [
+        {case.id_field: entity_id, **case.entity_extra} for entity_id in HYDRATED_IDS
+    ]
 
     rows = _extract_rows(_drive(case, entities))
 
@@ -549,9 +549,9 @@ def test_table_covers_every_call_site() -> None:
     covered = {case.site for case in CASES}
 
     assert not live - covered, f"call sites with no wiring case: {sorted(live - covered)}"
-    assert (
-        not covered - live
-    ), f"cases pointing at call sites that no longer exist: {sorted(covered - live)}"
+    assert not covered - live, (
+        f"cases pointing at call sites that no longer exist: {sorted(covered - live)}"
+    )
 
 
 def test_each_site_has_exactly_one_reorder_call() -> None:

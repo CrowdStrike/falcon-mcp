@@ -121,14 +121,16 @@ def _parse_jsonrpc(response: Response) -> dict[str, Any]:
     if "text/event-stream" in content_type:
         for raw_line in response.text.splitlines():
             if raw_line.startswith("data: "):
-                return json.loads(raw_line[len("data: ") :])
+                return json.loads(raw_line[len("data: "):])
         raise AssertionError(f"No data event in SSE response body: {response.text!r}")
     return response.json()
 
 
 def _initialize_session(client: TestClient) -> tuple[str, dict[str, Any]]:
     response = client.post("/mcp", json=_initialize_payload(), headers=ACCEPT_HEADERS)
-    assert response.status_code == 200, f"initialize failed: {response.status_code} {response.text}"
+    assert response.status_code == 200, (
+        f"initialize failed: {response.status_code} {response.text}"
+    )
     session_id = response.headers.get("Mcp-Session-Id", "")
     body = _parse_jsonrpc(response)
     client.post(
@@ -297,11 +299,19 @@ class TestMCPComplianceProtocol(unittest.IsolatedAsyncioTestCase):
                 annotations_dump,
             )
 
-        async with create_connected_server_and_client_session(self.mcp_server.server) as session:
-            snap1 = sorted(_tuple_for(tool) for tool in (await session.list_tools()).tools)
+        async with create_connected_server_and_client_session(
+            self.mcp_server.server
+        ) as session:
+            snap1 = sorted(
+                _tuple_for(tool) for tool in (await session.list_tools()).tools
+            )
 
-        async with create_connected_server_and_client_session(self.mcp_server.server) as session:
-            snap2 = sorted(_tuple_for(tool) for tool in (await session.list_tools()).tools)
+        async with create_connected_server_and_client_session(
+            self.mcp_server.server
+        ) as session:
+            snap2 = sorted(
+                _tuple_for(tool) for tool in (await session.list_tools()).tools
+            )
 
         self.assertEqual(snap1, snap2, "tools/list output differs between sessions")
 
@@ -311,12 +321,16 @@ class TestMCPComplianceProtocol(unittest.IsolatedAsyncioTestCase):
         falcon-mcp registers tools and resources at startup and never changes
         them at runtime. Declaring listChanged=True would mislead clients.
         """
-        async with create_connected_server_and_client_session(self.mcp_server.server) as session:
+        async with create_connected_server_and_client_session(
+            self.mcp_server.server
+        ) as session:
             caps = session.get_server_capabilities()
 
         self.assertIsNotNone(caps, "ClientSession returned no server capabilities")
 
-        self.assertIsNotNone(caps.tools, "Server registers tools but declares no tools capability")
+        self.assertIsNotNone(
+            caps.tools, "Server registers tools but declares no tools capability"
+        )
         self.assertFalse(
             caps.tools.listChanged,
             f"Server declares tools.listChanged={caps.tools.listChanged} but "
@@ -324,7 +338,8 @@ class TestMCPComplianceProtocol(unittest.IsolatedAsyncioTestCase):
         )
 
         has_any_resource = any(
-            len(getattr(mod, "resources", [])) > 0 for mod in self.mcp_server.modules.values()
+            len(getattr(mod, "resources", [])) > 0
+            for mod in self.mcp_server.modules.values()
         )
         if has_any_resource:
             self.assertIsNotNone(
@@ -343,7 +358,9 @@ class TestMCPComplianceProtocol(unittest.IsolatedAsyncioTestCase):
         Also asserts that every module with a filter-accepting tool registers
         at least one guide resource.
         """
-        async with create_connected_server_and_client_session(self.mcp_server.server) as session:
+        async with create_connected_server_and_client_session(
+            self.mcp_server.server
+        ) as session:
             list_result = await session.list_resources()
             tools_result = await session.list_tools()
 
@@ -359,7 +376,8 @@ class TestMCPComplianceProtocol(unittest.IsolatedAsyncioTestCase):
         )
 
         module_tools: dict[str, set[str]] = {
-            name: set(getattr(mod, "tools", [])) for name, mod in self.mcp_server.modules.items()
+            name: set(getattr(mod, "tools", []))
+            for name, mod in self.mcp_server.modules.items()
         }
         module_resources: dict[str, set[str]] = {
             name: set(getattr(mod, "resources", []))
@@ -393,7 +411,9 @@ class TestMCPComplianceProtocol(unittest.IsolatedAsyncioTestCase):
         declare readOnlyHint=True and destructiveHint=False. The allowlist is
         enforced bidirectionally — stale entries and reverted tools also fail.
         """
-        async with create_connected_server_and_client_session(self.mcp_server.server) as session:
+        async with create_connected_server_and_client_session(
+            self.mcp_server.server
+        ) as session:
             tools = (await session.list_tools()).tools
 
         tool_map = {t.name: t.annotations for t in tools}
@@ -404,7 +424,8 @@ class TestMCPComplianceProtocol(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(
             ghost_entries,
             "MUTATING_TOOL_ALLOWLIST contains tool names that no longer exist. "
-            "Remove stale entries:\n" + "\n".join(f"  - {name}" for name in sorted(ghost_entries)),
+            "Remove stale entries:\n"
+            + "\n".join(f"  - {name}" for name in sorted(ghost_entries)),
         )
 
         # Catch allowlisted tools that were reverted to read-only
@@ -434,7 +455,9 @@ class TestMCPComplianceProtocol(unittest.IsolatedAsyncioTestCase):
             if annotations.readOnlyHint is not True:
                 violations.append((tool.name, f"readOnlyHint={annotations.readOnlyHint!r}"))
             if annotations.destructiveHint is not False:
-                violations.append((tool.name, f"destructiveHint={annotations.destructiveHint!r}"))
+                violations.append(
+                    (tool.name, f"destructiveHint={annotations.destructiveHint!r}")
+                )
 
         self.assertFalse(
             violations,
@@ -461,7 +484,9 @@ class TestMCPComplianceDynamic(unittest.IsolatedAsyncioTestCase):
 
     async def test_dynamic_mode_exposes_three_tools(self):
         """Dynamic mode MUST expose exactly 3 tools."""
-        async with create_connected_server_and_client_session(self.mcp_server.server) as session:
+        async with create_connected_server_and_client_session(
+            self.mcp_server.server
+        ) as session:
             tools = (await session.list_tools()).tools
 
         tool_names = {t.name for t in tools}
@@ -472,7 +497,9 @@ class TestMCPComplianceDynamic(unittest.IsolatedAsyncioTestCase):
 
     async def test_dynamic_meta_tool_annotations(self):
         """falcon_search_tools MUST be read-only; falcon_execute_tool intentionally has no annotations."""
-        async with create_connected_server_and_client_session(self.mcp_server.server) as session:
+        async with create_connected_server_and_client_session(
+            self.mcp_server.server
+        ) as session:
             tools = {t.name: t for t in (await session.list_tools()).tools}
 
         search_annotations = tools["falcon_search_tools"].annotations
