@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib
 import os
 import pkgutil
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from falcon_mcp.common.logging import get_logger
@@ -20,6 +21,33 @@ logger = get_logger(__name__)
 
 # This will be populated by the discovery process
 AVAILABLE_MODULES: dict[str, type[BaseModule]] = {}
+
+# Former module names, mapped to the module that replaced them, so existing
+# --modules and FALCON_MCP_MODULES configurations keep working after a rename.
+MODULE_ALIASES: dict[str, str] = {
+    "dataprotection": "datasecurity",
+}
+
+
+def resolve_module_names(names: Iterable[str]) -> list[str]:
+    """Replace renamed module names with their current names, preserving order.
+
+    Logs a warning for each former name so operators can update their configuration.
+    Names that are neither aliases nor modules pass through for the caller to validate.
+    """
+    resolved: list[str] = []
+    for name in names:
+        current = MODULE_ALIASES.get(name)
+        if current:
+            logger.warning(
+                "Module '%s' has been renamed to '%s'; update your configuration.",
+                name,
+                current,
+            )
+            name = current
+        if name not in resolved:
+            resolved.append(name)
+    return resolved
 
 
 def _register_from_module(import_path: str, log_context: str) -> None:

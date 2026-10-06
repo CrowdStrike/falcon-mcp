@@ -292,5 +292,34 @@ class TestRegistryPackageScanCoverage(unittest.TestCase):
         self.assertIn("cloud", registry.AVAILABLE_MODULES)
 
 
+class TestModuleAliases(unittest.TestCase):
+    """Former module names keep resolving to the module that replaced them."""
+
+    def test_every_alias_points_at_a_real_module(self):
+        names = registry.get_module_names()
+        for alias, current in registry.MODULE_ALIASES.items():
+            with self.subTest(alias=alias):
+                self.assertIn(current, names)
+                self.assertNotIn(alias, names, "an alias must not shadow a live module")
+
+    def test_alias_resolves_and_warns(self):
+        with self.assertLogs("falcon_mcp.registry", level="WARNING") as logs:
+            self.assertEqual(
+                registry.resolve_module_names(["hosts", "dataprotection"]),
+                ["hosts", "datasecurity"],
+            )
+        self.assertIn("dataprotection", logs.output[0])
+        self.assertIn("datasecurity", logs.output[0])
+
+    def test_alias_and_current_name_collapse_to_one(self):
+        self.assertEqual(
+            registry.resolve_module_names(["dataprotection", "datasecurity"]),
+            ["datasecurity"],
+        )
+
+    def test_unknown_names_pass_through_for_validation(self):
+        self.assertEqual(registry.resolve_module_names(["bogus"]), ["bogus"])
+
+
 if __name__ == "__main__":
     unittest.main()
