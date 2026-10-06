@@ -70,7 +70,7 @@ class TestCorrelationRulesModule(TestModules):
             "falcon_update_correlation_rule",
             ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=True,
                 openWorldHint=True,
             ),

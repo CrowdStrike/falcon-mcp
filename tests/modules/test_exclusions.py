@@ -8,17 +8,17 @@ from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
 from falcon_mcp.modules.exclusions import ExclusionsModule
 from tests.modules.utils.test_modules import TestModules
 
-MUTATING_ANNOTATIONS = ToolAnnotations(
-    readOnlyHint=False,
-    destructiveHint=False,
-    idempotentHint=False,
-    openWorldHint=True,
-)
-
 DESTRUCTIVE_ANNOTATIONS = ToolAnnotations(
     readOnlyHint=False,
     destructiveHint=True,
     idempotentHint=True,
+    openWorldHint=True,
+)
+
+DESTRUCTIVE_MUTATING_ANNOTATIONS = ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=True,
+    idempotentHint=False,
     openWorldHint=True,
 )
 
@@ -89,8 +89,12 @@ class TestExclusionsModule(TestModules):
         self.assert_tool_annotations(
             "falcon_get_certificate_details", READ_ONLY_ANNOTATIONS
         )
-        self.assert_tool_annotations("falcon_create_exclusion", MUTATING_ANNOTATIONS)
-        self.assert_tool_annotations("falcon_update_exclusion", MUTATING_ANNOTATIONS)
+        self.assert_tool_annotations(
+            "falcon_create_exclusion", DESTRUCTIVE_MUTATING_ANNOTATIONS
+        )
+        self.assert_tool_annotations(
+            "falcon_update_exclusion", DESTRUCTIVE_MUTATING_ANNOTATIONS
+        )
         self.assert_tool_annotations(
             "falcon_delete_exclusions", DESTRUCTIVE_ANNOTATIONS
         )

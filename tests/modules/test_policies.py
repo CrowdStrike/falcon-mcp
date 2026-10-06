@@ -22,6 +22,13 @@ DESTRUCTIVE_ANNOTATIONS = ToolAnnotations(
     openWorldHint=True,
 )
 
+DESTRUCTIVE_MUTATING_ANNOTATIONS = ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=True,
+    idempotentHint=False,
+    openWorldHint=True,
+)
+
 # Maps policy_type -> (combined_op, query_op, get_op, members_op).
 EXPECTED_OPS = {
     "prevention": (
@@ -105,15 +112,17 @@ class TestPoliciesModule(TestModules):
             "falcon_search_policy_members", READ_ONLY_ANNOTATIONS
         )
         self.assert_tool_annotations("falcon_create_policy", MUTATING_ANNOTATIONS)
-        self.assert_tool_annotations("falcon_update_policy", MUTATING_ANNOTATIONS)
+        self.assert_tool_annotations(
+            "falcon_update_policy", DESTRUCTIVE_MUTATING_ANNOTATIONS
+        )
         self.assert_tool_annotations(
             "falcon_delete_policies", DESTRUCTIVE_ANNOTATIONS
         )
         self.assert_tool_annotations(
-            "falcon_perform_policy_action", MUTATING_ANNOTATIONS
+            "falcon_perform_policy_action", DESTRUCTIVE_MUTATING_ANNOTATIONS
         )
         self.assert_tool_annotations(
-            "falcon_set_policy_precedence", MUTATING_ANNOTATIONS
+            "falcon_set_policy_precedence", DESTRUCTIVE_MUTATING_ANNOTATIONS
         )
 
     # ---- Search ----------------------------------------------------------------

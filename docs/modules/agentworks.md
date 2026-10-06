@@ -86,8 +86,8 @@ conversation, ai_trace_id, and any tool approvals.
 
 ### `falcon_invoke_agentworks_agent`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Charlotte AI Agent Definition:read`, `Charlotte AI Agent Definition:write`
 

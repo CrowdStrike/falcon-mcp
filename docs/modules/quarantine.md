@@ -49,8 +49,8 @@ filter expressions. Returns a list of action counts keyed by action name.
 
 ### `falcon_update_quarantined_files`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Quarantined Files:write`
 

@@ -38,8 +38,8 @@ Responses include `pagination.total` (the total number of records matching the f
 
 ### `falcon_create_exclusion`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `IOA Exclusions:write`, `Machine Learning Exclusions:write`, `Sensor Visibility Exclusions:write`
 
@@ -58,8 +58,8 @@ error before any API call. Returns the created exclusion record(s).
 
 ### `falcon_update_exclusion`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `IOA Exclusions:write`, `Machine Learning Exclusions:write`, `Sensor Visibility Exclusions:write`
 

@@ -47,8 +47,8 @@ falcon_search_hosts instead. Returns comprehensive host details.
 
 ### `falcon_manage_host_grouping_tags`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Hosts:write`
 

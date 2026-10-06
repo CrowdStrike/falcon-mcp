@@ -689,7 +689,7 @@ class TestCustomIOAModule(TestModules):
             "falcon_update_ioa_rule_group",
             ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=True,
                 openWorldHint=True,
             ),
@@ -728,7 +728,7 @@ class TestCustomIOAModule(TestModules):
             "falcon_update_ioa_rule",
             ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=True,
                 openWorldHint=True,
             ),

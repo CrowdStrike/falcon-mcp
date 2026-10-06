@@ -81,7 +81,7 @@ class CasesModule(BaseModule):
             name="update_case",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),
@@ -114,7 +114,7 @@ class CasesModule(BaseModule):
             name="manage_case_tags",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),

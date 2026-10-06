@@ -66,7 +66,7 @@ class CustomIOAModule(BaseModule):
             name="update_ioa_rule_group",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=True,
                 openWorldHint=True,
             ),
@@ -102,7 +102,7 @@ class CustomIOAModule(BaseModule):
             name="update_ioa_rule",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=True,
                 openWorldHint=True,
             ),

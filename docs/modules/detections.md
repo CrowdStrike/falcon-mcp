@@ -70,8 +70,8 @@ with a `count`; single-value aggregations (`cardinality`, `max`, `min`, `avg`,
 
 ### `falcon_update_detections`
 
-> [!NOTE]
-> This tool modifies data.
+> [!CAUTION]
+> This tool performs destructive operations.
 
 **Required scopes:** `Alerts:write`
 

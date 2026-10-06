@@ -359,9 +359,19 @@ class TestHostGroupsModule(TestModules):
             openWorldHint=True,
         )
         self.assert_tool_annotations("falcon_create_host_group", non_destructive)
-        self.assert_tool_annotations("falcon_update_host_group", non_destructive)
+
+        # update_host_group can rewrite a dynamic group's assignment_rule and
+        # perform_host_group_action can remove hosts, so both move hosts out of
+        # groups (and their policies) rather than only adding.
+        destructive_mutating = ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=False,
+            openWorldHint=True,
+        )
+        self.assert_tool_annotations("falcon_update_host_group", destructive_mutating)
         self.assert_tool_annotations(
-            "falcon_perform_host_group_action", non_destructive
+            "falcon_perform_host_group_action", destructive_mutating
         )
 
         self.assert_tool_annotations(

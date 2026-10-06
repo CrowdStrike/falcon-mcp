@@ -471,7 +471,7 @@ class TestIOCModule(TestModules):
             "falcon_add_ioc",
             ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),

@@ -150,7 +150,7 @@ class ExclusionsModule(BaseModule):
             name="create_exclusion",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),
@@ -162,7 +162,7 @@ class ExclusionsModule(BaseModule):
             name="update_exclusion",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
-                destructiveHint=False,
+                destructiveHint=True,
                 idempotentHint=False,
                 openWorldHint=True,
             ),
