@@ -17,32 +17,16 @@ Provides access to Data Security configuration data — classifications, policie
 
 **Required scopes:** `Data Protection:read`
 
-Search for Data Security entities of the given entity_type.
+Search Data Security (DLP, formerly Data Protection) configuration entities.
 
-A single generic search across all Data Security entity types. The
-entity_type discriminator selects which collection is queried. Consult
-the matching FQL guide resource (listed in
-falcon://data-security/entities/model-guide) before constructing filter
-expressions. Returns full entity details wrapped in a pagination envelope.
-
-entity_type='policy' requires platform_name ('win' or 'mac').
-
-Read falcon://data-security/agent/behavioral-guide for behavioral rules
-and falcon://data-security/entities/model-guide for entity relationships.
-
-Formatting rules (apply to all Data Security output):
-
-- Protection mode emoji: blue circle = Enforce, yellow = Simulate, green = Monitor.
-- Use "Off" for disabled/unset settings — never a red X emoji.
-- Show entity NAMES, not raw UUIDs. If you only have IDs, say
-  "<n> attached" and offer to expand rather than dumping UUIDs.
-- Omit sections with no data.
-- Listings: aligned columns (#, Name, Mode, CPs, Rules, Created).
-- Single entity: header with name + mode circle, then labeled sections
-  (ID, Platform, Status, Precedence, Description, Created/Modified,
-  Host Groups, Inspection, Evidence, Justification).
-- Drill-downs: ASCII tree (Policy → Classification → Content Patterns → Rules
-  with egress channels).
+Covers classifications, policies, content patterns, cloud applications,
+enterprise accounts, web locations, local applications, local application
+groups, sensitivity labels, and file types; a policy search also needs
+platform_name. Consult the entity's FQL guide before constructing filter
+expressions, e.g. falcon://data-security/policies/fql-guide (all ten are
+listed in falcon://data-security/entities/model-guide). Returns full entity
+details in a pagination envelope whose `pagination.total` is the API's count
+of matches, or null when the API does not report one.
 
 **Example prompts:**
 
@@ -61,19 +45,6 @@ Always re-fetch by ID rather than relying on earlier search results,
 which may be stale. See falcon://data-security/entities/model-guide for
 entity relationships.
 
-Formatting rules (apply to all Data Security output):
-
-- Protection mode emoji: blue circle = Enforce, yellow = Simulate, green = Monitor.
-- Use "Off" for disabled/unset settings — never a red X emoji.
-- Show entity NAMES, not raw UUIDs. If you only have IDs, say
-  "<n> attached" and offer to expand rather than dumping UUIDs.
-- Omit sections with no data.
-- Single entity: header with name + mode circle, then labeled sections
-  (ID, Platform, Status, Precedence, Description, Created/Modified,
-  Host Groups, Inspection, Evidence, Justification).
-- Drill-downs: ASCII tree (Policy → Classification → Content Patterns → Rules
-  with egress channels).
-
 **Example prompts:**
 
 - "Show me the full details of that classification"
@@ -86,13 +57,13 @@ Formatting rules (apply to all Data Security output):
 
 **Required scopes:** `Data Protection:read`, `Data Protection:write`
 
-Create a new Data Security entity of the given entity_type.
+Create a Data Security entity of the chosen entity_type.
 
-A single generic create across all writable Data Security entity types.
-Bodies reference other entities (Classifications, Content Patterns, Web
-Locations, File Types, Sensitivity Labels) by ID — obtain those IDs via the
-search/get tools first (never guess them). entity_type='policy' requires
-platform_name. See falcon://data-security/entities/model-guide.
+Creates classifications, policies, content patterns, cloud applications,
+enterprise accounts, web locations, local applications, local application
+groups, and sensitivity labels; policies also need platform_name. Bodies
+reference other entities by ID, so look those IDs up with search first and
+never guess them. Returns a list containing the created entity.
 
 **Example prompts:**
 
@@ -106,12 +77,13 @@ platform_name. See falcon://data-security/entities/model-guide.
 
 **Required scopes:** `Data Protection:read`, `Data Protection:write`
 
-Update an existing Data Security entity of the given entity_type.
+Update an existing Data Security entity of the chosen entity_type.
 
-A single generic update across all updatable Data Security entity types.
-Retrieve the current entity via search/get, then submit the changed fields
-with the entity "id" included in the body. entity_type='policy' requires
-platform_name. See falcon://data-security/entities/model-guide.
+Updates classifications, policies, content patterns, cloud applications,
+enterprise accounts, web locations, local applications, and local
+application groups; policies also need platform_name. Find the entity with
+search, then send its "id" plus only the fields to change. Returns a list
+containing the updated entity.
 
 **Example prompts:**
 
