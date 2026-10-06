@@ -332,9 +332,11 @@ FILTER_HINTS: dict[str, str] = {
     "falcon_search_data_security_entities": (
         "Fields vary by entity_type — consult the entity's FQL guide "
         "(falcon://data-security/<entity>/fql-guide). Common fields by type: "
-        "classification → name, created_by, created_at, modified_by, modified_at; "
+        "classification → name, created_by, created_at, modified_by, modified_at "
+        "(name and emails match only with ~, e.g. created_by:~'user@example.com'); "
         "policy → name, description, is_enabled (true|false), is_default (true|false), "
-        "precedence, created_at, modified_by (requires platform_name); "
+        "precedence, created_at, modified_by (name, description and emails ~ only; "
+        "requires platform_name); "
         "content_pattern → name, category, type, region, example, deleted (true|false); "
         "cloud_application → name, type (integrated|predefined|custom), deleted, "
         "supports_network_inspection (true|false), application_group_id; "

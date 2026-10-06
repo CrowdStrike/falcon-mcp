@@ -50,11 +50,10 @@ SEARCH_CLASSIFICATIONS_FQL_FILTERS = [
         "Yes",
         """
         Email of the user who created the classification.
-        Use exact match with the full email address.
-        Note: ~ on email fields matches only complete @-delimited segments
-        (the full local part or the whole address), not arbitrary substrings.
+        Exact match returns nothing on this field; use ~ with the full
+        address or its full local part. Partial words do not match.
 
-        Ex: created_by:'user@example.com'
+        Ex: created_by:~'user@example.com'
         """,
     ),
     (
@@ -63,11 +62,10 @@ SEARCH_CLASSIFICATIONS_FQL_FILTERS = [
         "Yes",
         """
         Email of the user who last modified the classification.
-        Use exact match with the full email address.
-        Note: ~ on email fields matches only complete @-delimited segments
-        (the full local part or the whole address), not arbitrary substrings.
+        Exact match returns nothing on this field; use ~ with the full
+        address or its full local part. Partial words do not match.
 
-        Ex: modified_by:'user@example.com'
+        Ex: modified_by:~'user@example.com'
         """,
     ),
 ]
@@ -175,7 +173,8 @@ SEARCH_POLICIES_FQL_FILTERS = [
         "String",
         "Yes",
         """
-        Policy description text. Supports text match (~).
+        Policy description text. Only the ~ operator works on this field;
+        exact match returns nothing.
 
         Ex: description:~'compliance'
         """,
@@ -197,11 +196,10 @@ SEARCH_POLICIES_FQL_FILTERS = [
         "Yes",
         """
         Email of the user who last modified the policy.
-        Use exact match with the full email address.
-        Note: ~ on email fields matches only complete @-delimited segments
-        (the full local part or the whole address), not arbitrary substrings.
+        Exact match returns nothing on this field; use ~ with the full
+        address or its full local part. Partial words do not match.
 
-        Ex: modified_by:'user@example.com'
+        Ex: modified_by:~'user@example.com'
         """,
     ),
 ]

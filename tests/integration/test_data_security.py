@@ -154,6 +154,56 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
                     f"{entity_type} name.{direction} is not ordered: {keys}"
                 )
 
+    def _ids_matching(self, entity_type: str, fql: str, **kwargs) -> list[str]:
+        result = self.call_method(
+            self.module.search_data_security_entities,
+            entity_type=entity_type,
+            filter=fql,
+            limit=50,
+            **kwargs,
+        )
+        self.assert_no_error(result, context=f"{entity_type} {fql}")
+        return [e["id"] for e in self._unwrap_results(result)]
+
+    def test_name_and_email_match_only_with_tilde(self):
+        """Backs the classification and policy guides: `~` matches, exact returns nothing.
+
+        The fixture comes from an unfiltered search. Each pair of queries shares the
+        fixture's exact created_at, so the operator is the only difference between them.
+        """
+        cases = [
+            ("classification", "created_by", {}),
+            ("classification", "name", {}),
+            ("policy", "modified_by", {"platform_name": "win"}),
+            ("policy", "name", {"platform_name": "win"}),
+            ("policy", "description", {"platform_name": "win"}),
+        ]
+        for entity_type, field, kwargs in cases:
+            fixtures = self._unwrap_results(
+                self.call_method(
+                    self.module.search_data_security_entities,
+                    entity_type=entity_type,
+                    limit=50,
+                    **kwargs,
+                )
+            )
+            fixture = next(
+                (e for e in fixtures if e.get(field) and "'" not in e[field] and e.get("created_at")),
+                None,
+            )
+            assert fixture, f"No {entity_type} with a quote-free {field} to test against"
+            pin = f"created_at:'{fixture['created_at']}'"
+            value = fixture[field]
+
+            tilde = self._ids_matching(entity_type, f"{field}:~'{value}'+{pin}", **kwargs)
+            exact = self._ids_matching(entity_type, f"{field}:'{value}'+{pin}", **kwargs)
+
+            assert fixture["id"] in tilde, f"{entity_type} {field}:~ missed its own value {value!r}"
+            assert fixture["id"] not in exact, (
+                f"{entity_type} {field}:'...' exact match now works — update the FQL guide, "
+                f"which says only ~ matches. Value: {value!r}"
+            )
+
     # --- Policies ---
 
     def test_search_policies_windows(self):
