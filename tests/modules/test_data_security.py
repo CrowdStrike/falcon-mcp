@@ -361,6 +361,16 @@ class TestDataSecurityModule(TestModules):
         self.assertEqual(call.kwargs["parameters"]["ids"], ["cp-1"])
         self.assertEqual(result[0]["id"], "cp-1")
 
+    def test_get_error_is_wrapped_in_a_list(self):
+        """Get returns errors as [error], the same shape as search, create and update."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 404, "body": {"errors": [{"message": "not found"}]}}
+        ]
+        result = self.module.get_data_security_entities(entity_type="policy", ids=["missing"])
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
+
     # --- Create: body wrapping is the critical contract ---
 
     def test_create_content_pattern_bare_body(self):

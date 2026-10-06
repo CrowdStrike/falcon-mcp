@@ -393,7 +393,7 @@ class DataSecurityModule(BaseModule):
             TextResource(
                 uri=AnyUrl("falcon://data-security/agent/behavioral-guide"),
                 name="falcon_data_security_behavioral_guide",
-                description="Behavioral guidance for working with Data Security entities: domain context, operational rules, mandatory privacy/redaction requirements, and data freshness rules.",
+                description="Behavioral guidance for working with Data Security entities: domain context and operational rules.",
                 text=WORKFLOW_GUIDE_DOCUMENTATION,
             ),
         )
@@ -533,19 +533,23 @@ class DataSecurityModule(BaseModule):
             description="Entity IDs to retrieve (from a search or create response)."
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve full details of Data Security entities by their IDs.
+        """Retrieve full details of Data Security entities of one entity_type by ID.
 
-        A single generic get-by-IDs across all Data Security entity types.
-        Always re-fetch by ID rather than relying on earlier search results,
-        which may be stale. See falcon://data-security/entities/model-guide for
-        entity relationships.
+        Use when you already hold IDs, such as the ones one entity lists for the
+        entities it references; to find entities by their attributes, use
+        falcon_search_data_security_entities instead. See
+        falcon://data-security/entities/model-guide for how the entities reference
+        each other. Returns a list of the matching entities.
         """
         error = self._validate_entity_type(entity_type)
         if error:
             return [error]
 
         ops = self._OPERATIONS[entity_type]
-        return self._base_get_by_ids(ops["get"], ids, use_params=True)
+        result = self._base_get_by_ids(ops["get"], ids, use_params=True)
+        if self._is_error(result):
+            return [result]
+        return result
 
     # ── Create / update tools (generic, entity_type-keyed) ────────────────
 

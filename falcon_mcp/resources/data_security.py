@@ -921,12 +921,4 @@ setting, ask the user rather than assuming.
 3. After displaying entity details, check for UUIDs or references to other
    entities. Offer to fetch and display those relationships using the data
    model in falcon://data-security/entities/model-guide.
-
-=== FRESHNESS RULE ===
-
-When presenting details about a specific entity (policy, classification, etc.),
-always re-fetch it by ID using the appropriate get tool (e.g.,
-falcon_get_data_security_entities with entity_type='policy') rather than relying on earlier search
-results. Search results may be stale due to API caching or eventual
-consistency — only a direct get-by-ID call guarantees the current state.
 """

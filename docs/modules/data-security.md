@@ -38,12 +38,13 @@ of matches, or null when the API does not report one.
 
 **Required scopes:** `Data Protection:read`
 
-Retrieve full details of Data Security entities by their IDs.
+Retrieve full details of Data Security entities of one entity_type by ID.
 
-A single generic get-by-IDs across all Data Security entity types.
-Always re-fetch by ID rather than relying on earlier search results,
-which may be stale. See falcon://data-security/entities/model-guide for
-entity relationships.
+Use when you already hold IDs, such as the ones one entity lists for the
+entities it references; to find entities by their attributes, use
+falcon_search_data_security_entities instead. See
+falcon://data-security/entities/model-guide for how the entities reference
+each other. Returns a list of the matching entities.
 
 **Example prompts:**
 
@@ -103,4 +104,4 @@ containing the updated entity.
 - **`falcon://data-security/sensitivity-labels/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_data_security_entities` tool with `entity_type='sensitivity_label'`.
 - **`falcon://data-security/file-types/fql-guide`**: Contains the guide for the `filter` param of the `falcon_search_data_security_entities` tool with `entity_type='file_type'`.
 - **`falcon://data-security/entities/model-guide`**: Data Security entity relationship model. Shows how Policies reference Classifications, which combine Content Patterns, File Types, Web Origins, Sensitivity Labels, and Rules.
-- **`falcon://data-security/agent/behavioral-guide`**: Behavioral guidance for working with Data Security entities: domain context, operational rules, mandatory privacy/redaction requirements, and data freshness rules.
+- **`falcon://data-security/agent/behavioral-guide`**: Behavioral guidance for working with Data Security entities: domain context and operational rules.
