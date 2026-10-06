@@ -333,6 +333,26 @@ SEARCH_CONTENT_PATTERNS_FQL_FILTERS = [
         Ex: example:~'4111'
         """,
     ),
+    (
+        "created",
+        "Timestamp",
+        "Yes",
+        """
+        Date the content pattern was created (RFC3339).
+
+        Ex: created:>'2024-01-01'
+        """,
+    ),
+    (
+        "last_updated",
+        "Timestamp",
+        "Yes",
+        """
+        Date the content pattern was last updated (RFC3339).
+
+        Ex: last_updated:>'2024-06-01'
+        """,
+    ),
 ]
 
 SEARCH_CONTENT_PATTERNS_FQL_DOCUMENTATION = (
@@ -352,6 +372,7 @@ property_name:[operator]'value'
 
 === DATA TYPES & SYNTAX ===
 • Strings: 'value' (use ~ for case-insensitive matching)
+• Dates: 'YYYY-MM-DDTHH:MM:SSZ' (UTC format)
 • Booleans: true or false (no quotes)
 
 === COMBINING CONDITIONS ===
@@ -383,6 +404,7 @@ Supported sort fields: name.asc, name.desc, category.asc, region.asc
 • Use ~ operator for case-insensitive name matching
 • Boolean values have no quotes: deleted:false
 • type values are lowercase: 'custom', 'predefined'
+• Relative dates such as 'now-7d' are rejected; use an absolute UTC timestamp
 """
 )
 
@@ -425,6 +447,7 @@ def _fql_doc(title: str, tool_name: str, filters: list[tuple], sort_fields: str)
         + "• Use ~ operator for case-insensitive name matching\n"
         + "• Boolean values have no quotes (e.g. deleted:false)\n"
         + "• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'\n"
+        + "• Relative dates such as 'now-7d' are rejected; use an absolute UTC timestamp\n"
     )
 
 
@@ -478,7 +501,27 @@ SEARCH_CLOUD_APPLICATIONS_FQL_FILTERS = [
         """
         Cloud application group ID this application belongs to.
 
-        Ex: application_group_id:'abc123'
+        Ex: application_group_id:'google'
+        """,
+    ),
+    (
+        "created",
+        "Timestamp",
+        "Yes",
+        """
+        Date the cloud application was created (RFC3339).
+
+        Ex: created:>'2024-01-01'
+        """,
+    ),
+    (
+        "last_updated",
+        "Timestamp",
+        "Yes",
+        """
+        Date the cloud application was last updated (RFC3339).
+
+        Ex: last_updated:>'2024-06-01'
         """,
     ),
 ]
@@ -590,19 +633,9 @@ SEARCH_WEB_LOCATIONS_FQL_FILTERS = [
         "String",
         "Yes",
         """
-        Associated cloud application ID.
+        ID of the cloud application the web location belongs to.
 
-        Ex: application_id:'abc123'
-        """,
-    ),
-    (
-        "provider_location_id",
-        "String",
-        "Yes",
-        """
-        Provider-assigned location ID.
-
-        Ex: provider_location_id:'site-1'
+        Ex: application_id:'0123456789abcdef0123456789abcdef'
         """,
     ),
     (
@@ -610,9 +643,59 @@ SEARCH_WEB_LOCATIONS_FQL_FILTERS = [
         "String",
         "Yes",
         """
-        Enterprise account ID this web location belongs to.
+        ID of the enterprise account this web location belongs to.
 
-        Ex: enterprise_account_id:'abc123'
+        Ex: enterprise_account_id:'0123456789abcdef0123456789abcdef'
+        """,
+    ),
+    (
+        "web_location_group_id",
+        "String",
+        "Yes",
+        """
+        Matches web locations whose web_location_group_ids include this group ID.
+
+        Ex: web_location_group_id:'0123456789abcdef0123456789abcdef'
+        """,
+    ),
+    (
+        "web_location_group_count",
+        "Integer",
+        "Yes",
+        """
+        Number of web location groups the web location belongs to.
+
+        Ex: web_location_group_count:>0
+        """,
+    ),
+    (
+        "supports_network_inspection",
+        "Boolean",
+        "No",
+        """
+        Whether network-level inspection is supported.
+
+        Ex: supports_network_inspection:true
+        """,
+    ),
+    (
+        "created",
+        "Timestamp",
+        "Yes",
+        """
+        Date the web location was created (RFC3339).
+
+        Ex: created:>'2024-01-01'
+        """,
+    ),
+    (
+        "last_updated",
+        "Timestamp",
+        "Yes",
+        """
+        Date the web location was last updated (RFC3339).
+
+        Ex: last_updated:>'2024-06-01'
         """,
     ),
 ]

@@ -204,6 +204,67 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
                 f"which says only ~ matches. Value: {value!r}"
             )
 
+    def test_documented_v1_fields_find_a_known_record(self):
+        """Backs the content pattern, cloud application and web location guides.
+
+        Each fixture comes from an unfiltered search. Every check is ANDed with the
+        fixture's exact name, which these endpoints match exactly, so a field the API
+        ignored or rejected would drop the fixture rather than pass on volume.
+        """
+        checks = {
+            "content_pattern": lambda e: [f"created:'{e['created']}'", f"last_updated:'{e['last_updated']}'"],
+            "cloud_application": lambda e: [f"created:'{e['created']}'", f"last_updated:'{e['last_updated']}'"],
+            "web_location": lambda e: [
+                f"created:'{e['created']}'",
+                f"last_updated:'{e['last_updated']}'",
+                f"web_location_group_id:'{e['web_location_group_ids'][0]}'",
+                f"web_location_group_count:{len(e['web_location_group_ids'])}",
+            ],
+        }
+        for entity_type, clauses in checks.items():
+            records = self._unwrap_results(
+                self.call_method(
+                    self.module.search_data_security_entities, entity_type=entity_type, limit=100
+                )
+            )
+            fixture = next(
+                (
+                    e
+                    for e in records
+                    if e.get("name", "").strip()
+                    and "'" not in e["name"]
+                    and (entity_type != "web_location" or e.get("web_location_group_ids"))
+                ),
+                None,
+            )
+            assert fixture, f"No usable {entity_type} fixture in the first 100 records"
+            pin = f"name:'{fixture['name']}'"
+            for clause in clauses(fixture):
+                ids = self._ids_matching(entity_type, f"{clause}+{pin}")
+                assert fixture["id"] in ids, f"{entity_type} {clause} did not find its own record"
+
+        for value in ("true", "false"):
+            ids = self._ids_matching("web_location", f"supports_network_inspection:{value}")
+            assert ids, f"web_location supports_network_inspection:{value} returned nothing"
+
+    def test_relative_dates_are_rejected_outside_classification_and_policy(self):
+        """Backs the guides' note that only classification and policy accept now-Nd."""
+        result = self.call_method(
+            self.module.search_data_security_entities,
+            entity_type="content_pattern",
+            filter="created:>'now-7d'",
+            limit=1,
+        )
+        errors = result.get("results") if isinstance(result, dict) else result
+        assert errors and "error" in errors[0], (
+            "content_pattern now accepts relative dates — drop the 'relative dates are "
+            f"rejected' note from the v1 FQL guides and the filter hint. Got: {result}"
+        )
+        assert errors[0]["details"]["status_code"] == 400
+
+        ok = self._ids_matching("classification", "created_at:>'now-3650d'")
+        assert ok, "classification no longer accepts relative dates"
+
     # --- Policies ---
 
     def test_search_policies_windows(self):
