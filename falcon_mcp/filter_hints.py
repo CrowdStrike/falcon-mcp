@@ -341,10 +341,9 @@ FILTER_HINTS: dict[str, str] = {
         "enterprise_account → name, application_group_id (google|microsoft|box), deleted, "
         "created, last_updated; "
         "web_location → name, type (predefined|custom), deleted, application_id, "
-        "provider_location_id, enterprise_account_id (sort not supported); "
-        "local_application → name, executable_name, deleted, created, last_updated "
-        "(sort not supported); "
-        "local_application_group → name, deleted, created, last_updated (sort not supported); "
+        "provider_location_id, enterprise_account_id; "
+        "local_application → name, executable_name, deleted, created, last_updated; "
+        "local_application_group → name, deleted, created, last_updated; "
         "sensitivity_label → name, display_name, external_id, deleted, created, last_updated; "
         "file_type → name, created, last_updated (read-only/predefined)."
     ),

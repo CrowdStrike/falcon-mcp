@@ -1,5 +1,6 @@
 """Integration tests for the Data Security module."""
 
+import re
 import time
 
 import pytest
@@ -121,33 +122,37 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
             f"Got: {descending}"
         )
 
-    def test_content_pattern_name_sort_orders_neither_direction(self):
-        """Backs the `sort` description's name caveat with a live check.
+    @staticmethod
+    def _collation_key(name: str) -> str:
+        """The v1 endpoints sort names ignoring case and punctuation ('CLI monitoring'
+        before 'CL-LarkDemo'), with non-ASCII names last; mirror that to compare."""
+        return re.sub(r"[^0-9a-z\u0080-\uffff]", "", name.lower())
 
-        `name` fails to order results in either direction (0 of 4 trials each way, with 20
-        of 20 distinct names, so this is an ordering defect rather than a tie-break). If
-        either direction starts working, add `name` back to the content_pattern FQL guide's
-        sort fields.
+    def test_name_sort_orders_both_directions(self):
+        """Backs the guides' `name.asc` / `name.desc` sort fields with a live check.
 
-        Not a `_reorder_by_ids` concern — this endpoint's get step preserves the order it is
-        handed (0 of 4 trials scrambled).
+        Web locations and local applications are included because their SDK spec
+        omits `sort` even though the API accepts and honors it.
         """
-        for direction in ("asc", "desc"):
-            result = self.call_method(
-                self.module.search_data_security_entities,
-                entity_type="content_pattern",
-                sort=f"name.{direction}",
-                limit=20,
-            )
-            self.assert_no_error(result, context=f"dp content patterns name.{direction}")
-            names = [p["name"] for p in self._unwrap_results(result)]
-
-            assert len(names) > 1, f"Need 2+ content patterns to compare order, got {len(names)}"
-            assert names != sorted(names, reverse=(direction == "desc")), (
-                f"name.{direction} now orders results correctly — the known defect is fixed. "
-                "Add name to the content_pattern FQL guide's sort fields. "
-                f"Got: {names}"
-            )
+        for entity_type in (
+            "content_pattern",
+            "web_location",
+            "local_application",
+            "local_application_group",
+        ):
+            for direction in ("asc", "desc"):
+                result = self.call_method(
+                    self.module.search_data_security_entities,
+                    entity_type=entity_type,
+                    sort=f"name.{direction}",
+                    limit=20,
+                )
+                self.assert_no_error(result, context=f"{entity_type} name.{direction}")
+                keys = [self._collation_key(e["name"]) for e in self._unwrap_results(result)]
+                assert len(set(keys)) > 1, f"Need 2+ distinct {entity_type} names, got {keys}"
+                assert keys == sorted(keys, reverse=(direction == "desc")), (
+                    f"{entity_type} name.{direction} is not ordered: {keys}"
+                )
 
     # --- Policies ---
 

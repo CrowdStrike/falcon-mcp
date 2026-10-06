@@ -377,8 +377,8 @@ property_name:[operator]'value'
 
 === SORTING ===
 
-Supported sort fields: category.asc, region.asc
-(name sorting is not honored by this endpoint in either direction, so it is omitted)
+Supported sort fields: name.asc, name.desc, category.asc, region.asc
+(name ordering ignores case and punctuation)
 
 === IMPORTANT NOTES ===
 • Use single quotes around values: 'value'
@@ -623,7 +623,7 @@ SEARCH_WEB_LOCATIONS_FQL_DOCUMENTATION = _fql_doc(
     "Search Data Security Web Locations",
     "falcon_search_data_security_entities (entity_type='web_location')",
     SEARCH_WEB_LOCATIONS_FQL_FILTERS,
-    "Sort is not supported for this entity.",
+    "name.asc, name.desc, created.desc, last_updated.desc",
 )
 
 # Local Application FQL filters
@@ -686,7 +686,7 @@ SEARCH_LOCAL_APPLICATIONS_FQL_DOCUMENTATION = _fql_doc(
     "Search Data Security Local Applications",
     "falcon_search_data_security_entities (entity_type='local_application')",
     SEARCH_LOCAL_APPLICATIONS_FQL_FILTERS,
-    "Sort is not supported for this entity.",
+    "name.asc, name.desc, created.desc, last_updated.desc",
 )
 
 # Local Application Group FQL filters
@@ -738,7 +738,7 @@ SEARCH_LOCAL_APPLICATION_GROUPS_FQL_DOCUMENTATION = _fql_doc(
     "Search Data Security Local Application Groups",
     "falcon_search_data_security_entities (entity_type='local_application_group')",
     SEARCH_LOCAL_APPLICATION_GROUPS_FQL_FILTERS,
-    "Sort is not supported for this entity.",
+    "name.asc, name.desc, created.desc, last_updated.desc",
 )
 
 # Sensitivity Label FQL filters

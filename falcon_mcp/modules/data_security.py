@@ -103,7 +103,6 @@ class DataSecurityModule(BaseModule):
     #   update_merge: True when update replaces the whole entity, so the current
     #                 entity is fetched and the caller's fields overlaid onto it
     #   platform: True when the entity requires platform_name
-    #   sort: True when search supports a sort parameter
     _OPERATIONS: dict[str, dict[str, Any]] = {
         "classification": {
             "query": "queries_classification_get_v2",
@@ -115,7 +114,6 @@ class DataSecurityModule(BaseModule):
             "update_id_query": False,
             "update_merge": False,
             "platform": False,
-            "sort": True,
         },
         "policy": {
             "query": "queries_policy_get_v2",
@@ -127,7 +125,6 @@ class DataSecurityModule(BaseModule):
             "update_id_query": False,
             "update_merge": False,
             "platform": True,
-            "sort": True,
         },
         "content_pattern": {
             "query": "queries_content_pattern_get_v2",
@@ -139,7 +136,6 @@ class DataSecurityModule(BaseModule):
             "update_id_query": True,
             "update_merge": False,
             "platform": False,
-            "sort": True,
         },
         "cloud_application": {
             "query": "queries_cloud_application_get_v2",
@@ -151,7 +147,6 @@ class DataSecurityModule(BaseModule):
             "update_id_query": True,
             "update_merge": False,
             "platform": False,
-            "sort": True,
         },
         "enterprise_account": {
             "query": "queries_enterprise_account_get_v2",
@@ -163,7 +158,6 @@ class DataSecurityModule(BaseModule):
             "update_id_query": True,
             "update_merge": False,
             "platform": False,
-            "sort": True,
         },
         "web_location": {
             "query": "queries_web_location_get_v2",
@@ -175,7 +169,6 @@ class DataSecurityModule(BaseModule):
             "update_id_query": True,
             "update_merge": False,
             "platform": False,
-            "sort": False,
         },
         "local_application": {
             "query": "queries_local_application_get",
@@ -187,7 +180,6 @@ class DataSecurityModule(BaseModule):
             "update_id_query": True,
             "update_merge": True,
             "platform": False,
-            "sort": False,
         },
         "local_application_group": {
             "query": "queries_local_application_group_get",
@@ -199,7 +191,6 @@ class DataSecurityModule(BaseModule):
             "update_id_query": True,
             "update_merge": True,
             "platform": False,
-            "sort": False,
         },
         "sensitivity_label": {
             "query": "queries_sensitivity_label_get_v2",
@@ -211,7 +202,6 @@ class DataSecurityModule(BaseModule):
             "update_id_query": True,
             "update_merge": False,
             "platform": False,
-            "sort": True,
         },
         "file_type": {
             "query": "queries_file_type_get_v2",
@@ -223,7 +213,6 @@ class DataSecurityModule(BaseModule):
             "update_id_query": True,
             "update_merge": False,
             "platform": False,
-            "sort": True,
         },
     }
 
@@ -483,8 +472,8 @@ class DataSecurityModule(BaseModule):
         sort: str | None = Field(
             default=None,
             description=(
-                "Sort order (entity-dependent). Ex: name.asc, created_at.desc. "
-                "Ignored for entity types that do not support sorting."
+                "Sort order as field.direction, e.g. name.asc or created.desc. "
+                "Valid fields vary by entity_type; see its FQL guide."
             ),
         ),
         platform_name: str | None = Field(
@@ -513,9 +502,12 @@ class DataSecurityModule(BaseModule):
                 f"platform_name is required for entity_type='{entity_type}' ('win' or 'mac')."
             )]
 
-        search_params: dict[str, Any] = {"filter": filter, "limit": limit, "offset": offset}
-        if ops["sort"]:
-            search_params["sort"] = sort
+        search_params: dict[str, Any] = {
+            "filter": filter,
+            "limit": limit,
+            "offset": offset,
+            "sort": sort,
+        }
         if ops["platform"]:
             search_params["platform_name"] = platform_name
 

@@ -324,14 +324,25 @@ class TestDataSecurityModule(TestModules):
         self.assertIn("results", result)
         self.assertEqual(result["results"][0]["name"], "Box")
 
-    def test_search_web_locations_omits_sort(self):
-        """Web location query op does not support sort, so it must not be sent."""
-        self.mock_client.command.side_effect = [{"status_code": 200, "body": {"resources": []}}]
-        self.module.search_data_security_entities(
-            entity_type="web_location", filter=None, limit=100, offset=0, sort="name.asc"
-        )
-        params = self.mock_client.command.call_args_list[0].kwargs.get("parameters", {})
-        self.assertNotIn("sort", params)
+    def test_search_forwards_sort_for_every_entity_type(self):
+        """Sort reaches the query op for every type, including the ones whose SDK
+        spec omits it (web locations and local applications accept and honor it)."""
+        for entity_type in DataSecurityModule._OPERATIONS:
+            with self.subTest(entity_type=entity_type):
+                self.mock_client.reset_mock()
+                self.mock_client.command.side_effect = [
+                    {"status_code": 200, "body": {"resources": []}}
+                ]
+                self.module.search_data_security_entities(
+                    entity_type=entity_type,
+                    filter=None,
+                    limit=100,
+                    offset=0,
+                    sort="name.desc",
+                    platform_name="win",
+                )
+                params = self.mock_client.command.call_args_list[0].kwargs["parameters"]
+                self.assertEqual(params["sort"], "name.desc")
 
     # --- Get by IDs ---
 
