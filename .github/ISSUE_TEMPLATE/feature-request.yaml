@@ -48,7 +48,7 @@ body:
         - Cloud Security module
         - Correlation Rules module
         - Custom IOA module
-        - Data Protection module
+        - Data Security module
         - Detections module
         - Discover module
         - Exclusions module
