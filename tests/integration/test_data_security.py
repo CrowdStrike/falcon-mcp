@@ -83,7 +83,7 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
         )
 
     def test_policy_precedence_sorts_ascending_but_not_descending(self):
-        """Backs the `sort` description's precedence caveat with a live check.
+        """Backs the policy FQL guide's precedence sort fields with a live check.
 
         `precedence.asc` orders correctly (4 of 4 trials, 20 of 20 distinct values) while
         `precedence.desc` does not (0 of 4). Both directions are pinned together so the
@@ -113,8 +113,8 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
             len(ascending) > 1
         ), f"Need 2+ win data-security policies to compare order, got {len(ascending)}"
         assert ascending == sorted(ascending), (
-            f"precedence.asc is no longer ascending, so the `sort` description's claim that "
-            f"ascending works is wrong: {ascending}"
+            f"precedence.asc is no longer ascending, so the policy FQL guide's listing of "
+            f"precedence.asc as a sort field is wrong: {ascending}"
         )
         assert descending != sorted(descending, reverse=True), (
             "precedence.desc now returns correctly ordered results — the known defect is "
@@ -243,9 +243,25 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
                 ids = self._ids_matching(entity_type, f"{clause}+{pin}")
                 assert fixture["id"] in ids, f"{entity_type} {clause} did not find its own record"
 
+        # Records omit supports_network_inspection when it is false, so each side is checked
+        # against the value it returns rather than the presence of results.
+        by_value = {}
         for value in ("true", "false"):
-            ids = self._ids_matching("web_location", f"supports_network_inspection:{value}")
-            assert ids, f"web_location supports_network_inspection:{value} returned nothing"
+            result = self.call_method(
+                self.module.search_data_security_entities,
+                entity_type="web_location",
+                filter=f"supports_network_inspection:{value}",
+                limit=50,
+            )
+            self.assert_no_error(result, context=f"web_location supports_network_inspection:{value}")
+            by_value[value] = self._unwrap_results(result)
+            assert by_value[value], f"web_location supports_network_inspection:{value} returned nothing"
+        assert all(e.get("supports_network_inspection") is True for e in by_value["true"]), (
+            "supports_network_inspection:true returned a record without it set"
+        )
+        assert all(e.get("supports_network_inspection") is not True for e in by_value["false"]), (
+            "supports_network_inspection:false returned a record with it set"
+        )
 
     def test_relative_dates_are_rejected_outside_classification_and_policy(self):
         """Backs the guides' note that only classification and policy accept now-Nd."""
@@ -435,6 +451,7 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
     _DELETE_OPS = {
         "content_pattern": "entities_content_pattern_delete",
         "cloud_application": "entities_cloud_application_delete",
+        "enterprise_account": "entities_enterprise_account_delete",
         "web_location": "entities_web_location_delete_v2",
         "local_application": "entities_local_application_delete",
         "local_application_group": "entities_local_application_group_delete",
@@ -558,6 +575,27 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
         assert group_after["description"] == "after"
         assert group_after["name"] == group["name"]
         assert group_after["local_application_ids"] == [app["id"]], group_after
+
+    def test_enterprise_account_partial_update_keeps_other_fields(self, created):
+        """A partial enterprise account update leaves its domains and application group intact."""
+        domains = [f"{self._name('ea')}.example.com"]
+        account = self._create(
+            created,
+            "enterprise_account",
+            {
+                "name": self._name("ea"),
+                "application_group_id": "microsoft",
+                "plugin_config_id": "",
+                "domains": domains,
+            },
+        )
+        new_name = f"{account['name']}-renamed"
+        self._update("enterprise_account", {"id": account["id"], "name": new_name})
+
+        after = self._get("enterprise_account", account["id"])
+        assert after["name"] == new_name
+        assert after["domains"] == domains, after
+        assert after["application_group_id"] == "microsoft", after
 
     def test_classification_partial_update_keeps_rules(self, created):
         """Updating only the protection mode keeps the classification's rules and patterns."""
