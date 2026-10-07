@@ -134,7 +134,7 @@ HOSTED_MCP_TOOL_NOTES: dict[str, str] = {
 TOOL_SCOPE_OVERRIDES: dict[str, list[str]] = {
     "falcon_search_data_security_entities": ["Data Protection:read"],
     "falcon_get_data_security_entities": ["Data Protection:read"],
-    "falcon_create_data_security_entity": ["Data Protection:read", "Data Protection:write"],
+    "falcon_create_data_security_entity": ["Data Protection:write"],
     "falcon_update_data_security_entity": ["Data Protection:read", "Data Protection:write"],
 }
 
@@ -318,7 +318,7 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_search_data_security_entities": [
         "What Data Security classifications are configured in my environment?",
         "List all enabled Windows Data Security policies",
-        "Show me custom Data Security regex patterns in the Financial category",
+        "Show me custom Data Security regex patterns in the PII category",
     ],
     "falcon_get_data_security_entities": [
         "Show me the full details of that classification",

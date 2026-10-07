@@ -32,7 +32,7 @@ of matches, or null when the API does not report one.
 
 - "What Data Security classifications are configured in my environment?"
 - "List all enabled Windows Data Security policies"
-- "Show me custom Data Security regex patterns in the Financial category"
+- "Show me custom Data Security regex patterns in the PII category"
 
 ### `falcon_get_data_security_entities`
 
@@ -56,7 +56,7 @@ each other. Returns a list of the matching entities.
 > [!CAUTION]
 > This tool performs destructive operations.
 
-**Required scopes:** `Data Protection:read`, `Data Protection:write`
+**Required scopes:** `Data Protection:write`
 
 Create a Data Security entity of the chosen entity_type.
 
