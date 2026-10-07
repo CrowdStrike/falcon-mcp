@@ -91,6 +91,11 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     "falcon_update_detections",
     # fusion module
     "falcon_execute_workflow",
+    # ods module
+    "falcon_launch_ods_scan",
+    "falcon_cancel_ods_scans",
+    "falcon_schedule_ods_scan",
+    "falcon_delete_ods_scheduled_scans",
 }
 
 RESOURCE_URI_PATTERN = re.compile(r"^falcon://[a-z0-9-]+(/[a-z0-9-]+)+/[a-z]+-guide$")
