@@ -544,6 +544,20 @@ class TestDataSecurityModule(TestModules):
         self.assertIn("id", result[0]["error"])
         self.mock_client.command.assert_not_called()
 
+    def test_update_with_only_id_errors_without_calling_the_api(self):
+        """An update body holding nothing but the id returns a guiding error for every
+        updatable type instead of sending an empty PATCH."""
+        for entity_type, ops in self.module._OPERATIONS.items():
+            if ops["update"] is None:
+                continue
+            self.mock_client.command.reset_mock()
+            result = self.module.update_data_security_entity(
+                entity_type=entity_type, body={"id": "x-1"}, platform_name="win"
+            )
+            self.assertIsInstance(result, list, entity_type)
+            self.assertIn("at least one field", result[0]["error"], entity_type)
+            self.mock_client.command.assert_not_called()
+
     def test_update_web_location_sends_flat_body_and_id(self):
         """Web location update sends a flat body (create's 'web_locations' wrapper is
         rejected by PATCH) with the id as a query param."""

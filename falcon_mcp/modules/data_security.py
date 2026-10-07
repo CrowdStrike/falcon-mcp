@@ -645,14 +645,20 @@ class DataSecurityModule(BaseModule):
                 f"platform_name is required for entity_type='{entity_type}' ('win' or 'mac')."
             )]
 
+        entity_id = body.get("id")
+        if not entity_id:
+            return [_format_error_response(
+                f"body must include an 'id' field to update entity_type='{entity_type}'."
+            )]
+        if all(k == "id" for k in body):
+            return [_format_error_response(
+                f"body must include at least one field to change besides 'id' for "
+                f"entity_type='{entity_type}'."
+            )]
+
         query_params = None
         body_for_wrap = body
         if ops["update_id_query"]:
-            entity_id = body.get("id")
-            if not entity_id:
-                return [_format_error_response(
-                    f"body must include an 'id' field to update entity_type='{entity_type}'."
-                )]
             body_for_wrap = {k: v for k, v in body.items() if k != "id"}
             query_params = {"id": entity_id}
             if ops["update_merge"]:
@@ -668,13 +674,8 @@ class DataSecurityModule(BaseModule):
                     k: v for k, v in current[0].items() if k not in self._SERVER_MANAGED_FIELDS
                 }
                 body_for_wrap = {**existing, **body_for_wrap}
-        else:
-            if not body.get("id"):
-                return [_format_error_response(
-                    f"body must include an 'id' field to update entity_type='{entity_type}'."
-                )]
-            if ops["platform"]:
-                query_params = {"platform_name": platform_name}
+        elif ops["platform"]:
+            query_params = {"platform_name": platform_name}
 
         return self._write_entity(
             update_op,
