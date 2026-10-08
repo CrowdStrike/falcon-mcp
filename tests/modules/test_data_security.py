@@ -519,7 +519,7 @@ class TestDataSecurityModule(TestModules):
         self.assertEqual(call.kwargs["body"]["resources"][0]["id"], "pol-1")
 
     def test_update_classification_wraps_in_resources_with_id_in_body(self):
-        """Classification update (else branch: no id query param) wraps in 'resources'
+        """Classification update wraps in 'resources'
         and keeps the id inside the body rather than sending it as a query param."""
         self.mock_client.command.side_effect = [
             {"status_code": 200, "body": {"resources": [{"id": "cls-1"}]}}
@@ -531,11 +531,11 @@ class TestDataSecurityModule(TestModules):
         self.assertEqual(call.args[0], "entities_classification_patch_v2")
         self.assertEqual(call.kwargs["body"]["resources"][0]["id"], "cls-1")
         self.assertEqual(call.kwargs["body"]["resources"][0]["name"], "renamed")
-        # Distinguishing behavior of the else branch: id is NOT sent as a query param.
+        # The id stays in the body; it is NOT sent as a query param.
         self.assertNotIn("id", call.kwargs.get("parameters") or {})
 
     def test_update_classification_without_id_errors(self):
-        """A classification update (else branch) without an 'id' returns a guiding error."""
+        """A classification update without an 'id' returns a guiding error."""
         result = self.module.update_data_security_entity(
             entity_type="classification", body={"name": "renamed"}
         )

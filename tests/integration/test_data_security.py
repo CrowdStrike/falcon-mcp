@@ -262,6 +262,17 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
         assert all(e.get("supports_network_inspection") is not True for e in by_value["false"]), (
             "supports_network_inspection:false returned a record with it set"
         )
+        # Almost every record is false, so the page above cannot catch a false filter that
+        # is ignored; pin a known true record by name and require false to drop it.
+        inspected = next((e for e in by_value["true"] if e.get("name") and "'" not in e["name"]), None)
+        assert inspected, "No true web location with a quote-free name to pin"
+        pin = f"name:'{inspected['name']}'"
+        assert inspected["id"] in self._ids_matching(
+            "web_location", f"supports_network_inspection:true+{pin}"
+        )
+        assert inspected["id"] not in self._ids_matching(
+            "web_location", f"supports_network_inspection:false+{pin}"
+        ), "supports_network_inspection:false kept a record that has it set"
 
     def test_relative_dates_are_rejected_outside_classification_and_policy(self):
         """Backs the guides' note that only classification and policy accept now-Nd."""
