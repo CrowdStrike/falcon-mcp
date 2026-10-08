@@ -84,6 +84,39 @@ class TestFalconMCPServer(unittest.TestCase):
         self.assertIn("detections", server.modules)
 
     @patch("falcon_mcp.server.FalconClient")
+    @patch("falcon_mcp.server.FastMCP")
+    def test_server_accepts_a_renamed_module_by_its_former_name(self, mock_fastmcp, mock_client):
+        """A programmatic caller still naming 'dataprotection' gets the data security module."""
+        mock_client.return_value.authenticate.return_value = True
+        mock_fastmcp.return_value = MagicMock()
+
+        server = FalconMCPServer(enabled_modules={"dataprotection"})
+
+        self.assertEqual(set(server.modules), {"datasecurity"})
+        self.assertEqual(server.enabled_modules, {"datasecurity"})
+
+    def test_parse_modules_list_resolves_a_former_module_name(self):
+        from falcon_mcp.server import parse_modules_list
+
+        self.assertEqual(parse_modules_list("hosts, dataprotection"), ["hosts", "datasecurity"])
+
+    def test_cli_modules_flag_accepts_a_former_module_name(self):
+        """The CLI path, not just the parser helper: --modules dataprotection."""
+        from falcon_mcp.server import parse_args
+
+        with patch.object(sys, "argv", ["falcon-mcp", "--modules", "dataprotection"]):
+            self.assertEqual(parse_args().modules, ["datasecurity"])
+
+    def test_modules_env_var_accepts_a_former_module_name(self):
+        from falcon_mcp.server import parse_args
+
+        with (
+            patch.object(sys, "argv", ["falcon-mcp"]),
+            patch.dict("os.environ", {"FALCON_MCP_MODULES": "dataprotection"}),
+        ):
+            self.assertEqual(parse_args().modules, ["datasecurity"])
+
+    @patch("falcon_mcp.server.FalconClient")
     def test_authentication_failure(self, mock_client):
         """Test server initialization with authentication failure includes diagnostics."""
         mock_client_instance = MagicMock()

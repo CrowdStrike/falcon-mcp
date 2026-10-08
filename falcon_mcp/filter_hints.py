@@ -328,17 +328,30 @@ FILTER_HINTS: dict[str, str] = {
         "status (normal|contained|containment_pending|lift_containment_pending), local_ip, external_ip, os_version, last_seen, "
         "product_type_desc (Workstation|Server|Domain Controller)."
     ),
-    # === Data Protection ===
-    "falcon_search_data_protection_classifications": (
-        "Common fields: name, created_by, created_at (UTC datetime), "
-        "modified_by, modified_at (UTC datetime)."
-    ),
-    "falcon_search_data_protection_policies": (
-        "Common fields: name, description, is_enabled (true|false), "
-        "is_default (true|false), precedence, created_at (UTC datetime), modified_by."
-    ),
-    "falcon_search_data_protection_content_patterns": (
-        "Common fields: name, category, type, region, example, deleted (true|false)."
+    # === Data Security ===
+    "falcon_search_data_security_entities": (
+        "Fields vary by entity_type — consult the entity's FQL guide "
+        "(falcon://data-security/<entity>/fql-guide). Common fields by type: "
+        "classification → name, created_by, created_at, modified_by, modified_at "
+        "(name and emails match only with ~, e.g. created_by:~'user@example.com'); "
+        "policy → name, description, is_enabled (true|false), is_default (true|false), "
+        "precedence, created_at, modified_by (name, description and emails ~ only; "
+        "requires platform_name); "
+        "content_pattern → name, category, type, region, example, deleted (true|false), "
+        "created, last_updated; "
+        "cloud_application → name, type (integrated|predefined|custom), deleted, "
+        "supports_network_inspection (true|false), application_group_id, created, last_updated; "
+        "enterprise_account → name, application_group_id (google|microsoft|box), deleted, "
+        "created, last_updated; "
+        "web_location → name, type (predefined|custom), deleted, application_id, "
+        "enterprise_account_id, web_location_group_id, web_location_group_count, "
+        "supports_network_inspection, created, last_updated; "
+        "local_application → name, executable_name, deleted, created, last_updated; "
+        "local_application_group → name, deleted, created, last_updated; "
+        "sensitivity_label → name, display_name, external_id, deleted, created, last_updated; "
+        "file_type → name, created, last_updated (read-only/predefined). "
+        "Relative dates (now-7d) work only for classification and policy; other types "
+        "need an absolute UTC timestamp, e.g. created:>'2026-01-01T00:00:00Z'."
     ),
     # === Recon ===
     "falcon_search_recon_notifications": (

@@ -45,8 +45,8 @@ MODULE_METADATA: dict[str, dict[str, Any]] = {
     "customioa": {
         "slug": "custom-ioa",
     },
-    "dataprotection": {
-        "slug": "data-protection",
+    "datasecurity": {
+        "slug": "data-security",
     },
     "fusion": {
         "title": "Fusion SOAR",
@@ -125,6 +125,17 @@ HOSTED_MCP_TOOL_NOTES: dict[str, str] = {
     "falcon_search_managed_assets": (
         f"Not available on CrowdStrike's hosted Falcon MCP. See [module overview]({_OVERVIEW_LINK})."
     ),
+}
+
+# Per-tool scope overrides. The automatic scope extractor widens to every
+# operation in a class-level dispatch table when the subscript key is a runtime
+# parameter (e.g. ``self._OPERATIONS[entity_type]``). Override here to publish
+# the correct, narrower scope list for those tools.
+TOOL_SCOPE_OVERRIDES: dict[str, list[str]] = {
+    "falcon_search_data_security_entities": ["Data Protection:read"],
+    "falcon_get_data_security_entities": ["Data Protection:read"],
+    "falcon_create_data_security_entity": ["Data Protection:write"],
+    "falcon_update_data_security_entity": ["Data Protection:read", "Data Protection:write"],
 }
 
 # Natural language prompt examples for each tool, shown in generated docs
@@ -303,18 +314,23 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_delete_ioa_rules": [
         "Delete rules from IOA group abc123",
     ],
-    # Data Protection
-    "falcon_search_data_protection_classifications": [
-        "What Data Protection classifications are configured in my environment?",
-        "Show me the classification rules that detect credit card data",
+    # Data Security
+    "falcon_search_data_security_entities": [
+        "What Data Security classifications are configured in my environment?",
+        "List all enabled Windows Data Security policies",
+        "Show me custom Data Security regex patterns in the PII category",
     ],
-    "falcon_search_data_protection_policies": [
-        "List all enabled Windows Data Protection policies",
-        "Show me the Mac Data Protection policies and their precedence order",
+    "falcon_get_data_security_entities": [
+        "Show me the full details of that classification",
+        "Get the Data Security policy by ID so I can see its current config",
     ],
-    "falcon_search_data_protection_content_patterns": [
-        "What predefined content patterns are available for Data Protection?",
-        "Show me custom Data Protection regex patterns in the Financial category",
+    "falcon_create_data_security_entity": [
+        "Create a new Data Security classification called 'PCI Card Numbers'",
+        "Add a custom content pattern that detects internal project codes",
+    ],
+    "falcon_update_data_security_entity": [
+        "Enable that Data Security policy",
+        "Change the classification's protection mode to enforce",
     ],
     # Detections
     "falcon_search_detections": [
@@ -1396,8 +1412,11 @@ def generate_module_page(module_key: str, module_cls: type, auto_title: str, aut
                 "idempotentHint": True,
             }
 
-        # Get per-tool scopes
-        info["scopes"] = extract_tool_scopes(method, module_cls)
+        # Get per-tool scopes (override takes precedence over auto-extraction)
+        if info["name"] in TOOL_SCOPE_OVERRIDES:
+            info["scopes"] = TOOL_SCOPE_OVERRIDES[info["name"]]
+        else:
+            info["scopes"] = extract_tool_scopes(method, module_cls)
 
         # Example prompts (from static TOOL_EXAMPLES dict)
         info["examples"] = TOOL_EXAMPLES.get(info["name"], [])

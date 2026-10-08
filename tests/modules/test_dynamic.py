@@ -850,6 +850,35 @@ class TestSearchRanking(unittest.TestCase):
                 self.assertEqual(names[0], read_only)
                 self.assertLess(names.index(read_only), names.index(destructive))
 
+    def test_each_data_security_entity_type_reaches_its_search_tool(self):
+        """One discriminated search tool must still be found by each entity's name.
+
+        falcon_search_data_security_entities serves ten entity types through its
+        entity_type parameter, and parameter descriptions are not in the search
+        corpus. When its description named none of them, 'list sensitivity labels'
+        and 'web locations' surfaced only the create tool, and 'enterprise accounts'
+        or 'cloud applications' surfaced no data-security tool at all.
+        """
+        search = "falcon_search_data_security_entities"
+        writers = ("falcon_create_data_security_entity", "falcon_update_data_security_entity")
+        for query in (
+            "list sensitivity labels",
+            "web locations",
+            "local applications",
+            "local application groups",
+            "enterprise accounts",
+            "cloud applications",
+            "content patterns",
+            "data security classifications",
+            "data protection policies",
+        ):
+            with self.subTest(query=query):
+                names = self._names(query, limit=10_000)
+                self.assertIn(search, names)
+                for writer in writers:
+                    if writer in names:
+                        self.assertLess(names.index(search), names.index(writer))
+
     def test_a_tool_named_for_a_query_word_is_not_dropped_for_a_prose_match(self):
         """Selection must respect the name-over-prose weighting score() already uses.
 

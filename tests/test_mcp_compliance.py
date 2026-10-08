@@ -89,6 +89,9 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     "falcon_set_policy_precedence",
     # detections module
     "falcon_update_detections",
+    # data_security module
+    "falcon_create_data_security_entity",
+    "falcon_update_data_security_entity",
     # fusion module
     "falcon_execute_workflow",
 }

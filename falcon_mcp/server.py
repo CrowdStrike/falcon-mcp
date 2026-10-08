@@ -120,7 +120,7 @@ class FalconMCPServer:
         # modules owning the tools it names, gated so they contribute only those
         # tools.
         if enabled_modules:
-            self.enabled_modules = set(enabled_modules)
+            self.enabled_modules = set(registry.resolve_module_names(enabled_modules))
         elif allowed_tools:
             # --tools alone supplies the whole surface, so start from no modules.
             self.enabled_modules = set()
@@ -505,8 +505,10 @@ def parse_modules_list(modules_string: str) -> list[str]:
     # Get available modules
     available_modules = registry.get_module_names()
 
-    # Split by comma and clean up whitespace
-    modules = [m.strip() for m in modules_string.split(",") if m.strip()]
+    # Split by comma, clean up whitespace, and replace renamed modules' former names
+    modules = registry.resolve_module_names(
+        m.strip() for m in modules_string.split(",") if m.strip()
+    )
 
     # Validate against available modules
     invalid_modules = [m for m in modules if m not in available_modules]
