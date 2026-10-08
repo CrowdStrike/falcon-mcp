@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.20.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.19.0...v0.20.0) (2026-10-08)
+
+
+### Features
+
+* **modules/data-security:** expand data-protection module's tools. ([#576](https://github.com/CrowdStrike/falcon-mcp/issues/576)) ([ece8575](https://github.com/CrowdStrike/falcon-mcp/commit/ece85750f8c9445850c61315f8cdbdf21dbf2b4f))
+
+
+### Bug Fixes
+
+* correct destructiveHint on mutating tools and pin mcp-publisher ([#577](https://github.com/CrowdStrike/falcon-mcp/issues/577)) ([82d5031](https://github.com/CrowdStrike/falcon-mcp/commit/82d5031dddca464bb81d74bfec31fcc51a0d5854))
+* **dynamic:** live-validate the residual FQL filter-hint findings ([#574](https://github.com/CrowdStrike/falcon-mcp/issues/574)) ([9bc0efe](https://github.com/CrowdStrike/falcon-mcp/commit/9bc0efeb92e38ca0667e5a18847a7cbf09dcd206))
+
 ## [0.19.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.18.0...v0.19.0) (2026-09-01)
 
 
