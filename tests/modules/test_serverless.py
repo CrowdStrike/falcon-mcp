@@ -32,47 +32,39 @@ class TestServerlessModule(TestModules):
 
     def test_search_serverless_vulnerabilities_success(self):
         """Test searching serverless vulnerabilities with successful response."""
-        # Setup mock response with sample vulnerability data
+        run = {
+            "tool": {
+                "driver": {
+                    "name": "CrowdStrike",
+                    "informationUri": "https://www.crowdstrike.com/",
+                    "rules": [
+                        {
+                            "id": "CVE-2023-12345",
+                            "name": "PythonPackageVulnerability",
+                            "shortDescription": {"text": "Test vulnerability description"},
+                            "fullDescription": {"text": "Test vulnerability full description"},
+                            "help": {"text": "Package: test-package\nVulnerability: CVE-2023-12345"},
+                            "properties": {
+                                "severity": "HIGH",
+                                "cvssBaseScore": 8.5,
+                                "remediations": ["Upgrade to version 2.0.0"],
+                            },
+                        }
+                    ],
+                }
+            }
+        }
+        # Real FalconPy shape: SARIF document(s) live in body.resources
         mock_response = {
             "status_code": 200,
-            "body": {
-                "runs": [
-                    {
-                        "tool": {
-                            "driver": {
-                                "name": "CrowdStrike",
-                                "informationUri": "https://www.crowdstrike.com/",
-                                "rules": [
-                                    {
-                                        "id": "CVE-2023-12345",
-                                        "name": "PythonPackageVulnerability",
-                                        "shortDescription": {"text": "Test vulnerability description"},
-                                        "fullDescription": {"text": "Test vulnerability full description"},
-                                        "help": {"text": "Package: test-package\nVulnerability: CVE-2023-12345"},
-                                        "properties": {
-                                            "severity": "HIGH",
-                                            "cvssBaseScore": 8.5,
-                                            "remediations": ["Upgrade to version 2.0.0"]
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    }
-                ]
-            },
+            "body": {"resources": [{"runs": [run]}]},
         }
         self.mock_client.command.return_value = mock_response
 
-        # Mock the prepare_api_parameters function to return a simple dict
-        self.module.search_serverless_vulnerabilities = MagicMock(return_value=mock_response["body"]["runs"])
-
-        # Call search_serverless_vulnerabilities with test parameters
         result = self.module.search_serverless_vulnerabilities(
             filter="cloud_provider:'aws'"
         )
 
-        # Verify result contains expected values
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["tool"]["driver"]["name"], "CrowdStrike")
         self.assertEqual(
@@ -102,15 +94,15 @@ class TestServerlessModule(TestModules):
 
     def test_search_serverless_vulnerabilities_empty_response(self):
         """Test searching serverless vulnerabilities with empty response."""
-        # Mock the method to return empty runs
-        self.module.search_serverless_vulnerabilities = MagicMock(return_value=[])
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": []},
+        }
 
-        # Call search_serverless_vulnerabilities
         result = self.module.search_serverless_vulnerabilities(
             filter="cloud_provider:'aws'"
         )
 
-        # Verify result is an empty list
         self.assertEqual(result, [])
 
     def test_search_serverless_vulnerabilities_error(self):
@@ -194,34 +186,19 @@ class TestServerlessModule(TestModules):
 
     def test_search_serverless_vulnerabilities_none_runs(self):
         """Test searching serverless vulnerabilities when 'runs' key exists but is None."""
-        # We need to mock handle_api_response to return a dict with runs=None
-        # This simulates the case where the API returns a response with runs=None
-
-        # Create a mock response that handle_api_response will process
-        mock_api_response = {
+        self.mock_client.command.return_value = {
             "status_code": 200,
-            "body": {
-                # The actual structure doesn't matter as we'll mock handle_api_response
-            }
+            "body": {"resources": [{"runs": None}]},
         }
-        self.mock_client.command.return_value = mock_api_response
 
-        # Mock handle_api_response to return a dict with runs=None
-        mock_processed_response = {"runs": None}  # This is what we want to test
+        result = self.module.search_serverless_vulnerabilities(
+            filter="cloud_provider:'aws'"
+        )
 
-        with patch('falcon_mcp.modules.serverless.handle_api_response', return_value=mock_processed_response):
-            # Call search_serverless_vulnerabilities
-            result = self.module.search_serverless_vulnerabilities(
-                filter="cloud_provider:'aws'"
-            )
-
-            # Verify result is an empty list
-            self.assertEqual(result, [])
-
-            # Verify the API was called with the correct parameters
-            self.mock_client.command.assert_called_once()
-            call_args = self.mock_client.command.call_args[1]
-            self.assertEqual(call_args["parameters"]["filter"], "cloud_provider:'aws'")
+        self.assertEqual(result, [])
+        self.mock_client.command.assert_called_once()
+        call_args = self.mock_client.command.call_args[1]
+        self.assertEqual(call_args["parameters"]["filter"], "cloud_provider:'aws'")
 
 
 if __name__ == "__main__":
