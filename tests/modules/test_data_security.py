@@ -3,6 +3,9 @@ Tests for the Data Security module.
 """
 
 import unittest
+from unittest.mock import patch
+
+from mcp.server.fastmcp.tools import Tool
 
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
 from falcon_mcp.modules.data_security import DataSecurityModule
@@ -31,24 +34,52 @@ class TestDataSecurityModule(TestModules):
     ]
 
     def test_register_tools(self):
-        """Test registering the 4 generic entity_type-keyed tools."""
+        """Test registering the generic entity_type-keyed tools and the schema tool."""
         expected_tools = [
             "falcon_search_data_security_entities",
             "falcon_get_data_security_entities",
+            "falcon_get_data_security_entity_schema",
             "falcon_create_data_security_entity",
             "falcon_update_data_security_entity",
         ]
         self.assert_tools_registered(expected_tools)
 
+    # Body-guide resources, one per writable entity type.
+    _BODY_GUIDE_ENTITIES = [
+        "classification",
+        "policy",
+        "content_pattern",
+        "cloud_application",
+        "enterprise_account",
+        "web_location",
+        "local_application",
+        "local_application_group",
+        "sensitivity_label",
+    ]
+
     def test_register_resources(self):
         """Test registering resources with the server."""
-        expected_resources = [
-            f"falcon_search_data_security_{e}_fql_guide" for e in self._FQL_GUIDE_ENTITIES
-        ] + [
-            "falcon_data_security_entity_model",
-            "falcon_data_security_behavioral_guide",
-        ]
+        expected_resources = (
+            [f"falcon_search_data_security_{e}_fql_guide" for e in self._FQL_GUIDE_ENTITIES]
+            + [f"falcon_data_security_{e}_body_guide" for e in self._BODY_GUIDE_ENTITIES]
+            + [
+                "falcon_data_security_entity_model",
+                "falcon_data_security_behavioral_guide",
+            ]
+        )
         self.assert_resources_registered(expected_resources)
+
+    def test_body_guide_resources_serve_the_schema_tool_guides(self):
+        """Each body-guide resource carries the same text the schema tool returns."""
+        self.module.register_resources(self.mock_server)
+        by_name = {
+            call.kwargs["resource"].name: call.kwargs["resource"]
+            for call in self.mock_server.add_resource.call_args_list
+        }
+        for entity_type in self._BODY_GUIDE_ENTITIES:
+            resource = by_name[f"falcon_data_security_{entity_type}_body_guide"]
+            self.assertEqual(resource.text, self.module._BODY_GUIDES[entity_type], entity_type)
+        self.assertEqual(sorted(self.module._BODY_GUIDES), sorted(self._BODY_GUIDE_ENTITIES))
 
     def test_read_tools_are_read_only_and_write_tools_are_not(self):
         """Search/get tools are read-only; create/update tools are not."""
@@ -56,7 +87,11 @@ class TestDataSecurityModule(TestModules):
         for call in self.mock_server.add_tool.call_args_list:
             name = call.kwargs.get("name")
             annotations = call.kwargs.get("annotations")
-            if name.startswith(("falcon_search_", "falcon_get_")):
+            if name == "falcon_get_data_security_entity_schema":
+                self.assertTrue(annotations.readOnlyHint, f"{name} should be read-only")
+                self.assertFalse(annotations.destructiveHint, f"{name} must not be destructive")
+                self.assertFalse(annotations.openWorldHint, f"{name} makes no API call")
+            elif name.startswith(("falcon_search_", "falcon_get_")):
                 self.assertEqual(annotations, READ_ONLY_ANNOTATIONS, f"{name} should be read-only")
             elif name.startswith("falcon_create_"):
                 self.assertFalse(annotations.readOnlyHint, f"{name} must not be read-only")
@@ -693,6 +728,518 @@ class TestDataSecurityModule(TestModules):
         self.assertIn("error", result[0])
         self.assertIn("does not support update", result[0]["error"])
         self.mock_client.command.assert_not_called()
+
+    # --- Tool schema enums ---
+
+    def _tool_schema(self, method) -> dict:
+        return Tool.from_function(method).parameters["properties"]
+
+    @staticmethod
+    def _enum(prop: dict) -> list:
+        """The enum of a Literal parameter, unwrapping an `X | None` anyOf."""
+        if "enum" in prop:
+            return prop["enum"]
+        return next(p["enum"] for p in prop["anyOf"] if "enum" in p)
+
+    def test_entity_type_enums_match_the_dispatch_table(self):
+        """Read tools accept every entity type; create leaves out read-only file_type and
+        update also leaves out create-only sensitivity_label."""
+        all_types = sorted(self.module._OPERATIONS)
+        writable = sorted(t for t, ops in self.module._OPERATIONS.items() if ops["create"])
+        updatable = sorted(t for t, ops in self.module._OPERATIONS.items() if ops["update"])
+        for method, expected in [
+            (self.module.search_data_security_entities, all_types),
+            (self.module.get_data_security_entities, all_types),
+            (self.module.create_data_security_entity, writable),
+            (self.module.update_data_security_entity, updatable),
+        ]:
+            with self.subTest(tool=method.__name__):
+                self.assertEqual(sorted(self._enum(self._tool_schema(method)["entity_type"])), expected)
+        schema_items = self._tool_schema(self.module.get_data_security_entity_schema)["entity_types"]
+        self.assertEqual(sorted(schema_items["items"]["enum"]), writable)
+
+    def test_platform_name_and_deleted_enums(self):
+        """platform_name and deleted are enums, so bad values fail before any API call."""
+        for method in (
+            self.module.search_data_security_entities,
+            self.module.create_data_security_entity,
+            self.module.update_data_security_entity,
+        ):
+            with self.subTest(tool=method.__name__):
+                self.assertEqual(self._enum(self._tool_schema(method)["platform_name"]), ["win", "mac"])
+        search = self._tool_schema(self.module.search_data_security_entities)
+        self.assertEqual(search["deleted"]["enum"], ["exclude", "include", "only"])
+        self.assertEqual(search["deleted"]["default"], "exclude")
+
+    def test_search_limit_and_get_ids_are_capped_at_100(self):
+        """Search hydrates every queried ID through get, so both stop at 100."""
+        search = self._tool_schema(self.module.search_data_security_entities)
+        self.assertEqual(search["limit"]["maximum"], 100)
+        self.assertEqual(search["limit"]["default"], 50)
+        ids = self._tool_schema(self.module.get_data_security_entities)["ids"]
+        self.assertEqual(ids["minItems"], 1)
+        self.assertEqual(ids["maxItems"], 100)
+
+    # --- Search: deleted argument ---
+
+    def _search_filter_sent(self, entity_type: str, **kwargs) -> str | None:
+        self.mock_client.reset_mock()
+        self.mock_client.command.side_effect = [{"status_code": 200, "body": {"resources": []}}]
+        result = self.module.search_data_security_entities(
+            entity_type=entity_type, limit=50, offset=0, sort=None, **kwargs
+        )
+        sent = self.mock_client.command.call_args_list[0].kwargs["parameters"].get("filter")
+        self.assertEqual(result.get("filter_used"), sent)
+        return sent
+
+    def test_search_deleted_argument_on_soft_delete_types(self):
+        """exclude (the default) and only add a deleted clause; include sends the filter as-is."""
+        cases = [
+            ({"filter": None}, "deleted:false"),
+            ({"filter": None, "deleted": "exclude"}, "deleted:false"),
+            ({"filter": "type:'custom'"}, "deleted:false+(type:'custom')"),
+            ({"filter": "type:'custom',name:~'x'"}, "deleted:false+(type:'custom',name:~'x')"),
+            ({"filter": None, "deleted": "only"}, "deleted:true"),
+            ({"filter": "type:'custom'", "deleted": "only"}, "deleted:true+(type:'custom')"),
+            ({"filter": None, "deleted": "include"}, None),
+            ({"filter": "type:'custom'", "deleted": "include"}, "type:'custom'"),
+        ]
+        for kwargs, expected in cases:
+            with self.subTest(**kwargs):
+                self.assertEqual(self._search_filter_sent("content_pattern", **kwargs), expected)
+
+    def test_search_deleted_on_types_without_soft_delete(self):
+        """classification, policy and file_type keep the caller's filter and reject 'only'."""
+        for entity_type in ("classification", "policy", "file_type"):
+            with self.subTest(entity_type=entity_type):
+                for deleted in ("exclude", "include"):
+                    self.assertEqual(
+                        self._search_filter_sent(
+                            entity_type, filter="name:~'x'", deleted=deleted, platform_name="win"
+                        ),
+                        "name:~'x'",
+                    )
+                self.mock_client.reset_mock()
+                result = self.module.search_data_security_entities(
+                    entity_type=entity_type,
+                    filter=None,
+                    limit=50,
+                    offset=0,
+                    sort=None,
+                    platform_name="win",
+                    deleted="only",
+                )
+                self.assertIn("has no deleted entities", result[0]["error"])
+                self.mock_client.command.assert_not_called()
+
+    def test_soft_delete_matches_the_fql_guides(self):
+        """A type hides deleted entities exactly when its FQL guide documents a deleted field."""
+        for entity_type, ops in self.module._OPERATIONS.items():
+            with self.subTest(entity_type=entity_type):
+                self.assertEqual(
+                    ops["soft_delete"], "|deleted|" in self.module._FQL_DOCS[entity_type]
+                )
+
+    def test_search_fql_error_echoes_effective_filter(self):
+        """An FQL error reports the filter the API actually received."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 400, "body": {"errors": [{"code": 400, "message": "bad filter"}]}}
+        ]
+        result = self.module.search_data_security_entities(
+            entity_type="web_location", filter="foo:'x'", limit=50, offset=0, sort=None
+        )
+        self.assertEqual(result["filter_used"], "deleted:false+(foo:'x')")
+        self.assertIn("fql_guide", result)
+
+    # --- Partial and errors-only 2xx responses ---
+
+    def test_get_partial_errors_are_warnings(self):
+        """A 2xx with resources and per-ID errors keeps both."""
+        missing = {"code": 404, "id": "cp-missing", "message": "Not Found"}
+        self.mock_client.command.side_effect = [
+            {
+                "status_code": 200,
+                "body": {"resources": [{"id": "cp-1"}], "errors": [missing]},
+            }
+        ]
+        result = self.module.get_data_security_entities(
+            entity_type="content_pattern", ids=["cp-1", "cp-missing"]
+        )
+        self.assertEqual(result, {"results": [{"id": "cp-1"}], "_warnings": [missing]})
+
+    def test_search_partial_errors_are_warnings(self):
+        """A partial hydration keeps the envelope and adds the errors as _warnings."""
+        missing = {"code": 404, "id": "cls-2", "message": "Not Found"}
+        self.mock_client.command.side_effect = [
+            {
+                "status_code": 200,
+                "body": {
+                    "resources": ["cls-1", "cls-2"],
+                    "meta": {"pagination": {"offset": 0, "limit": 50, "total": 2}},
+                },
+            },
+            {"status_code": 200, "body": {"resources": [{"id": "cls-1"}], "errors": [missing]}},
+        ]
+        result = self.module.search_data_security_entities(
+            entity_type="classification", filter=None, limit=50, offset=0, sort=None
+        )
+        self.assertEqual(result["results"], [{"id": "cls-1"}])
+        self.assertEqual(result["pagination"]["total"], 2)
+        self.assertEqual(result["_warnings"], [missing])
+
+    def test_empty_errors_list_leaves_the_result_unchanged(self):
+        """`errors: []` is not a failure."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [{"id": "cp-1"}], "errors": []}}
+        ]
+        result = self.module.get_data_security_entities(entity_type="content_pattern", ids=["cp-1"])
+        self.assertEqual(result, [{"id": "cp-1"}])
+
+    def test_get_errors_without_resources_is_an_error(self):
+        """A 2xx carrying only errors fails, with the status taken from the error code."""
+        self.mock_client.command.side_effect = [
+            {
+                "status_code": 200,
+                "body": {"resources": [], "errors": [{"code": 404, "message": "Not Found"}]},
+            }
+        ]
+        result = self.module.get_data_security_entities(entity_type="policy", ids=["missing"])
+        self.assertIsInstance(result, list)
+        self.assertIn("Not Found", result[0]["error"])
+        self.assertEqual(result[0]["details"]["status_code"], 404)
+        self.assertNotIn("may have been applied", result[0]["error"])
+
+    def test_search_hydration_errors_without_resources_is_an_error(self):
+        """When every hydrated ID fails, search returns an error rather than empty results."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": ["cls-1"]}},
+            {"status_code": 200, "body": {"errors": [{"code": 500, "message": "boom"}]}},
+        ]
+        result = self.module.search_data_security_entities(
+            entity_type="classification", filter=None, limit=50, offset=0, sort=None
+        )
+        self.assertIsInstance(result, list)
+        self.assertIn("error", result[0])
+
+    def test_write_errors_without_resources_may_have_been_applied(self):
+        """A write that failed with a server error says to verify before retrying."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"errors": [{"code": 500, "message": "boom"}]}}
+        ]
+        result = self.module.create_data_security_entity(
+            entity_type="cloud_application", body={"name": "x", "urls": []}
+        )
+        self.assertIsInstance(result, list)
+        self.assertIn("may have been applied", result[0]["error"])
+        self.assertNotIn("body_guide", result[0])
+
+    def test_may_have_applied_follows_the_status_not_the_path(self):
+        """Server errors and missing statuses warn on either path; clean 4xx do not."""
+        cases = [
+            ({"status_code": 500, "body": {"errors": [{"message": "boom"}]}}, True),
+            ({"status_code": 504, "body": {}}, True),
+            ({"body": {}}, True),
+            ({"status_code": 404, "body": {"errors": [{"message": "no"}]}}, False),
+            ({"status_code": 200, "body": {"errors": [{"code": 403, "message": "no"}]}}, False),
+            ({"status_code": 200, "body": {"errors": [{"code": 409, "message": "dup"}]}}, False),
+        ]
+        for response, warns in cases:
+            with self.subTest(response=response):
+                self.mock_client.command.side_effect = [response]
+                result = self.module.create_data_security_entity(
+                    entity_type="cloud_application", body={"name": "x", "urls": []}
+                )
+                self.assertEqual("may have been applied" in result[0]["error"], warns)
+
+    def test_rejected_write_does_not_blame_the_filter(self):
+        """A 400 on a write uses body wording, not the shared FQL-filter advice."""
+        for response in (
+            {"status_code": 400, "body": {"errors": [{"message": "bad name"}]}},
+            {"status_code": 200, "body": {"errors": [{"code": 400, "message": "bad name"}]}},
+        ):
+            with self.subTest(response=response):
+                self.mock_client.command.side_effect = [response]
+                result = self.module.create_data_security_entity(
+                    entity_type="classification", body={"name": "x"}
+                )
+                self.assertIn("The API rejected the request body. API said: bad name", result[0]["error"])
+                self.assertNotIn("filter syntax", result[0]["error"])
+
+    def test_search_rejects_a_deleted_term_in_the_filter(self):
+        """With exclude/only, a caller's own deleted term could only narrow to nothing."""
+        for deleted in ("exclude", "only"):
+            with self.subTest(deleted=deleted):
+                result = self.module.search_data_security_entities(
+                    entity_type="content_pattern",
+                    filter="name:~'x'+deleted:true",
+                    limit=50,
+                    offset=0,
+                    sort=None,
+                    deleted=deleted,
+                )
+                self.assertIn("set the deleted argument", result[0]["error"])
+        self.mock_client.command.assert_not_called()
+        # 'include' passes the caller's filter through untouched, deleted term and all.
+        self.assertEqual(
+            self._search_filter_sent("content_pattern", filter="deleted:true", deleted="include"),
+            "deleted:true",
+        )
+        # A field that merely ends in "deleted" is not the deleted field.
+        self.assertEqual(
+            self._search_filter_sent("content_pattern", filter="is_deleted:true"),
+            "deleted:false+(is_deleted:true)",
+        )
+        # Nor is the word inside a quoted value.
+        self.assertEqual(
+            self._search_filter_sent("content_pattern", filter="name:~'deleted: old'"),
+            "deleted:false+(name:~'deleted: old')",
+        )
+
+    def test_write_errors_without_code_report_a_failed_2xx(self):
+        """With no error code to go by, the error says the 2xx did not succeed."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 201, "body": {"errors": [{"message": "something failed"}]}}
+        ]
+        result = self.module.create_data_security_entity(
+            entity_type="cloud_application", body={"name": "x", "urls": []}
+        )
+        self.assertIn("HTTP 201 but the request did not succeed", result[0]["error"])
+        self.assertIn("something failed", result[0]["error"])
+        self.assertIn("may have been applied", result[0]["error"])
+
+    def test_write_partial_errors_are_warnings(self):
+        """A write that returns its entity next to errors keeps both."""
+        warning = {"code": 409, "message": "partially applied"}
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [{"id": "ca-1"}], "errors": [warning]}}
+        ]
+        result = self.module.create_data_security_entity(
+            entity_type="cloud_application", body={"name": "x", "urls": []}
+        )
+        self.assertEqual(result, {"results": [{"id": "ca-1"}], "_warnings": [warning]})
+
+    # --- Empty write success ---
+
+    def test_empty_create_success_is_acknowledged(self):
+        """A create that succeeds with no entity is acknowledged, not reported as empty."""
+        for response in (
+            {"status_code": 204, "body": {}},
+            {"status_code": 201, "body": {"resources": []}},
+        ):
+            with self.subTest(status=response["status_code"]):
+                self.mock_client.command.side_effect = [response]
+                result = self.module.create_data_security_entity(
+                    entity_type="cloud_application", body={"name": "x", "urls": []}
+                )
+                self.assertEqual(result["status"], "created")
+                self.assertEqual(result["entity_type"], "cloud_application")
+                self.assertNotIn("id", result)
+                self.assertIn("Do not retry", result["message"])
+
+    def test_empty_update_success_is_acknowledged(self):
+        """An update that succeeds with no entity is acknowledged with its id."""
+        self.mock_client.command.side_effect = [{"status_code": 204, "body": {}}]
+        result = self.module.update_data_security_entity(
+            entity_type="content_pattern", body={"id": "cp-1", "name": "renamed"}
+        )
+        self.assertEqual(result["status"], "updated")
+        self.assertEqual(result["id"], "cp-1")
+        self.assertIn("falcon_get_data_security_entities", result["message"])
+
+    def test_empty_get_stays_an_empty_list(self):
+        """Reads are not acknowledged: an empty get is just empty."""
+        self.mock_client.command.side_effect = [{"status_code": 200, "body": {"resources": []}}]
+        result = self.module.get_data_security_entities(entity_type="content_pattern", ids=["x"])
+        self.assertEqual(result, [])
+
+    def test_create_with_empty_body_is_rejected(self):
+        """An empty create body is rejected before any API call."""
+        result = self.module.create_data_security_entity(entity_type="cloud_application", body={})
+        self.assertIn("body must not be empty", result[0]["error"])
+        self.mock_client.command.assert_not_called()
+
+    # --- Body guide on rejected writes ---
+
+    def test_rejected_write_includes_the_body_guide(self):
+        """A 400/422 on create or update returns the entity's body guide and a hint."""
+        cases = [
+            ("create", 400, {"status_code": 400, "body": {"errors": [{"code": 400, "message": "bad"}]}}),
+            ("create", 422, {"status_code": 422, "body": {"errors": [{"message": "bad"}]}}),
+            ("create", 422, {"status_code": 200, "body": {"errors": [{"code": 422, "message": "bad"}]}}),
+            ("update", 400, {"status_code": 400, "body": {"errors": [{"message": "bad"}]}}),
+        ]
+        for verb, status, response in cases:
+            with self.subTest(verb=verb, response=response):
+                self.mock_client.command.side_effect = [response]
+                if verb == "create":
+                    result = self.module.create_data_security_entity(
+                        entity_type="classification", body={"name": "x"}
+                    )
+                else:
+                    result = self.module.update_data_security_entity(
+                        entity_type="classification", body={"id": "cls-1", "name": "x"}
+                    )
+                error = result[0]
+                self.assertEqual(error["body_guide"], self.module._BODY_GUIDES["classification"])
+                self.assertIn("Rebuild it using body_guide", error["hint"])
+                self.assertEqual(error["details"]["status_code"], status)
+                self.assertNotIn("may have been applied", error["error"])
+
+    def test_other_write_failures_have_no_body_guide(self):
+        """Statuses other than 400/422 would not be fixed by the guide, so it is left out."""
+        for status in (403, 404, 409, 500):
+            with self.subTest(status=status):
+                self.mock_client.command.side_effect = [
+                    {"status_code": status, "body": {"errors": [{"message": "no"}]}}
+                ]
+                result = self.module.create_data_security_entity(
+                    entity_type="classification", body={"name": "x"}
+                )
+                self.assertIn("error", result[0])
+                self.assertNotIn("body_guide", result[0])
+
+    def test_failed_merge_fetch_has_no_body_guide(self):
+        """A 400 from the update's pre-fetch is a read failure, not a rejected body."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 400, "body": {"errors": [{"message": "bad id"}]}}
+        ]
+        result = self.module.update_data_security_entity(
+            entity_type="local_application", body={"id": "la-1", "name": "x"}
+        )
+        self.assertEqual(self.mock_client.command.call_count, 1)
+        self.assertIn("error", result[0])
+        self.assertNotIn("body_guide", result[0])
+
+    def test_read_failures_have_no_body_guide(self):
+        """Gets and searches never carry a body guide."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 400, "body": {"errors": [{"message": "bad"}]}}
+        ]
+        result = self.module.get_data_security_entities(entity_type="classification", ids=["x"])
+        self.assertIn("error", result[0])
+        self.assertNotIn("body_guide", result[0])
+
+    # --- Schema tool ---
+
+    def test_schema_returns_the_body_guides(self):
+        """The schema tool returns one guide per type, in order, without calling the API."""
+        result = self.module.get_data_security_entity_schema(
+            entity_types=["policy", "classification", "policy"]
+        )
+        self.assertEqual(
+            [s["entity_type"] for s in result["schemas"]], ["policy", "classification"]
+        )
+        self.assertEqual(result["schemas"][0]["body_guide"], self.module._BODY_GUIDES["policy"])
+        self.assertIn("a list you send replaces the stored list", result["hint"])
+        self.mock_client.command.assert_not_called()
+
+    def test_schema_rejects_unknown_read_only_and_empty(self):
+        """Unknown types, read-only file_type and an empty list are rejected."""
+        for entity_types, message in [
+            (["bogus"], "Invalid entity_type"),
+            (["classification", "file_type"], "read-only and has no body"),
+            ([], "must not be empty"),
+        ]:
+            with self.subTest(entity_types=entity_types):
+                result = self.module.get_data_security_entity_schema(entity_types=entity_types)
+                self.assertIsInstance(result, list)
+                self.assertIn(message, result[0]["error"])
+        self.mock_client.command.assert_not_called()
+
+    # --- Get: id handling ---
+
+    def test_get_deduplicates_ids_keeping_order(self):
+        """Duplicate IDs are dropped before the call; first-seen order is kept."""
+        self.mock_client.command.side_effect = [{"status_code": 200, "body": {"resources": []}}]
+        self.module.get_data_security_entities(entity_type="content_pattern", ids=["b", "a", "b"])
+        self.assertEqual(self.mock_client.command.call_args.kwargs["parameters"]["ids"], ["b", "a"])
+
+    def test_get_rejects_empty_and_more_than_100_ids(self):
+        """Out-of-range id lists are rejected before any API call."""
+        for ids in ([], [f"id-{i}" for i in range(101)]):
+            with self.subTest(count=len(ids)):
+                result = self.module.get_data_security_entities(
+                    entity_type="content_pattern", ids=ids
+                )
+                self.assertIn("between 1 and 100", result[0]["error"])
+        self.mock_client.command.assert_not_called()
+
+    # --- Update hardening ---
+
+    def test_update_rejects_a_non_string_id(self):
+        """The id must be a non-empty string; anything else is rejected before any call."""
+        for bad_id in (123, "", None, ["x"]):
+            with self.subTest(id=bad_id):
+                result = self.module.update_data_security_entity(
+                    entity_type="content_pattern", body={"id": bad_id, "name": "x"}
+                )
+                self.assertIn("non-empty string", result[0]["error"])
+        self.mock_client.command.assert_not_called()
+
+    def test_update_merge_uses_the_matching_record(self):
+        """The merge overlays onto the fetched record whose id matches, not the first one."""
+        other = {**self._LOCAL_APP, "id": "la-other", "name": "Other"}
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [other, dict(self._LOCAL_APP)]}},
+            {"status_code": 200, "body": {"resources": [{"id": "la-1"}]}},
+        ]
+        self.module.update_data_security_entity(
+            entity_type="local_application", body={"id": "la-1", "enable_rename_detection": True}
+        )
+        self.assertEqual(self.mock_client.command.call_args.kwargs["body"]["name"], "Excel")
+
+    def test_update_merge_refuses_unusable_records(self):
+        """A deleted record, or only records with another id, are not patched."""
+        for resources, message in [
+            ([{**self._LOCAL_APP, "deleted": True}], "is deleted"),
+            ([{**self._LOCAL_APP, "id": "la-other"}], "No local_application found"),
+        ]:
+            with self.subTest(message=message):
+                self.mock_client.reset_mock()
+                self.mock_client.command.side_effect = [
+                    {"status_code": 200, "body": {"resources": resources}}
+                ]
+                result = self.module.update_data_security_entity(
+                    entity_type="local_application", body={"id": "la-1", "name": "x"}
+                )
+                self.assertEqual(self.mock_client.command.call_count, 1)
+                self.assertIn(message, result[0]["error"])
+
+    def test_update_merge_is_independent_of_id_in_query(self):
+        """A merge type that keeps its id in the body still merges and keeps the caller's id."""
+        ops = dict(self.module._OPERATIONS["classification"], update_merge=True)
+        with patch.dict(self.module._OPERATIONS, {"classification": ops}):
+            self.mock_client.command.side_effect = [
+                {
+                    "status_code": 200,
+                    "body": {
+                        "resources": [
+                            {"id": "cls-1", "cid": "c", "created_at": "t", "name": "old", "x": 1}
+                        ]
+                    },
+                },
+                {"status_code": 200, "body": {"resources": [{"id": "cls-1"}]}},
+            ]
+            self.module.update_data_security_entity(
+                entity_type="classification", body={"id": "cls-1", "name": "new"}
+            )
+        self.assertEqual(
+            self.mock_client.command.call_args.kwargs["body"],
+            {"resources": [{"x": 1, "id": "cls-1", "name": "new"}]},
+        )
+
+    def test_write_body_is_sent_verbatim(self):
+        """Null and false values in a flat body reach the API unchanged."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [{"id": "ca-1"}]}}
+        ]
+        self.module.update_data_security_entity(
+            entity_type="cloud_application",
+            body={"id": "ca-1", "description": None, "flag": False},
+        )
+        self.assertEqual(
+            self.mock_client.command.call_args.kwargs["body"], {"description": None, "flag": False}
+        )
 
 
 if __name__ == "__main__":

@@ -385,11 +385,75 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
         result = self.call_method(
             self.module.search_data_security_entities,
             entity_type="content_pattern",
-            filter="deleted:false",
+            filter="category:'PII'",
             limit=3,
         )
 
         self.assert_no_error(result, context="search content_pattern with filter")
+
+    def _total(self, entity_type: str, **kwargs) -> int:
+        result = self.call_method(
+            self.module.search_data_security_entities, entity_type=entity_type, limit=1, **kwargs
+        )
+        self.assert_no_error(result, context=f"{entity_type} total {kwargs}")
+        total = result["pagination"]["total"]
+        assert isinstance(total, int), f"{entity_type} reported no total: {result['pagination']}"
+        return total
+
+    def test_deleted_argument_splits_live_and_deleted(self):
+        """Backs the deleted argument: exclude + only == include on every soft-delete type,
+        with and without a caller filter, which proves the parenthesized clause keeps the
+        caller's OR terms inside the AND."""
+        for entity_type in (
+            "content_pattern",
+            "web_location",
+            "local_application",
+            "local_application_group",
+            "enterprise_account",
+            "sensitivity_label",
+            "cloud_application",
+        ):
+            for fql in (None, "type:'custom',type:'predefined'"):
+                if fql and entity_type not in ("content_pattern", "web_location"):
+                    continue
+                with self.subTest(entity_type=entity_type, filter=fql):
+                    live = self._total(entity_type, filter=fql)
+                    deleted = self._total(entity_type, filter=fql, deleted="only")
+                    both = self._total(entity_type, filter=fql, deleted="include")
+                    assert live + deleted == both, (
+                        f"{entity_type} {fql}: exclude {live} + only {deleted} != include {both}"
+                    )
+
+    def test_search_hydrates_a_full_page_of_100(self):
+        """The search limit's maximum (100) still hydrates in one get call."""
+        result = self.call_method(
+            self.module.search_data_security_entities,
+            entity_type="content_pattern",
+            deleted="include",
+            limit=100,
+        )
+        self.assert_no_error(result, context="content_pattern limit=100")
+        if (result["pagination"]["total"] or 0) < 100:
+            self.skip_with_warning("Fewer than 100 content patterns", "content_pattern limit=100")
+            return
+        assert len(result["results"]) == 100, f"expected a full page, got {len(result['results'])}"
+
+    def test_get_with_a_missing_id_returns_warnings(self):
+        """A get mixing a real and a bogus id keeps the real entity and warns about the other."""
+        real = self._unwrap_results(
+            self.call_method(
+                self.module.search_data_security_entities, entity_type="content_pattern", limit=1
+            )
+        )[0]["id"]
+        result = self.call_method(
+            self.module.get_data_security_entities,
+            entity_type="content_pattern",
+            ids=[real, "0" * 32],
+        )
+        assert isinstance(result, dict) and "_warnings" in result, (
+            f"expected results plus _warnings for a partial get, got {result}"
+        )
+        assert [e["id"] for e in result["results"]] == [real]
 
     def test_search_content_patterns_by_type(self):
         """Test filtering content patterns by type."""

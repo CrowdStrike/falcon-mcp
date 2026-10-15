@@ -114,7 +114,7 @@ Supported sort fields: name.asc, name.desc, created_at.asc, created_at.desc, mod
 === IMPORTANT NOTES ===
 • Use single quotes around values: 'value'
 • Use ~ operator for case-insensitive name matching
-• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'
+• Dates are UTC, as 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM:SSZ'; relative dates such as 'now-7d' also work
 """
 )
 
@@ -317,10 +317,8 @@ SEARCH_CONTENT_PATTERNS_FQL_FILTERS = [
         "Boolean",
         "No",
         """
-        Whether the content pattern has been deleted.
-
-        Ex: deleted:false
-        Ex: deleted:true
+        Whether the content pattern has been soft-deleted. Do not filter on it;
+        set the search's deleted argument instead (exclude by default, include, only).
         """,
     ),
     (
@@ -338,7 +336,7 @@ SEARCH_CONTENT_PATTERNS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the content pattern was created (RFC3339).
+        Date the content pattern was created (UTC).
 
         Ex: created:>'2024-01-01'
         """,
@@ -348,7 +346,7 @@ SEARCH_CONTENT_PATTERNS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the content pattern was last updated (RFC3339).
+        Date the content pattern was last updated (UTC).
 
         Ex: last_updated:>'2024-06-01'
         """,
@@ -390,7 +388,6 @@ property_name:[operator]'value'
 • type:'custom' - Custom patterns only
 • type:'predefined' - CrowdStrike-provided patterns
 • category:'PCI DSS' - Payment-card data patterns
-• deleted:false - Active (non-deleted) patterns
 • region:'US'+type:'predefined' - US-specific predefined patterns
 • name:~'credit' - Patterns with "credit" in the name
 
@@ -402,8 +399,8 @@ Supported sort fields: name.asc, name.desc, category.asc, region.asc
 === IMPORTANT NOTES ===
 • Use single quotes around values: 'value'
 • Use ~ operator for case-insensitive name matching
-• Boolean values have no quotes: deleted:false
 • type values are lowercase: 'custom', 'predefined'
+• Dates are UTC, as 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM:SSZ'
 • Relative dates such as 'now-7d' are rejected; use an absolute UTC timestamp
 """
 )
@@ -433,8 +430,19 @@ property_name:[operator]'value'
 """
 
 
-def _fql_doc(title: str, tool_name: str, filters: list[tuple], sort_fields: str) -> str:
-    """Assemble a standard entity FQL guide from its filter table and sort fields."""
+def _fql_doc(
+    title: str,
+    tool_name: str,
+    filters: list[tuple],
+    sort_fields: str,
+    bool_example: str | None = None,
+) -> str:
+    """Assemble a standard entity FQL guide from its filter table and sort fields.
+
+    bool_example names a filterable boolean for the no-quotes note; guides with no
+    such field (deleted is set through the search's deleted argument) omit the note.
+    """
+    bool_note = f"• Boolean values have no quotes (e.g. {bool_example})\n" if bool_example else ""
     return (
         f"Falcon Query Language (FQL) - {title} Guide\n"
         + _FQL_SYNTAX_PREAMBLE
@@ -445,8 +453,8 @@ def _fql_doc(title: str, tool_name: str, filters: list[tuple], sort_fields: str)
         + "=== IMPORTANT NOTES ===\n"
         + "• Use single quotes around values: 'value'\n"
         + "• Use ~ operator for case-insensitive name matching\n"
-        + "• Boolean values have no quotes (e.g. deleted:false)\n"
-        + "• Date format must be UTC: 'YYYY-MM-DDTHH:MM:SSZ'\n"
+        + bool_note
+        + "• Dates are UTC, as 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM:SSZ'\n"
         + "• Relative dates such as 'now-7d' are rejected; use an absolute UTC timestamp\n"
     )
 
@@ -479,9 +487,8 @@ SEARCH_CLOUD_APPLICATIONS_FQL_FILTERS = [
         "Boolean",
         "No",
         """
-        Whether the cloud application has been soft-deleted.
-
-        Ex: deleted:false
+        Whether the cloud application has been soft-deleted. Do not filter on it;
+        set the search's deleted argument instead (exclude by default, include, only).
         """,
     ),
     (
@@ -509,7 +516,7 @@ SEARCH_CLOUD_APPLICATIONS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the cloud application was created (RFC3339).
+        Date the cloud application was created (UTC).
 
         Ex: created:>'2024-01-01'
         """,
@@ -519,7 +526,7 @@ SEARCH_CLOUD_APPLICATIONS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the cloud application was last updated (RFC3339).
+        Date the cloud application was last updated (UTC).
 
         Ex: last_updated:>'2024-06-01'
         """,
@@ -531,6 +538,7 @@ SEARCH_CLOUD_APPLICATIONS_FQL_DOCUMENTATION = _fql_doc(
     "falcon_search_data_security_entities (entity_type='cloud_application')",
     SEARCH_CLOUD_APPLICATIONS_FQL_FILTERS,
     "name.asc, name.desc",
+    bool_example="supports_network_inspection:true",
 )
 
 # Enterprise Account FQL filters
@@ -561,9 +569,8 @@ SEARCH_ENTERPRISE_ACCOUNTS_FQL_FILTERS = [
         "Boolean",
         "No",
         """
-        Whether the enterprise account has been soft-deleted.
-
-        Ex: deleted:false
+        Whether the enterprise account has been soft-deleted. Do not filter on it;
+        set the search's deleted argument instead (exclude by default, include, only).
         """,
     ),
     (
@@ -571,7 +578,7 @@ SEARCH_ENTERPRISE_ACCOUNTS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the enterprise account was created (RFC3339).
+        Date the enterprise account was created (UTC).
 
         Ex: created:>'2024-01-01'
         """,
@@ -581,7 +588,7 @@ SEARCH_ENTERPRISE_ACCOUNTS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the enterprise account was last updated (RFC3339).
+        Date the enterprise account was last updated (UTC).
 
         Ex: last_updated:>'2024-06-01'
         """,
@@ -623,9 +630,8 @@ SEARCH_WEB_LOCATIONS_FQL_FILTERS = [
         "Boolean",
         "No",
         """
-        Whether the web location has been soft-deleted.
-
-        Ex: deleted:false
+        Whether the web location has been soft-deleted. Do not filter on it;
+        set the search's deleted argument instead (exclude by default, include, only).
         """,
     ),
     (
@@ -683,7 +689,7 @@ SEARCH_WEB_LOCATIONS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the web location was created (RFC3339).
+        Date the web location was created (UTC).
 
         Ex: created:>'2024-01-01'
         """,
@@ -693,7 +699,7 @@ SEARCH_WEB_LOCATIONS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the web location was last updated (RFC3339).
+        Date the web location was last updated (UTC).
 
         Ex: last_updated:>'2024-06-01'
         """,
@@ -705,6 +711,7 @@ SEARCH_WEB_LOCATIONS_FQL_DOCUMENTATION = _fql_doc(
     "falcon_search_data_security_entities (entity_type='web_location')",
     SEARCH_WEB_LOCATIONS_FQL_FILTERS,
     "name.asc, name.desc, created.desc, last_updated.desc",
+    bool_example="supports_network_inspection:true",
 )
 
 # Local Application FQL filters
@@ -736,9 +743,8 @@ SEARCH_LOCAL_APPLICATIONS_FQL_FILTERS = [
         "Boolean",
         "No",
         """
-        Whether the local application has been soft-deleted.
-
-        Ex: deleted:false
+        Whether the local application has been soft-deleted. Do not filter on it;
+        set the search's deleted argument instead (exclude by default, include, only).
         """,
     ),
     (
@@ -746,7 +752,7 @@ SEARCH_LOCAL_APPLICATIONS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the local application was created (RFC3339).
+        Date the local application was created (UTC).
 
         Ex: created:>'2024-01-01'
         """,
@@ -756,7 +762,7 @@ SEARCH_LOCAL_APPLICATIONS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the local application was last updated (RFC3339).
+        Date the local application was last updated (UTC).
 
         Ex: last_updated:>'2024-06-01'
         """,
@@ -788,9 +794,8 @@ SEARCH_LOCAL_APPLICATION_GROUPS_FQL_FILTERS = [
         "Boolean",
         "No",
         """
-        Whether the local application group has been soft-deleted.
-
-        Ex: deleted:false
+        Whether the local application group has been soft-deleted. Do not filter on it;
+        set the search's deleted argument instead (exclude by default, include, only).
         """,
     ),
     (
@@ -798,7 +803,7 @@ SEARCH_LOCAL_APPLICATION_GROUPS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the group was created (RFC3339).
+        Date the group was created (UTC).
 
         Ex: created:>'2024-01-01'
         """,
@@ -808,7 +813,7 @@ SEARCH_LOCAL_APPLICATION_GROUPS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the group was last updated (RFC3339).
+        Date the group was last updated (UTC).
 
         Ex: last_updated:>'2024-06-01'
         """,
@@ -860,9 +865,8 @@ SEARCH_SENSITIVITY_LABELS_FQL_FILTERS = [
         "Boolean",
         "No",
         """
-        Whether the sensitivity label has been soft-deleted.
-
-        Ex: deleted:false
+        Whether the sensitivity label has been soft-deleted. Do not filter on it;
+        set the search's deleted argument instead (exclude by default, include, only).
         """,
     ),
     (
@@ -870,7 +874,7 @@ SEARCH_SENSITIVITY_LABELS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the label was created (RFC3339).
+        Date the label was created (UTC).
 
         Ex: created:>'2024-01-01'
         """,
@@ -880,7 +884,7 @@ SEARCH_SENSITIVITY_LABELS_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the label was last updated (RFC3339).
+        Date the label was last updated (UTC).
 
         Ex: last_updated:>'2024-06-01'
         """,
@@ -913,7 +917,7 @@ SEARCH_FILE_TYPES_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the file type was created (RFC3339).
+        Date the file type was created (UTC).
 
         Ex: created:>'2024-01-01'
         """,
@@ -923,7 +927,7 @@ SEARCH_FILE_TYPES_FQL_FILTERS = [
         "Timestamp",
         "Yes",
         """
-        Date the file type was last updated (RFC3339).
+        Date the file type was last updated (UTC).
 
         Ex: last_updated:>'2024-06-01'
         """,
@@ -947,26 +951,75 @@ DATA_MODEL_DOCUMENTATION = """\
 Data Security Entity Relationship Model
 ==========================================
 
-Policies reference Classifications by ID; Classifications combine detection
-criteria (Content Patterns, File Types, Web Origins, Sensitivity Labels) with
-response Rules. Use search/get tools to resolve referenced IDs.
+All references are by ID. Create dependencies first (bottom-up): an entity can
+only reference IDs that already exist. Use search/get tools to resolve
+referenced IDs — never guess them. The one exception is AD users/groups (see
+Key rules): they cannot be looked up, so their SIDs must come from the user.
 
-Policy  (HOW to respond)
-└── references one or more Classifications
-        ├── WHAT to detect — any combination of:
-        │     ├── Content Patterns (content): regex-based data pattern detectors
-        │     ├── File Paths (context): where data is stored/named (glob syntax)
-        │     ├── File Types (context): true file type, regardless of extension
-        │     ├── Web Origins (context): where data originated from
-        │     └── Sensitivity (MIP) Labels (context): Microsoft Information Protection labels
-        └── one or more Rules  (WHO / WHICH channels / WHAT action)
-              ├── Egress Channels: USB, Printer, Web Upload, Local Application
-              ├── User Scope: all users OR specific AD Users/Groups (by SID)
-              └── Response Action: block, allow, or justify
+Policy  (platform_name: win | mac — inspection, notification, forensics; NO enforcement)
+└── policy_properties.classifications: ORDERED list — index 0 is evaluated first.
+    │   For each egress, the first Classification that matches the data AND has a
+    │   Rule covering that egress acts; the rest are skipped. Place "undefined"
+    │   Classifications (no detection criteria) last, or they shadow the others.
+    └── Classification  (WHAT to detect + enforcement)
+          ├── protection_mode: monitor | simulate | enforce
+          ├── Detection criteria — any combination (blank = match everything):
+          │     ├── content_patterns     -> content_pattern   (predefined catalog + custom regex;
+          │     │                                              content_patterns_operator and | or)
+          │     ├── file_types           -> file_type         (read-only; true type, not extension)
+          │     ├── sensitivity_labels   -> sensitivity_label (Microsoft MIP or Google labels)
+          │     ├── web_sources          -> web_location      (Web ORIGIN: data came FROM here)
+          │     └── win_/mac_file_path_patterns               (inline glob strings, no entity)
+          └── rules[]  (nested, not searchable on their own; evaluated in order)  WHERE / WHO / ACTION
+                ├── Channels:
+                │     ├── Removable Media    (enable_usb_devices)
+                │     ├── Printer            (enable_printer_egress; Windows only)
+                │     ├── Web Upload         (enable_web_locations; web_locations_scope all | specific,
+                │     │                       web_locations -> web_location = Web DESTINATION: data goes TO)
+                │     └── Local Application  (enable_local_application_groups;
+                │                             local_application_groups -> local_application_group)
+                ├── User scope: user_scope all | specific (ad_users / ad_groups by SID —
+                │                NOT searchable here: ask the user for the SIDs)
+                ├── response_action: block | allow | justify
+                └── detection_severity · trigger_detection (fires only in enforce) · notify_end_user
+
+Supporting entities (create before the entities that reference them):
+
+  cloud_application ──(application_id)──────────> web_location
+  enterprise_account ─(enterprise_account_id)───> web_location   (makes it "managed":
+                                                                  matches corporate activity only)
+  application_group_id: google | microsoft | box ─> enterprise_account
+  local_application <──(group_ids / local_application_ids)──> local_application_group
+                                                                 (Windows only)
+
+Read-only (search/get only, never create): file_type. sensitivity_label
+supports create but not update.
+
+Key rules
+---------
+- AD users and groups CANNOT be searched or fetched with these tools. When a
+  Rule must be scoped to specific users/groups ("for HR", "except user Y"),
+  tell the user they cannot be looked up and ask them for the exact SIDs
+  (e.g. S-1-5-21-...) to put in ad_users / ad_groups. Never derive a SID from a
+  name, never invent one, and never silently fall back to user_scope all —
+  if the user cannot provide SIDs, ask whether to apply the Rule to all users.
+- One Policy per host per platform: Policies never stack. Windows + macOS =
+  two Policies referencing the same (platform-agnostic) Classifications.
+- "Upload / send TO X" = Rule Web Destination (web_locations, scope specific).
+  "Data FROM X" / "downloaded from X" = Classification Web Origin (web_sources).
+  The same web_location ID can serve both roles.
+- A Classification has no effect until a Policy references it.
+- Enforcement lives only on the Classification (protection_mode, Rule
+  response_action), never on the Policy.
 
 When displaying a policy or classification, offer to drill into referenced
 entity IDs (classifications, content patterns, web locations, etc.) and
 present the relationships using the tree structure above.
+
+For the exact create/update body of an entity type (field names, types,
+allowed values), call falcon_get_data_security_entity_schema, or read
+falcon://data-security/<entity>/body-guide (e.g.
+falcon://data-security/classifications/body-guide).
 
 Per-entity FQL guides
 ---------------------
@@ -998,10 +1051,277 @@ setting, ask the user rather than assuming.
 
 === OPERATIONAL RULES ===
 
-1. Always use falcon-mcp tools for Data Security queries — do not fabricate
-   configuration details from memory.
+1. Always use the Data Security tools for Data Security queries — do not
+   fabricate configuration details from memory.
 2. When in doubt about any setting value, ask the user before proceeding.
 3. After displaying entity details, check for UUIDs or references to other
    entities. Offer to fetch and display those relationships using the data
    model in falcon://data-security/entities/model-guide.
+4. AD users and groups cannot be looked up with the Data Security tools. When a
+   rule must target specific users or groups, tell the user so and ask them for
+   the exact SIDs. When displaying a rule, show its ad_users / ad_groups SIDs
+   as-is — names cannot be resolved.
+"""
+
+
+# ── Write body guides ────────────────────────────────────────────────────
+#
+# The exact create/update body of each writable entity type, served by
+# falcon_get_data_security_entity_schema, as falcon://data-security/<entity>/body-guide
+# resources, and with a create/update the API rejects as a bad request.
+
+BODY_GUIDE_NOTATION = (
+    "Each value shows the field's type (string, integer, number, bool, [T] for a list) "
+    'or its allowed values ("a" | "b"); // comments are notes, not part of the body.'
+)
+
+CLASSIFICATION_BODY_GUIDE = """\
+Data Security Classification Body Guide
+=========================================
+
+A Classification defines WHAT to detect and, through its nested rules, WHERE /
+WHO / WHICH action. All references are IDs obtained via search/get.
+
+{
+  "name": string, // required. No special characters
+  "classification_properties": {
+    "protection_mode": "monitor" | "simulate" | "enforce", // required. The only classification-level enforcement control
+    "content_patterns": [string], // optional. content_pattern IDs
+    "content_patterns_operator": "or" | "and", // optional. 'or' = match any pattern, 'and' = match all
+    "file_types": [string], // optional. file_type IDs; blank = all file types
+    "sensitivity_labels": [string], // optional. sensitivity_label IDs
+    "web_sources": [string], // optional. web_location IDs the data came FROM (origins). Never put a destination here
+    "win_file_path_patterns": [string], // optional, max 20. Windows globs, e.g. **\\*.{py,js,ts}
+    "mac_file_path_patterns": [string], // optional, max 20. macOS globs, e.g. **/*.{py,js,ts}
+    "evidence_duplication_enabled": bool, // optional. Retain forensic evidence
+    "rules": [Rule] // optional. Evaluated in list order: put an exception (allow) before the general rule (block)
+  }
+}
+
+Rule (an element of classification_properties.rules):
+
+{
+  "id": string, // existing rules only: keep it on update, or the rule is re-added as new
+  "user_scope": "all" | "specific", // required
+  "ad_users": [string], // only when user_scope is 'specific'. AD user SIDs — provided by the user, cannot be looked up
+  "ad_groups": [string], // only when user_scope is 'specific'. AD group SIDs — provided by the user, cannot be looked up
+  "response_action": "allow" | "block" | "justify", // required. 'justify' is not valid on Printer or Local Application egress
+  "detection_severity": "informational" | "low" | "medium" | "high" | "critical", // required
+  "trigger_detection": bool, // required. Detections fire only when protection_mode is 'enforce'
+  "notify_end_user": bool, // required
+  "enable_usb_devices": bool, // required. Removable Media channel
+  "enable_printer_egress": bool, // required. Printer channel, Windows only
+  "enable_web_locations": bool, // required. Web Upload channel
+  "enable_local_application_groups": bool, // required. Local Application channel
+  "web_locations_scope": "all" | "specific", // required
+  "web_locations": [string], // only when web_locations_scope is 'specific'. web_location IDs the data goes TO (destinations)
+  "web_location_destination_groups": [string], // optional, max 15. Web location destination group IDs
+  "local_application_groups": [string], // only with enable_local_application_groups. local_application_group IDs, max 15
+  "enable_screen_capture_rule": bool, // optional. Needs the policy's enable_screen_capture (Windows)
+  "description": string // optional
+}
+
+Update: send "id" plus only the fields to change, top-level or inside
+classification_properties; omitted fields keep their stored values. A list you
+send replaces the stored list. For rules, send the full current list (from
+falcon_get_data_security_entities) with your change, and keep each existing
+rule's "id": a rule without one is added as a new rule.
+"""
+
+POLICY_BODY_GUIDE = """\
+Data Security Policy Body Guide
+=================================
+
+A Policy is platform-specific: pass platform_name ('win' or 'mac') as a tool
+argument, never in the body. It carries inspection, notification and forensics
+settings; enforcement lives on its classifications.
+
+{
+  "name": string, // required. No special characters
+  "description": string, // required. No special characters
+  "precedence": integer, // required on create. Lower numbers evaluate first
+  "policy_properties": {
+    "classifications": [string], // classification IDs, ORDERED: the first match with a rule covering the egress wins; classifications without detection criteria go last
+    "enable_content_inspection": bool,
+    "enable_context_inspection": bool,
+    "enable_clipboard_inspection": bool,
+    "enable_clipboard_web_origin": bool, // attribute web sources for clipboard content; needs context inspection
+    "inspection_depth": "balanced" | "high_performance" | "deep_scan",
+    "min_confidence_level": "low" | "medium" | "high",
+    "max_file_size_to_inspect": number, // paired with max_file_size_to_inspect_unit
+    "max_file_size_to_inspect_unit": "Bytes" | "KB" | "MB",
+    "similarity_detection": bool, // near-duplicate / derived content
+    "similarity_threshold": "10" | "20" | "30" | "40" | "50" | "60" | "70" | "80" | "90" | "100", // string; set only with similarity_detection
+    "block_notifications": "default" | "custom", // 'custom' needs custom_block_notification
+    "custom_block_notification": string, // 2-256 chars, max 4 lines
+    "allow_notifications": "default" | "custom", // 'custom' needs custom_allow_notification
+    "custom_allow_notification": string, // 2-256 chars, max 4 lines
+    "evidence_download_enabled": bool, // retrieval of forensic evidence
+    "browsers_without_active_extension": "allow" | "block_policy", // inspection coverage, NOT enforcement
+
+    // Windows only:
+    "enable_network_inspection": bool,
+    "network_inspection_exclude_list_v2": [string], // max 200
+    "network_inspection_files_exceeding_size_limit": "block" | "allow",
+    "enable_print_monitor": bool,
+    "enable_screen_capture": bool, // prerequisite for a rule's enable_screen_capture_rule
+    "screen_capture_duration_pre_event": "3" | "5" | "10",
+    "screen_capture_duration_post_event": "3" | "5" | "10",
+    "evidence_encrypted_enabled": bool, // inspect encrypted archives (ZIP, RAR)
+    "block_all_data_access": bool,
+    "enable_end_user_notifications_unsupported_browser": bool,
+
+    // macOS only:
+    "enable_ocr": bool
+  }
+}
+
+A new policy is created disabled and without host groups: is_enabled and
+host_groups are not part of the create request — set them with an update.
+
+Update: send "id" plus the fields to change; is_enabled (bool) and host_groups
+([string] host group IDs) are update-only. Lists replace the stored list: to
+add a classification, send the full current classifications list (from
+falcon_get_data_security_entities) with the new ID in the right position.
+"""
+
+CONTENT_PATTERN_BODY_GUIDE = """\
+Data Security Content Pattern Body Guide
+==========================================
+
+Search the predefined catalog first (e.g. filter category:~'PCI DSS'); create
+a custom pattern only when none fits.
+
+{
+  "name": string, // required. No special characters
+  "description": string, // required. What sensitive data it detects
+  "category": "PII" | "PCI DSS" | "PHI" | "Custom" | "ITAR" | "Secret", // required
+  "region": string, // required. e.g. 'ALL'
+  "regexes": [string], // required. One entry per distinct pattern
+  "example": string, // required. Sample text that the regexes match
+  "min_match_threshold": integer // required, >= 1. Matches needed to trigger detection
+}
+
+Update: send "id" plus any of name, description, regexes, example,
+min_match_threshold. category and region cannot be changed. regexes replaces
+the stored list.
+"""
+
+CLOUD_APPLICATION_BODY_GUIDE = """\
+Data Security Cloud Application Body Guide
+============================================
+
+A SaaS application that web locations reference via application_id. Search by
+name first (FQDNs are not searchable) — predefined applications cover most
+common services.
+
+{
+  "name": string, // required
+  "description": string, // optional
+  "urls": [{ "fqdn": string, "path": string }] // required. e.g. [{ "fqdn": "app.example.com", "path": "/" }]
+}
+
+Update: send "id" plus any of name, description, urls. urls replaces the
+stored list.
+"""
+
+ENTERPRISE_ACCOUNT_BODY_GUIDE = """\
+Data Security Enterprise Account Body Guide
+=============================================
+
+Separates corporate from personal use of a provider. A web_location that
+references it (enterprise_account_id) becomes "managed".
+
+{
+  "name": string, // required. e.g. 'Corporate OneDrive'
+  "application_group_id": "google" | "microsoft" | "box", // required
+  "domains": [string], // required. The organization's domains for this provider, e.g. ['contoso.com']
+  "plugin_config_id": string // links the Data Protection connector; needed for site-level tracking
+}
+
+Update: send "id" plus name and/or domains — the only updatable fields.
+domains replaces the stored list.
+"""
+
+WEB_LOCATION_BODY_GUIDE = """\
+Data Security Web Location Body Guide
+=======================================
+
+The same web location can be an origin (classification web_sources) or a
+destination (rule web_locations). Search predefined locations first — a
+duplicate custom one changes FQDN matching.
+
+{
+  "name": string, // required
+  "application_id": string, // required. cloud_application ID
+  "type": "custom", // required. Predefined locations cannot be created or changed
+  "location_type": string, // required by the API spec; existing custom locations store ''
+  "deleted": false, // required by the API spec
+  "enterprise_account_id": string, // optional. Makes the location "managed" (corporate activity only)
+  "provider_location_id": string, // optional. Site-level tracking (SharePoint site, Google shared drive, Box folder); needs the connector and enterprise_account_id
+  "provider_location_name": string, // optional. Set together with provider_location_id
+  "web_location_group_ids": [string] // optional
+}
+
+Update: send "id" and "name" plus the fields to change; omitted fields keep
+their stored values. name is required unless the update sets
+enterprise_account_id, in which case the stored name is kept and any name sent
+is ignored. web_location_group_ids replaces the stored list.
+"""
+
+LOCAL_APPLICATION_BODY_GUIDE = """\
+Data Security Local Application Body Guide
+============================================
+
+A desktop application (Windows only) whose data access a rule can scope through
+a local_application_group.
+
+{
+  "name": string, // required
+  "executable_name": string, // required. e.g. 'excel.exe'
+  "group_ids": [string], // local_application_group IDs to join; use this to add a new application to existing groups
+  "apply_rules_for_children_processes": bool, // rules also apply to child processes
+  "enable_rename_detection": bool, // detect a renamed executable
+  "emit_rule_matched_events_only": bool // emit events only when a rule matches
+}
+
+Update: send "id" plus the fields to change; the tool merges them onto the
+current entity. group_ids replaces the stored list.
+"""
+
+LOCAL_APPLICATION_GROUP_BODY_GUIDE = """\
+Data Security Local Application Group Body Guide
+==================================================
+
+Groups local applications so a rule's Local Application channel can target
+them (rule local_application_groups).
+
+{
+  "name": string, // required
+  "description": string, // required by the API spec
+  "local_application_ids": [string] // required. local_application IDs in the group
+}
+
+Update: send "id" plus the fields to change; the tool merges them onto the
+current entity. local_application_ids replaces the stored list.
+"""
+
+SENSITIVITY_LABEL_BODY_GUIDE = """\
+Data Security Sensitivity Label Body Guide
+============================================
+
+A Microsoft (MIP) or Google label applied to files. Labels are normally synced
+by the Microsoft 365 / Google Workspace connector — search before creating one.
+
+{
+  "name": string, // required
+  "display_name": string, // required
+  "external_id": string, // required. The label's ID at the provider
+  "label_provider": "microsoft" | "google", // required
+  "plugins_configuration_id": string, // required. The connector configuration ID
+  "co_authoring": bool, // required
+  "synced": bool // required
+}
+
+Create only: sensitivity labels cannot be updated.
 """

@@ -196,9 +196,9 @@ CASES: list[ReorderCase] = [
         kwargs={"policy_id": "policy-1"},
         site=("falcon_mcp/modules/firewall.py", "search_firewall_policy_rules"),
     ),
-    # --- Discriminated site: one reorder call in the shared _search_entity helper
-    # serves every data-security entity_type. Each entity type is driven through the
-    # single generic search tool so a wrapper cannot bypass the reorder. ---
+    # --- Discriminated site: one reorder call in the generic search tool serves every
+    # data-security entity_type. Its hydration reads the raw response (to keep per-ID
+    # errors), so both steps are stubbed at client.command. ---
     *[
         ReorderCase(
             tool="falcon_search_data_security_entities",
@@ -206,7 +206,8 @@ CASES: list[ReorderCase] = [
             method="search_data_security_entities",
             id_field="id",
             kwargs=kwargs,
-            site=("falcon_mcp/modules/data_security.py", "_search_entity"),
+            site=("falcon_mcp/modules/data_security.py", "search_data_security_entities"),
+            query_patch="client.command",
         )
         for kwargs in (
             {"entity_type": "classification"},
