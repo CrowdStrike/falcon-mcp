@@ -8,7 +8,12 @@ from unittest.mock import patch
 from mcp.server.fastmcp.tools import Tool
 
 from falcon_mcp.modules.base import READ_ONLY_ANNOTATIONS
-from falcon_mcp.modules.data_security import DataSecurityModule
+from falcon_mcp.modules.data_security import (
+    DataSecurityModule,
+    _elide_binary,
+    _elided_paths,
+    _project,
+)
 from tests.modules.utils.test_modules import TestModules
 
 
@@ -775,7 +780,7 @@ class TestDataSecurityModule(TestModules):
         """Search hydrates every queried ID through get, so both stop at 100."""
         search = self._tool_schema(self.module.search_data_security_entities)
         self.assertEqual(search["limit"]["maximum"], 100)
-        self.assertEqual(search["limit"]["default"], 50)
+        self.assertEqual(search["limit"]["default"], 25)
         ids = self._tool_schema(self.module.get_data_security_entities)["ids"]
         self.assertEqual(ids["minItems"], 1)
         self.assertEqual(ids["maxItems"], 100)
@@ -810,14 +815,19 @@ class TestDataSecurityModule(TestModules):
 
     def test_search_deleted_on_types_without_soft_delete(self):
         """classification, policy and file_type keep the caller's filter and reject 'only'."""
-        for entity_type in ("classification", "policy", "file_type"):
+        # A policy filter is parenthesized: see test_search_policy_filter_is_parenthesized.
+        for entity_type, sent in (
+            ("classification", "name:~'x'"),
+            ("policy", "(name:~'x')"),
+            ("file_type", "name:~'x'"),
+        ):
             with self.subTest(entity_type=entity_type):
                 for deleted in ("exclude", "include"):
                     self.assertEqual(
                         self._search_filter_sent(
                             entity_type, filter="name:~'x'", deleted=deleted, platform_name="win"
                         ),
-                        "name:~'x'",
+                        sent,
                     )
                 self.mock_client.reset_mock()
                 result = self.module.search_data_security_entities(
@@ -1240,6 +1250,332 @@ class TestDataSecurityModule(TestModules):
         self.assertEqual(
             self.mock_client.command.call_args.kwargs["body"], {"description": None, "flag": False}
         )
+
+    # --- Search: filter shaping ---
+
+    def test_search_blank_filter_is_no_filter(self):
+        """A whitespace-only filter is treated as no filter."""
+        self.assertEqual(self._search_filter_sent("content_pattern", filter="  "), "deleted:false")
+        self.assertIsNone(
+            self._search_filter_sent("content_pattern", filter="  ", deleted="include")
+        )
+        self.assertIsNone(self._search_filter_sent("classification", filter="  "))
+
+    def test_search_policy_filter_is_parenthesized(self):
+        """The policy API ANDs platform_name with the first OR term only, so the tool
+        parenthesizes the filter to keep the other platform's policies out."""
+        self.assertEqual(
+            self._search_filter_sent(
+                "policy", filter="is_enabled:true,is_enabled:false", platform_name="win"
+            ),
+            "(is_enabled:true,is_enabled:false)",
+        )
+        self.assertIsNone(self._search_filter_sent("policy", filter=None, platform_name="mac"))
+
+    # --- Search: pagination ---
+
+    def _search_page(self, ids, meta=None, get_resources=None, get_errors=None, **kwargs):
+        """Run a content_pattern search whose query step returns ids (and meta)."""
+        self.mock_client.reset_mock()
+        query_body: dict = {"resources": ids}
+        if meta is not None:
+            query_body["meta"] = meta
+        get_body: dict = {
+            "resources": [{"id": i} for i in ids] if get_resources is None else get_resources
+        }
+        if get_errors:
+            get_body["errors"] = get_errors
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": query_body},
+            {"status_code": 200, "body": get_body},
+        ]
+        return self.module.search_data_security_entities(
+            entity_type="content_pattern", filter=None, sort=None, **kwargs
+        )
+
+    def test_search_pagination(self):
+        """pagination echoes the requested offset and limit, carries the API's total,
+        and computes next, which the API never sends."""
+        cases = {
+            # The classification and policy APIs report offset+limit as the offset.
+            "API reports the next offset": (
+                {"ids": ["a", "b"], "meta": {"pagination": {"offset": 2, "limit": 2, "total": 5}}},
+                {"offset": 0, "limit": 2},
+                {"total": 5, "offset": 0, "limit": 2, "next": 2},
+            ),
+            "echoed offset": (
+                {"ids": ["c", "d"], "meta": {"pagination": {"offset": 2, "limit": 2, "total": 5}}},
+                {"offset": 2, "limit": 2},
+                {"total": 5, "offset": 2, "limit": 2, "next": 4},
+            ),
+            "last page has no next": (
+                {"ids": ["e"], "meta": {"pagination": {"offset": 4, "limit": 2, "total": 5}}},
+                {"offset": 4, "limit": 2},
+                {"total": 5, "offset": 4, "limit": 2, "next": None},
+            ),
+            "no total, full page": (
+                {"ids": ["a", "b"]},
+                {"offset": 0, "limit": 2},
+                {"total": None, "offset": 0, "limit": 2, "next": 2},
+            ),
+            "no total, short page": (
+                {"ids": ["a"]},
+                {"offset": 0, "limit": 2},
+                {"total": None, "offset": 0, "limit": 2, "next": None},
+            ),
+        }
+        for name, (response, request, expected) in cases.items():
+            with self.subTest(name):
+                result = self._search_page(**response, **request)
+                self.assertEqual(result["pagination"], expected)
+
+    def test_search_pagination_counts_ids(self):
+        """next counts the queried IDs, so an ID that fails to hydrate does not shift
+        the following pages."""
+        result = self._search_page(
+            ["a", "b"],
+            meta={"pagination": {"total": 10}},
+            get_resources=[{"id": "a"}],
+            get_errors=[{"code": 404, "id": "b", "message": "Not Found"}],
+            offset=4,
+            limit=2,
+        )
+        self.assertEqual(result["pagination"]["next"], 6)
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(len(result["_warnings"]), 1)
+
+    def test_search_past_the_end(self):
+        """An empty page past the last one says so instead of reading as no match."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [], "meta": {"pagination": {"total": 3}}}}
+        ]
+        result = self.module.search_data_security_entities(
+            entity_type="content_pattern", filter=None, limit=25, offset=10, sort=None
+        )
+        self.assertEqual(result["results"], [])
+        self.assertEqual(
+            result["pagination"], {"total": 3, "offset": 10, "limit": 25, "next": None}
+        )
+        self.assertIn("offset 10 is past the end: 3 entities match", result["hint"])
+        self.assertNotIn("fql_guide", result)
+        self.assertEqual(self.mock_client.command.call_count, 1)
+
+    def test_search_empty_first_page_has_no_hint(self):
+        """Nothing matching at offset 0 is a plain empty envelope."""
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [], "meta": {"pagination": {"total": 0}}}}
+        ]
+        result = self.module.search_data_security_entities(
+            entity_type="content_pattern", filter="name:~'zzz'", limit=25, offset=0, sort=None
+        )
+        self.assertEqual(result["results"], [])
+        self.assertNotIn("hint", result)
+
+    def test_search_non_filter_error_omits_guide(self):
+        """A query-step failure the filter cannot have caused returns the plain error;
+        a 400/422 keeps the FQL guide."""
+        for status in (401, 403, 429, 500):
+            with self.subTest(status=status):
+                self.mock_client.reset_mock()
+                self.mock_client.command.side_effect = [
+                    {"status_code": status, "body": {"errors": [{"message": "nope"}]}}
+                ]
+                result = self.module.search_data_security_entities(
+                    entity_type="content_pattern", filter="name:~'x'", limit=25, offset=0, sort=None
+                )
+                self.assertIsInstance(result, list)
+                self.assertIn("error", result[0])
+                self.assertNotIn("fql_guide", result[0])
+        for status in (400, 422):
+            with self.subTest(status=status):
+                self.mock_client.reset_mock()
+                self.mock_client.command.side_effect = [
+                    {"status_code": status, "body": {"errors": [{"message": "bad filter"}]}}
+                ]
+                result = self.module.search_data_security_entities(
+                    entity_type="content_pattern", filter="name:~'x'", limit=25, offset=0, sort=None
+                )
+                self.assertIn("fql_guide", result)
+
+    # --- Elided inline binary data ---
+
+    _LOGO = "data:image/png;base64," + "iVBORw0KGgo" * 100
+
+    def _policy(self, entity_id: str) -> dict:
+        return {
+            "id": entity_id,
+            "name": "P",
+            "platform_name": "win",
+            "rules": [{"x": 1}],
+            "policy_properties": {"classifications": ["c1"], "euj_dialog_box_logo": self._LOGO},
+        }
+
+    def test_elide_binary(self):
+        """Data URIs of 256+ characters become a placeholder at any depth; short ones
+        and other long strings are kept."""
+        short = "data:image/png;base64,abc"
+        plain = "x" * 500
+        result = _elide_binary(
+            {"short": short, "plain": plain, "nested": {"logos": [self._LOGO]}, "keep": "keep"}
+        )
+        self.assertEqual(result["short"], short)
+        self.assertEqual(result["plain"], plain)
+        self.assertEqual(result["keep"], "keep")
+        self.assertEqual(
+            result["nested"]["logos"][0],
+            f"<elided data URI (image/png;base64), {len(self._LOGO)} bytes: omitted from "
+            "results; never send this placeholder back in a write>",
+        )
+
+    def test_elided_paths(self):
+        """Placeholder paths are dotted for keys, indexed for list items, sorted by key."""
+        placeholder = _elide_binary(self._LOGO)
+        body = {
+            "rules": [{"x": placeholder}],
+            "policy_properties": {"euj_dialog_box_logo": placeholder, "name": "ok"},
+        }
+        self.assertEqual(
+            _elided_paths(body), ["policy_properties.euj_dialog_box_logo", "rules[0].x"]
+        )
+        self.assertEqual(_elided_paths({"name": "ok", "list": ["a"]}), [])
+
+    def test_search_elides_inline_images(self):
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": ["p1"]}},
+            {"status_code": 200, "body": {"resources": [self._policy("p1")]}},
+        ]
+        result = self.module.search_data_security_entities(
+            entity_type="policy", filter=None, limit=5, offset=0, sort=None,
+            platform_name="win", fields=["*"],
+        )
+        logo = result["results"][0]["policy_properties"]["euj_dialog_box_logo"]
+        self.assertTrue(logo.startswith("<elided data URI (image/png;base64)"))
+
+    def test_get_elides_inline_images(self):
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [self._policy("p1")]}}
+        ]
+        result = self.module.get_data_security_entities(entity_type="policy", ids=["p1"])
+        self.assertTrue(
+            result[0]["policy_properties"]["euj_dialog_box_logo"].startswith("<elided ")
+        )
+
+    def test_update_result_elides_inline_images(self):
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [self._policy("p1")]}}
+        ]
+        result = self.module.update_data_security_entity(
+            entity_type="policy", body={"id": "p1", "name": "P"}, platform_name="win"
+        )
+        self.assertTrue(
+            result[0]["policy_properties"]["euj_dialog_box_logo"].startswith("<elided ")
+        )
+
+    def test_merge_prefetch_keeps_inline_images(self):
+        """The update merge sends the stored value, never the placeholder."""
+        stored = {"id": "la-1", "name": "app", "icon": self._LOGO}
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [stored]}},
+            {"status_code": 200, "body": {"resources": [stored]}},
+        ]
+        self.module.update_data_security_entity(
+            entity_type="local_application", body={"id": "la-1", "name": "app2"}
+        )
+        self.assertEqual(
+            self.mock_client.command.call_args.kwargs["body"], {"name": "app2", "icon": self._LOGO}
+        )
+
+    def test_writes_reject_elided_placeholders(self):
+        """A body that echoes a placeholder is rejected before any API call."""
+        placeholder = _elide_binary(self._LOGO)
+        body = {"id": "p1", "policy_properties": {"euj_dialog_box_logo": placeholder}}
+        for method in (
+            self.module.create_data_security_entity,
+            self.module.update_data_security_entity,
+        ):
+            with self.subTest(tool=method.__name__):
+                self.mock_client.reset_mock()
+                result = method(entity_type="policy", body=body, platform_name="win")
+                self.assertIn("policy_properties.euj_dialog_box_logo", result[0]["error"])
+                self.assertIn("remove them from the body", result[0]["error"])
+                self.mock_client.command.assert_not_called()
+
+    # --- Search: fields projection and summary records ---
+
+    def test_project(self):
+        """Paths a record lacks, or that run through a non-dict, are skipped; no fields
+        keeps the record whole."""
+        record = {"id": "x", "name": "n", "a": {"b": 1, "c": 2}}
+        self.assertEqual(
+            _project([record], ["name", "a.b", "missing", "name.too.deep"]),
+            [{"id": "x", "name": "n", "a": {"b": 1}}],
+        )
+        self.assertEqual(_project([record], None), [record])
+        self.assertEqual(_project(["raw"], ["name"]), ["raw"])
+
+    def test_search_fields_projection(self):
+        """Named fields project the records to id plus those fields, with no hint."""
+        result = self._search_page(
+            ["a"],
+            get_resources=[{"id": "a", "name": "n", "category": "PII"}],
+            offset=0,
+            limit=5,
+            fields=["name"],
+        )
+        self.assertEqual(result["results"], [{"id": "a", "name": "n"}])
+        self.assertNotIn("hint", result)
+
+    def _search_one(self, entity_type: str, record: dict, **kwargs):
+        self.mock_client.reset_mock()
+        self.mock_client.command.side_effect = [
+            {"status_code": 200, "body": {"resources": [record["id"]]}},
+            {"status_code": 200, "body": {"resources": [record]}},
+        ]
+        return self.module.search_data_security_entities(
+            entity_type=entity_type, filter=None, limit=5, offset=0, sort=None,
+            platform_name="win", **kwargs,
+        )
+
+    def test_search_summary_by_default(self):
+        """Policies and classifications come back as summaries unless fields are named."""
+        with self.subTest("policy summary"):
+            result = self._search_one("policy", self._policy("p1"))
+            self.assertEqual(
+                result["results"][0],
+                {
+                    "id": "p1",
+                    "name": "P",
+                    "platform_name": "win",
+                    "policy_properties": {"classifications": ["c1"]},
+                },
+            )
+            self.assertIn("summary records", result["hint"])
+            self.assertIn("falcon_get_data_security_entities", result["hint"])
+            self.assertIn("pagination", result)
+            self.assertNotIn("_warnings", result)
+        with self.subTest("classification summary drops rules"):
+            classification = {
+                "id": "c1",
+                "name": "C",
+                "classification_properties": {"protection_mode": "monitor", "rules": [{}]},
+            }
+            result = self._search_one("classification", classification)
+            self.assertEqual(
+                result["results"][0],
+                {"id": "c1", "name": "C", "classification_properties": {"protection_mode": "monitor"}},
+            )
+        with self.subTest("star returns full records"):
+            result = self._search_one("policy", {"id": "p1", "rules": [{"x": 1}]}, fields=["name", "*"])
+            self.assertEqual(result["results"][0], {"id": "p1", "rules": [{"x": 1}]})
+            self.assertNotIn("hint", result)
+        with self.subTest("other types stay full"):
+            result = self._search_one("content_pattern", {"id": "cp1", "regexes": ["x"]})
+            self.assertEqual(result["results"][0], {"id": "cp1", "regexes": ["x"]})
+            self.assertNotIn("hint", result)
+
+    def test_summary_fields_are_set_only_for_policy_and_classification(self):
+        summarized = sorted(t for t, ops in self.module._OPERATIONS.items() if ops["summary_fields"])
+        self.assertEqual(summarized, ["classification", "policy"])
 
 
 if __name__ == "__main__":

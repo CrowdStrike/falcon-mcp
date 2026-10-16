@@ -53,28 +53,23 @@ from falcon_mcp.resources.data_security import (
 
 # Shared reference-ID guidance for the create/update body parameter.
 _BODY_REFERENCES_DOC = (
-    "All referenced IDs must be real IDs obtained via search/get — never guess them. "
-    "Exception: AD users/groups cannot be looked up with these tools, so rule "
-    "ad_users / ad_groups SIDs must be provided by the user — ask for them, never "
-    "invent them. See falcon://data-security/entities/model-guide for entity "
-    "relationships."
+    "Referenced IDs must be real IDs from search/get, never guessed. Rule ad_users / "
+    "ad_groups SIDs cannot be looked up: ask the user for them, never invent them."
 )
 
 _CREATE_BODY_DOC = (
-    "JSON object with the entity's fields, exactly as returned by "
-    "falcon_get_data_security_entity_schema for the entity_type. Classification fields "
-    "go under classification_properties (rules nested inside it); policy fields under "
-    "policy_properties, with the platform in the platform_name argument, never in the "
-    "body.\n\n" + _BODY_REFERENCES_DOC
+    "The entity's fields, shaped as its body guide (falcon_get_data_security_entity_schema): "
+    "classification fields under classification_properties (rules inside it), policy "
+    "fields under policy_properties. " + _BODY_REFERENCES_DOC
 )
 
 _UPDATE_BODY_DOC = (
-    'JSON object with the entity "id" plus only the fields to change; omitted fields '
-    "keep their value. Use the field names and nesting from "
-    "falcon_get_data_security_entity_schema (classification fields under "
-    "classification_properties, policy fields under policy_properties).\n\n"
-    + _BODY_REFERENCES_DOC
+    '"id" plus only the fields to change; omitted fields keep their value. Nesting as for '
+    'create. Never copy an "<elided …>" placeholder from a result into the body; leave '
+    "that field out. " + _BODY_REFERENCES_DOC
 )
+
+_WRITE_PLATFORM_DOC = "Required for entity_type 'policy' ('win' or 'mac'); never put it in the body."
 
 # Ordered tuple of supported entity_type discriminator values. Also drives the
 # accepted-values list surfaced in guiding errors.
@@ -147,6 +142,86 @@ _MAY_HAVE_APPLIED = (
     "entity) before retrying."
 )
 
+# Data Security records can carry inline binary data: a policy's
+# policy_properties.euj_dialog_box_logo is a base64 PNG data URI of 10-20 KB, about
+# two thirds of the record. Results replace large data URIs with a placeholder that
+# starts with _ELIDED_PREFIX, and a write body that echoes one is rejected, as
+# sending it back would overwrite the stored value with the placeholder.
+_ELIDED_PREFIX = "<elided "
+# Shorter data URIs cost little and may be meaningful to show as-is.
+_ELIDE_MIN_LEN = 256
+
+# The fields value that asks a search for full records.
+_ALL_FIELDS = "*"
+
+
+def _elide_binary(value: Any) -> Any:
+    """Return value with every data URI of at least _ELIDE_MIN_LEN characters, at
+    any depth, replaced by a placeholder naming its media type and size."""
+    if isinstance(value, dict):
+        return {k: _elide_binary(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_elide_binary(v) for v in value]
+    if isinstance(value, str) and len(value) >= _ELIDE_MIN_LEN and value.startswith("data:"):
+        media = value[len("data:"):].split(",", 1)[0]
+        return (
+            f"{_ELIDED_PREFIX}data URI ({media}), {len(value)} bytes: omitted from results; "
+            "never send this placeholder back in a write>"
+        )
+    return value
+
+
+def _elided_paths(value: Any, path: str = "") -> list[str]:
+    """Return the dotted paths of the elision placeholders in a write body, in key order."""
+    if isinstance(value, dict):
+        return [
+            found
+            for key in sorted(value)
+            for found in _elided_paths(value[key], f"{path}.{key}" if path else key)
+        ]
+    if isinstance(value, list):
+        return [found for i, v in enumerate(value) for found in _elided_paths(v, f"{path}[{i}]")]
+    if isinstance(value, str) and value.startswith(_ELIDED_PREFIX):
+        return [path]
+    return []
+
+
+def _project(records: list[Any], fields: list[str] | None) -> list[Any]:
+    """Return each record reduced to "id" plus the dotted field paths in fields (e.g.
+    "name", "policy_properties.classifications"), keeping their nesting.
+
+    Paths a record does not have are skipped; no fields keeps every field.
+    """
+    if not fields:
+        return records
+    projected = []
+    for record in records:
+        if not isinstance(record, dict):
+            projected.append(record)
+            continue
+        kept = {"id": record["id"]} if "id" in record else {}
+        for field in fields:
+            _copy_path(record, kept, field.split("."))
+        projected.append(kept)
+    return projected
+
+
+def _copy_path(src: dict[str, Any], dst: dict[str, Any], path: list[str]) -> None:
+    """Copy the value at path from src into dst, creating the intermediate dicts,
+    when every step of the path exists in src."""
+    if path[0] not in src:
+        return
+    value = src[path[0]]
+    if len(path) == 1:
+        dst[path[0]] = value
+        return
+    if not isinstance(value, dict):
+        return
+    sub = dst[path[0]] if isinstance(dst.get(path[0]), dict) else {}
+    _copy_path(value, sub, path[1:])
+    if sub:
+        dst[path[0]] = sub
+
 
 class DataSecurityModule(BaseModule):
     """CrowdStrike Data Security configuration module.
@@ -157,7 +232,12 @@ class DataSecurityModule(BaseModule):
 
     Required API Scopes:
     - Data Protection:read (search and get tools)
-    - Data Protection:write (create and update tools)
+    - Data Protection:write (create tool)
+    - Data Protection:read and Data Protection:write (update tool)
+
+    Searches of policies and classifications return summary records unless the
+    caller names fields: a deliberate exception to returning full entity details,
+    as a page of full policies (5-20 KB each) outgrows client output limits.
     """
 
     # Per-entity dispatch table. FalconPy operation IDs are recorded verbatim
@@ -171,6 +251,8 @@ class DataSecurityModule(BaseModule):
     #   platform: True when the entity requires platform_name
     #   soft_delete: True when deleted entities are kept with deleted:true, which
     #                search hides unless the deleted argument asks for them
+    #   summary_fields: the fields a search returns when the caller names none (the
+    #                   records are several KB each), or None for full records
     _OPERATIONS: dict[str, dict[str, Any]] = {
         "classification": {
             "query": "queries_classification_get_v2",
@@ -183,6 +265,18 @@ class DataSecurityModule(BaseModule):
             "update_merge": False,
             "platform": False,
             "soft_delete": False,
+            "summary_fields": (
+                "name",
+                "classification_properties.protection_mode",
+                "classification_properties.content_patterns",
+                "classification_properties.content_patterns_operator",
+                "classification_properties.file_types",
+                "classification_properties.sensitivity_labels",
+                "classification_properties.web_sources",
+                "classification_properties.win_file_path_patterns",
+                "classification_properties.mac_file_path_patterns",
+                "modified_at",
+            ),
         },
         "policy": {
             "query": "queries_policy_get_v2",
@@ -195,6 +289,17 @@ class DataSecurityModule(BaseModule):
             "update_merge": False,
             "platform": True,
             "soft_delete": False,
+            "summary_fields": (
+                "name",
+                "description",
+                "platform_name",
+                "is_enabled",
+                "is_default",
+                "precedence",
+                "host_groups",
+                "policy_properties.classifications",
+                "modified_at",
+            ),
         },
         "content_pattern": {
             "query": "queries_content_pattern_get_v2",
@@ -207,6 +312,7 @@ class DataSecurityModule(BaseModule):
             "update_merge": False,
             "platform": False,
             "soft_delete": True,
+            "summary_fields": None,
         },
         "cloud_application": {
             "query": "queries_cloud_application_get_v2",
@@ -219,6 +325,7 @@ class DataSecurityModule(BaseModule):
             "update_merge": False,
             "platform": False,
             "soft_delete": True,
+            "summary_fields": None,
         },
         "enterprise_account": {
             "query": "queries_enterprise_account_get_v2",
@@ -231,6 +338,7 @@ class DataSecurityModule(BaseModule):
             "update_merge": False,
             "platform": False,
             "soft_delete": True,
+            "summary_fields": None,
         },
         "web_location": {
             "query": "queries_web_location_get_v2",
@@ -243,6 +351,7 @@ class DataSecurityModule(BaseModule):
             "update_merge": False,
             "platform": False,
             "soft_delete": True,
+            "summary_fields": None,
         },
         "local_application": {
             "query": "queries_local_application_get",
@@ -255,6 +364,7 @@ class DataSecurityModule(BaseModule):
             "update_merge": True,
             "platform": False,
             "soft_delete": True,
+            "summary_fields": None,
         },
         "local_application_group": {
             "query": "queries_local_application_group_get",
@@ -267,6 +377,7 @@ class DataSecurityModule(BaseModule):
             "update_merge": True,
             "platform": False,
             "soft_delete": True,
+            "summary_fields": None,
         },
         "sensitivity_label": {
             "query": "queries_sensitivity_label_get_v2",
@@ -279,6 +390,7 @@ class DataSecurityModule(BaseModule):
             "update_merge": False,
             "platform": False,
             "soft_delete": True,
+            "summary_fields": None,
         },
         "file_type": {
             "query": "queries_file_type_get_v2",
@@ -291,6 +403,7 @@ class DataSecurityModule(BaseModule):
             "update_merge": False,
             "platform": False,
             "soft_delete": False,
+            "summary_fields": None,
         },
     }
 
@@ -756,25 +869,31 @@ class DataSecurityModule(BaseModule):
             entity_type,
         )
 
-    def _deleted_filter(
+    def _effective_filter(
         self, entity_type: str, filter: str | None, deleted: str
     ) -> tuple[str | None, dict[str, Any] | None]:
-        """Return (effective filter, error) for the search's deleted argument.
+        """Return (filter to send, error) for the caller's filter and deleted argument.
 
-        Soft-delete entity types return deleted entities by default, so the tool
-        adds the clause itself rather than relying on the caller to; the caller's
-        filter is parenthesized so its OR terms stay inside the AND.
+        A blank filter is no filter. Soft-delete entity types return deleted entities
+        by default, so the tool adds the clause itself rather than relying on the
+        caller to; the caller's filter is parenthesized so its OR terms stay inside the
+        AND. A policy filter is parenthesized too: the policy API ANDs platform_name
+        with the first OR term only, so the other platform's policies leak in.
         """
         if deleted not in ("exclude", "include", "only"):
             return None, _format_error_response(
                 f"Invalid deleted: '{deleted}'. Accepted values: exclude, include, only."
             )
-        if not self._OPERATIONS[entity_type]["soft_delete"]:
+        filter = (filter or "").strip() or None
+        ops = self._OPERATIONS[entity_type]
+        if not ops["soft_delete"]:
             if deleted == "only":
                 return None, _format_error_response(
                     f"entity_type='{entity_type}' has no deleted entities; omit deleted "
                     "or use 'exclude'."
                 )
+            if filter and ops["platform"]:
+                return f"({filter})", None
             return filter, None
         if deleted == "include":
             return filter, None
@@ -807,6 +926,7 @@ class DataSecurityModule(BaseModule):
         )
         if error:
             return [error]
+        resources = _elide_binary(resources)
         if warnings:
             return {"results": resources, "_warnings": warnings}
         if resources:
@@ -831,6 +951,51 @@ class DataSecurityModule(BaseModule):
             ),
         }
 
+    @staticmethod
+    def _search_page(
+        pagination: dict[str, Any] | None, offset: int, limit: int, n: int
+    ) -> dict[str, Any]:
+        """Build the pagination of a search page that started at offset and whose
+        query step returned n IDs.
+
+        The tool's own, not the API's: the classification and policy APIs report
+        offset+limit as the offset, and no entity type sends a next cursor. total
+        is the API's count, or None when it sent none. next counts the IDs, not the
+        hydrated records, so an ID that fails to hydrate does not shift the
+        following pages; without a total, a full page is taken to have a next one.
+        """
+        total = (pagination or {}).get("total")
+        next_offset = offset + n
+        has_next = n > 0 and (
+            (total is not None and next_offset < total) or (total is None and n == limit)
+        )
+        return {
+            "total": total,
+            "offset": offset,
+            "limit": limit,
+            "next": next_offset if has_next else None,
+        }
+
+    def _search_fields(
+        self, entity_type: str, fields: list[str] | None
+    ) -> tuple[list[str] | None, str | None]:
+        """Return (fields to project search records to, hint).
+
+        None keeps records whole. Fields the caller names win, and "*" among them
+        asks for full records; otherwise the entity's summary fields apply, with a
+        hint saying so.
+        """
+        summary = self._OPERATIONS[entity_type]["summary_fields"]
+        if fields and _ALL_FIELDS in fields:
+            return None, None
+        if fields or not summary:
+            return fields or None, None
+        return list(summary), (
+            f"These are summary records (id plus {', '.join(summary)}), as no fields were "
+            "named. For full records pass their ids to falcon_get_data_security_entities, "
+            f'or search again with fields ["{_ALL_FIELDS}"] and a small limit (about 5).'
+        )
+
     # ── Search / get tools (generic, entity_type-keyed) ───────────────────
 
     def search_data_security_entities(
@@ -846,16 +1011,30 @@ class DataSecurityModule(BaseModule):
         filter: str | None = Field(
             default=None,
             description=(
-                "FQL filter expression. Supported fields vary by entity_type; see "
-                "falcon://data-security/<entity>/fql-guide (e.g. "
-                "falcon://data-security/classifications/fql-guide) for syntax. Do not "
-                "filter on deleted; use the deleted argument."
+                "FQL filter. Fields vary by entity_type; full guide: "
+                "falcon://data-security/<type>/fql-guide, <type> = plural hyphenated "
+                "entity_type (e.g. falcon://data-security/content-patterns/fql-guide). "
+                "id and deleted are not filter fields: fetch known IDs with "
+                "falcon_get_data_security_entities; use the deleted argument."
             ),
         ),
         limit: int = Field(
-            default=50, ge=1, le=_MAX_IDS, description="Maximum number of records to return."
+            default=25,
+            ge=1,
+            le=_MAX_IDS,
+            description=(
+                "Maximum number of entities to return. Keep it small with a filter; "
+                'limit 1 with pagination.total answers "how many".'
+            ),
         ),
-        offset: int = Field(default=0, ge=0, description="Pagination offset."),
+        offset: int = Field(
+            default=0,
+            ge=0,
+            description=(
+                "Offset of the first entity. For the next page pass pagination.next; "
+                "a null next means the last page."
+            ),
+        ),
         sort: str | None = Field(
             default=None,
             description=(
@@ -865,16 +1044,26 @@ class DataSecurityModule(BaseModule):
         ),
         platform_name: PlatformName | None = Field(
             default=None,
-            description="Required only for entity_type='policy': 'win' or 'mac'.",
+            description="Required for entity_type 'policy': 'win' or 'mac'.",
         ),
         deleted: DeletedMode = Field(
             default="exclude",
             description=(
-                "Deleted entities: 'exclude' (default) hides them, 'include' returns them "
-                "alongside live ones, 'only' returns just them. Use include or only only "
-                "when the user asks about deleted entities. classification, policy and "
-                "file_type have no deleted entities: 'only' is rejected for them and the "
-                "other values are ignored."
+                "'exclude' hides deleted entities, 'include' adds them, 'only' returns "
+                "just them; use 'include' or 'only' just when the user asks about deleted "
+                "entities. classification, policy and file_type have none: 'only' is "
+                "rejected, the other values are ignored."
+            ),
+        ),
+        fields: list[str] | None = Field(
+            default=None,
+            description=(
+                'Return only these fields (plus id), as dotted paths, e.g. ["name", '
+                '"is_enabled", "host_groups"] or ["name", "policy_properties.classifications"]. '
+                "Omitted: summaries for policy and classification (the hint lists their "
+                'fields), full records otherwise. ["*"] returns full records, several KB '
+                "each for a policy or classification: keep limit to about 5, or get chosen "
+                "ids with falcon_get_data_security_entities."
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
@@ -883,15 +1072,22 @@ class DataSecurityModule(BaseModule):
         Covers classifications, policies, content patterns, cloud applications,
         enterprise accounts, web locations, local applications, local application
         groups, sensitivity labels, and file types; a policy search also needs
-        platform_name. Consult the entity's FQL guide before constructing filter
-        expressions, e.g. falcon://data-security/policies/fql-guide (all ten are
-        listed in falcon://data-security/entities/model-guide), and read
-        falcon://data-security/agent/behavioral-guide once before working with these
-        tools. Returns full entity details in a pagination envelope whose
-        `pagination.total` is the API's count of matches, or null when the API does
-        not report one; `_warnings` lists per-entity errors the API reported. Rule
-        ad_users / ad_groups values are AD SIDs these tools cannot resolve to names,
-        so show them as-is.
+        platform_name. Read falcon://data-security/agent/behavioral-guide once first:
+        it holds the operating rules. Search narrowly: filter on what the user named
+        and keep limit small; for a listing, show the first page with its total and
+        offer the next. Consult the entity's FQL guide before composing a filter,
+        e.g. falcon://data-security/policies/fql-guide.
+
+        Returns a pagination envelope: `pagination.total` is the API's count of
+        matches (null when it reports none) and `pagination.next` the offset of the
+        next page (null on the last); `_warnings` lists per-entity errors the API
+        reported. Policy and classification results are summary records unless you
+        pass fields (a `hint` names the summary fields); other types return full
+        records. Large inline images (e.g. a policy's euj_dialog_box_logo) come back
+        as an "<elided …>" placeholder. With child CIDs, results span every CID (each
+        record's cid says which); policy precedence and the default policy are per
+        CID, so group policies by cid. Rule ad_users / ad_groups are AD SIDs: show
+        them as-is, names cannot be resolved.
         """
         error = self._validate_entity_type(entity_type)
         if error:
@@ -903,7 +1099,7 @@ class DataSecurityModule(BaseModule):
                 f"platform_name is required for entity_type='{entity_type}' ('win' or 'mac')."
             )]
 
-        filter_used, error = self._deleted_filter(
+        filter_used, error = self._effective_filter(
             entity_type, filter, unwrap_field_default(deleted)
         )
         if error:
@@ -924,17 +1120,38 @@ class DataSecurityModule(BaseModule):
             error_message=f"Failed to search Data Security {entity_type} entities",
         )
         if self._is_error(ids):
+            # The FQL guide rides along only when the API rejected the request
+            # (400/422), where the filter or sort is the likely cause; auth,
+            # rate-limit and server failures get the plain error.
+            status_code: int | None = (ids.get("details") or {}).get("status_code")
+            if status_code not in (400, 422):
+                return [ids]
             return self._format_fql_error_response([ids], filter_used, self._FQL_DOCS[entity_type])
+
+        page = self._search_page(pagination, offset, limit, len(ids))
         if not ids:
-            return self._build_pagination_envelope([], pagination, filter_used)
+            envelope = self._build_pagination_envelope([], page, filter_used)
+            if offset > 0 and page["total"]:
+                # Past the last page the query matches entities but returns none.
+                envelope["hint"] = (
+                    f"offset {offset} is past the end: {page['total']} entities match, so "
+                    "there is no page here. The filter is fine; page from a lower offset "
+                    "(0 for the first page)."
+                )
+            return envelope
 
         details, warnings, error = self._fetch_by_ids(entity_type, ids)
         if error:
             return [error]
-        details = self._reorder_by_ids(ids, details, id_field="id")
-        envelope = self._build_pagination_envelope(details, pagination, filter_used)
+        project_to, hint = self._search_fields(entity_type, unwrap_field_default(fields))
+        details = _project(
+            _elide_binary(self._reorder_by_ids(ids, details, id_field="id")), project_to
+        )
+        envelope = self._build_pagination_envelope(details, page, filter_used)
         if warnings:
             envelope["_warnings"] = warnings
+        if hint:
+            envelope["hint"] = hint
         return envelope
 
     def get_data_security_entities(
@@ -956,15 +1173,15 @@ class DataSecurityModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Retrieve full details of Data Security entities of one entity_type by ID.
+        """Retrieve full Data Security entities of one entity_type by ID.
 
-        Use when you already hold IDs, such as the ones one entity lists for the
-        entities it references; to find entities by their attributes, use
-        falcon_search_data_security_entities instead. See
-        falcon://data-security/entities/model-guide for how the entities reference
-        each other. Returns a list of the matching entities, or `{results,
-        _warnings}` when some IDs failed. Rule ad_users / ad_groups values are AD
-        SIDs these tools cannot resolve to names, so show them as-is.
+        Use it for IDs you already hold, e.g. the IDs another entity references
+        (relationships: falcon://data-security/entities/model-guide). To find entities
+        by attribute, use falcon_search_data_security_entities. Returns a list of the
+        matching entities, or `{results, _warnings}` when some IDs failed. Large
+        inline images (e.g. a policy's euj_dialog_box_logo) come back as an
+        "<elided …>" placeholder. Rule ad_users / ad_groups are AD SIDs: show them
+        as-is, names cannot be resolved.
         """
         error = self._validate_entity_type(entity_type)
         if error:
@@ -979,6 +1196,7 @@ class DataSecurityModule(BaseModule):
         resources, warnings, error = self._fetch_by_ids(entity_type, unique_ids)
         if error:
             return [error]
+        resources = _elide_binary(resources)
         if warnings:
             return {"results": resources, "_warnings": warnings}
         return resources
@@ -993,14 +1211,13 @@ class DataSecurityModule(BaseModule):
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Return the exact write-body shape for one or more Data Security entity types.
+        """Return the write-body guide of one or more Data Security entity types.
 
-        Call this before building the body of falcon_create_data_security_entity or
-        falcon_update_data_security_entity, batching every entity type you are about
-        to write (e.g. ["classification", "policy"]); never guess field names. Covers
-        every type but file_type, which is read-only, and makes no API call. Returns
-        one body guide per entity type (field names, types, allowed values, nesting,
-        required fields) plus a usage hint.
+        Each guide gives the field names, types, allowed values, nesting and required
+        fields. Covers every type except file_type, which is read-only. Reads embedded
+        docs only, no API call. Call it before building a create or update body,
+        batching every type you will write (e.g. ["classification", "policy"]); never
+        guess field names. Returns one body guide per entity type plus a usage hint.
         """
         unique_types = list(dict.fromkeys(entity_types))
         if not unique_types:
@@ -1037,6 +1254,18 @@ class DataSecurityModule(BaseModule):
             return body
         return {wrapper: [body]}
 
+    @staticmethod
+    def _elided_error(body: dict[str, Any]) -> dict[str, Any] | None:
+        """Return the error for a write body that echoes an elision placeholder, or None."""
+        paths = _elided_paths(body)
+        if not paths:
+            return None
+        return _format_error_response(
+            f"body field(s) {', '.join(paths)} hold an \"{_ELIDED_PREFIX}…>\" placeholder "
+            "copied from a result, not the real value; remove them from the body (omitted "
+            "fields keep their stored value)."
+        )
+
     def create_data_security_entity(
         self,
         entity_type: WriteEntityType = Field(
@@ -1048,31 +1277,28 @@ class DataSecurityModule(BaseModule):
             ),
         ),
         body: dict[str, Any] = Field(description=_CREATE_BODY_DOC),
-        platform_name: PlatformName | None = Field(
-            default=None,
-            description="Required only for entity_type='policy': 'win' or 'mac'.",
-        ),
+        platform_name: PlatformName | None = Field(default=None, description=_WRITE_PLATFORM_DOC),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Create a Data Security entity of the chosen entity_type.
 
         Creates classifications, policies, content patterns, cloud applications,
         enterprise accounts, web locations, local applications, local application
-        groups, and sensitivity labels; policies also need platform_name. Call
-        falcon_get_data_security_entity_schema first for the exact body of each
-        entity type you create. Bodies reference other entities by ID, so look those
-        IDs up with search first and never guess them. Returns a list containing the
-        created entity, {results, _warnings} when the API also reported errors, or an
-        acknowledgement {status, entity_type, message} when it accepted the write but
-        returned no entity (do not retry). If the API rejects the body, the error
-        includes the entity's body_guide. Follow falcon://data-security/agent/behavioral-guide (domain
-        context and operating rules, e.g. ask the user rather than assume a setting).
+        groups, and sensitivity labels; policies also need platform_name. Build the
+        body from falcon_get_data_security_entity_schema and follow
+        falcon://data-security/agent/behavioral-guide (ask rather than assume a
+        setting). Returns a list with the created entity, `{results, _warnings}` when
+        the API also reported errors, or an acknowledgement {status, entity_type,
+        message} when it accepted the write but returned no entity (do not retry). If
+        the API rejects the body, the error includes its body_guide.
 
         Rules (the API accepts violations silently):
 
-        - Create bottom-up, referencing only existing IDs: cloud application /
-          enterprise account → web location → classification → policy.
-        - Enforcement is only on the classification (protection_mode, rule
-          response_action); policy settings control inspection.
+        - Create bottom-up, referencing only real IDs from search/get, never guessed:
+          cloud application / enterprise account → web location → classification →
+          policy.
+        - Enforcement is only on the classification: rule response_action applies
+          only when protection_mode is 'enforce' ('simulate' runs silently, 'monitor'
+          only observes). Policy settings control inspection.
         - "Upload TO X" is a rule destination (web_locations, scope 'specific');
           "data FROM X" is a classification origin (web_sources). Ask when unclear.
         - A policy's classifications are ordered: the first match with a rule
@@ -1097,6 +1323,9 @@ class DataSecurityModule(BaseModule):
             )]
         if not body:
             return [_format_error_response("body must not be empty.")]
+        error = self._elided_error(body)
+        if error:
+            return [error]
 
         query_params = {"platform_name": platform_name} if ops["platform"] else None
         response = self._command(
@@ -1117,32 +1346,27 @@ class DataSecurityModule(BaseModule):
             ),
         ),
         body: dict[str, Any] = Field(description=_UPDATE_BODY_DOC),
-        platform_name: PlatformName | None = Field(
-            default=None,
-            description="Required only for entity_type='policy': 'win' or 'mac'.",
-        ),
+        platform_name: PlatformName | None = Field(default=None, description=_WRITE_PLATFORM_DOC),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Update an existing Data Security entity of the chosen entity_type.
 
         Updates classifications, policies, content patterns, cloud applications,
         enterprise accounts, web locations, local applications, and local
-        application groups; policies also need platform_name. Find the entity with
-        search, then send its "id" plus only the fields to change;
-        falcon_get_data_security_entity_schema lists the fields and which ones are
-        updatable. Returns a list containing the updated entity, {results, _warnings}
-        when the API also reported errors, or an acknowledgement {status, entity_type,
-        id, message} when it accepted the write but returned no entity.
-        If the API rejects the body, the error includes the entity's body_guide.
+        application groups; policies also need platform_name. Send the entity's "id"
+        (from search/get) plus only the fields to change; its body guide
+        (falcon_get_data_security_entity_schema) says which fields are updatable.
+        Returns a list with the updated entity, `{results, _warnings}` when the API
+        also reported errors, or an acknowledgement {status, entity_type, id, message}
+        when it accepted the write but returned no entity. If the API rejects the
+        body, the error includes its body_guide.
 
         Rules (the API accepts violations silently):
 
         - A list you send replaces the stored list: to add or remove an item (e.g. a
-          policy's classifications), get the entity and send its full list with your
+          policy's classification), get the entity and send its full list with your
           change.
-        - "Upload TO X" is a rule destination (web_locations); "data FROM X" is a
-          classification origin (web_sources). A policy's classifications are
-          ordered: the first match wins.
-        - The other rules of falcon_create_data_security_entity apply.
+        - The rules of falcon_create_data_security_entity apply (IDs and SIDs,
+          destinations vs origins, classification order, enforcement).
         """
         error = self._validate_entity_type(entity_type)
         if error:
@@ -1171,6 +1395,9 @@ class DataSecurityModule(BaseModule):
                 f"body must include at least one field to change besides 'id' for "
                 f"entity_type='{entity_type}'."
             )]
+        error = self._elided_error(body)
+        if error:
+            return [error]
 
         query_params: dict[str, Any] = {}
         update_body = body
