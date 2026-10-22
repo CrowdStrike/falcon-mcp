@@ -1,10 +1,10 @@
 # Stage 1: uv binary (distroless image, COPY only)
-# ghcr.io/astral-sh/uv:0.11.15 (multi-arch: amd64, arm64)
-FROM ghcr.io/astral-sh/uv@sha256:e590846f4776907b254ac0f44b5b380347af5d90d668138ca7938d1b0c2f98d3 AS uv-bin
+# ghcr.io/astral-sh/uv:0.13.5 (multi-arch: amd64, arm64)
+FROM ghcr.io/astral-sh/uv@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv-bin
 
 # Stage 2: Build dependencies
 # python:3.13-alpine (multi-arch: amd64, arm64)
-FROM python@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc AS builder
+FROM python@sha256:c50ccfb66e5cc97a610dcd0b9597de6ef5b52c96280b51997b353a0fc87a8361 AS builder
 
 COPY --from=uv-bin /uv /usr/local/bin/uv
 
@@ -41,9 +41,12 @@ RUN find /app/.venv -name '__pycache__' -type d -exec rm -rf {} + && \
 
 # Stage 3: Runtime
 # python:3.13-alpine (multi-arch: amd64, arm64)
-FROM python@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc
+FROM python@sha256:c50ccfb66e5cc97a610dcd0b9597de6ef5b52c96280b51997b353a0fc87a8361
 
 LABEL io.modelcontextprotocol.server.name="io.github.CrowdStrike/falcon-mcp"
+
+# Remove the system pip; the app runs from /app/.venv and never uses it
+RUN python -m pip uninstall -y --root-user-action=ignore pip
 
 # Create a non-root user 'app'
 RUN adduser -D -h /home/app -s /bin/sh app
