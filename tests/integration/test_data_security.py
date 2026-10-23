@@ -40,10 +40,13 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
         self.assert_valid_list_response(result, min_length=0, context="search classification")
 
     def test_search_classifications_returns_full_details(self):
-        """Test that classifications include full entity details."""
+        """Test that classifications include full entity details when fields asks for them."""
         result = self._unwrap_results(
             self.call_method(
-                self.module.search_data_security_entities, entity_type="classification", limit=2
+                self.module.search_data_security_entities,
+                entity_type="classification",
+                limit=2,
+                fields=["*"],
             )
         )
 
@@ -184,6 +187,7 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
                     self.module.search_data_security_entities,
                     entity_type=entity_type,
                     limit=50,
+                    fields=[field, "created_at"],
                     **kwargs,
                 )
             )
@@ -291,6 +295,76 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
 
         ok = self._ids_matching("classification", "created_at:>'now-3650d'")
         assert ok, "classification no longer accepts relative dates"
+        ok = self._ids_matching("policy", "created_at:>'now-3650d'", platform_name="win")
+        assert ok, "policy no longer accepts relative dates"
+
+    # --- Pagination and filter shaping ---
+
+    def test_pagination_offset_and_next_are_the_tools_own(self):
+        """The classification API reports offset+limit as the offset and no API sends a
+        next cursor; the tool echoes the requested offset and computes next."""
+        first = self.call_method(
+            self.module.search_data_security_entities, entity_type="classification", limit=1
+        )
+        self.assert_no_error(first, context="classification page 1")
+        if (first["pagination"]["total"] or 0) < 2:
+            self.skip_with_warning("Fewer than 2 classifications", "classification paging")
+            return
+        assert first["pagination"]["offset"] == 0
+        assert first["pagination"]["next"] == 1
+        second = self.call_method(
+            self.module.search_data_security_entities,
+            entity_type="classification",
+            limit=1,
+            offset=first["pagination"]["next"],
+        )
+        self.assert_no_error(second, context="classification page 2")
+        assert second["pagination"]["offset"] == 1
+        assert second["results"][0]["id"] != first["results"][0]["id"]
+
+    def test_past_the_end_page_says_so(self):
+        result = self.call_method(
+            self.module.search_data_security_entities,
+            entity_type="content_pattern",
+            limit=1,
+            offset=100000,
+        )
+        self.assert_no_error(result, context="content_pattern past the end")
+        assert result["results"] == []
+        assert "past the end" in result.get("hint", ""), result
+
+    def test_policy_or_filter_stays_on_its_platform(self):
+        """The policy API ANDs platform_name with the first OR term only; the tool's
+        parentheses keep the other platform's policies out."""
+        totals = {}
+        for fql in (None, "is_enabled:true,is_enabled:false"):
+            result = self.call_method(
+                self.module.search_data_security_entities,
+                entity_type="policy",
+                platform_name="win",
+                filter=fql,
+                limit=100,
+                fields=["platform_name"],
+            )
+            self.assert_no_error(result, context=f"policy win {fql}")
+            assert all(p["platform_name"] == "win" for p in result["results"])
+            totals[fql] = result["pagination"]["total"]
+        assert totals[None] == totals["is_enabled:true,is_enabled:false"], totals
+
+    def test_policy_search_returns_summaries_by_default(self):
+        result = self.call_method(
+            self.module.search_data_security_entities,
+            entity_type="policy",
+            platform_name="win",
+            limit=2,
+        )
+        self.assert_no_error(result, context="policy summaries")
+        if not result["results"]:
+            self.skip_with_warning("No win policies found", "policy summaries")
+            return
+        assert "summary records" in result["hint"]
+        for policy in result["results"]:
+            assert set(policy.get("policy_properties", {})) <= {"classifications"}, policy
 
     # --- Policies ---
 
@@ -385,11 +459,75 @@ class TestDataSecurityIntegration(BaseIntegrationTest):
         result = self.call_method(
             self.module.search_data_security_entities,
             entity_type="content_pattern",
-            filter="deleted:false",
+            filter="category:'PII'",
             limit=3,
         )
 
         self.assert_no_error(result, context="search content_pattern with filter")
+
+    def _total(self, entity_type: str, **kwargs) -> int:
+        result = self.call_method(
+            self.module.search_data_security_entities, entity_type=entity_type, limit=1, **kwargs
+        )
+        self.assert_no_error(result, context=f"{entity_type} total {kwargs}")
+        total = result["pagination"]["total"]
+        assert isinstance(total, int), f"{entity_type} reported no total: {result['pagination']}"
+        return total
+
+    def test_deleted_argument_splits_live_and_deleted(self):
+        """Backs the deleted argument: exclude + only == include on every soft-delete type,
+        with and without a caller filter, which proves the parenthesized clause keeps the
+        caller's OR terms inside the AND."""
+        for entity_type in (
+            "content_pattern",
+            "web_location",
+            "local_application",
+            "local_application_group",
+            "enterprise_account",
+            "sensitivity_label",
+            "cloud_application",
+        ):
+            for fql in (None, "type:'custom',type:'predefined'"):
+                if fql and entity_type not in ("content_pattern", "web_location"):
+                    continue
+                with self.subTest(entity_type=entity_type, filter=fql):
+                    live = self._total(entity_type, filter=fql)
+                    deleted = self._total(entity_type, filter=fql, deleted="only")
+                    both = self._total(entity_type, filter=fql, deleted="include")
+                    assert live + deleted == both, (
+                        f"{entity_type} {fql}: exclude {live} + only {deleted} != include {both}"
+                    )
+
+    def test_search_hydrates_a_full_page_of_100(self):
+        """The search limit's maximum (100) still hydrates in one get call."""
+        result = self.call_method(
+            self.module.search_data_security_entities,
+            entity_type="content_pattern",
+            deleted="include",
+            limit=100,
+        )
+        self.assert_no_error(result, context="content_pattern limit=100")
+        if (result["pagination"]["total"] or 0) < 100:
+            self.skip_with_warning("Fewer than 100 content patterns", "content_pattern limit=100")
+            return
+        assert len(result["results"]) == 100, f"expected a full page, got {len(result['results'])}"
+
+    def test_get_with_a_missing_id_returns_warnings(self):
+        """A get mixing a real and a bogus id keeps the real entity and warns about the other."""
+        real = self._unwrap_results(
+            self.call_method(
+                self.module.search_data_security_entities, entity_type="content_pattern", limit=1
+            )
+        )[0]["id"]
+        result = self.call_method(
+            self.module.get_data_security_entities,
+            entity_type="content_pattern",
+            ids=[real, "0" * 32],
+        )
+        assert isinstance(result, dict) and "_warnings" in result, (
+            f"expected results plus _warnings for a partial get, got {result}"
+        )
+        assert [e["id"] for e in result["results"]] == [real]
 
     def test_search_content_patterns_by_type(self):
         """Test filtering content patterns by type."""

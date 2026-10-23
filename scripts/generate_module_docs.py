@@ -130,10 +130,12 @@ HOSTED_MCP_TOOL_NOTES: dict[str, str] = {
 # Per-tool scope overrides. The automatic scope extractor widens to every
 # operation in a class-level dispatch table when the subscript key is a runtime
 # parameter (e.g. ``self._OPERATIONS[entity_type]``). Override here to publish
-# the correct, narrower scope list for those tools.
+# the correct, narrower scope list for those tools. An empty list declares a tool
+# that makes no API call, so it documents no scopes.
 TOOL_SCOPE_OVERRIDES: dict[str, list[str]] = {
     "falcon_search_data_security_entities": ["Data Protection:read"],
     "falcon_get_data_security_entities": ["Data Protection:read"],
+    "falcon_get_data_security_entity_schema": [],
     "falcon_create_data_security_entity": ["Data Protection:write"],
     "falcon_update_data_security_entity": ["Data Protection:read", "Data Protection:write"],
 }
@@ -323,6 +325,10 @@ TOOL_EXAMPLES: dict[str, list[str]] = {
     "falcon_get_data_security_entities": [
         "Show me the full details of that classification",
         "Get the Data Security policy by ID so I can see its current config",
+    ],
+    "falcon_get_data_security_entity_schema": [
+        "What fields does a Data Security classification body take?",
+        "Show me the body format for creating a policy and a content pattern",
     ],
     "falcon_create_data_security_entity": [
         "Create a new Data Security classification called 'PCI Card Numbers'",

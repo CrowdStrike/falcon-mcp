@@ -17,6 +17,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from falcon_mcp.modules.base import BaseModule  # noqa: E402
 from scripts.generate_module_docs import (  # noqa: E402
+    TOOL_SCOPE_OVERRIDES,
     _extract_kwarg_string,
     _extract_module_meta,
     _register_module_classes,
@@ -656,6 +657,8 @@ class TestClassContainerOperations(unittest.TestCase):
 
         A tool that reaches the API but documents nothing is the silent failure mode this
         whole area keeps regressing into, so assert it globally rather than per module.
+        The only exemption is a tool pinned to ``[]`` in TOOL_SCOPE_OVERRIDES, which
+        declares that it makes no API call.
         """
         blank: list[str] = []
         for key, info in discover_module_classes().items():
@@ -664,9 +667,21 @@ class TestClassContainerOperations(unittest.TestCase):
                 method = getattr(module_cls, name, None)
                 if method is None:
                     continue
+                if TOOL_SCOPE_OVERRIDES.get(f"falcon_{tool_name}") == []:
+                    continue
                 if not extract_tool_scopes(method, module_cls):
                     blank.append(f"{key}/falcon_{tool_name}")
         self.assertEqual(sorted(blank), [], f"tools documenting no scopes: {sorted(blank)}")
+
+    def test_no_api_tool_exemptions_really_make_no_api_call(self):
+        """A tool pinned to no scopes must not reach an operation the scanner can see."""
+        for key, info in discover_module_classes().items():
+            module_cls = info["cls"]
+            for name, tool_name in extract_registered_tool_names(module_cls).items():
+                if TOOL_SCOPE_OVERRIDES.get(f"falcon_{tool_name}") != []:
+                    continue
+                with self.subTest(tool=f"{key}/falcon_{tool_name}"):
+                    self.assertEqual(extract_tool_scopes(getattr(module_cls, name), module_cls), [])
 
 
 # ---------------------------------------------------------------------------
