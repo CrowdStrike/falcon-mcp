@@ -142,4 +142,19 @@ class ServerlessModule(BaseModule):
         if self._is_error(vulnerabilities):
             return [vulnerabilities]
 
-        return vulnerabilities.get("runs") or []
+        # handle_api_response returns body["resources"] (a list). Each resource is
+        # typically a SARIF document with a "runs" key. A bare dict was never what
+        # that helper returned, so .get("runs") raised AttributeError on lists.
+        if isinstance(vulnerabilities, dict):
+            return vulnerabilities.get("runs") or []
+
+        if isinstance(vulnerabilities, list):
+            runs: list[Any] = []
+            for item in vulnerabilities:
+                if isinstance(item, dict) and "runs" in item:
+                    runs.extend(item.get("runs") or [])
+                elif isinstance(item, dict):
+                    runs.append(item)
+            return runs
+
+        return []
