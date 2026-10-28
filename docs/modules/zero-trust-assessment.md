@@ -7,7 +7,7 @@
 Retrieving Zero Trust Assessment posture scores and sensor and OS hardening signals for hosts
 
 > [!NOTE]
-> This module is not available on CrowdStrike's hosted Falcon MCP; it is only available when self-hosting this server. See [module overview](/falcon-mcp/modules/overview/#crowdstrike-hosted-mcp-differences).
+> This module is not available on CrowdStrike MCP; it is only available when self-hosting this server. See [module overview](/falcon-mcp/modules/overview/#differences-from-crowdstrike-mcp).
 
 ## API Scopes
 

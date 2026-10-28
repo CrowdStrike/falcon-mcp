@@ -46,7 +46,7 @@ Responses include `pagination.total` (the total number of records matching the f
 ### `falcon_search_managed_assets`
 
 > [!NOTE]
-> Not available on CrowdStrike's hosted Falcon MCP. See [module overview](/falcon-mcp/modules/overview/#crowdstrike-hosted-mcp-differences).
+> Not available on CrowdStrike MCP. See [module overview](/falcon-mcp/modules/overview/#differences-from-crowdstrike-mcp).
 
 **Required scopes:** `Assets:read`
 

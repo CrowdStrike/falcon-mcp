@@ -2,6 +2,9 @@
 
 Welcome and thank you for your interest in contributing to a CrowdStrike project! We recognize contributing to a project is no small feat! The guidance here aspires to help onboard new community members into how CrowdStrike-led projects tend to operate, and by extension, make the contribution process easier.
 
+> [!IMPORTANT]
+> falcon-mcp is in maintenance mode and no longer accepts new features or modules. Pull requests are limited to security and dependency fixes. Development continues in [CrowdStrike MCP](https://docs.crowdstrike.com/r/en-US/pclqa2q2/tefc5682), CrowdStrike's hosted MCP server.
+
 ## How do I make a contribution?
 
 Never made an open source contribution before? Wondering how contributions work in CrowdStrike projects? Here is a quick rundown!
