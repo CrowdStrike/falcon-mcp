@@ -159,6 +159,21 @@ FILTER_HINTS: dict[str, str] = {
         "Ex: severity:'Critical'+status:'Open'+cloud_provider:'aws'. "
         "Also: threat_actors (adversary/threat group name), risk_factor (risk factor identifier like PUBLIC_ACCESS)."
     ),
+    # === Data Connectors ===
+    "falcon_search_data_connectors": (
+        "Common fields: name, vendor, connector_type (push|pull). "
+        "Use ~* with * wildcards for substring matching: name:~*'*cloudtrail*'. "
+        "Each connector returns: id, name, vendor_name, vendor_product_name, type, parsers, subscription. "
+        "Ex: vendor:~*'*aws*'+connector_type:'pull'"
+    ),
+    "falcon_search_data_connections": (
+        "Common fields: name, connector_id, status (active|idle|disconnected|paused|pending|error), "
+        "connector_type (push|pull), vendor_name, vendor_product_name. "
+        "Use ~* with * wildcards for substring matching: name:~*'*okta*'. "
+        "Cross-reference vendor_name with correlation rule template vendors field to determine "
+        "which rules your data supports — see falcon://data-connectors/data-sources/mapping-guide. "
+        "Ex: status:'error',status:'disconnected' or status:'active'+connector_type:'push'"
+    ),
     # === Correlation Rules ===
     "falcon_search_correlation_rules": (
         "Common fields: name, status (active|inactive), state (published|unpublished|draft), "
@@ -169,7 +184,9 @@ FILTER_HINTS: dict[str, str] = {
         "for substring/contains use name:~*'*term*' (case-insensitive, matches anywhere). "
         "For multi-word searches, split each keyword into its own ~* clause "
         "(e.g. name:~*'*email*'+name:~*'*phishing*') to match regardless of word order. "
-        "Status/user_id values are case-sensitive (use lowercase)."
+        "Status/user_id values are case-sensitive (use lowercase). "
+        "Status only accepts 'active' or 'inactive' — 'enabled' and 'disabled' are NOT valid values and return empty results. "
+        "Search returns summary fields only — use falcon_get_correlation_rule(rule_id) for the full object including CQL query, schedule, and execution details."
     ),
     "falcon_search_correlation_rule_templates": (
         "Common fields: name, description, vendor, outcome (detection|case), "
@@ -177,7 +194,8 @@ FILTER_HINTS: dict[str, str] = {
         "Substring/contains match: name:~*'*term*' or description:~*'*term*' (case-insensitive). "
         "For multi-word searches, split each keyword: name:~*'*lateral*'+name:~*'*movement*'. "
         "For MITRE-based search, prefer tactic/technique IDs over keywords. "
-        "Ex: mitre_attack.tactic_id:'TA0008' or description:~*'*ransomware*'"
+        "Ex: mitre_attack.tactic_id:'TA0008' or description:~*'*ransomware*' "
+        "Search returns summary fields only — use falcon_get_correlation_rule_template(id) for the full object including CQL query, schedule, lookback, and trigger config."
     ),
     # === Custom IOA Rule Groups ===
     "falcon_search_ioa_rule_groups": (

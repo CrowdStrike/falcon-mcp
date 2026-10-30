@@ -29,8 +29,9 @@ Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://deve
 | [AgentWorks](https://developer.crowdstrike.com/falcon-mcp/modules/agentworks/) | Call, list, and observe Charlotte AI agents and their execution traces |
 | [Case Management](https://developer.crowdstrike.com/falcon-mcp/modules/cases/) | Case lifecycle management, evidence attachment, tagging, and templates |
 | [Cloud Security](https://developer.crowdstrike.com/falcon-mcp/modules/cloud/) | Kubernetes containers, image vulnerabilities, CSPM asset inventory, IOM findings, suppression rules, cloud risks, cloud insights, and cloud groups |
-| [Correlation Rules](https://developer.crowdstrike.com/falcon-mcp/modules/correlationrules/) | Search, create, update, and manage NG-SIEM correlation rules |
+| [Correlation Rules](https://developer.crowdstrike.com/falcon-mcp/modules/correlationrules/) | Search, create, update, and delete NG-SIEM correlation rules, and discover and deploy pre-built rule templates |
 | [Custom IOA](https://developer.crowdstrike.com/falcon-mcp/modules/custom-ioa/) | Create and manage Custom IOA behavioral detection rules and rule groups |
+| [Data Connectors](https://developer.crowdstrike.com/falcon-mcp/modules/dataconnectors/) | Discover available connector types, search, create, and delete data connections, retrieve and regenerate ingest tokens, and manage pull-based connector configurations |
 | [Data Security](https://developer.crowdstrike.com/falcon-mcp/modules/data-security/) | Search, create, and update Data Security classifications, policies, content patterns, applications, web locations, sensitivity labels, and file types |
 | [Detections](https://developer.crowdstrike.com/falcon-mcp/modules/detections/) | Find, aggregate, and analyze detections to understand malicious activity |
 | [Discover](https://developer.crowdstrike.com/falcon-mcp/modules/discover/) | Search application inventory and managed/unmanaged assets, including drive encryption and system-insights posture |
