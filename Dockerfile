@@ -1,6 +1,6 @@
 # Stage 1: uv binary (distroless image, COPY only)
 # ghcr.io/astral-sh/uv:0.13.5 (multi-arch: amd64, arm64)
-FROM ghcr.io/astral-sh/uv@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv-bin
+FROM ghcr.io/astral-sh/uv@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0 AS uv-bin
 
 # Stage 2: Build dependencies
 # python:3.13-alpine (multi-arch: amd64, arm64)
