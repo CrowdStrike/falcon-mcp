@@ -381,6 +381,23 @@ class DataConnectorsModule(BaseModule):
             default=None,
             description="List of log source identifiers to ingest from.",
         ),
+        custom: dict[str, str] | None = Field(
+            default=None,
+            description=(
+                "Connector-specific custom properties (e.g. API tokens). "
+                "Keys are connector-defined (e.g. 'dcc1'). Use the Falcon UI to discover "
+                "required custom fields for a connector."
+            ),
+        ),
+        config: dict[str, Any] | None = Field(
+            default=None,
+            description=(
+                "Inline credential configuration for pull-based connectors. "
+                "Object with `auth` (dict), `name` (str), and `params` (dict). "
+                "Alternative to creating a config separately with `falcon_manage_connector_config` "
+                "then passing `config_id`."
+            ),
+        ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Create a new data connection.
 
@@ -389,6 +406,19 @@ class DataConnectorsModule(BaseModule):
         the ingest URL and API key. For pull-based connectors, provide a config_id with
         data source credentials. Returns the created connection record on success.
         """
+        name = unwrap_field_default(name)
+        description = unwrap_field_default(description)
+        config_id = unwrap_field_default(config_id)
+        connector_type = unwrap_field_default(connector_type)
+        parser = unwrap_field_default(parser)
+        vendor_name = unwrap_field_default(vendor_name)
+        vendor_product_name = unwrap_field_default(vendor_product_name)
+        enable_host_enrichment = unwrap_field_default(enable_host_enrichment)
+        enable_user_enrichment = unwrap_field_default(enable_user_enrichment)
+        log_sources = unwrap_field_default(log_sources)
+        custom = unwrap_field_default(custom)
+        config = unwrap_field_default(config)
+
         body: dict[str, Any] = {"connector_id": connector_id}
 
         if name is not None:
@@ -411,6 +441,10 @@ class DataConnectorsModule(BaseModule):
             body["enable_user_enrichment"] = enable_user_enrichment
         if log_sources is not None:
             body["log_sources"] = log_sources
+        if custom is not None:
+            body["custom"] = custom
+        if config is not None:
+            body["config"] = config
 
         result = self._base_query_api_call(
             operation="ExternalCreateDataConnection",
@@ -462,6 +496,14 @@ class DataConnectorsModule(BaseModule):
             default=None,
             description="Updated list of log sources. Deselecting a source stops ingestion immediately.",
         ),
+        custom: dict[str, str] | None = Field(
+            default=None,
+            description=(
+                "Connector-specific custom properties to update (e.g. API tokens). "
+                "Keys are connector-defined (e.g. 'dcc1'). Use the Falcon UI to discover "
+                "required custom fields for a connector."
+            ),
+        ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """Update a data connection: rename, change parser, toggle enrichment, or pause/resume.
 
@@ -478,6 +520,7 @@ class DataConnectorsModule(BaseModule):
         enable_host_enrichment = unwrap_field_default(enable_host_enrichment)
         enable_user_enrichment = unwrap_field_default(enable_user_enrichment)
         log_sources = unwrap_field_default(log_sources)
+        custom = unwrap_field_default(custom)
 
         results: list[dict[str, Any]] = []
 
@@ -514,6 +557,8 @@ class DataConnectorsModule(BaseModule):
             body["enable_user_enrichment"] = enable_user_enrichment
         if log_sources is not None:
             body["log_sources"] = log_sources
+        if custom is not None:
+            body["custom"] = custom
 
         if body:
             update_resp = self.client.command(
