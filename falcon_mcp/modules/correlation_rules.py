@@ -449,6 +449,13 @@ class CorrelationRulesModule(BaseModule):
         Modifies fields on the rule and auto-publishes a new version — no separate publish
         step needed. To enable/disable a rule, set status to 'active' or 'inactive'.
         Only provided fields are changed; omitted fields retain current values.
+
+        IMPORTANT — schedule and lookback interaction: when changing the schedule to a
+        longer interval (less frequent), also update the lookback to preserve the original
+        overlap (overlap = lookback − schedule interval). Otherwise the unchanged lookback
+        becomes shorter than the new schedule, introducing gaps in detection coverage.
+        For example, a rule with schedule=30m and lookback=40m has a 10m overlap; changing
+        the schedule to 1h requires setting lookback to 1h10m to keep that 10m overlap.
         """
         schedule = unwrap_field_default(schedule)
         lookback = unwrap_field_default(lookback)

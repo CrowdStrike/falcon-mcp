@@ -248,6 +248,61 @@ class TestDataConnectorsModule(TestModules):
         body = call_args.kwargs.get("body") or call_args[1].get("body", {})
         self.assertEqual(body["connector_id"], "custom_hec")
 
+    def test_create_data_connection_with_custom(self):
+        """Test that custom dict is included in the request body when provided."""
+        self.mock_client.command.return_value = {
+            "status_code": 201,
+            "body": {"resources": [{"id": "new-conn-3"}]},
+        }
+        self.module.create_data_connection(
+            connector_id="1password",
+            custom={"dcc1": "my-api-token"},
+        )
+        call_args = self.mock_client.command.call_args
+        body = call_args.kwargs.get("body") or call_args[1].get("body", {})
+        self.assertEqual(body["custom"], {"dcc1": "my-api-token"})
+
+    def test_create_data_connection_custom_omitted_when_none(self):
+        """Test that custom is not in the request body when not provided."""
+        self.mock_client.command.return_value = {
+            "status_code": 201,
+            "body": {"resources": [{"id": "new-conn-4"}]},
+        }
+        self.module.create_data_connection(connector_id="custom_hec")
+        call_args = self.mock_client.command.call_args
+        body = call_args.kwargs.get("body") or call_args[1].get("body", {})
+        self.assertNotIn("custom", body)
+
+    def test_create_data_connection_with_config(self):
+        """Test that inline config is included in the request body when provided."""
+        self.mock_client.command.return_value = {
+            "status_code": 201,
+            "body": {"resources": [{"id": "new-conn-5"}]},
+        }
+        inline_config = {
+            "auth": {"type": "api_key"},
+            "name": "My Config",
+            "params": {"domain": "example.okta.com"},
+        }
+        self.module.create_data_connection(
+            connector_id="okta",
+            config=inline_config,
+        )
+        call_args = self.mock_client.command.call_args
+        body = call_args.kwargs.get("body") or call_args[1].get("body", {})
+        self.assertEqual(body["config"], inline_config)
+
+    def test_create_data_connection_config_omitted_when_none(self):
+        """Test that config is not in the request body when not provided."""
+        self.mock_client.command.return_value = {
+            "status_code": 201,
+            "body": {"resources": [{"id": "new-conn-6"}]},
+        }
+        self.module.create_data_connection(connector_id="okta", config_id="cfg-1")
+        call_args = self.mock_client.command.call_args
+        body = call_args.kwargs.get("body") or call_args[1].get("body", {})
+        self.assertNotIn("config", body)
+
     # -------------------------------------------------------------------------
     # manage_data_connection
     # -------------------------------------------------------------------------
@@ -288,6 +343,31 @@ class TestDataConnectorsModule(TestModules):
         result = self.module.manage_data_connection(ids="conn-1", status=None)
         self.assertIsInstance(result, list)
         self.assertIn("message", result[0])
+
+    def test_manage_connection_with_custom(self):
+        """Test that custom dict is included in the update body when provided."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "conn-1"}]},
+        }
+        self.module.manage_data_connection(
+            ids="conn-1",
+            custom={"dcc1": "new-api-token"},
+        )
+        call_args = self.mock_client.command.call_args
+        body = call_args.kwargs.get("body") or call_args[1].get("body", {})
+        self.assertEqual(body["custom"], {"dcc1": "new-api-token"})
+
+    def test_manage_connection_custom_omitted_when_none(self):
+        """Test that custom is not in the update body when not provided."""
+        self.mock_client.command.return_value = {
+            "status_code": 200,
+            "body": {"resources": [{"id": "conn-1"}]},
+        }
+        self.module.manage_data_connection(ids="conn-1", name="Renamed")
+        call_args = self.mock_client.command.call_args
+        body = call_args.kwargs.get("body") or call_args[1].get("body", {})
+        self.assertNotIn("custom", body)
 
     # -------------------------------------------------------------------------
     # delete_data_connection

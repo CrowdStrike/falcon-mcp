@@ -41,6 +41,12 @@ _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 BASE_INSTRUCTIONS = (
     "This server provides access to CrowdStrike Falcon capabilities.\n\n"
+    "Detecting threats: when a user asks to detect, monitor, or create alerts for a "
+    "threat, CVE, technique, or attack pattern, start with "
+    "falcon_search_correlation_rule_templates — CrowdStrike maintains a library of "
+    "pre-built detection templates covering common threats, MITRE ATT&CK techniques, "
+    "and CVEs. Deploy a matching template with falcon_deploy_correlation_rule_template "
+    "before considering a custom rule from scratch.\n\n"
     f"Composing filters: {FQL_FILTER_HINT_SUFFIX} When a tool's filter parameter names "
     "a falcon:// guide resource, read it before composing a filter: it lists the fields "
     "and operators that endpoint actually accepts, and an unsupported field returns an "
