@@ -45,7 +45,7 @@ connections with errors or that are idle/disconnected.
 Each connection includes: id, name, vendor_name, vendor_product_name, parser_name,
 status, source_type, last_ingested_volume_one_day, and ingest_url (for push).
 
-Connection status values: `active`, `idle`, `disconnected`, `paused`, `pending`, `error`.
+Connection status values (title-case required): `Active`, `Idle`, `Disconnected`, `Paused`, `Pending`, `Error`.
 
 **Example prompts:**
 
@@ -140,28 +140,68 @@ regeneration are immediately revoked.
 
 - "Regenerate the ingest token for this push connection"
 
-### `falcon_manage_connector_config`
+### `falcon_list_connector_configs`
 
-> [!CAUTION]
-> This tool performs destructive operations.
+**Required scopes:** `ngsiem-data-connections:read`
 
-**Required scopes:** `ngsiem-data-connections:read` (list), `ngsiem-data-connections:write` (create/update/delete)
+List data source configurations for a pull-based connector type.
 
-Manage data source configurations for pull-based connectors.
-
-Configurations define how Falcon accesses a third-party data source (credentials,
-endpoints, etc.) and can be reused across multiple connections.
-
-Actions:
-- **list**: List configs for a connector type (requires `connector_id`)
-- **create**: Create a new config (requires `connector_id` + `config`)
-- **update**: Update an existing config (requires `config_id` + `connector_id` + `config`)
-- **delete**: Delete configs (requires `connector_id` + `config_ids`)
+Returns existing configurations that define how Falcon accesses a third-party
+data source (credentials, endpoints, etc.). Configs can be reused across
+multiple connections.
 
 **Example prompts:**
 
 - "List the configurations for the Okta connector"
+- "Show me the pull configs for this connector type"
+
+### `falcon_create_connector_config`
+
+> [!NOTE]
+> This tool modifies data.
+
+**Required scopes:** `ngsiem-data-connections:write`
+
+Create a new data source configuration for a pull-based connector.
+
+Configurations define how Falcon accesses a third-party data source (credentials,
+endpoints, etc.) and can be reused across multiple connections.
+
+**Example prompts:**
+
 - "Create a new pull configuration for this connector"
+
+### `falcon_update_connector_config`
+
+> [!CAUTION]
+> This tool performs destructive operations.
+
+**Required scopes:** `ngsiem-data-connections:write`
+
+Update an existing data source configuration.
+
+Modifies credentials, endpoints, or other provider-specific settings
+for a pull-based connector configuration.
+
+**Example prompts:**
+
+- "Update the credentials for this connector config"
+
+### `falcon_delete_connector_configs`
+
+> [!CAUTION]
+> This tool performs destructive operations.
+
+**Required scopes:** `ngsiem-data-connections:write`
+
+Delete one or more data source configurations.
+
+Removes the specified configurations. This cannot be undone.
+Use `falcon_list_connector_configs` to confirm IDs before deleting.
+
+**Example prompts:**
+
+- "Delete this connector configuration"
 
 ## Resources
 

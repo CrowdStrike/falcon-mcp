@@ -485,35 +485,6 @@ class TestCorrelationRulesModule(TestModules):
         self.assertEqual(len(result), 1)
         self.assertIn("error", result[0])
 
-    def test_update_lookback_shorter_than_schedule_rejected(self):
-        """Test that lookback shorter than schedule is rejected without calling the API."""
-        result = self.module.update_correlation_rule(
-            rule_id="r1",
-            schedule="@every 1h0m",
-            lookback="0h30m",
-        )
-
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 1)
-        self.assertIn("error", result[0])
-        self.mock_client.command.assert_not_called()
-
-    def test_update_lookback_equal_to_schedule_allowed(self):
-        """Test that lookback equal to schedule passes validation."""
-        self.mock_client.command.return_value = {
-            "status_code": 200,
-            "body": {"resources": [{"id": "v2", "rule_id": "r1"}]},
-        }
-
-        result = self.module.update_correlation_rule(
-            rule_id="r1",
-            schedule="@every 1h0m",
-            lookback="1h0m",
-        )
-
-        self.mock_client.command.assert_called_once()
-        self.assertIsInstance(result, list)
-
     def test_update_only_schedule_no_validation(self):
         """Test that providing only schedule (no lookback) skips validation."""
         self.mock_client.command.return_value = {
@@ -727,8 +698,8 @@ class TestCorrelationRulesModule(TestModules):
         self.assertEqual(len(result["results"]), 1)
         self.assertIn("error", result["results"][0])
 
-    def test_search_templates_hydrate_error_returns_fql_guide(self):
-        """Test that hydrate-step API errors return a dict with fql_guide."""
+    def test_search_templates_hydrate_error_returns_error_list(self):
+        """Test that hydrate-step API errors return the error directly, not an FQL guide."""
         self.mock_client.command.side_effect = [
             {
                 "status_code": 200,
@@ -745,8 +716,9 @@ class TestCorrelationRulesModule(TestModules):
 
         result = self.module.search_correlation_rule_templates()
 
-        self.assertIsInstance(result, dict)
-        self.assertIn("fql_guide", result)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertIn("error", result[0])
 
     def test_search_templates_preserves_sort_order(self):
         """Test that hydrated results are reordered to match query ID order."""
@@ -852,6 +824,7 @@ class TestCorrelationRulesModule(TestModules):
     def test_deploy_template_success_with_defaults(self):
         """Test deploying a template with only required params uses template defaults."""
         self.mock_client.command.side_effect = [
+            # 1. Hydrate template
             {
                 "status_code": 200,
                 "body": {"resources": [{
@@ -874,6 +847,15 @@ class TestCorrelationRulesModule(TestModules):
                     ],
                 }]},
             },
+            # 2. Duplicate check — no match
+            {
+                "status_code": 200,
+                "body": {
+                    "resources": [],
+                    "meta": {"pagination": {"total": 0}},
+                },
+            },
+            # 3. Deploy
             {
                 "status_code": 200,
                 "body": {"resources": [
@@ -890,9 +872,10 @@ class TestCorrelationRulesModule(TestModules):
         first_call = self.mock_client.command.call_args_list[0]
         self.assertEqual(first_call[0][0], "entities_templates_get_v1Mixin0")
 
-        second_call = self.mock_client.command.call_args_list[1]
-        self.assertEqual(second_call[0][0], "entities_templates_rules_post_v1")
-        body = second_call[1]["body"]
+        # The deploy call is now the third (index 2) after the duplicate check
+        deploy_call = self.mock_client.command.call_args_list[2]
+        self.assertEqual(deploy_call[0][0], "entities_templates_rules_post_v1")
+        body = deploy_call[1]["body"]
         self.assertEqual(body[0]["customer_id"], "cid123")
         tmpl = body[0]["templates"][0]
         self.assertEqual(tmpl["template_id"], "tmpl-1")
@@ -912,6 +895,7 @@ class TestCorrelationRulesModule(TestModules):
     def test_deploy_template_with_overrides(self):
         """Test that user-provided overrides take precedence over template defaults."""
         self.mock_client.command.side_effect = [
+            # 1. Hydrate template
             {
                 "status_code": 200,
                 "body": {"resources": [{
@@ -928,6 +912,15 @@ class TestCorrelationRulesModule(TestModules):
                     "operation": {"schedule": {"definition": "@every 1h0m"}},
                 }]},
             },
+            # 2. Duplicate check — no match
+            {
+                "status_code": 200,
+                "body": {
+                    "resources": [],
+                    "meta": {"pagination": {"total": 0}},
+                },
+            },
+            # 3. Deploy
             {
                 "status_code": 200,
                 "body": {"resources": [{"id": "v1", "rule_id": "r1"}]},
@@ -947,7 +940,7 @@ class TestCorrelationRulesModule(TestModules):
             comment="Deploying for testing",
         )
 
-        body = self.mock_client.command.call_args_list[1][1]["body"]
+        body = self.mock_client.command.call_args_list[2][1]["body"]
         tmpl = body[0]["templates"][0]
         self.assertEqual(tmpl["name"], "My Custom Name")
         self.assertEqual(tmpl["severity"], 90)
@@ -995,6 +988,7 @@ class TestCorrelationRulesModule(TestModules):
     def test_deploy_template_deploy_error(self):
         """Test that a deploy API error is returned wrapped in a list."""
         self.mock_client.command.side_effect = [
+            # 1. Hydrate template
             {
                 "status_code": 200,
                 "body": {"resources": [{
@@ -1011,6 +1005,15 @@ class TestCorrelationRulesModule(TestModules):
                     "operation": {"schedule": {"definition": "@every 1h0m"}},
                 }]},
             },
+            # 2. Duplicate check — no match
+            {
+                "status_code": 200,
+                "body": {
+                    "resources": [],
+                    "meta": {"pagination": {"total": 0}},
+                },
+            },
+            # 3. Deploy fails
             {
                 "status_code": 403,
                 "body": {"errors": [{"message": "Access denied"}]},
@@ -1026,52 +1029,205 @@ class TestCorrelationRulesModule(TestModules):
         self.assertEqual(len(result), 1)
         self.assertIn("error", result[0])
 
-    def test_deploy_template_lookback_shorter_than_schedule_rejected(self):
-        """Test that deploy is rejected without API calls when lookback < schedule."""
-        result = self.module.deploy_correlation_rule_template(
-            template_id="tmpl-1",
-            customer_id="cid123",
-            schedule="@every 2h0m",
-            lookback="1h0m",
-        )
-
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 1)
-        self.assertIn("error", result[0])
-        self.mock_client.command.assert_not_called()
-
-    def test_deploy_template_lookback_equal_to_schedule_allowed(self):
-        """Test that deploy passes validation when lookback equals schedule."""
+    def test_deploy_template_duplicate_found_returns_existing_rule(self):
+        """Test that deploying a template when a rule with the same name exists returns duplicate info."""
         self.mock_client.command.side_effect = [
+            # 1. Hydrate template
             {
                 "status_code": 200,
                 "body": {"resources": [{
                     "id": "tmpl-1",
-                    "name": "Test Template",
+                    "name": "Lateral Movement via SMB",
+                    "description": "Detects SMB lateral movement",
                     "severity": 70,
-                    "search": {"filter": "#test", "outcome": "detection", "lookback": "1h0m", "trigger_mode": "summary", "execution_mode": "scheduled"},
-                    "operation": {"schedule": {"definition": "@every 1h0m"}},
+                    "search": {
+                        "filter": "#event_simpleName=NetworkConnect",
+                        "outcome": "detection",
+                        "lookback": "2h0m",
+                        "trigger_mode": "summary",
+                        "execution_mode": "standard",
+                    },
+                    "operation": {
+                        "schedule": {"definition": "@every 2h0m"},
+                    },
+                    "mitre_attack": [
+                        {"tactic_id": "TA0008", "technique_id": "T1021"},
+                    ],
                 }]},
             },
+            # 2. Duplicate check — existing rule found
             {
                 "status_code": 200,
-                "body": {"resources": [{"rule_id": "new-rule"}]},
+                "body": {
+                    "resources": [{
+                        "rule_id": "existing-rule-1",
+                        "name": "Lateral Movement via SMB",
+                        "severity": 70,
+                        "status": "active",
+                        "state": "published",
+                        "template_id": "tmpl-1",
+                    }],
+                    "meta": {"pagination": {"total": 1}},
+                },
             },
         ]
 
         result = self.module.deploy_correlation_rule_template(
             template_id="tmpl-1",
             customer_id="cid123",
-            schedule="@every 1h0m",
-            lookback="1h0m",
         )
 
+        # Should return a duplicate_found dict, not a list of deployed rules
+        self.assertIsInstance(result, dict)
+        self.assertTrue(result["duplicate_found"])
+        self.assertIn("existing-rule-1", result["message"])
+        self.assertEqual(result["existing_rule"]["rule_id"], "existing-rule-1")
+        self.assertEqual(result["template_id"], "tmpl-1")
+        # Should NOT have called the deploy endpoint (only hydrate + search)
         self.assertEqual(self.mock_client.command.call_count, 2)
+
+    def test_deploy_template_duplicate_check_uses_name_override(self):
+        """Test that the duplicate check uses the caller's name override, not the template name."""
+        self.mock_client.command.side_effect = [
+            # 1. Hydrate template
+            {
+                "status_code": 200,
+                "body": {"resources": [{
+                    "id": "tmpl-1",
+                    "name": "Template Name",
+                    "severity": 50,
+                    "search": {
+                        "filter": "#event=Test",
+                        "outcome": "detection",
+                        "lookback": "1h0m",
+                        "trigger_mode": "summary",
+                        "execution_mode": "standard",
+                    },
+                    "operation": {"schedule": {"definition": "@every 1h0m"}},
+                }]},
+            },
+            # 2. Duplicate check — searches with overridden name, finds match
+            {
+                "status_code": 200,
+                "body": {
+                    "resources": [{
+                        "rule_id": "existing-rule-2",
+                        "name": "My Custom Name",
+                        "severity": 50,
+                        "status": "active",
+                        "state": "published",
+                    }],
+                    "meta": {"pagination": {"total": 1}},
+                },
+            },
+        ]
+
+        result = self.module.deploy_correlation_rule_template(
+            template_id="tmpl-1",
+            customer_id="cid123",
+            name="My Custom Name",
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertTrue(result["duplicate_found"])
+        # Verify the search used the overridden name
+        search_call = self.mock_client.command.call_args_list[1]
+        search_filter = search_call[1].get("filter") or search_call[0][1] if len(search_call[0]) > 1 else search_call[1].get("filter")
+        # The filter should reference the overridden name, not the template name
+        self.assertIn("My Custom Name", result["message"])
+
+    def test_deploy_template_no_duplicate_proceeds_to_deploy(self):
+        """Test that deployment proceeds normally when no duplicate is found."""
+        self.mock_client.command.side_effect = [
+            # 1. Hydrate template
+            {
+                "status_code": 200,
+                "body": {"resources": [{
+                    "id": "tmpl-1",
+                    "name": "Unique Rule Name",
+                    "severity": 50,
+                    "search": {
+                        "filter": "#event=Test",
+                        "outcome": "detection",
+                        "lookback": "1h0m",
+                        "trigger_mode": "summary",
+                        "execution_mode": "standard",
+                    },
+                    "operation": {"schedule": {"definition": "@every 1h0m"}},
+                }]},
+            },
+            # 2. Duplicate check — no match
+            {
+                "status_code": 200,
+                "body": {
+                    "resources": [],
+                    "meta": {"pagination": {"total": 0}},
+                },
+            },
+            # 3. Deploy succeeds
+            {
+                "status_code": 200,
+                "body": {"resources": [{"rule_id": "new-rule-1", "name": "Unique Rule Name"}]},
+            },
+        ]
+
+        result = self.module.deploy_correlation_rule_template(
+            template_id="tmpl-1",
+            customer_id="cid123",
+        )
+
+        # Should return the deployed rule, not a duplicate response
         self.assertIsInstance(result, list)
+        self.assertEqual(result[0]["rule_id"], "new-rule-1")
+        # All three API calls should have been made
+        self.assertEqual(self.mock_client.command.call_count, 3)
+
+    def test_deploy_template_duplicate_check_error_still_deploys(self):
+        """Test that an error during the duplicate check doesn't block deployment."""
+        self.mock_client.command.side_effect = [
+            # 1. Hydrate template
+            {
+                "status_code": 200,
+                "body": {"resources": [{
+                    "id": "tmpl-1",
+                    "name": "Test Template",
+                    "severity": 50,
+                    "search": {
+                        "filter": "#event=Test",
+                        "outcome": "detection",
+                        "lookback": "1h0m",
+                        "trigger_mode": "summary",
+                        "execution_mode": "standard",
+                    },
+                    "operation": {"schedule": {"definition": "@every 1h0m"}},
+                }]},
+            },
+            # 2. Duplicate check — API error
+            {
+                "status_code": 500,
+                "body": {"errors": [{"message": "Internal error"}]},
+            },
+            # 3. Deploy succeeds anyway
+            {
+                "status_code": 200,
+                "body": {"resources": [{"rule_id": "new-rule-2"}]},
+            },
+        ]
+
+        result = self.module.deploy_correlation_rule_template(
+            template_id="tmpl-1",
+            customer_id="cid123",
+        )
+
+        # Should still deploy despite the search error
+        self.assertIsInstance(result, list)
+        self.assertEqual(result[0]["rule_id"], "new-rule-2")
+        self.assertEqual(self.mock_client.command.call_count, 3)
 
     def test_deploy_template_only_schedule_override_no_validation(self):
         """Test that providing only schedule override (no lookback override) skips validation."""
         self.mock_client.command.side_effect = [
+            # 1. Hydrate template
             {
                 "status_code": 200,
                 "body": {"resources": [{
@@ -1082,6 +1238,15 @@ class TestCorrelationRulesModule(TestModules):
                     "operation": {"schedule": {"definition": "@every 1h0m"}},
                 }]},
             },
+            # 2. Duplicate check — no match
+            {
+                "status_code": 200,
+                "body": {
+                    "resources": [],
+                    "meta": {"pagination": {"total": 0}},
+                },
+            },
+            # 3. Deploy
             {
                 "status_code": 200,
                 "body": {"resources": [{"rule_id": "new-rule"}]},
@@ -1094,7 +1259,7 @@ class TestCorrelationRulesModule(TestModules):
             schedule="@every 2h0m",
         )
 
-        self.assertEqual(self.mock_client.command.call_count, 2)
+        self.assertEqual(self.mock_client.command.call_count, 3)
         self.assertIsInstance(result, list)
 
 

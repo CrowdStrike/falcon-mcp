@@ -100,7 +100,9 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     "falcon_manage_data_connection",
     "falcon_delete_data_connection",
     "falcon_regenerate_data_connection_token",
-    "falcon_manage_connector_config",
+    "falcon_create_connector_config",
+    "falcon_update_connector_config",
+    "falcon_delete_connector_configs",
 }
 
 RESOURCE_URI_PATTERN = re.compile(r"^falcon://[a-z0-9-]+(/[a-z0-9-]+)+/[a-z]+-guide$")

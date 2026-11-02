@@ -65,7 +65,7 @@ The server will call `falcon_check_connectivity` and confirm the connection.
 
 > "List all enabled modules"
 
-You should see all 16 modules listed.
+You should see all 29 modules listed.
 
 ## Next Steps
 

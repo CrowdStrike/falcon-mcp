@@ -106,12 +106,39 @@ class DataConnectorsModule(BaseModule):
         )
         self._add_tool(
             server=server,
-            method=self.manage_connector_config,
-            name="manage_connector_config",
+            method=self.list_connector_configs,
+            name="list_connector_configs",
+        )
+        self._add_tool(
+            server=server,
+            method=self.create_connector_config,
+            name="create_connector_config",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
+        self._add_tool(
+            server=server,
+            method=self.update_connector_config,
+            name="update_connector_config",
             annotations=ToolAnnotations(
                 readOnlyHint=False,
                 destructiveHint=True,
-                idempotentHint=False,
+                idempotentHint=True,
+                openWorldHint=True,
+            ),
+        )
+        self._add_tool(
+            server=server,
+            method=self.delete_connector_configs,
+            name="delete_connector_configs",
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=True,
                 openWorldHint=True,
             ),
         )
@@ -309,9 +336,14 @@ class DataConnectorsModule(BaseModule):
             use_params=True,
         )
 
+        if self._is_error(status):
+            provisioning_status = {"error": "Failed to retrieve provisioning status", "details": status}
+        else:
+            provisioning_status = status[0] if isinstance(status, list) and status else status
+
         result: dict[str, Any] = {
             "connection": details[0] if isinstance(details, list) and details else details,
-            "provisioning_status": status[0] if isinstance(status, list) and status else status,
+            "provisioning_status": provisioning_status,
         }
 
         # Optionally fetch ingest token (push connectors only)
@@ -625,94 +657,106 @@ class DataConnectorsModule(BaseModule):
 
         return result
 
-    def manage_connector_config(
+    def list_connector_configs(
         self,
-        action: str = Field(
-            description="Action to perform: 'list', 'create', 'update', or 'delete'.",
-            examples={"list", "create", "update", "delete"},
-        ),
         connector_id: str = Field(
-            description="Connector type ID (for list/create/delete).",
+            description="Connector type ID to list configurations for.",
         ),
-        config_id: str | None = Field(
-            default=None,
-            description="Configuration ID (required for update and delete).",
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """List data source configurations for a pull-based connector type.
+
+        Returns existing configurations that define how Falcon accesses a third-party
+        data source (credentials, endpoints, etc.). Configs can be reused across
+        multiple connections.
+        """
+        result = self._base_search_api_call(
+            operation="ExternalListConnectorConfigs",
+            search_params={"ids": connector_id},
+            error_message="Failed to list connector configurations",
+        )
+        if self._is_error(result):
+            return [result]
+        return result
+
+    def create_connector_config(
+        self,
+        connector_id: str = Field(
+            description="Connector type ID to create a configuration for.",
         ),
-        config_ids: list[str] | None = Field(
-            default=None,
-            description="Configuration IDs to delete (for delete action, max 20).",
-        ),
-        config: dict[str, Any] | None = Field(
-            default=None,
+        config: dict[str, Any] = Field(
             description=(
-                "Configuration object with provider-specific fields (for create/update). "
-                "Use action='list' first to see existing configs and understand the expected structure."
+                "Configuration object with provider-specific fields. "
+                "Use `falcon_list_connector_configs` first to see existing configs "
+                "and understand the expected structure."
             ),
         ),
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        """Manage data source configurations for pull-based connectors.
+        """Create a new data source configuration for a pull-based connector.
 
         Configurations define how Falcon accesses a third-party data source (credentials,
         endpoints, etc.) and can be reused across multiple connections.
-
-        Actions:
-        - list: List configs for a connector type (requires connector_id)
-        - create: Create a new config (requires connector_id + config)
-        - update: Update an existing config (requires config_id + connector_id + config)
-        - delete: Delete configs (requires connector_id + config_ids)
         """
-        if action == "list":
-            result = self._base_search_api_call(
-                operation="ExternalListConnectorConfigs",
-                search_params={"ids": connector_id},
-                error_message="Failed to list connector configurations",
-            )
-            if self._is_error(result):
-                return [result]
-            return result
+        result = self._base_query_api_call(
+            operation="ExternalCreateConnectorConfig",
+            body_params={"connector_id": connector_id, "config": config},
+            error_message="Failed to create connector configuration",
+            default_result=[],
+        )
+        if self._is_error(result):
+            return [result]
+        return result
 
-        if action == "create":
-            if not config:
-                return [_format_error_response("`config` is required for create action.")]
-            result = self._base_query_api_call(
-                operation="ExternalCreateConnectorConfig",
-                body_params={"connector_id": connector_id, "config": config},
-                error_message="Failed to create connector configuration",
-                default_result=[],
-            )
-            if self._is_error(result):
-                return [result]
-            return result
+    def update_connector_config(
+        self,
+        config_id: str = Field(
+            description="Configuration ID to update.",
+        ),
+        connector_id: str = Field(
+            description="Connector type ID the configuration belongs to.",
+        ),
+        config: dict[str, Any] = Field(
+            description="Updated configuration object with provider-specific fields.",
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Update an existing data source configuration.
 
-        if action == "update":
-            if not config_id:
-                return [_format_error_response("`config_id` is required for update action.")]
-            if not config:
-                return [_format_error_response("`config` is required for update action.")]
-            response = self.client.command(
-                "ExternalPatchConnectorConfig",
-                parameters={"ids": config_id},
-                body={"connector_id": connector_id, "config": config},
-            )
-            return handle_api_response(
-                response,
-                operation="ExternalPatchConnectorConfig",
-                error_message="Failed to update connector configuration",
-                default_result=[],
-            )
+        Modifies credentials, endpoints, or other provider-specific settings
+        for a pull-based connector configuration.
+        """
+        response = self.client.command(
+            "ExternalPatchConnectorConfig",
+            parameters={"ids": config_id},
+            body={"connector_id": connector_id, "config": config},
+        )
+        return handle_api_response(
+            response,
+            operation="ExternalPatchConnectorConfig",
+            error_message="Failed to update connector configuration",
+            default_result=[],
+        )
 
-        if action == "delete":
-            ids_to_delete = config_ids or ([config_id] if config_id else [])
-            if not ids_to_delete:
-                return [_format_error_response("`config_ids` or `config_id` is required for delete action.")]
-            result = self._base_query_api_call(
-                operation="ExternalDeleteConnectorConfigs",
-                query_params={"connector_id": connector_id, "ids": ids_to_delete},
-                error_message="Failed to delete connector configurations",
-                default_result=[],
-            )
-            if self._is_error(result):
-                return [result]
-            return result
+    def delete_connector_configs(
+        self,
+        connector_id: str = Field(
+            description="Connector type ID the configurations belong to.",
+        ),
+        config_ids: list[str] = Field(
+            description="Configuration IDs to delete (max 20).",
+        ),
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Delete one or more data source configurations.
 
-        return [_format_error_response(f"Unknown action '{action}'. Use: list, create, update, or delete.")]
+        Removes the specified configurations. This cannot be undone.
+        Use `falcon_list_connector_configs` to confirm IDs before deleting.
+        """
+        if not config_ids:
+            return [_format_error_response("`config_ids` is required for delete.")]
+        result = self._base_query_api_call(
+            operation="ExternalDeleteConnectorConfigs",
+            query_params={"connector_id": connector_id, "ids": config_ids},
+            error_message="Failed to delete connector configurations",
+            default_result=[],
+        )
+        if self._is_error(result):
+            return [result]
+        return result

@@ -4,9 +4,7 @@ Falcon API Client for MCP Server
 This module provides the Falcon API client and authentication utilities for the Falcon MCP server.
 """
 
-import base64
 import functools
-import json
 import os
 import platform
 import sys
@@ -35,6 +33,7 @@ class FalconClient:
         client_id: str | None = None,
         client_secret: str | None = None,
         member_cid: str | None = None,
+        cid: str | None = None,
         proxy: str | None = None,
     ):
         """Initialize the Falcon client.
@@ -46,6 +45,8 @@ class FalconClient:
             client_id: Falcon API Client ID (defaults to FALCON_CLIENT_ID env var)
             client_secret: Falcon API Client Secret (defaults to FALCON_CLIENT_SECRET env var)
             member_cid: Child CID for Flight Control (MSSP) support (defaults to FALCON_MEMBER_CID env var)
+            cid: Customer ID (CID) for the target tenant (defaults to FALCON_CID env var).
+                 Required by correlation rule create/deploy operations.
             proxy: HTTP/HTTPS proxy URL for outbound Falcon API connections (defaults to FALCON_PROXY_URL env var).
                    Example: "http://proxy.corp.example.com:8080"
         """
@@ -60,6 +61,7 @@ class FalconClient:
             "FALCON_MCP_USER_AGENT_COMMENT"
         )
         self.member_cid = member_cid or os.environ.get("FALCON_MEMBER_CID")
+        self.cid = cid or os.environ.get("FALCON_CID")
         self.proxy = proxy or os.environ.get("FALCON_PROXY_URL")
 
         if not self.client_id or not self.client_secret:
@@ -93,28 +95,9 @@ class FalconClient:
         # lock, several threads could observe a stale token at once and each fire its
         # own POST /oauth2/token. The lock guards only the refresh, never the API call.
         self._token_lock = threading.Lock()
-        self._cid: str | None = None
-
         logger.debug("Initialized Falcon client with base URL: %s", self.base_url)
         if self.member_cid:
             logger.debug("Flight Control member_cid: %s", self.member_cid)
-
-    def resolve_cid(self) -> str | None:
-        """Resolve the Customer ID from the authenticated session.
-
-        Queries the sensor-download CCID endpoint to obtain the tenant CID.
-        The result is cached after the first successful call.  Requires the
-        ``sensor-download:read`` API scope.
-        """
-        if self._cid is not None:
-            return self._cid
-        resp = self.command("GetSensorInstallersCCIDByQuery")
-        resources = resp.get("body", {}).get("resources", [])
-        if resources:
-            # CCID format is "HEX-CHECKSUM"; strip the checksum suffix.
-            self._cid = resources[0].lower().replace("-", "")[:32]
-            return self._cid
-        return None
 
     @property
     def token_status(self) -> int | None:
