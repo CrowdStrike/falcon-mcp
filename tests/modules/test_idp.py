@@ -864,6 +864,92 @@ class TestIdpModule(TestModules):
 
         self.assertTrue(self.mock_client.command.called)
 
+    def test_build_timeline_query_escapes_entity_id(self):
+        """A double-quote in entity_id must stay inside the JSON string literal."""
+        malicious_id = 'uuid-a", "uuid-b'
+        query = self.module._build_timeline_query(
+            entity_id=malicious_id,
+            start_time=None,
+            end_time=None,
+            event_types=None,
+            limit=5,
+        )
+        self.assertIn(r'uuid-a\", \"uuid-b', query)
+        self.assertNotIn('entityIds: ["uuid-a", "uuid-b"]', query)
+
+    def test_build_relationship_analysis_query_escapes_entity_id(self):
+        """A double-quote in entity_id must stay inside the JSON string literal."""
+        malicious_id = 'uuid-a", "uuid-b'
+        query = self.module._build_relationship_analysis_query(
+            entity_id=malicious_id,
+            relationship_depth=1,
+            include_risk_context=False,
+            limit=5,
+        )
+        self.assertIn(r'uuid-a\", \"uuid-b', query)
+        self.assertNotIn('entityIds: ["uuid-a", "uuid-b"]', query)
+
+    def test_build_timeline_query_escapes_start_time(self):
+        """A double-quote in start_time must stay inside the JSON string literal."""
+        query = self.module._build_timeline_query(
+            entity_id="clean-id",
+            start_time='2024-01-01", extra: "injected',
+            end_time=None,
+            event_types=None,
+            limit=5,
+        )
+        self.assertNotIn('extra: "injected"', query)
+
+    def test_build_timeline_query_clean_entity_id(self):
+        """A clean UUID entity_id must appear correctly in the query."""
+        clean_id = "550e8400-e29b-41d4-a716-446655440000"
+        query = self.module._build_timeline_query(
+            entity_id=clean_id,
+            start_time=None,
+            end_time=None,
+            event_types=None,
+            limit=5,
+        )
+        self.assertIn(f'entityIds: ["{clean_id}"]', query)
+
+    def test_build_timeline_query_keeps_valid_event_types(self):
+        """Valid enum names are passed through as the categories filter."""
+        query = self.module._build_timeline_query(
+            entity_id="clean-id",
+            start_time=None,
+            end_time=None,
+            event_types=["ACTIVITY", "AUDIT"],
+            limit=5,
+        )
+        self.assertIn("categories: [ACTIVITY, AUDIT]", query)
+
+    def test_build_timeline_query_drops_invalid_event_types(self):
+        """An event type that is not an enum name must not change the query."""
+        payload = (
+            "ACTIVITY], first: 1) { pageInfo { hasNextPage } } "
+            "x: entities(first: 1) { nodes { entityId } } y: timeline(categories: [AUDIT"
+        )
+        query = self.module._build_timeline_query(
+            entity_id="clean-id",
+            start_time=None,
+            end_time=None,
+            event_types=[payload, "THREAT"],
+            limit=5,
+        )
+        self.assertIn("categories: [THREAT]", query)
+        self.assertNotIn("entities(", query)
+
+    def test_build_timeline_query_omits_categories_when_all_invalid(self):
+        """No categories filter when no event type is a valid enum name."""
+        query = self.module._build_timeline_query(
+            entity_id="clean-id",
+            start_time=None,
+            end_time=None,
+            event_types=["ACTIVITY]"],
+            limit=5,
+        )
+        self.assertNotIn("categories", query)
+
 
 if __name__ == "__main__":
     unittest.main()

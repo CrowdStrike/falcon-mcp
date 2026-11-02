@@ -7,6 +7,7 @@ Core use cases:
 """
 
 import json
+import re
 from datetime import datetime
 from typing import Any
 
@@ -18,6 +19,9 @@ from falcon_mcp.common.utils import sanitize_input, unwrap_field_default
 from falcon_mcp.modules.base import BaseModule
 
 logger = get_logger(__name__)
+
+# GraphQL enum values are unquoted names, so only this form is safe to insert.
+GRAPHQL_ENUM_NAME = re.compile(r"[_A-Za-z][_0-9A-Za-z]*")
 
 
 class IdpModule(BaseModule):
@@ -492,16 +496,20 @@ class IdpModule(BaseModule):
         limit: int,
     ) -> str:
         """Build GraphQL query for entity timeline."""
-        filters = [f'sourceEntityQuery: {{entityIds: ["{entity_id}"]}}']
+        filters = [f"sourceEntityQuery: {{entityIds: [{json.dumps(entity_id)}]}}"]
 
         if start_time and isinstance(start_time, str):
-            filters.append(f'startTime: "{start_time}"')
+            filters.append(f"startTime: {json.dumps(start_time)}")
         if end_time and isinstance(end_time, str):
-            filters.append(f'endTime: "{end_time}"')
+            filters.append(f"endTime: {json.dumps(end_time)}")
         if event_types and isinstance(event_types, list):
-            # Format event types as unquoted GraphQL enums
-            categories_str = "[" + ", ".join(event_types) + "]"
-            filters.append(f"categories: {categories_str}")
+            valid_types = [
+                t for t in event_types if isinstance(t, str) and GRAPHQL_ENUM_NAME.fullmatch(t)
+            ]
+            if len(valid_types) != len(event_types):
+                logger.warning("Ignoring timeline event types that are not valid enum names")
+            if valid_types:
+                filters.append(f"categories: [{', '.join(valid_types)}]")
 
         filter_string = ", ".join(filters)
 
@@ -806,7 +814,7 @@ class IdpModule(BaseModule):
 
         return f"""
         query {{
-            entities(entityIds: ["{entity_id}"], first: {limit}) {{
+            entities(entityIds: [{json.dumps(entity_id)}], first: {limit}) {{
                 nodes {{
                     entityId
                     primaryDisplayName
