@@ -21,7 +21,7 @@ class TestDataConnectorsModule(TestModules):
     # -------------------------------------------------------------------------
 
     def test_register_tools(self):
-        """Test that all 8 consolidated tools are registered."""
+        """Test that all 11 tools are registered."""
         expected_tools = [
             "falcon_search_data_connectors",
             "falcon_search_data_connections",
@@ -30,7 +30,10 @@ class TestDataConnectorsModule(TestModules):
             "falcon_manage_data_connection",
             "falcon_delete_data_connection",
             "falcon_regenerate_data_connection_token",
-            "falcon_manage_connector_config",
+            "falcon_list_connector_configs",
+            "falcon_create_connector_config",
+            "falcon_update_connector_config",
+            "falcon_delete_connector_configs",
         ]
         self.assert_tools_registered(expected_tools)
 
@@ -106,14 +109,45 @@ class TestDataConnectorsModule(TestModules):
             ),
         )
 
-    def test_manage_config_tool_annotations(self):
+    def test_list_connector_configs_tool_annotations(self):
         self.module.register_tools(self.mock_server)
         self.assert_tool_annotations(
-            "falcon_manage_connector_config",
+            "falcon_list_connector_configs",
+            READ_ONLY_ANNOTATIONS,
+        )
+
+    def test_create_connector_config_tool_annotations(self):
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations(
+            "falcon_create_connector_config",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
+
+    def test_update_connector_config_tool_annotations(self):
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations(
+            "falcon_update_connector_config",
             ToolAnnotations(
                 readOnlyHint=False,
                 destructiveHint=True,
-                idempotentHint=False,
+                idempotentHint=True,
+                openWorldHint=True,
+            ),
+        )
+
+    def test_delete_connector_configs_tool_annotations(self):
+        self.module.register_tools(self.mock_server)
+        self.assert_tool_annotations(
+            "falcon_delete_connector_configs",
+            ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=True,
                 openWorldHint=True,
             ),
         )
@@ -394,7 +428,7 @@ class TestDataConnectorsModule(TestModules):
         self.assertIsNotNone(result)
 
     # -------------------------------------------------------------------------
-    # manage_connector_config
+    # list_connector_configs
     # -------------------------------------------------------------------------
 
     def test_config_list(self):
@@ -402,62 +436,57 @@ class TestDataConnectorsModule(TestModules):
             "status_code": 200,
             "body": {"resources": [{"id": "cfg-1", "connector_id": "okta"}]},
         }
-        result = self.module.manage_connector_config(action="list", connector_id="okta")
+        result = self.module.list_connector_configs(connector_id="okta")
         self.assertEqual(len(result), 1)
+
+    # -------------------------------------------------------------------------
+    # create_connector_config
+    # -------------------------------------------------------------------------
 
     def test_config_create(self):
         self.mock_client.command.return_value = {
             "status_code": 201,
             "body": {"resources": [{"id": "cfg-new"}]},
         }
-        result = self.module.manage_connector_config(
-            action="create", connector_id="okta",
+        result = self.module.create_connector_config(
+            connector_id="okta",
             config={"api_token": "secret", "domain": "example.okta.com"},
         )
         self.assertIsInstance(result, list)
 
-    def test_config_create_missing_config(self):
-        result = self.module.manage_connector_config(
-            action="create", connector_id="okta", config=None,
-        )
-        self.assertIn("error", result[0])
+    # -------------------------------------------------------------------------
+    # update_connector_config
+    # -------------------------------------------------------------------------
 
     def test_config_update(self):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": [{"id": "cfg-1"}]},
         }
-        result = self.module.manage_connector_config(
-            action="update", connector_id="okta",
-            config_id="cfg-1", config={"api_token": "new-secret"},
+        result = self.module.update_connector_config(
+            config_id="cfg-1",
+            connector_id="okta",
+            config={"api_token": "new-secret"},
         )
         self.assertIsInstance(result, list)
 
-    def test_config_update_missing_id(self):
-        result = self.module.manage_connector_config(
-            action="update", connector_id="okta", config={"x": "y"}, config_id=None,
-        )
-        self.assertIn("error", result[0])
+    # -------------------------------------------------------------------------
+    # delete_connector_configs
+    # -------------------------------------------------------------------------
 
     def test_config_delete(self):
         self.mock_client.command.return_value = {
             "status_code": 200,
             "body": {"resources": [{"id": "cfg-1"}]},
         }
-        result = self.module.manage_connector_config(
-            action="delete", connector_id="okta", config_ids=["cfg-1"],
+        result = self.module.delete_connector_configs(
+            connector_id="okta", config_ids=["cfg-1"],
         )
         self.assertIsInstance(result, list)
 
-    def test_config_delete_missing_ids(self):
-        result = self.module.manage_connector_config(
-            action="delete", connector_id="okta", config_ids=None, config_id=None,
-        )
-        self.assertIn("error", result[0])
-
-    def test_config_unknown_action(self):
-        result = self.module.manage_connector_config(
-            action="explode", connector_id="okta",
+    def test_config_delete_empty_ids(self):
+        result = self.module.delete_connector_configs(
+            connector_id="okta", config_ids=[],
         )
         self.assertIn("error", result[0])
 

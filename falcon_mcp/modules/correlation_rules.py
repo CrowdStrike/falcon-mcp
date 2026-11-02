@@ -1,6 +1,5 @@
 """Correlation Rules module for Falcon MCP Server."""
 
-import re
 from typing import Any
 
 from mcp.server import FastMCP
@@ -18,41 +17,6 @@ from falcon_mcp.resources.correlation_rules import (
 )
 
 logger = get_logger(__name__)
-
-_DURATION_RE = re.compile(
-    r"(?:@every\s+)?(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$",
-    re.IGNORECASE,
-)
-
-
-def _parse_duration_seconds(value: str) -> int | None:
-    """Parse a schedule or lookback string to total seconds.
-
-    Accepts both schedule form (@every 1h30m) and lookback form (1h30m).
-    Returns None when the string doesn't match the expected format.
-    """
-    m = _DURATION_RE.match(value.strip())
-    if not m or not any(m.groups()):
-        return None
-    days, hours, minutes, seconds = (int(x or 0) for x in m.groups())
-    return days * 86400 + hours * 3600 + minutes * 60 + seconds
-
-
-def _validate_lookback_vs_schedule(
-    lookback: str, schedule: str
-) -> dict[str, Any] | None:
-    """Return an error dict when lookback is shorter than schedule, else None."""
-    lb_secs = _parse_duration_seconds(lookback)
-    sc_secs = _parse_duration_seconds(schedule)
-    if lb_secs is None or sc_secs is None:
-        return None
-    if lb_secs < sc_secs:
-        return _format_error_response(
-            f"lookback '{lookback}' ({lb_secs}s) is shorter than schedule '{schedule}' "
-            f"({sc_secs}s). The search window must cover at least one full schedule interval.",
-        )
-    return None
-
 
 _RULE_SEARCH_FIELDS = {
     "rule_id", "id", "name", "description", "severity", "status", "state",
@@ -72,6 +36,26 @@ def _slim(entity: dict, fields: set) -> dict:
 
 class CorrelationRulesModule(BaseModule):
     """Module for managing NG-SIEM Correlation Rules."""
+
+    def _find_existing_rule_by_name(self, name: str) -> dict | None:
+        """Search for an existing published correlation rule with the given exact name.
+
+        Returns the first matching rule dict, or None if no match is found.
+        Returns None on API errors to avoid blocking deployment.
+        """
+        result, _ = self._base_search_with_meta(
+            operation="combined_rules_get_v2",
+            search_params={
+                "filter": f"name:'{name}'+state:'published'",
+                "limit": 1,
+            },
+            error_message="Failed to check for existing correlation rules",
+        )
+
+        if self._is_error(result) or not result:
+            return None
+
+        return result[0]
 
     def register_tools(self, server: FastMCP) -> None:
         self._add_tool(
@@ -343,11 +327,12 @@ class CorrelationRulesModule(BaseModule):
         Returns the created rule record on success.
         """
         if customer_id is None:
-            customer_id = self.client.resolve_cid()
+            customer_id = self.client.cid
             if customer_id is None:
                 return [_format_error_response(
-                    "Could not auto-resolve customer_id from the authenticated session. "
-                    "Please provide the customer_id explicitly.",
+                    "customer_id is required but was not provided and FALCON_CID "
+                    "is not set. Set the FALCON_CID environment variable or pass "
+                    "customer_id explicitly.",
                 )]
 
         body: dict[str, Any] = {
@@ -459,11 +444,6 @@ class CorrelationRulesModule(BaseModule):
         """
         schedule = unwrap_field_default(schedule)
         lookback = unwrap_field_default(lookback)
-
-        if schedule is not None and lookback is not None:
-            err = _validate_lookback_vs_schedule(lookback, schedule)
-            if err is not None:
-                return [err]
 
         body: dict[str, Any] = {"id": rule_id}
 
@@ -630,9 +610,7 @@ class CorrelationRulesModule(BaseModule):
         )
 
         if self._is_error(entities):
-            return self._format_fql_error_response(
-                [entities], filter, SEARCH_CORRELATION_RULE_TEMPLATES_FQL_DOCUMENTATION
-            )
+            return [entities]
 
         ordered = self._reorder_by_ids(ids_result, entities, id_field="id")
 
@@ -727,15 +705,18 @@ class CorrelationRulesModule(BaseModule):
         """Deploy a Correlation Rule template as a live detection rule.
 
         First fetches the template to get its defaults (CQL query, schedule, severity,
-        MITRE mappings, etc.), then deploys it with any user-provided overrides. Only
-        template_id and customer_id are required — all other fields use the template's
-        built-in values when omitted.
+        MITRE mappings, etc.), then checks whether a rule with the same name already
+        exists. If a duplicate is found, returns a structured response with the existing
+        rule's details instead of creating a duplicate — the caller should ask the user
+        whether to update the existing rule. Only template_id and customer_id are
+        required — all other fields use the template's built-in values when omitted.
 
         Typical workflow:
         1. Use falcon_search_correlation_rule_templates to find a template
         2. Pass the template's `id` here along with your `customer_id`
         3. Optionally override name, severity, status, schedule, etc.
-        Returns the created rule record on success.
+        Returns the created rule record on success, or a duplicate_found response
+        when a rule with the same name already exists.
         """
         name = unwrap_field_default(name)
         severity = unwrap_field_default(severity)
@@ -748,17 +729,13 @@ class CorrelationRulesModule(BaseModule):
         customer_id = unwrap_field_default(customer_id)
 
         if customer_id is None:
-            customer_id = self.client.resolve_cid()
+            customer_id = self.client.cid
             if customer_id is None:
                 return [_format_error_response(
-                    "Could not auto-resolve customer_id from the authenticated session. "
-                    "Please provide the customer_id explicitly.",
+                    "customer_id is required but was not provided and FALCON_CID "
+                    "is not set. Set the FALCON_CID environment variable or pass "
+                    "customer_id explicitly.",
                 )]
-
-        if schedule is not None and lookback is not None:
-            err = _validate_lookback_vs_schedule(lookback, schedule)
-            if err is not None:
-                return [err]
 
         template_result = self._base_get_by_ids(
             operation="entities_templates_get_v1Mixin0",
@@ -778,13 +755,31 @@ class CorrelationRulesModule(BaseModule):
             ]
 
         template = template_result[0]
+        effective_name = name if name is not None else template.get("name", "")
+
+        # Check for an existing rule with the same name to avoid duplicates.
+        existing_rule = self._find_existing_rule_by_name(effective_name)
+        if existing_rule is not None:
+            existing_id = existing_rule.get("rule_id", existing_rule.get("id", ""))
+            return {
+                "duplicate_found": True,
+                "message": (
+                    f"A correlation rule named '{effective_name}' already exists "
+                    f"(rule_id: '{existing_id}'). To update the existing rule with "
+                    f"the latest template settings, use falcon_update_correlation_rule "
+                    f"with rule_id='{existing_id}'."
+                ),
+                "existing_rule": _slim(existing_rule, _RULE_SEARCH_FIELDS),
+                "template_id": template_id,
+            }
+
         template_search = template.get("search", {})
         template_operation = template.get("operation", {})
         template_schedule = template_operation.get("schedule", {})
 
         deploy_template: dict[str, Any] = {
             "template_id": template_id,
-            "name": name if name is not None else template.get("name", ""),
+            "name": effective_name,
             "severity": severity if severity is not None else template.get("severity", 50),
             "status": status,
             "search": {

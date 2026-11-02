@@ -4,6 +4,74 @@ Contains Correlation Rules resources.
 
 from falcon_mcp.common.utils import generate_md_table
 
+# Shared MITRE ATT&CK Enterprise Tactics reference (v16) — used by both
+# the rules FQL guide and the templates FQL guide so the table stays in sync.
+MITRE_ATTACK_TACTICS_REFERENCE = """\
+=== MITRE ATT&CK ENTERPRISE TACTICS (v16) — ID, NAME, AND ALIASES ===
+Use the aliases to match fuzzy user intent to the correct tactic ID.
+If a user says any alias term, use the corresponding tactic ID in the filter.
+
+• TA0043: Reconnaissance
+  Aliases: recon, scanning, footprinting, OSINT, information gathering,
+  target selection, open-source intelligence
+
+• TA0042: Resource Development
+  Aliases: infrastructure setup, staging, acquiring infrastructure,
+  developing capabilities, establishing accounts
+
+• TA0001: Initial Access
+  Aliases: entry point, intrusion, exploitation, phishing, spearphishing,
+  drive-by, trusted relationship, supply chain
+
+• TA0002: Execution
+  Aliases: code execution, running malware, script execution, command execution,
+  PowerShell, scripting, user execution
+
+• TA0003: Persistence
+  Aliases: backdoor, implant, foothold, maintaining access, boot or logon,
+  scheduled task, registry run key, startup
+
+• TA0004: Privilege Escalation
+  Aliases: privesc, elevating privileges, admin access, root access,
+  token manipulation, exploitation for privilege escalation
+
+• TA0005: Defense Evasion
+  Aliases: stealth, evasion, hiding, obfuscation, masquerading,
+  process injection, indicator removal, rootkit, disabling defenses
+
+• TA0112: Defense Impairment
+  Aliases: disabling security, tampering, impairing defenses, breaking security,
+  disabling logging, killing security tools
+
+• TA0006: Credential Access
+  Aliases: credential theft, password stealing, credential dumping, brute force,
+  keylogging, credential harvesting, Kerberoasting, pass-the-hash
+
+• TA0007: Discovery
+  Aliases: enumeration, network scanning, system discovery, account discovery,
+  network share discovery, permission groups discovery
+
+• TA0008: Lateral Movement
+  Aliases: pivoting, moving laterally, spreading, remote services,
+  pass-the-ticket, WMI, RDP, SMB, internal spearphishing
+
+• TA0009: Collection
+  Aliases: data gathering, data staging, harvesting, screen capture,
+  clipboard data, email collection, audio capture
+
+• TA0011: Command and Control
+  Aliases: C2, C&C, beaconing, callback, remote access, encrypted channel,
+  proxy, web service, DNS tunneling
+
+• TA0010: Exfiltration
+  Aliases: data theft, data exfil, stealing data, data transfer,
+  exfiltration over C2, exfiltration over web service
+
+• TA0040: Impact
+  Aliases: destruction, ransomware, wiping, disruption, sabotage,
+  data encryption, defacement, denial of service, resource hijacking
+"""
+
 # List of tuples containing filter options data: (name, type, description)
 SEARCH_CORRELATION_RULES_FQL_FILTERS = [
     (
@@ -260,70 +328,9 @@ When the user describes a threat or detection goal in natural language:
 • Responses to the user: always use the name (e.g. "High", "Critical")
   Never show raw severity numbers to the user without the corresponding name.
 
-=== MITRE ATT&CK ENTERPRISE TACTICS (v16) — ID, NAME, AND ALIASES ===
-Use the aliases to match fuzzy user intent to the correct tactic ID.
-If a user says any alias term, use the corresponding tactic ID in the filter.
-
-• TA0043: Reconnaissance
-  Aliases: recon, scanning, footprinting, OSINT, information gathering,
-  target selection, open-source intelligence
-
-• TA0042: Resource Development
-  Aliases: infrastructure setup, staging, acquiring infrastructure,
-  developing capabilities, establishing accounts
-
-• TA0001: Initial Access
-  Aliases: entry point, intrusion, exploitation, phishing, spearphishing,
-  drive-by, trusted relationship, supply chain
-
-• TA0002: Execution
-  Aliases: code execution, running malware, script execution, command execution,
-  PowerShell, scripting, user execution
-
-• TA0003: Persistence
-  Aliases: backdoor, implant, foothold, maintaining access, boot or logon,
-  scheduled task, registry run key, startup
-
-• TA0004: Privilege Escalation
-  Aliases: privesc, elevating privileges, admin access, root access,
-  token manipulation, exploitation for privilege escalation
-
-• TA0005: Stealth (formerly Defense Evasion)
-  Aliases: defense evasion, evasion, hiding, obfuscation, masquerading,
-  process injection, indicator removal, rootkit, disabling defenses
-
-• TA0112: Defense Impairment
-  Aliases: disabling security, tampering, impairing defenses, breaking security,
-  disabling logging, killing security tools
-
-• TA0006: Credential Access
-  Aliases: credential theft, password stealing, credential dumping, brute force,
-  keylogging, credential harvesting, Kerberoasting, pass-the-hash
-
-• TA0007: Discovery
-  Aliases: enumeration, network scanning, system discovery, account discovery,
-  network share discovery, permission groups discovery
-
-• TA0008: Lateral Movement
-  Aliases: pivoting, moving laterally, spreading, remote services,
-  pass-the-ticket, WMI, RDP, SMB, internal spearphishing
-
-• TA0009: Collection
-  Aliases: data gathering, data staging, harvesting, screen capture,
-  clipboard data, email collection, audio capture
-
-• TA0011: Command and Control
-  Aliases: C2, C&C, beaconing, callback, remote access, encrypted channel,
-  proxy, web service, DNS tunneling
-
-• TA0010: Exfiltration
-  Aliases: data theft, data exfil, stealing data, data transfer,
-  exfiltration over C2, exfiltration over web service
-
-• TA0040: Impact
-  Aliases: destruction, ransomware, wiping, disruption, sabotage,
-  data encryption, defacement, denial of service, resource hijacking
-
+"""
+    + MITRE_ATTACK_TACTICS_REFERENCE
+    + """
 === falcon_search_correlation_rule_templates FQL filter available fields ===
 
 """
@@ -435,19 +442,9 @@ Filter on nested fields:
 • ✅ Correct: mitre_attack.tactic_id:'TA0001'
 • ❌ Wrong: mitre_attack.tactic_id:'Execution'
 
-Common tactic IDs:
-• TA0001: Initial Access
-• TA0002: Execution
-• TA0003: Persistence
-• TA0004: Privilege Escalation
-• TA0005: Defense Evasion
-• TA0006: Credential Access
-• TA0007: Discovery
-• TA0008: Lateral Movement
-• TA0009: Collection
-• TA0010: Exfiltration
-• TA0011: Command and Control
-
+"""
+    + MITRE_ATTACK_TACTICS_REFERENCE
+    + """
 === falcon_search_correlation_rules FQL filter available fields ===
 
 """ + generate_md_table(SEARCH_CORRELATION_RULES_FQL_FILTERS) + """

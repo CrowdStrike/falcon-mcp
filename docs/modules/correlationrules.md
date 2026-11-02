@@ -1,10 +1,10 @@
 <!-- meta:title Correlation Rules -->
-<!-- meta:description Correlation Rules module for CrowdStrike Falcon. -->
+<!-- meta:description Search, create, update, and delete NG-SIEM correlation rules, and discover and deploy pre-built rule templates. -->
 <!-- meta:section modules -->
 <!-- meta:link-base /falcon-mcp/ -->
 <!-- frontmatter:sidebar order:10 -->
 
-Correlation Rules module for CrowdStrike Falcon.
+Search, create, update, and delete NG-SIEM correlation rules, and discover and deploy pre-built rule templates.
 
 ## API Scopes
 
@@ -21,10 +21,18 @@ Search NG-SIEM Correlation Rules and return summary rule details.
 
 Use this to find detection rules by name, status, severity, or MITRE tactic/technique.
 Consult falcon://correlation-rules/search/fql-guide before constructing filter expressions.
-Returns summary rule objects (rule_id, name, description, severity, status, state, mitre_attack, template_id, user_id, created_on, last_updated_on); use the `rule_id` field when passing results to update or
+Returns summary rule objects (id, rule_id, name, description, severity, status, state, mitre_attack, template_id, user_id, created_on, last_updated_on); use the `rule_id` field when passing results to update or
 delete tools. Filter with state:'published' to get one result per rule.
 Responses include `pagination.total` (the total number of records matching the filter, or null when the API does not report a count) — use it to answer "how many" questions.
 Use falcon_get_correlation_rule to retrieve the full rule object including the CQL query, schedule, execution history, and notification config.
+
+> [!IMPORTANT]
+> This tool only returns rules that have already been deployed in the tenant.
+> When results are empty or the user asks what rules they *can* or *should*
+> enable, always follow up with `falcon_search_correlation_rule_templates` to
+> surface pre-built detection templates that can be deployed. Templates
+> represent the full catalog of available detections — a tenant with zero
+> matching rules may still have many relevant templates ready to deploy.
 
 Severity mapping — use integers in API/FQL calls, show only the name when presenting to the user:
 10=Informational, 30=Low, 50=Medium, 70=High, 90=Critical.
@@ -61,6 +69,10 @@ Create a new NG-SIEM Correlation Rule.
 Wraps a user-provided CQL query as a scheduled detection rule. The caller must
 supply the CQL query — use falcon_search_ngsiem to test queries before creating rules.
 Returns the created rule record on success.
+
+The `customer_id` parameter falls back to the `FALCON_CID` environment variable when
+not provided explicitly. See [Configuration](/falcon-mcp/getting-started/configuration/)
+for details.
 
 **Example prompts:**
 
@@ -156,16 +168,26 @@ detection logic before deploying it.
 Deploy a Correlation Rule template as a live detection rule.
 
 First fetches the template to get its defaults (CQL query, schedule, severity,
-MITRE mappings, etc.), then deploys it with any user-provided overrides. Only
-`template_id` and `customer_id` are required — all other fields use the template's
-built-in values when omitted.
+MITRE mappings, etc.), then checks whether a rule with the same name already
+exists. If a duplicate is found, returns a structured response with the existing
+rule's details instead of creating a duplicate — the caller should ask the user
+whether to update the existing rule via `falcon_update_correlation_rule`.
+
+Only `template_id` and `customer_id` are required — all other fields except
+`status` use the template's built-in values when omitted. The `status` parameter
+defaults to `"active"` when not provided (it does not inherit from the template).
+
+The `customer_id` parameter falls back to the `FALCON_CID` environment variable when
+not provided explicitly. See [Configuration](/falcon-mcp/getting-started/configuration/)
+for details.
 
 Typical workflow:
 1. Use `falcon_search_correlation_rule_templates` to find a template
 2. Pass the template's `id` here along with your `customer_id`
 3. Optionally override name, severity, status, schedule, etc.
 
-Returns the created rule record on success.
+Returns the created rule record on success, or a `duplicate_found` response
+when a rule with the same name already exists.
 
 **Example prompts:**
 
