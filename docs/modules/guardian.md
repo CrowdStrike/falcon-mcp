@@ -196,6 +196,9 @@ wider window is refused, after which the retry ladder narrows it back to
 
 ### `falcon_search_guardian_prompts`
 
+> [!NOTE]
+> Not available on CrowdStrike MCP. See [module overview](/falcon-mcp/modules/overview/#differences-from-crowdstrike-mcp).
+
 **Required scopes:** `AIDR:read`
 
 Search for AI prompts within a session (LogScale AgenticUserPromptSubmit).

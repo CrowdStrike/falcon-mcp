@@ -96,10 +96,6 @@ HOSTED_MCP_MODULE_NOTES: dict[str, str] = {
         "This module is not available on CrowdStrike MCP; it is only "
         f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
     ),
-    "rtr": (
-        "This module is not available on CrowdStrike MCP; it is only "
-        f"available when self-hosting this server. See [module overview]({_OVERVIEW_LINK})."
-    ),
     "policies": (
         "CrowdStrike MCP does not use these unified, `policy_type`-discriminated "
         "tools. It instead exposes six policy-type-specific variants of each tool below, suffixed "
@@ -113,13 +109,7 @@ HOSTED_MCP_MODULE_NOTES: dict[str, str] = {
 # Notes on tools not (yet) available on CrowdStrike MCP, rendered
 # as an admonition under the tool heading. Keyed by full tool name (falcon_*).
 HOSTED_MCP_TOOL_NOTES: dict[str, str] = {
-    "falcon_search_cloud_insights": (
-        f"Not available on CrowdStrike MCP. See [module overview]({_OVERVIEW_LINK})."
-    ),
-    "falcon_get_cloud_asset_insights": (
-        f"Not available on CrowdStrike MCP. See [module overview]({_OVERVIEW_LINK})."
-    ),
-    "falcon_list_cloud_insight_definitions": (
+    "falcon_search_guardian_prompts": (
         f"Not available on CrowdStrike MCP. See [module overview]({_OVERVIEW_LINK})."
     ),
     "falcon_search_managed_assets": (
@@ -1568,15 +1558,13 @@ def generate_overview_page(modules: dict[str, dict[str, Any]]) -> str:
     lines.append("Module and tool coverage also differs:")
     lines.append("")
     lines.append(
-        f"- [Fusion SOAR]({_module_link('fusion')}), "
-        f"[Zero Trust Assessment]({_module_link('zerotrustassessment')}), and "
-        f"[Real Time Response]({_module_link('rtr')}) are available only on this self-hosted "
-        "server; CrowdStrike MCP has no equivalent modules."
+        f"- [Fusion SOAR]({_module_link('fusion')}) and "
+        f"[Zero Trust Assessment]({_module_link('zerotrustassessment')}) are available only on "
+        "this self-hosted server; CrowdStrike MCP has no equivalent modules."
     )
     lines.append(
-        f"- [Cloud Security]({_module_link('cloud')}): `falcon_search_cloud_insights`, "
-        "`falcon_list_cloud_insight_definitions`, and `falcon_get_cloud_asset_insights` are not "
-        "available on CrowdStrike MCP."
+        f"- [Guardian]({_module_link('guardian')}): `falcon_search_guardian_prompts` is "
+        "not available on CrowdStrike MCP."
     )
     lines.append(
         f"- [Discover]({_module_link('discover')}): `falcon_search_managed_assets` is "
