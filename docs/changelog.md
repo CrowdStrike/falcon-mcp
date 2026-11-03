@@ -3,6 +3,16 @@
 
 # Changelog
 
+## [0.20.2](https://github.com/CrowdStrike/falcon-mcp/compare/v0.20.1...v0.20.2) (2026-11-03)
+
+
+### Bug Fixes
+
+* **deps:** keep Dependabot on mcp 1.x ([#594](https://github.com/CrowdStrike/falcon-mcp/issues/594)) ([3c367ec](https://github.com/CrowdStrike/falcon-mcp/commit/3c367ec1a0e565f2a9cf7d166e956d6c17ae7b12))
+* **modules/cloud:** clarify what cloud risks aggregate ([#572](https://github.com/CrowdStrike/falcon-mcp/issues/572)) ([b7da8e9](https://github.com/CrowdStrike/falcon-mcp/commit/b7da8e9037cae5b92b8538545a7c7b7fa075c7b1))
+* **tests:** allow timestamp ties in recon rules sort-order test ([#582](https://github.com/CrowdStrike/falcon-mcp/issues/582)) ([7400585](https://github.com/CrowdStrike/falcon-mcp/commit/74005850160a5633a770de78e40dce9a51e5ba7a))
+* **tests:** skip Guardian product assertions when Unclassified ([#583](https://github.com/CrowdStrike/falcon-mcp/issues/583)) ([e89d50b](https://github.com/CrowdStrike/falcon-mcp/commit/e89d50bd444514ce52ae6ae12c10e40d844ace04))
+
 ## [0.20.1](https://github.com/CrowdStrike/falcon-mcp/compare/v0.20.0...v0.20.1) (2026-11-03)
 
 
