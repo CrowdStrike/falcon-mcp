@@ -15,11 +15,30 @@
 **falcon-mcp** is a Model Context Protocol (MCP) server that connects AI agents with the CrowdStrike Falcon platform, powering intelligent security analysis in your agentic workflows. It delivers programmatic access to essential security capabilities—including detections, threat intelligence, and host management—establishing the foundation for advanced security operations and automation.
 
 > [!IMPORTANT]
-> **Pre-1.0 release**: falcon-mcp is under active development ahead of 1.0. Tool names, parameters, and response shapes can still change between minor releases, so pin a version and check the [changelog](CHANGELOG.md) before upgrading. The project is actively maintained by CrowdStrike and supported through [GitHub Issues](https://github.com/crowdstrike/falcon-mcp/issues); CrowdStrike customers can also raise questions through their usual Technical Support channels. See [SUPPORT.md](SUPPORT.md) for details.
+> **falcon-mcp is now in maintenance mode.** Development continues in [CrowdStrike MCP](https://docs.crowdstrike.com/r/en-US/pclqa2q2/tefc5682), CrowdStrike's hosted MCP server, and we recommend moving to it. falcon-mcp stays supported and will keep getting security fixes, but new features will only ship in CrowdStrike MCP. See [Moving to CrowdStrike MCP](#moving-to-crowdstrike-mcp) for what this means for you.
 
 ## Documentation
 
 Full docs are available at **[developer.crowdstrike.com/falcon-mcp](https://developer.crowdstrike.com/falcon-mcp/)**.
+
+## Moving to CrowdStrike MCP
+
+falcon-mcp started as an open source project to work out how AI agents should use Falcon. A lot of what we built here, including fixes and ideas from your issues and pull requests, carries forward into [CrowdStrike MCP](https://docs.crowdstrike.com/r/en-US/pclqa2q2/tefc5682). CrowdStrike MCP is a CrowdStrike product rather than an open source project, so new development won't happen in this repository. Thanks to everyone who filed issues and sent pull requests.
+
+For most teams, CrowdStrike MCP is the better choice now:
+
+- It runs inside the Falcon platform, so there's nothing to install, host, or upgrade.
+- Most tools keep the same `falcon_*` names, so prompts and agent instructions written for falcon-mcp carry over.
+- Tool access follows the Falcon roles and permissions you already manage, and activity is recorded in the Falcon audit log.
+- New tools and improvements ship there.
+
+What happens to falcon-mcp:
+
+- The same CrowdStrike team that builds CrowdStrike MCP maintains it, and it's supported through the same channels.
+- Existing installs keep working. Future releases carry security and dependency fixes only.
+- We're no longer accepting feature requests or feature pull requests.
+- CrowdStrike MCP is available in US-1, US-2, and EU-1. If your tenant is in another cloud, or you depend on a tool that only falcon-mcp has (see [Differences from CrowdStrike MCP](https://developer.crowdstrike.com/falcon-mcp/modules/overview/#differences-from-crowdstrike-mcp)), keep using falcon-mcp for now.
+- We'll announce an end-of-life date here before the repository is archived.
 
 ## Modules
 
@@ -273,6 +292,8 @@ guides are static field documentation carrying no tenant data.
 
 ## Contributing
 
+falcon-mcp is in maintenance mode and no longer accepts new features or modules. We still review security and dependency fixes. To report a vulnerability, follow the [security policy](.github/SECURITY.md).
+
 ```bash
 # Clone and install
 git clone https://github.com/CrowdStrike/falcon-mcp.git
@@ -307,6 +328,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-This is a community-driven, open source project. While it is not an official CrowdStrike product, it is actively maintained by CrowdStrike and supported in collaboration with the open source developer community.
+falcon-mcp is maintained by the CrowdStrike team that builds [CrowdStrike MCP](https://docs.crowdstrike.com/r/en-US/pclqa2q2/tefc5682) and is supported through the same channels. It's in maintenance mode, so fixes are limited to security and dependency issues.
 
 For more information, please see our [SUPPORT](SUPPORT.md) file.

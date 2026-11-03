@@ -1,1 +1,5 @@
 blank_issues_enabled: false
+contact_links:
+  - name: Feature requests
+    url: https://github.com/CrowdStrike/falcon-mcp#moving-to-crowdstrike-mcp
+    about: falcon-mcp no longer takes feature requests. Send them to your CrowdStrike account team, CrowdStrike Technical Support, or the Ideas portal (Support > Ideas in the Falcon console).

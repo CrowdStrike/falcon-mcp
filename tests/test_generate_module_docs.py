@@ -1147,7 +1147,7 @@ class TestHostedMcpNotes(unittest.TestCase):
         )
 
         page = generate_overview_page(self.modules)
-        section = page.split("## CrowdStrike-hosted MCP differences", 1)[1]
+        section = page.split("## Differences from CrowdStrike MCP", 1)[1]
 
         for key in HOSTED_MCP_MODULE_NOTES:
             slug = MODULE_METADATA.get(key, {}).get("slug", key)

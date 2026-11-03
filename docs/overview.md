@@ -4,6 +4,9 @@
 <!-- frontmatter:overview sidebar label:"Overview" -->
 <!-- meta:link-base /falcon-mcp/ -->
 
+> [!IMPORTANT]
+> **falcon-mcp is now in maintenance mode.** Development continues in [CrowdStrike MCP](https://docs.crowdstrike.com/r/en-US/pclqa2q2/tefc5682)<!-- link:external -->, CrowdStrike's hosted MCP server, and we recommend moving to it. falcon-mcp stays supported and will keep getting security fixes, but new features will only ship in CrowdStrike MCP. See [Moving to CrowdStrike MCP](https://github.com/CrowdStrike/falcon-mcp#moving-to-crowdstrike-mcp)<!-- link:external --> for details.
+
 The Falcon MCP connects AI assistants to the CrowdStrike Falcon platform through the [Model Context Protocol](https://modelcontextprotocol.io)<!-- link:external -->.
 
 This gives tools like Claude Desktop, VS Code, Gemini CLI, and custom agents direct access to your Falcon environment — enabling AI-powered threat investigation, detection triage, and security operations.
