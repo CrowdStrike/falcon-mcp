@@ -382,8 +382,20 @@ class TestGuardianIntegration(BaseIntegrationTest):
             unfiltered, f"{tool_name} rows", context=f"{tool_name}.{param}"
         )
 
+        def _usable_narrowing_value(v):
+            if not v:
+                return False
+            # API lists ProductName "Unclassified" but rejects it as a product filter.
+            if param == "product" and str(v).strip().lower() == "unclassified":
+                return False
+            return True
+
         value = next(
-            (v for v in (self._read_back(r, *paths) for r in rows if isinstance(r, dict)) if v),
+            (
+                v
+                for v in (self._read_back(r, *paths) for r in rows if isinstance(r, dict))
+                if _usable_narrowing_value(v)
+            ),
             None,
         )
         if value is None:
