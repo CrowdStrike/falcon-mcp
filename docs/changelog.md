@@ -3,6 +3,13 @@
 
 # Changelog
 
+## [0.20.1](https://github.com/CrowdStrike/falcon-mcp/compare/v0.20.0...v0.20.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **docs:** announce maintenance mode and point users to CrowdStrike MCP ([#591](https://github.com/CrowdStrike/falcon-mcp/issues/591)) ([285602f](https://github.com/CrowdStrike/falcon-mcp/commit/285602f76dbef07b1c26067cb366722a126445bf))
+
 ## [0.20.0](https://github.com/CrowdStrike/falcon-mcp/compare/v0.19.0...v0.20.0) (2026-10-22)
 
 
