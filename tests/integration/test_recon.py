@@ -183,11 +183,11 @@ class TestReconIntegration(BaseIntegrationTest):
         different order on 6 of 6 trials), so without this the sort could be scrambled on
         every call and the rest of this file would still pass.
 
-        `created_timestamp` is the probe because it is strictly monotone in both directions
-        here. `priority` and `topic` — the other documented sort keys — tie across rows on
-        this tenant, and a tied key tie-breaks unstably, so they would flake. The limit is
-        deliberately 8 rather than 20: the tenant holds few rules, and asking for more than
-        exist gives no extra coverage.
+        `created_timestamp` is still the best documented probe (`priority` / `topic` tie
+        even more often), but the tenant can now hold multiple rules with the same
+        timestamp. Pass `allow_ties=True` so equal values are accepted while opposite-end
+        ordering is still checked. The limit is deliberately 8 rather than 20: the tenant
+        holds few rules, and asking for more than exist gives no extra coverage.
         """
         key = "created_timestamp"
         ascending = self.call_method(self.module.search_recon_rules, sort=f"{key}.asc", limit=8)
@@ -201,6 +201,7 @@ class TestReconIntegration(BaseIntegrationTest):
             [rule[key] for rule in self._unwrap_results(descending)],
             key,
             context="search_recon_rules",
+            allow_ties=True,
         )
 
     # ------------------------------------------------------------------
