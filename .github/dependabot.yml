@@ -21,6 +21,13 @@ updates:
         applies-to: security-updates
         patterns:
           - "*"
+    ignore:
+      - dependency-name: "mcp"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "ruff"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "mypy"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
 
   # GitHub Actions configuration
   - package-ecosystem: "github-actions"
