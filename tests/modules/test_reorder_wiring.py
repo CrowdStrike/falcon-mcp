@@ -43,6 +43,7 @@ from falcon_mcp.client import FalconClient
 from falcon_mcp.modules.agentworks import AgentworksModule
 from falcon_mcp.modules.cases import CasesModule
 from falcon_mcp.modules.cloud.cloud import CloudModule
+from falcon_mcp.modules.correlation_rules import CorrelationRulesModule
 from falcon_mcp.modules.custom_ioa import CustomIOAModule
 from falcon_mcp.modules.data_security import DataSecurityModule
 from falcon_mcp.modules.detections import DetectionsModule
@@ -363,6 +364,14 @@ CASES: list[ReorderCase] = [
             "search_agentworks_spans",
         )
     ],
+    # --- Correlation Rule Templates ---
+    ReorderCase(
+        tool="falcon_search_correlation_rule_templates",
+        module_cls=CorrelationRulesModule,
+        method="search_correlation_rule_templates",
+        id_field="id",
+        site=("falcon_mcp/modules/correlation_rules.py", "search_correlation_rule_templates"),
+    ),
 ]
 
 

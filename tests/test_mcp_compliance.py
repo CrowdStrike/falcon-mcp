@@ -74,6 +74,7 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     "falcon_create_correlation_rule",
     "falcon_update_correlation_rule",
     "falcon_delete_correlation_rules",
+    "falcon_deploy_correlation_rule_template",
     # quarantine module
     "falcon_update_quarantined_files",
     "falcon_delete_quarantined_files",
@@ -94,6 +95,14 @@ MUTATING_TOOL_ALLOWLIST: set[str] = {
     "falcon_update_data_security_entity",
     # fusion module
     "falcon_execute_workflow",
+    # data_connectors module
+    "falcon_create_data_connection",
+    "falcon_manage_data_connection",
+    "falcon_delete_data_connection",
+    "falcon_regenerate_data_connection_token",
+    "falcon_create_connector_config",
+    "falcon_update_connector_config",
+    "falcon_delete_connector_configs",
 }
 
 RESOURCE_URI_PATTERN = re.compile(r"^falcon://[a-z0-9-]+(/[a-z0-9-]+)+/[a-z]+-guide$")

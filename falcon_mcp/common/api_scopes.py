@@ -176,6 +176,9 @@ API_SCOPE_REQUIREMENTS = {
     "entities_rules_post_v1": ["Correlation Rules:write"],
     "entities_rules_patch_v1": ["Correlation Rules:write"],
     "entities_rules_delete_v1": ["Correlation Rules:write"],
+    "queries_templates_get_v1Mixin0": ["Correlation Rules:read"],
+    "entities_templates_get_v1Mixin0": ["Correlation Rules:read"],
+    "entities_templates_rules_post_v1": ["Correlation Rules:write"],
     # Data Protection operations - read
     "queries_classification_get_v2": ["Data Protection:read"],
     "entities_classification_get_v2": ["Data Protection:read"],
@@ -321,6 +324,21 @@ API_SCOPE_REQUIREMENTS = {
     "WorkflowExecutionsCombined": ["Workflows:read"],
     "WorkflowExecutionResults": ["Workflows:read"],
     "WorkflowExecute": ["Workflows:write"],
+    # Data Connectors operations (ngsiem-data-connections)
+    "ExternalListDataConnectors": ["ngsiem-data-connections:read"],
+    "ExternalListDataConnections": ["ngsiem-data-connections:read"],
+    "ExternalGetDataConnectionByID": ["ngsiem-data-connections:read"],
+    "ExternalGetDataConnectionStatus": ["ngsiem-data-connections:read"],
+    "ExternalGetDataConnectionToken": ["ngsiem-data-connections:read"],
+    "ExternalListConnectorConfigs": ["ngsiem-data-connections:read"],
+    "ExternalCreateDataConnection": ["ngsiem-data-connections:write"],
+    "ExternalUpdateDataConnection": ["ngsiem-data-connections:write"],
+    "ExternalDeleteDataConnection": ["ngsiem-data-connections:write"],
+    "ExternalUpdateDataConnectionStatus": ["ngsiem-data-connections:write"],
+    "ExternalRegenerateDataConnectionToken": ["ngsiem-data-connections:write"],
+    "ExternalCreateConnectorConfig": ["ngsiem-data-connections:write"],
+    "ExternalPatchConnectorConfig": ["ngsiem-data-connections:write"],
+    "ExternalDeleteConnectorConfigs": ["ngsiem-data-connections:write"],
     # Guardian operations (via /aidr/queries/*/v1, /aidr/entities/*/v1, and
     # /aidr/aggregates/*/v1). The single operation key below covers all of them.
     # The key and the scope keep the API-side "AIDR" spelling on purpose: the MCP

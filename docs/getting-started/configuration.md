@@ -20,6 +20,7 @@ Configure your CrowdStrike API credentials and server settings using environment
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `FALCON_MEMBER_CID` | — | Flight Control child CID (MSSP) |
+| `FALCON_CID` | — | Customer ID (CID) for correlation rule create/deploy operations |
 | `FALCON_MCP_MODULES` | all | Comma-separated list of modules to enable |
 | `FALCON_MCP_TRANSPORT` | `stdio` | Transport method: `stdio`, `sse`, `streamable-http` |
 | `FALCON_MCP_DEBUG` | `false` | Enable debug logging |
@@ -59,6 +60,7 @@ FALCON_BASE_URL=https://api.crowdstrike.com
 
 # Optional Configuration
 #FALCON_MEMBER_CID=your-child-cid
+#FALCON_CID=your-customer-id
 #FALCON_MCP_MODULES=detections,hosts,intel
 #FALCON_MCP_TRANSPORT=stdio
 #FALCON_MCP_DEBUG=false
