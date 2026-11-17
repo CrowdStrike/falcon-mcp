@@ -3,6 +3,13 @@
 
 # Changelog
 
+## [0.20.3](https://github.com/CrowdStrike/falcon-mcp/compare/v0.20.2...v0.20.3) (2026-11-17)
+
+
+### Bug Fixes
+
+* **idp:** escape values in timeline and relationship GraphQL queries ([#598](https://github.com/CrowdStrike/falcon-mcp/issues/598)) ([34f7573](https://github.com/CrowdStrike/falcon-mcp/commit/34f7573cdffd34ee9d1c14b9728d0ba023d02af1))
+
 ## [0.20.2](https://github.com/CrowdStrike/falcon-mcp/compare/v0.20.1...v0.20.2) (2026-11-03)
 
 
