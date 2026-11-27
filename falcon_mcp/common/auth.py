@@ -86,8 +86,11 @@ def auth_middleware(app: ASGIApp, api_key: str) -> ASGIApp:
     async def middleware(scope: Scope, receive: ASGIReceive, send: ASGISend) -> None:
         if scope["type"] == "http":
             request = Request(scope)
-            provided_key = request.headers.get("x-api-key", "")
-            if not secrets.compare_digest(provided_key, api_key):
+            # Compare as bytes: compare_digest raises TypeError for str values that
+            # hold non-ASCII characters. Starlette decodes header values as latin-1,
+            # so encoding back gives the bytes the client sent.
+            provided_key = request.headers.get("x-api-key", "").encode("latin-1")
+            if not secrets.compare_digest(provided_key, api_key.encode("utf-8")):
                 response = JSONResponse({"error": "Unauthorized"}, status_code=401)
                 await response(scope, receive, send)
                 return

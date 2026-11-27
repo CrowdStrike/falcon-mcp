@@ -56,6 +56,20 @@ class TestAPIKeyAuthMiddleware:
         assert response.status_code == 401
         assert response.json() == {"error": "Unauthorized"}
 
+    def test_returns_401_with_non_ascii_api_key(self, client):
+        """Test middleware returns 401, not an error, when the key holds a non-ASCII byte."""
+        response = client.get("/", headers={"x-api-key": b"\xe9"})
+        assert response.status_code == 401
+        assert response.json() == {"error": "Unauthorized"}
+
+    def test_passes_through_with_correct_non_ascii_api_key(self):
+        """Test middleware accepts a configured non-ASCII key sent as UTF-8."""
+        app = Starlette(routes=[Route("/", homepage, methods=["GET"])])
+        non_ascii_client = TestClient(auth_middleware(app, api_key="cl\u00e9-secr\u00e8te"))
+        response = non_ascii_client.get("/", headers={"x-api-key": "cl\u00e9-secr\u00e8te".encode("utf-8")})
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+
 
 class TestAPIKeyHeaderCaseSensitivity:
     """Test that HTTP headers are handled case-insensitively."""
